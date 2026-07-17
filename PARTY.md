@@ -150,15 +150,16 @@ is proven and the free rounds are in.
 
 ## Now
 
-**Iteration 8 (blocks) is the next thing to build, then Iteration 9 (the draft).** Both are
-designed and settled (2026-07-17, with Jan, against a click-through mock); neither is started.
+**Iteration 8 (blocks) is SHIPPED (#950, on `main`). Iteration 9 (the draft) is BUILT on
+`feat/party-draft`**, verified end-to-end in-browser, pending a PR + Jan's merge.
 
-**Build 8 first and play it before starting 9.** 8 is client-only and reversible; 9 is the first
-room-reducer change since Iteration 5. If the block rhythm is wrong, you want to find that out for
-the price of the cheap one.
+The next thing after Iteration 9 merges is the **deferred final-block polish** (double points +
+always-tricky on the last block) — a small scoring/veil slice on top of the draft, see its entry.
 
 Shipped and on `main`: the show engine, three round types (flag-pick, map, superlative), the clock,
-tricky mode + its configurable reveal timing, the host game-setup panel, and the grouped setup.
+tricky mode + its configurable reveal timing, the host game-setup panel, the grouped setup, and
+**Iteration 8's blocks + the standings break** (per-statistic blocks, on/off setup, the between-blocks
+break with MVP + rank deltas).
 
 Still open after 8 and 9:
 
@@ -811,28 +812,54 @@ partial plan, so a pick is an append.
 - **Scoring is untouched** (Jan: "your scoring is fine"). See the speed-bonus note under Open
   decisions for why time-decay was considered and parked.
 
-**Build steps:**
+**Build steps (BUILT on `feat/party-draft`, pending PR + Jan's merge):**
 
-- [ ] `flags/partyDraft.js` (new, pure + tested) — `blockCountFor(playerCount)`,
-      `pickerFor(scoreboard, alreadyPicked)`, `handFor(usedModeIds, enabledMetricIds, rng)`, seeded rng.
-- [ ] `flags/partyRoom.js` — `picking` phase; `applyPick` (appends a segment, only the designated
-      picker, ignored in any other phase); the room learns `BLOCK_ROUNDS`; serialize / deserialize
-      the grown plan + the picked set (+ tests).
-- [ ] `party/partyGameServer.js` — the `pick` message; generate from the grown plan; validate the
-      picked mode against the hand.
-- [ ] `flags/partyClient.js` — the `picking` phase, picker vs watcher (+ tests).
-- [ ] `flagParty/page.js` — the two doors, the pick screen (both points of view), the final-block
-      badges, attribution on the block card ("Zosia's pick").
-- [ ] `flagParty/index.css` — cards + pick screen, palette vars; metric hues confined to the draft
-      cards, same sanctioned exception as the setup chips.
-- [ ] `i18n/en.json` + `pl.json` — en + pl, no em dashes.
-- [ ] `npm run validate` green + end-to-end in-browser verify.
+- [x] `flags/partyDraft.js` (new, pure + tested) — `blockCountFor(playerCount)`,
+      `pickerFor(scoreboard, alreadyPicked)`, `handFor(usedModeIds, rng)`, `isValidPick`, seeded rng.
+- [x] `flags/partyRoom.js` — `picking` phase; `pendingPickAfterReveal`, `applyEnterPicking`,
+      `applyPick` (appends a block to the growing plan, only the designated picker, stamps
+      `draftPick` attribution); draft state serialized; `resetToLobby` clears it (+ 8 tests).
+- [x] `party/partyGameServer.js` — draft `start` (opening Flags block, `targetBlocks` from the seat
+      count); `next` routes to a pick at block boundaries; the `pick` + `forcePick` messages;
+      `usedModes` tracked + rebuilt after an eviction; validates the picked mode.
+- [x] `flags/partyClient.js` — the `picking` phase, picker vs watcher, `lastPick` attribution (+ 6 tests).
+- [x] `flagParty/page.js` — the two doors (draft default, persisted), the pick screen (both points of
+      view), the host's 10 s pick clock firing `forcePick`, attribution on the block's first round.
+- [x] `flagParty/index.css` — doors + pick cards + pick timer, palette vars; metric hues confined to
+      the draft cards, same sanctioned exception as the setup chips.
+- [x] `i18n/en.json` + `pl.json` — doors / pick / attribution strings, en + pl, no em dashes.
+- [x] `npm run validate` green (2872 tests) + **end-to-end in-browser verified** (solo, fresh-port
+      serve to beat the SWA-CLI module cache): doors render with Draft default, draft start deals a
+      Flags block, the pick screen shows a 5-card hand (unused picture modes + random stats, metric
+      hues on the icons), a manual pick deals the right block (picked Map → contour tiles) with the
+      "X's pick" attribution, and the 10 s `forcePick` timeout auto-picks a random card. 0 party-code
+      console errors.
 
 **Mock (the design both iterations were settled against):**
 https://claude.ai/code/artifact/f2a1acb4-12cb-40c0-831b-075f921afdad
 
-**Deferred:** the TV / Display surface (unchanged, see Surfaces); preset packs (probably dead, see
-above); per-player hint tokens and double-down, which were discussed and parked with scoring.
+**Reviewed (adversarial correctness pass, 2026-07-17).** No reachable bug: the pick-vs-final
+boundary is exact, state resets cleanly between games, and draft fields serialize for reconnect
+mid-pick. Fixed one latent gap it found: a null picker at a boundary now falls through to the
+ordinary advance instead of freezing the room (defensive — the block-count formula already
+guarantees a picker). Two findings accepted, not fixed:
+- **A disconnected seat can be handed the pick** (`pickerFor` is lowest-*ranked*, not lowest-*present*,
+  per spec). Not a stall: the host's `forcePick` clock resolves it with a random card after 10 s.
+- **`usedCodes` isn't rebuilt after a durable-object eviction** (only `usedModes` is) — a general,
+  pre-existing server gap (affects setlist too, and the plan doesn't record which countries were
+  used), so left alone here. Cosmetic sibling: the "X's pick" attribution card doesn't survive a
+  reconnect mid-drafted-block (the block / scores / question all do).
+
+**Deferred from Iteration 9 (a follow-up slice, noted so it isn't lost):**
+- **The final block being double points + always tricky.** The draft mechanic ships first; this is a
+  scoring/veil polish on top (double-points touches `partyScore` / `toReveal`; always-tricky-final
+  forces the veil on the last block). Parked to keep the draft PR focused, and because Jan may want
+  to react to the base draft before layering the finale stakes on.
+- **The full "next block" title card** (a big card, not just the pill attribution). The client now has
+  what it needs (`lastPick`), so this is pure presentation whenever it's wanted.
+
+Still deferred (unchanged): the TV / Display surface; preset packs (probably dead — Draft supersedes,
+see Iteration 7's note); per-player hint tokens and double-down, parked with scoring.
 
 ## Open decisions (settle as they come up, not now)
 

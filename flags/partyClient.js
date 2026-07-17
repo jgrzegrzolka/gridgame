@@ -8,7 +8,7 @@
  * player's screen needs to render, plus `myChoice` — the option this device
  * tapped, which is local until reveal (the server never echoes picks early).
  *
- * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'final'} Phase
+ * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
  * @typedef {{ playerId: string, nickname: string, score: number, present: boolean }} RosterEntry
  * @typedef {{ prompt: string, options: string[], roundId?: string, clearFrac?: number, nameFrac?: number }} PublicQuestion
  * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
@@ -28,6 +28,13 @@
  * @property {string | null} myChoice
  * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number> } | null} reveal
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
+ * @property {string | null} picker  during the `picking` phase (draft mode), the
+ *   seat whose turn it is to choose the next block; null otherwise.
+ * @property {string[] | null} hand  during `picking`, the mode ids the picker may
+ *   choose from; null otherwise.
+ * @property {{ picker: string, modeId: string } | null} lastPick  who picked the
+ *   current block and which mode, for the "Zosia's pick" attribution; null in a
+ *   non-drafted block.
  * @property {StatusOverride | null} statusOverride
  *
  * @typedef {{ type: 'close' }} Effect
@@ -49,6 +56,9 @@ export function initialPartyClientState() {
     myChoice: null,
     reveal: null,
     scoreboard: null,
+    picker: null,
+    hand: null,
+    lastPick: null,
     statusOverride: null,
   };
 }
@@ -96,6 +106,10 @@ export function reducePartyMessage(state, message) {
           tricky: message.tricky ?? state.tricky,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
+          // A reconnect mid-pick resumes the draft turn (picker + hand ride the
+          // welcome); otherwise these are null.
+          picker: message.picker ?? null,
+          hand: message.hand ?? null,
           // A reconnect can't recover whether we already buzzed this question;
           // treat as fresh — the server ignores a duplicate buzz anyway.
           myChoice: null,
@@ -126,6 +140,24 @@ export function reducePartyMessage(state, message) {
           reveal: null,
           scoreboard: null,
           myChoice: null,
+          picker: null,
+          hand: null,
+          lastPick: null,
+        },
+        effects: [],
+      };
+    }
+    case 'picking': {
+      // Draft: the room paused to let one seat choose the next block.
+      return {
+        state: {
+          ...state,
+          phase: 'picking',
+          picker: message.picker ?? null,
+          hand: Array.isArray(message.hand) ? message.hand : [],
+          roundIndex: message.roundIndex ?? state.roundIndex,
+          totalRounds: message.totalRounds ?? state.totalRounds,
+          reveal: null,
         },
         effects: [],
       };
@@ -143,6 +175,11 @@ export function reducePartyMessage(state, message) {
           reveal: null,
           buzzedCount: 0,
           seatCount: presentCount(state.roster),
+          // The picking turn is over; a drafted block's first question carries who
+          // picked it (for the attribution card), else this clears.
+          picker: null,
+          hand: null,
+          lastPick: message.draftPick ?? null,
         },
         effects: [],
       };

@@ -38,6 +38,12 @@ export function revealSecondsFor(clean) {
   return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 
+/** Seconds a draft **pick** stays open before it auto-resolves. The picker taps a
+ *  card to choose their block; if they don't, the host (authoritative for timing,
+ *  like the reveal) fires a `forcePick` and the server picks a random card. Short
+ *  so an idle or absent picker never stalls the show. */
+export const PICK_SECONDS = 10;
+
 /** Seconds a between-blocks **break** lingers before the host advances to the
  *  next block. The break shows the block's MVP and the standings (with rank
  *  movement) — a beat to read where everyone landed, so it holds longer than a

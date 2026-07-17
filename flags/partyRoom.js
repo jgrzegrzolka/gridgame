@@ -1,4 +1,5 @@
 import { scoreRound } from './partyScore.js';
+import { isBlockBoundary } from './partyPlan.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -16,7 +17,7 @@ import { scoreRound } from './partyScore.js';
  * Phase machine: `lobby` → `question` → `reveal` → (`question` | `final`),
  * and `final` → `lobby` on Play again.
  *
- * @typedef {'lobby' | 'question' | 'reveal' | 'final'} Phase
+ * @typedef {'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
  * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string, clearFrac?: number, nameFrac?: number }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
@@ -51,6 +52,20 @@ import { scoreRound } from './partyScore.js';
  * @property {Question | null} question  the live question; `answer` never leaves
  *   the server until reveal.
  * @property {Buzz[]} buzzes  this question's buzzes in server arrival order.
+ * @property {boolean} draft  draft mode (Iteration 9): the plan grows one block
+ *   at a time as players pick, instead of being fixed at start. When true the
+ *   room enters a `picking` phase at each block boundary; when false it's the
+ *   ordinary setlist show. Stored so it survives an eviction and rides welcome.
+ * @property {number} targetBlocks  the draft's total block count, fixed at start
+ *   from the seat count (`blockCountFor`). The game ends after this many blocks;
+ *   `totalRounds` is `targetBlocks * BLOCK_ROUNDS`. 0 in a non-draft game.
+ * @property {string[]} pickedBy  playerIds that have already picked a block, in
+ *   pick order — the no-repeat set the draft's picker selection reads.
+ * @property {string | null} picker  during `picking`, the seat whose turn it is to
+ *   choose the next block; null otherwise.
+ * @property {string[] | null} hand  during `picking`, the mode ids the picker may
+ *   choose from (server-dealt); null otherwise. Stored so a reconnect mid-pick
+ *   sees the same hand.
  *
  * @typedef {{ to: string | 'all', message: object }} Broadcast
  * @typedef {{ room: Room, broadcasts: Broadcast[], rejectConnection?: boolean }} ApplyResult
@@ -89,6 +104,11 @@ export function createRoom(totalRounds = DEFAULT_ROUNDS, plan = null) {
     reveal: null,
     question: null,
     buzzes: [],
+    draft: false,
+    targetBlocks: 0,
+    pickedBy: [],
+    picker: null,
+    hand: null,
   };
 }
 
@@ -153,6 +173,10 @@ export function applyHello(room, playerId, nickname) {
  * server) and its `totalRounds` ride along and are stored on the room; omit
  * them to keep whatever the room opened with.
  *
+ * In **draft** mode the caller passes `draft: true` with the opening plan (a
+ * single Flags block), `totalRoundsValue = targetBlocks * BLOCK_ROUNDS`, and
+ * `targetBlocks`; the plan then grows one block per pick (see {@link applyPick}).
+ *
  * @param {Room} room
  * @param {string} playerId
  * @param {Question} question
@@ -162,12 +186,15 @@ export function applyHello(room, playerId, nickname) {
  *   room's current value.
  * @param {Room['reveal']} [reveal]  the host's per-category reveal timing; omit to
  *   keep the room's current value.
+ * @param {{ draft?: boolean, targetBlocks?: number }} [draftOpts]  draft-mode setup;
+ *   omit for an ordinary setlist game.
  * @returns {ApplyResult}
  */
-export function applyStart(room, playerId, question, plan, totalRoundsValue, tricky, reveal) {
+export function applyStart(room, playerId, question, plan, totalRoundsValue, tricky, reveal, draftOpts) {
   if (room.phase !== 'lobby') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (room.seats.size === 0) return { room, broadcasts: [] };
+  const draft = draftOpts ? draftOpts.draft === true : false;
   const nextRoom = {
     ...room,
     phase: /** @type {Phase} */ ('question'),
@@ -178,6 +205,11 @@ export function applyStart(room, playerId, question, plan, totalRoundsValue, tri
     tricky: typeof tricky === 'boolean' ? tricky : room.tricky,
     reveal: reveal ?? room.reveal,
     totalRounds: typeof totalRoundsValue === 'number' ? totalRoundsValue : room.totalRounds,
+    draft,
+    targetBlocks: draft && draftOpts && typeof draftOpts.targetBlocks === 'number' ? draftOpts.targetBlocks : 0,
+    pickedBy: [],
+    picker: null,
+    hand: null,
   };
   return { room: nextRoom, broadcasts: [questionBroadcast(nextRoom)] };
 }
@@ -270,6 +302,86 @@ export function applyNext(room, playerId, nextQuestion) {
 }
 
 /**
+ * Whether a `next` from the current reveal should open a **draft pick** rather
+ * than deal the next question: true only in draft mode, at a reveal that sits on
+ * a block boundary (another block follows). Pure, so the server can branch on it
+ * (`next` → {@link applyEnterPicking} vs {@link applyNext}) without duplicating
+ * the boundary rule. In draft `totalRounds` is `targetBlocks * BLOCK_ROUNDS`, so
+ * `isBlockBoundary` is true at exactly the block ends before the last block.
+ *
+ * @param {Room} room
+ * @returns {boolean}
+ */
+export function pendingPickAfterReveal(room) {
+  return room.draft && room.phase === 'reveal' && isBlockBoundary(room.roundIndex, room.totalRounds);
+}
+
+/**
+ * Host opens the draft pick for the next block: the room moves from `reveal` to
+ * `picking`, and the chosen `picker` (the lowest-ranked seat that hasn't picked,
+ * resolved by the caller via `pickerFor`) chooses from `hand` (the mode ids the
+ * caller dealt via `handFor`). Both are held on the room so a reconnect mid-pick
+ * sees the same turn. Host-driven, same as {@link applyNext}.
+ *
+ * @param {Room} room
+ * @param {string} playerId  must be the host
+ * @param {string | null} picker  the seat whose turn it is
+ * @param {string[]} hand  the mode ids the picker may choose from
+ * @returns {ApplyResult}
+ */
+export function applyEnterPicking(room, playerId, picker, hand) {
+  if (room.phase !== 'reveal') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  if (!picker) return { room, broadcasts: [] };
+  const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice() };
+  return {
+    room: nextRoom,
+    broadcasts: [{
+      to: 'all',
+      message: { type: 'picking', picker, hand: hand.slice(), roundIndex: room.roundIndex, totalRounds: room.totalRounds },
+    }],
+  };
+}
+
+/**
+ * The designated picker chooses `modeId`, and its block starts. The caller has
+ * already validated the pick (`isValidPick`) and built the block `segment` and
+ * the first `question`; this appends the segment to the (growing) plan, advances
+ * to that block's first round, records the picker in `pickedBy` (the no-repeat
+ * set), and clears the picking state. Ignored unless we're in `picking` and the
+ * sender is the seat whose turn it is.
+ *
+ * The first question of a drafted block carries `draftPick` (who picked, which
+ * mode) so every client can show the "Zosia's pick" attribution.
+ *
+ * @param {Room} room
+ * @param {string} pickerId  the seat picking; must equal `room.picker`
+ * @param {string} modeId  the picked mode (for attribution)
+ * @param {{ poolId: string, roundId: string, rounds: number }} segment  the block to append
+ * @param {Question} question  the block's first question
+ * @returns {ApplyResult}
+ */
+export function applyPick(room, pickerId, modeId, segment, question) {
+  if (room.phase !== 'picking') return { room, broadcasts: [] };
+  if (room.picker !== pickerId) return { room, broadcasts: [] };
+  const plan = [...(room.plan ?? []), segment];
+  const nextRoom = {
+    ...room,
+    phase: /** @type {Phase} */ ('question'),
+    roundIndex: room.roundIndex + 1,
+    plan,
+    question,
+    buzzes: [],
+    pickedBy: [...room.pickedBy, pickerId],
+    picker: null,
+    hand: null,
+  };
+  const bc = questionBroadcast(nextRoom);
+  /** @type {any} */ (bc.message).draftPick = { picker: pickerId, modeId };
+  return { room: nextRoom, broadcasts: [bc] };
+}
+
+/**
  * Reset the room to the lobby with every score zeroed. Shared by 'play again'
  * (from the final board) and 'back to settings' (a mid-game abort) — both drop
  * the whole room onto the setup screen for a fresh start.
@@ -290,6 +402,12 @@ function resetToLobby(room) {
     question: null,
     buzzes: [],
     seats,
+    // Clear any draft-in-progress state so the next game starts its draft clean.
+    draft: false,
+    targetBlocks: 0,
+    pickedBy: [],
+    picker: null,
+    hand: null,
   };
   return {
     room: nextRoom,
@@ -509,6 +627,10 @@ function welcomeBroadcast(room, playerId) {
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
+      // Draft: a reconnect mid-pick needs the current picker + hand to paint the
+      // pick screen; harmless (null) in a non-draft or non-picking room.
+      picker: room.picker,
+      hand: room.hand,
     },
   };
 }
@@ -533,6 +655,11 @@ export function serializeRoom(room) {
     reveal: room.reveal,
     question: room.question,
     buzzes: room.buzzes,
+    draft: room.draft,
+    targetBlocks: room.targetBlocks,
+    pickedBy: room.pickedBy,
+    picker: room.picker,
+    hand: room.hand,
   };
 }
 
@@ -553,5 +680,10 @@ export function deserializeRoom(snapshot) {
     reveal: snapshot.reveal ?? null,
     question: snapshot.question ?? null,
     buzzes: snapshot.buzzes ?? [],
+    draft: snapshot.draft ?? false,
+    targetBlocks: snapshot.targetBlocks ?? 0,
+    pickedBy: snapshot.pickedBy ?? [],
+    picker: snapshot.picker ?? null,
+    hand: snapshot.hand ?? null,
   };
 }

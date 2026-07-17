@@ -242,3 +242,57 @@ test('isCleanReveal: no reveal or empty room → not clean', () => {
   assert.equal(isCleanReveal([seat('a')], null), false);
   assert.equal(isCleanReveal([], { answer: 'jp', picks: {} }), false);
 });
+
+// ---- draft: the picking phase (Iteration 9) ----
+
+test('picking: adopts the picker + hand from the server', () => {
+  const s = reduce({ ...initialPartyClientState(), you, phase: 'reveal' }, {
+    type: 'picking', picker: 'bob', hand: ['map-outlines', 'superlative-coffee'], roundIndex: 4, totalRounds: 15,
+  });
+  assert.equal(s.phase, 'picking');
+  assert.equal(s.picker, 'bob');
+  assert.deepEqual(s.hand, ['map-outlines', 'superlative-coffee']);
+  assert.equal(s.reveal, null);
+});
+
+test('picking: a malformed hand becomes an empty array, not a crash', () => {
+  const s = reduce(initialPartyClientState(), { type: 'picking', picker: 'bob' });
+  assert.deepEqual(s.hand, []);
+});
+
+test('question after a pick: clears the picking turn and records who picked', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  let s = { ...initialPartyClientState(), you, phase: 'picking', picker: 'bob', hand: ['map-outlines'] };
+  s = reduce(s, { type: 'question', prompt: 'pa', options: ['pa', 'us'], roundIndex: 5, totalRounds: 15, draftPick: { picker: 'bob', modeId: 'map-outlines' } });
+  assert.equal(s.phase, 'question');
+  assert.equal(s.picker, null);
+  assert.equal(s.hand, null);
+  assert.deepEqual(s.lastPick, { picker: 'bob', modeId: 'map-outlines' });
+});
+
+test('an ordinary (non-drafted) question clears lastPick', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  let s = { ...initialPartyClientState(), lastPick: { picker: 'bob', modeId: 'map-outlines' } };
+  s = reduce(s, { type: 'question', prompt: 'jp', options: ['jp'], roundIndex: 6, totalRounds: 15 });
+  assert.equal(s.lastPick, null);
+});
+
+test('welcome mid-pick resumes the picker + hand', () => {
+  const s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, isHost: false, phase: 'picking', roster: [], totalRounds: 15,
+    picker: 'bob', hand: ['map-outlines', 'superlative-beer'],
+  });
+  assert.equal(s.phase, 'picking');
+  assert.equal(s.picker, 'bob');
+  assert.deepEqual(s.hand, ['map-outlines', 'superlative-beer']);
+});
+
+test('lobby (play again) clears any draft state', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  let s = { ...initialPartyClientState(), phase: 'picking', picker: 'bob', hand: ['x'], lastPick: { picker: 'bob', modeId: 'x' } };
+  s = reduce(s, { type: 'lobby', hostId: you, roster: [] });
+  assert.equal(s.phase, 'lobby');
+  assert.equal(s.picker, null);
+  assert.equal(s.hand, null);
+  assert.equal(s.lastPick, null);
+});
