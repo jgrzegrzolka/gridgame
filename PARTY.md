@@ -150,18 +150,23 @@ is proven and the free rounds are in.
 
 ## Now
 
-**Iteration 5, Round 3: Superlative (population)** is BUILT on `feat/party-superlative-round`
-and verified end-to-end (see the iteration entry below); it awaits a PR + Jan's merge. The show
-engine, two rounds (flag-pick + map), the host game-setup panel, single online path (start with
-1+), and the reveal polish are all shipped and on `main`.
+**Iteration 8 (blocks) is the next thing to build, then Iteration 9 (the draft).** Both are
+designed and settled (2026-07-17, with Jan, against a click-through mock); neither is started.
 
-After iteration 5, the remaining pieces:
+**Build 8 first and play it before starting 9.** 8 is client-only and reversible; 9 is the first
+room-reducer change since Iteration 5. If the block rhythm is wrong, you want to find that out for
+the price of the cheap one.
+
+Shipped and on `main`: the show engine, three round types (flag-pick, map, superlative), the clock,
+tricky mode + its configurable reveal timing, the host game-setup panel, and the grouped setup.
+
+Still open after 8 and 9:
 
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
-- Loose ends under **Open decisions** (QR in the lobby, speed-bonus curve, max-seat cap).
+- Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
 Reading the history below: it's a time-ordered journal, so the current design of anything is
-the **newest** entry that mentions it — earlier numbers (e.g. Iteration 2's `DEFAULT_PLAN`
+the **newest** entry that mentions it. Earlier numbers (e.g. Iteration 2's `DEFAULT_PLAN`
 shape) are superseded by later ones.
 
 ## Iteration 1 — the show skeleton with one round (flag-pick), own-screen — SHIPPED (branch `feat/flag-party-iter1`)
@@ -334,7 +339,7 @@ simplification — a naive regex round would drift over a 20k-point path). Set w
 (heavy tiles re-eyeballed). Build-time only — `svgo` + `playwright-core` are devDeps of the
 generator; the runtime/client never changed, and the code set (`contourPool.js`) is byte-identical.
 
-## Iteration 5: Round 3, Superlative (population), BUILT on branch `feat/party-superlative-round` (pending PR)
+## Iteration 5 — Round 3: Superlative (population) — SHIPPED (#774)
 
 Goal: the **third round type**, and the first that turns a world *metric* into a question.
 "Which of these four flags is the **most** (or **least**) **populous**?" It cashes in what
@@ -486,7 +491,7 @@ per-tile veil the page animates off the question clock. Decisions:
 **Deferred (folded into Iteration 6b below):** making the clear fractions host-configurable.
 Still deferred: a preset *dial* (Normal / Tricky / Brutal) and per-effect choices.
 
-## Iteration 6b — Configurable reveal timing, BUILT on branch `feat/party-reveal-config` (pending PR)
+## Iteration 6b — Configurable reveal timing — SHIPPED (#801)
 
 Goal: let the host tune how hard tricky mode is, per round category, instead of the fixed
 70 / 40 that shipped in Iteration 6. Jan's call: **each of Flags / Map / Metrics picks its
@@ -529,7 +534,7 @@ server stamps the right `clearFrac` on each question from its category. The clie
 - [x] Touched-module tests green (72) + typecheck clean.
 - [ ] End-to-end in-browser verify.
 
-## Iteration 7 — Grouped setup: picture icons + the world-facts family (Option E) — BUILT on branch `feat/party-setup-grouping` (pending PR)
+## Iteration 7 — Grouped setup: picture icons + the world-facts family (Option E) — SHIPPED (#822)
 
 Goal: stop the lobby setup growing one tall row per metric. The panel mixed two
 different things in one flat list: a **fixed picture trio** (flags / territories /
@@ -622,7 +627,13 @@ changed.
 - Round 2 (five more, colour + illustration): https://claude.ai/code/artifact/3591873b-25e8-4d6b-b320-ad0d41d1b2bf
 - Round 3 (the chosen direction: presets + Option E custom): https://claude.ai/code/artifact/ad2cae63-e333-4527-90b9-45d3cf9bce1f
 
-### Future: preset packs (Easy / Default / Advanced) — designed, not built
+### Future: preset packs (Easy / Default / Advanced) — designed, not built, PROBABLY SUPERSEDED
+
+> **Read Iteration 9 before building this.** Packs exist to answer "give me a good geography game
+> in one tap", and **Draft answers it better**: it needs no pack list at all, it starts in one tap,
+> and it hands the choosing to the players instead of to a preset. The two overlap almost
+> completely. Don't build both without re-deciding which one survives. The design below is kept
+> because its reasoning is still good, not because it is queued.
 
 Jan wants presets **on top of** the custom view, not instead of it: most hosts
 don't want to tune dials, they want "give me a good geography game" in one tap.
@@ -646,6 +657,158 @@ agent can build it without re-deciding.
   packs are the default with Custom as a disclosure below them (Round 3 drew the
   latter). Decide when building; both fit the same `setupState` plumbing.
 
+## Iteration 8 — Blocks of five + the break — PLANNED (2026-07-17)
+
+Goal: give the show an **act structure**. A mode stops being a dial from 1 to N and becomes a
+**block of 5 rounds**; after every block the game stops on a standings screen. Jan's idea:
+"maybe adding a mode is adding 5 flags always, and after 5 played rounds you would have a score
+revealed."
+
+**Why it earns its place.** A mode's identity is currently invisible *during play*. Rounds 1 to 3
+are flags, 4 to 6 are territories, 7 to 9 are outlines, and nobody perceives a mode switch: they
+perceive twelve questions. A titled block plus a standings break turns the switch into an
+**announced event** and gives the show a rhythm instead of a flat run at a final board. It also
+kills the stepper: Iteration 7 was fighting "the panel grows a row per metric", and a mode that is
+simply on or off ends that fight for good.
+
+**The shape: client-only. No server, room, or wire-protocol touch.** Same load-bearing property
+Iteration 7 had, and the reason to build this one first.
+
+- `buildPartyPlan` already turns setup state into `Segment[]`; blocks only change the arithmetic
+  (every enabled mode contributes `rounds: 5`). The server generates from the plan exactly as now.
+- **The break needs no model at all.** A block boundary is `roundIndex % BLOCK_ROUNDS === BLOCK_ROUNDS - 1`,
+  derivable on the client from data every client already has.
+- **The break is a longer reveal, not a new phase.** Timing lives on the page by design
+  (Iteration 3): the host's timer is what sends `next`. At a block end the host simply waits
+  `BLOCK_BREAK_SECONDS` instead of the reveal duration, and every client renders the break instead
+  of the reveal. The room stays in `reveal` throughout and never learns blocks exist.
+
+**Decisions:**
+
+- **`BLOCK_ROUNDS = 5`** (Jan's number, and the arithmetic backs it). `QUESTION_SECONDS` is 20, but
+  a round auto-reveals once every present seat has buzzed, so a block runs **~50 s** (everyone
+  answering fast) to **~115 s** (clock expiring every round). Roughly a minute and a half typical,
+  which is the right act length.
+- **Steppers are gone.** A mode is on or off; on means 5 rounds. Length granularity goes from 1 to
+  5, which is the accepted price.
+- **The world-facts group stays mixed and stays one block.** The Iteration 7 chips are untouched:
+  `distributeWorldFacts(5, enabledIds, rng)` already returns five 1-round segments, which *is* a
+  mixed block. (Iteration 9's draft deals per-metric blocks instead. Both are ordinary `Segment[]`,
+  so the server never learns the difference. See its entry.)
+- **Default is 3 blocks on, not everything on.** Everything-on would be 4 blocks = 20 rounds, a 67%
+  longer default game than today's 12, chosen by nobody.
+- **The break shows:** block MVP ("Best of the block", a second thing to win so a player losing
+  overall still has something to hold), standings with **rank deltas versus the previous break** and
+  the row movement animated, and the **gap to the leader** on your own row. No timer: the break is a
+  beat, not a countdown (same reasoning that removed the reveal's bar under Done).
+- **Block 1 has no deltas** (there is no previous break). Accepted, not a bug.
+- **Title card between blocks:** block number, the mode's icon, the name, "5 rounds". Icons come
+  from `flags/deckIcons.js` (`deckIconHtml`) and `flags/metricVisuals.js` (`METRIC_ICONS`,
+  `METRIC_HUES`, `METRIC_SHORT`), both already shared modules since #942, so this costs nothing.
+- **Known cosmetic gap, accepted:** a player reconnecting *during* a break gets `welcome` with
+  `phase: 'reveal'` and paints the reveal, not the break. Same class as Iteration 3's documented
+  "reconnect mid-question starts a fresh bar", and it self-corrects on the host's next transition.
+
+**Build steps:**
+
+- [ ] `flags/partyPlan.js` — `BLOCK_ROUNDS`; `buildPartyPlan` emits a 5-round segment per enabled
+      picture mode and a 5-round mixed facts block; `blockCount` / `blockIndexForRound` /
+      `isBlockEnd` (pure + tested). `defaultSetup()` → 3 blocks on.
+- [ ] `flags/partyTiming.js` — `BLOCK_BREAK_SECONDS` (+ test).
+- [ ] `flags/partyClient.js` — the client knows when a reveal lands on a block end (+ test).
+- [ ] `flagParty/page.js` — the break (standings + MVP + deltas + gap), the block title card, the
+      setup panel losing its steppers, the host holding the break before `next`.
+- [ ] `flagParty/index.css` — break + title card, on the eight palette vars.
+- [ ] `i18n/en.json` + `pl.json` — en + pl, no em dashes.
+- [ ] **Migration**, not a reset: fold the stored per-mode counts (`gridgame.party.setup`) to on/off
+      (count > 0 = on).
+- [ ] `npm run validate` green + end-to-end in-browser verify.
+
+## Iteration 9 — The draft: players pick the blocks — PLANNED (2026-07-17)
+
+Goal: **the host stops configuring the show and the players choose it as they go.** Jan's idea:
+"maybe each player is deciding what mode we are playing next?" Today the host picks everything up
+front and every other seat is a passenger, which is the actual complaint behind "the host is picking
+a game mode and you just see who wins at the end".
+
+**Iterations 8 and 9 are one idea in two halves.** The block structure creates a break; the break
+needs a purpose; the pick is the purpose. Without the pick, the break is a pause. With it, the
+standings stop being a readout you skim and become **the thing that decides who chooses next**.
+
+**The shape: the first room-reducer change since Iteration 5.** This is the honest cost, and the
+line between the two iterations. A break is a *render*, so Iteration 8 keeps it client-side. A pick
+is an *input*, so it needs a room phase: the plan can no longer be fixed at `start`, it grows one
+segment per pick, and the room has to learn what a block is in order to know when to enter
+`picking` instead of dealing the next question. `roundIdForRound(plan, i)` already works fine on a
+partial plan, so a pick is an append.
+
+**Decisions:**
+
+- **Two doors at start.** **Draft** (default) and **Custom setup** (Iteration 8's panel, behind a
+  link). Draft's real win is that it is a **zero-setup game**: today the setup panel is a wall the
+  host climbs before anyone plays, and Jackbox's actual trick is that you press one button and you
+  are in. This very likely **supersedes the preset-packs design** parked under Iteration 7: packs
+  exist to answer "give me a good geography game in one tap", and Draft answers it better. Don't
+  build both without re-deciding.
+- **Block 1 is always Flags: countries.** This closes Draft's cold-start hole (no scores means no
+  last place means no picker) and is the right on-ramp anyway: establish the loop before asking
+  anyone to choose.
+- **Blocks = `min(players + 1, 5)`**, host can override. The `+1` is the fixed opener. This makes
+  **"everyone picks exactly once" true for 2 to 4 players** (the stated design center: "2-player is
+  the main case") without anyone being told a rule, and caps a 20-seat room (`MAX_SEATS`) at 5
+  blocks instead of 20. At ~2 min a block cycle that is about 10 minutes, against Jackbox's 15 to 20.
+  Tying block count to player count *directly* is the trap: the two are independent quantities that
+  only coincide for 2 to 4 players.
+- **Picker = the lowest-ranked player who hasn't picked yet.** Not merely "last place": with two
+  players, pure loser's-pick can hand *both* picks to the same person, and then one of the two never
+  chose anything. Note the formula makes the clause free: picks = blocks − 1 = `min(players, 4)`,
+  never more than the player count, so the eligible set cannot empty (unless the host overrides above
+  `players + 1`, where everyone simply becomes eligible again).
+- **Why loser's pick over a vote or a seat rotation.** A vote is mushy (the fun of choosing is
+  diluted, and ties need a rule); leader-picks snowballs. Loser's pick does three jobs with one rule:
+  it is a comeback mechanic, it hands the spotlight to exactly the player who is disengaging, and it
+  makes the break load-bearing. It is a **soft rubber-band** that only bends *what you play*, never
+  the points, so it never feels unfair the way a handout does. **The live objection, accepted with
+  eyes open:** being bad early buys you a pick. The mock's worked example (Zosia last by 16, picks
+  Coffee, goes 5/5, takes the lead) exists to make that judgeable rather than arguable.
+- **A hand of 5 cards, not a menu of 30.** Drawn from the unused modes: the picture modes plus a
+  random draw of the enabled metrics. A list of 30-odd registry metrics is a form, not a party beat.
+- **Draft deals per-metric blocks** (one 5-round segment), where Setlist deals mixed. "I pick Coffee"
+  is a moment; "I pick World facts" is a menu. Both shapes are valid `Segment[]`, so this needs no
+  model, no fork, and no server knowledge.
+- **No mode twice in a game.** Keeps coverage honest and makes the last pick nearly forced.
+- **10 s to pick, random on timeout.**
+- **The watcher screen matters as much as the picker's.** With 4 players, 3 of them are watching.
+  "Zosia is choosing", with her avatar. It is a spotlight, which is why it is short.
+- **The final block is double points and always tricky.** Loser's pick chooses the terrain for the
+  block that decides the game. Tricky as an *act* also finally gives the veil a home: it is a global
+  switch today, so most hosts never flip it, so two iterations of work mostly never run.
+- **Scoring is untouched** (Jan: "your scoring is fine"). See the speed-bonus note under Open
+  decisions for why time-decay was considered and parked.
+
+**Build steps:**
+
+- [ ] `flags/partyDraft.js` (new, pure + tested) — `blockCountFor(playerCount)`,
+      `pickerFor(scoreboard, alreadyPicked)`, `handFor(usedModeIds, enabledMetricIds, rng)`, seeded rng.
+- [ ] `flags/partyRoom.js` — `picking` phase; `applyPick` (appends a segment, only the designated
+      picker, ignored in any other phase); the room learns `BLOCK_ROUNDS`; serialize / deserialize
+      the grown plan + the picked set (+ tests).
+- [ ] `party/partyGameServer.js` — the `pick` message; generate from the grown plan; validate the
+      picked mode against the hand.
+- [ ] `flags/partyClient.js` — the `picking` phase, picker vs watcher (+ tests).
+- [ ] `flagParty/page.js` — the two doors, the pick screen (both points of view), the final-block
+      badges, attribution on the block card ("Zosia's pick").
+- [ ] `flagParty/index.css` — cards + pick screen, palette vars; metric hues confined to the draft
+      cards, same sanctioned exception as the setup chips.
+- [ ] `i18n/en.json` + `pl.json` — en + pl, no em dashes.
+- [ ] `npm run validate` green + end-to-end in-browser verify.
+
+**Mock (the design both iterations were settled against):**
+https://claude.ai/code/artifact/f2a1acb4-12cb-40c0-831b-075f921afdad
+
+**Deferred:** the TV / Display surface (unchanged, see Surfaces); preset packs (probably dead, see
+above); per-player hint tokens and double-down, which were discussed and parked with scoring.
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes
@@ -653,14 +816,26 @@ agent can build it without re-deciding.
   surface it edits. Kept here only as a pointer — no longer an open question.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
-- **Question count / timing per round.** 16 rounds (4 flag / 4 territory / 4 map / 4 superlative,
-  per `DEFAULT_PLAN`; the host can retune each in the lobby setup).
-  Per-question countdown landed in iteration 3 (`flags/partyTiming.js`, host-driven,
-  hands-free advance); question time is `QUESTION_SECONDS = 20`. **Reveal pace is decided
-  and deliberately *not* configurable** (see the reveal-pace note under Done): it's keyed on
+- **Question count — superseded by Iteration 8.** The per-mode round counts are replaced by
+  **blocks of 5**, and the game length becomes `min(players + 1, 5)` blocks (Iteration 9). Kept here
+  only as a pointer.
+- **Timing per round.** Per-question countdown landed in iteration 3 (`flags/partyTiming.js`,
+  host-driven, hands-free advance); question time is `QUESTION_SECONDS = 20`. **Reveal pace is
+  decided and deliberately *not* configurable** (see the reveal-pace note under Done): it's keyed on
   correctness, not a dial. If pace ever becomes a setting it should be one overall fast/normal
   feel, not raw per-phase seconds.
-- **Speed-bonus curve.** Currently decaying (+5/+3/+1) in `flags/partyScore.js`.
+- **Speed-bonus curve — settled 2026-07-17: it stays as it is.** Decaying by **rank** among the
+  correct answers (+5/+3/+1) in `flags/partyScore.js`. **Time-decay was considered and parked.** The
+  case for it was that solo has no clock incentive at all (`applySpeedBonus` is off at one seat, so
+  a 1-second answer and a 19-second answer both score a flat 10, which makes the countdown bar
+  decoration and leaves tricky mode's "gamble on partial detail" with no stake). That argument
+  mostly evaporates now that solo is leaving (see below): with 2+ seats, rank *is* a real race.
+  Don't reopen this without a reason that survives the solo point.
+- **Solo is leaving Flag Party.** Single-player was already removed once (PR #768, one online path,
+  start with 1+), and Jan's direction (2026-07-17) is that **solo geography play belongs to the 60 s
+  quiz**, which now has its own decks (`flags/decks.js`, and the icons both features share via
+  `flags/deckIcons.js`). Flag Party may disable the 1-seat game outright. Consequence for future
+  design: **don't reintroduce solo-specific scoring or a solo-only surface here.** Party is a room.
 - **Max seats — SHIPPED.** Hard cap of 20 (`MAX_SEATS` in `flags/partyRoom.js`).
   Not a platform limit (the Durable Object would take far more): a sane bound for
   the phone-only surface (scoreboard + per-tile pick avatars stay readable) plus a
