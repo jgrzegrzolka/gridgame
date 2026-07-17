@@ -7,8 +7,8 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, isFinalBlock, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
+import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, BLOCK_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, isBlockStart, isFinalBlock, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
 import { blockBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
@@ -152,6 +152,19 @@ function modeHue(/** @type {string} */ modeId) {
   return (key && METRIC_HUES[key]) || null;
 }
 
+/** The icon HTML for a **block title card** — the same artwork as {@link
+ *  modeIconHtml} but at the card's hero size (its own classes rather than the
+ *  setup row's tiny slot). Empty string for an unknown mode (the caller shows a
+ *  generic Flags card instead). */
+function blockCardIconHtml(/** @type {string} */ modeId) {
+  if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'blockcard-thumb' });
+  if (modeId === 'flags-territories') return deckIconHtml('weird', { className: 'blockcard-thumb' });
+  if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'blockcard-contour' });
+  const mode = MODE_BY_ID[modeId];
+  const key = mode ? metricKeyForRound(mode.roundId) : null;
+  return (key && METRIC_ICONS[key]) || '';
+}
+
 /**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
  * mapping can be pinned by a test (the DOM `modeShort` below is a thin `t()`
@@ -184,6 +197,33 @@ export function modeShortLabel(id) {
 export function modeFullLabel(id) {
   const ml = MODE_LABELS[id];
   return { key: ml && ml.key, fallback: ml && ml.full };
+}
+
+/**
+ * Which catalog mode a block's title card should announce, resolved from what the
+ * client actually knows about the block.
+ *
+ * - **Drafted block** (`lastPick` present) → the exact picked mode id, so a stat
+ *   block names its specific metric ("Coffee production") and a flag block names
+ *   its pool ("Flags: countries" vs "Flags: others"). This is the precise path,
+ *   and the only one in a Draft game.
+ * - **Custom / setlist block** (no `lastPick`) → derived from the question's
+ *   `roundId`, which is 1:1 with a mode for the map round and every superlative
+ *   metric (`superlative-coffee` etc.). The one exception is the two flag pools,
+ *   which **share** `roundId: 'flagPick'` and so can't be told apart from the wire
+ *   alone → returns `null`, the caller's cue to show a generic "Flags" card.
+ * - Unknown / unrenderable round id → `null` (generic), though the stale-build
+ *   guard means such a round never reaches the card anyway.
+ *
+ * @param {{ picker: string, modeId: string } | null | undefined} lastPick
+ * @param {string | undefined} roundId
+ * @returns {string | null}  a PARTY_MODES mode id, or null for the generic case
+ */
+export function blockModeId(lastPick, roundId) {
+  if (lastPick && lastPick.modeId && MODE_BY_ID[lastPick.modeId]) return lastPick.modeId;
+  if (roundId === 'flagPick') return null; // ambiguous pool → generic Flags card
+  const mode = PARTY_MODES.find((m) => m.roundId === roundId);
+  return mode ? mode.id : null;
 }
 
 /**
@@ -221,7 +261,7 @@ export function bootFlagParty() {
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
   const statusEl = $('party-status');
   const sections = {
-    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), pick: $('pt-pick'), break: $('pt-break'), final: $('pt-final'),
+    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), blockcard: $('pt-blockcard'), pick: $('pt-pick'), break: $('pt-break'), final: $('pt-final'),
   };
   const roomCodeEl = $('room-code');
   const playersEl = $('players');
@@ -242,6 +282,12 @@ export function bootFlagParty() {
   const breakMvp = $('break-mvp');
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
+  const blockCardCount = $('blockcard-count');
+  const blockCardIc = $('blockcard-ic');
+  const blockCardName = $('blockcard-name');
+  const blockCardRounds = $('blockcard-rounds');
+  const blockCardPick = $('blockcard-pick');
+  const blockCardDouble = $('blockcard-double');
   const partyModeEl = $('party-mode');
   const modeDraftBtn = $('mode-draft');
   const modeCustomBtn = $('mode-custom');
@@ -333,7 +379,7 @@ export function bootFlagParty() {
   }
   function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
-  function showSection(/** @type {'start'|'lobby'|'round'|'pick'|'break'|'final'|null} */ which) {
+  function showSection(/** @type {'start'|'lobby'|'round'|'blockcard'|'pick'|'break'|'final'|null} */ which) {
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
   }
 
@@ -989,6 +1035,32 @@ export function bootFlagParty() {
    *  double-tap can't fire two picks; reset when we leave the picking phase. */
   let pickSent = false;
 
+  // ---- block title card ----
+  // A short beat (BLOCK_INTRO_SECONDS) announcing a new block before its first
+  // round, on blocks 2..N (the opener starts play straight away). It's a
+  // client-side hold: the question is already dealt, but we show the card first
+  // and only start the round + clock + veil when the beat ends — so it costs no
+  // answer time, and because every client (host included) holds the same beat it
+  // introduces no clock drift. `blockIntroToken` guards the once-per-block-start
+  // arm against render()'s many re-runs; `blockIntroActive` is true while the
+  // beat is on screen.
+  let blockIntroTimer = 0;
+  /** @type {string | null} */
+  let blockIntroToken = null;
+  let blockIntroActive = false;
+  function armBlockIntro(/** @type {string} */ token) {
+    blockIntroToken = token;
+    blockIntroActive = true;
+    window.clearTimeout(blockIntroTimer);
+    blockIntroTimer = window.setTimeout(() => { blockIntroActive = false; render(); }, BLOCK_INTRO_SECONDS * 1000);
+  }
+  function resetBlockIntro() {
+    window.clearTimeout(blockIntroTimer);
+    blockIntroTimer = 0;
+    blockIntroToken = null;
+    blockIntroActive = false;
+  }
+
   /** True when the current reveal is a between-blocks break (a boundary round
    *  with another block to follow). Client-derived from roundIndex + totalRounds
    *  — no plan needed. */
@@ -1020,6 +1092,15 @@ export function bootFlagParty() {
       // Leaving a break (the next block's first question is here): the standings
       // we just showed become the baseline the following break diffs against.
       if (state.phase === 'question' && pendingBreakBoard) { prevBreakBoard = pendingBreakBoard; pendingBreakBoard = null; }
+      // Blocks 2..N open with a title-card beat before their first round. The
+      // question is already dealt; we hold the card and start the round + clock +
+      // veil only when the beat ends, so the card costs no answer time. Armed once
+      // per block-start (the token guards render()'s re-runs from restarting it).
+      if (state.phase === 'question' && isBlockStart(state.roundIndex, state.totalRounds)) {
+        const token = String(state.roundIndex);
+        if (blockIntroToken !== token) armBlockIntro(token);
+        if (blockIntroActive) { stopClock(); stopVeil(); showSection('blockcard'); renderBlockCard(); return; }
+      }
       // At a block boundary the reveal becomes the standings break instead of the
       // answer tiles. The clock still runs (host advances after the break beat),
       // just against the break duration; syncClock reads atBlockBreak() for it.
@@ -1037,8 +1118,10 @@ export function bootFlagParty() {
     else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
     else {
       // Lobby = a fresh game (or play-again reset): forget the block baselines so
-      // the first break of the next game shows gains-from-zero, no deltas.
+      // the first break of the next game shows gains-from-zero, no deltas, and
+      // clear any pending block-intro beat.
       prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null;
+      resetBlockIntro();
       stopClock(); stopVeil(); showSection('lobby'); renderLobby();
     }
   }
@@ -1296,6 +1379,49 @@ export function bootFlagParty() {
       pickWatch.appendChild(buildAvatar(state.picker || ''));
       pickWatch.appendChild(el('p', 'pick-watch-name', fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
     }
+  }
+
+  /** The block title card: a short beat before block 2..N's first round, naming
+   *  the block number, its mode (icon + full label, metric hue on the icon),
+   *  "5 rounds", who picked it (draft), and the double-points stakes on the final
+   *  block. Paints in `#pt-blockcard`; the round follows when the beat elapses
+   *  (see `render` / `armBlockIntro`). A big-card counterpart to the round pill's
+   *  "Zosia's pick" attribution — the deferred "full title card" from PARTY.md. */
+  function renderBlockCard() {
+    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
+    const blockNum = blockIndexForRound(state.roundIndex) + 1;
+    blockCardCount.textContent = fmt(t('party.blockCardCount', 'Block {n} of {total}'), { n: blockNum, total: totalBlocks });
+
+    const modeId = blockModeId(state.lastPick, state.question ? state.question.roundId : undefined);
+    if (modeId) {
+      blockCardIc.innerHTML = blockCardIconHtml(modeId);
+      blockCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
+      const label = modeFullLabel(modeId);
+      blockCardName.textContent = t(label.key || '', label.fallback || '');
+    } else {
+      // The one ambiguous case: a custom-setup flag block, whose pool ('countries'
+      // vs 'others') isn't on the wire — announce it generically.
+      blockCardIc.innerHTML = deckIconHtml('flags', { className: 'blockcard-thumb' });
+      blockCardIc.style.setProperty('--mc', 'currentColor');
+      blockCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
+    }
+
+    blockCardRounds.textContent = fmt(t('party.blockCardRounds', '{n} rounds'), { n: BLOCK_ROUNDS });
+
+    // Draft: name who chose this block (the big-card version of the round pill's
+    // "Zosia's pick"). Absent on a custom block (no picker).
+    blockCardPick.innerHTML = '';
+    const pickSeat = state.lastPick ? state.roster.find((r) => r.playerId === state.lastPick?.picker) : null;
+    blockCardPick.hidden = !pickSeat;
+    if (pickSeat) {
+      blockCardPick.appendChild(buildAvatar(pickSeat.playerId));
+      blockCardPick.appendChild(el('span', 'blockcard-pick-name', fmt(t('party.blockPick', "{name}'s pick"), { name: pickSeat.nickname })));
+    }
+
+    // The final block scores double and plays veiled — announce the stakes.
+    const isFinal = isFinalBlock(state.roundIndex, state.totalRounds);
+    blockCardDouble.hidden = !isFinal;
+    if (isFinal) blockCardDouble.textContent = t('party.doublePoints', 'Double points');
   }
 
   /** The between-blocks standings break: the block's MVP, then the full board

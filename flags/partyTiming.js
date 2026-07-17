@@ -54,6 +54,15 @@ export const PICK_TIMEOUT_SECONDS = 45;
  *  the reveal's clean/miss split. */
 export const BLOCK_BREAK_SECONDS = 6;
 
+/** Seconds the **block title card** holds before the first round of a new block
+ *  begins (block 2..N — the opening block starts play straight away). A short
+ *  beat announcing "Block 2 of 3 · Coffee · 5 rounds" with who picked it; the
+ *  question clock and veil start fresh *after* it, so it costs no answer time.
+ *  Client-side and uniform — every client (host included) holds the same beat, so
+ *  no clock drift is introduced (the host's authoritative reveal clock simply
+ *  starts after the card, like everyone else's). */
+export const BLOCK_INTRO_SECONDS = 2;
+
 /** Tricky mode: the reveal-timing options a host can pick per round category — a
  *  tile stays veiled until this fraction of the question window has elapsed, then
  *  it is fully clear. Every option is below 1, so a late decider always gets a
