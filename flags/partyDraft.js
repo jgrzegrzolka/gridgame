@@ -21,8 +21,9 @@ export const OPENING_MODE_ID = 'flags-all';
  *  Also the point past which "everyone picks once" stops holding anyway. */
 export const MAX_DRAFT_BLOCKS = 5;
 
-/** How many cards a picker chooses from. Small enough to be a beat, not a form. */
-export const HAND_SIZE = 5;
+/** How many cards a picker chooses from. Wide enough to give real choice across
+ *  the picture modes and a good spread of statistics, still a glance not a form. */
+export const HAND_SIZE = 10;
 
 /**
  * How many blocks a draft of `playerCount` seats plays: `players + 1`, capped at
