@@ -15,6 +15,7 @@ import {
   scoreColor,
   poolFor,
   targetFor,
+  artBaseFor,
   isQuizShowMap,
   setQuizShowMap,
   getQuizLastVariant,
@@ -345,6 +346,9 @@ export function bootFlagQuiz() {
     const budgetMs = timed && modeDef.kind === 'timed' ? modeDef.budgetMs : 0;
     const penaltyMs = timed && modeDef.kind === 'timed' ? modeDef.penaltyMs : 0;
     const modes = availableModes(pool.length);
+    // What this deck's choice tiles are made of. Outlines deals contour
+    // silhouettes from a different directory; every other deck deals flags.
+    const artBase = artBaseFor(key);
     // The scope label keeps its original job: it says WHERE you are, and is
     // empty on a deck's default variant so the row stays quiet. The deck
     // indicator beside it says WHICH GAME — the one thing the screen can't
@@ -773,7 +777,7 @@ export function bootFlagQuiz() {
         tile.className = 'flag-choice';
         tile.dataset.code = c.code;
         const img = document.createElement('img');
-        img.src = `../flags/svg/${c.code}.svg`;
+        img.src = `${artBase}${c.code}.svg`;
         img.alt = '';
         tile.appendChild(img);
         tile.addEventListener('click', () => onAnswer(c, tile));
@@ -786,7 +790,7 @@ export function bootFlagQuiz() {
       const upcoming = quiz.peek();
       if (upcoming) {
         for (const c of upcoming.choices) {
-          new Image().src = `../flags/svg/${c.code}.svg`;
+          new Image().src = `${artBase}${c.code}.svg`;
         }
       }
     }

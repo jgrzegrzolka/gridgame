@@ -1,4 +1,5 @@
 import { isSovereignFlag, isNonSovereignFlag } from './flagPools.js';
+import { CONTOUR_CODE_SET } from './contourPool.js';
 
 const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
 const QUIZ_SHOW_MAP_KEY = 'gridgame.flagquiz.showMap';
@@ -91,6 +92,10 @@ export function setQuizLastVariant(store, key) {
  * @typedef {Object} Variant
  * @property {string} label
  * @property {(c: Country) => boolean} filter
+ * @property {'flag' | 'contour'} [art] What the choice tiles are made of.
+ *   Absent means 'flag' — true of every deck but Outlines, so the default
+ *   keeps the common case quiet. Read via `artKindFor` / `artBaseFor`, never
+ *   directly, so the fallback lives in one place.
  */
 
 /**
@@ -296,7 +301,50 @@ export const VARIANTS = {
     label: 'Weird flags',
     filter: isNonSovereignFlag,
   },
+  // Feature V Phase 3. The same question as every other deck — "which of
+  // these is Italy?" — but the choices are contour silhouettes, so this is
+  // the first variant whose ART differs from the flags everything else
+  // deals. `art` is what the renderer reads to pick an asset directory.
+  //
+  // World-only, and that isn't a simplification: contour coverage is
+  // microstate-shaped. 157 of 195 sovereigns have one; the 38 without are
+  // every microstate and island nation plus Russia. Per continent that's
+  // Oceania 3/14 — a dead deck — and North America 14/23 with the whole
+  // Caribbean missing. A world pool of 157 has none of those problems.
+  outlines: {
+    label: 'Outlines',
+    filter: (c) => isSovereignFlag(c) && CONTOUR_CODE_SET.has(c.code),
+    art: 'contour',
+  },
 };
+
+/**
+ * What a variant's choice tiles are made of: 'flag' (every deck but one) or
+ * 'contour'.
+ *
+ * Declared on the variant rather than derived at each call site, because two
+ * places need it (the tile renderer and its prefetch) and a third will when
+ * Facts lands. Unknown variants fall back to 'flag' so a stale `?v=` renders
+ * something rather than 404ing on a directory that doesn't exist.
+ *
+ * @param {string} variantKey
+ * @returns {string}
+ */
+export function artKindFor(variantKey) {
+  const v = VARIANTS[variantKey];
+  return (v && v.art) ? v.art : 'flag';
+}
+
+/**
+ * The asset directory for a variant's choice tiles, relative to a page one
+ * level under the root (which is every game page).
+ *
+ * @param {string} variantKey
+ * @returns {string}
+ */
+export function artBaseFor(variantKey) {
+  return artKindFor(variantKey) === 'contour' ? '../flags/contours/' : '../flags/svg/';
+}
 
 /**
  * Which variants get a global leaderboard (and the Cosmos writes that feed

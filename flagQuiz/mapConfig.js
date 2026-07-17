@@ -74,4 +74,9 @@ export const QUIZ_MAP_CONFIG = {
   // This deck needs the map most: "which flag is Montserrat?" is a question
   // about a place the player has very likely never located.
   weird:           { url: './worldMap.svg',  crop: false },
+  // Outlines: the world view, uncropped — 157 countries spread over every
+  // continent, so there's no bbox worth cropping to. The map is NOT redundant
+  // with the question here: the choices say what a country's shape looks like,
+  // the map says where on earth it sits. Different facts.
+  outlines:        { url: './worldMap.svg',  crop: false },
 };
