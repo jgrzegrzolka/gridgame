@@ -334,13 +334,25 @@ export function applyEnterPicking(room, playerId, picker, hand) {
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (!picker) return { room, broadcasts: [] };
   const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice() };
-  return {
-    room: nextRoom,
-    broadcasts: [{
-      to: 'all',
-      message: { type: 'picking', picker, hand: hand.slice(), roundIndex: room.roundIndex, totalRounds: room.totalRounds },
-    }],
-  };
+  // Per-recipient, so "am I the picker" is **server-authoritative**: the picker's
+  // own connection is told `youPick: true` and given the hand, and everyone else
+  // gets `youPick: false` (and no hand — no need to leak it). The client never
+  // re-derives its role by comparing its own id to the picker, which is exactly
+  // what a stale / mismatched identity could get wrong (a picker seeing the
+  // watcher view). Disconnected seats get their role on reconnect via `welcome`.
+  /** @type {Broadcast[]} */
+  const broadcasts = [{
+    to: picker,
+    message: { type: 'picking', youPick: true, picker, hand: hand.slice(), roundIndex: room.roundIndex, totalRounds: room.totalRounds },
+  }];
+  for (const pid of room.present) {
+    if (pid === picker) continue;
+    broadcasts.push({
+      to: pid,
+      message: { type: 'picking', youPick: false, picker, roundIndex: room.roundIndex, totalRounds: room.totalRounds },
+    });
+  }
+  return { room: nextRoom, broadcasts };
 }
 
 /**
@@ -634,10 +646,13 @@ function welcomeBroadcast(room, playerId) {
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
-      // Draft: a reconnect mid-pick needs the current picker + hand to paint the
-      // pick screen; harmless (null) in a non-draft or non-picking room.
+      // Draft: a reconnect mid-pick needs the current picker to paint the pick
+      // screen. `youPick` is server-authoritative (this seat vs the picker), and
+      // the hand is sent only to the picker (never leaked to a watcher). All null
+      // / false in a non-draft or non-picking room.
       picker: room.picker,
-      hand: room.hand,
+      youPick: room.phase === 'picking' && room.picker === playerId,
+      hand: (room.phase === 'picking' && room.picker === playerId) ? room.hand : null,
     },
   };
 }

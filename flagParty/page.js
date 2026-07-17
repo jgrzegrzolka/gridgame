@@ -1257,7 +1257,9 @@ export function bootFlagParty() {
     const nextBlock = blockIndexForRound(state.roundIndex) + 2; // 1-based: the block being chosen
     pickPill.textContent = fmt(t('party.choosingBlock', 'Choosing block {n} of {total}'), { n: nextBlock, total: totalBlocks });
 
-    const youPick = state.you != null && state.you === state.picker;
+    // Server-authoritative: the server told us whether we're the picker (never
+    // re-derived from `you === picker`, which a stale identity could get wrong).
+    const youPick = state.youPick;
     const pickerSeat = state.roster.find((r) => r.playerId === state.picker);
     const pickerName = pickerSeat ? pickerSeat.nickname : t('party.aPlayer', 'A player');
 

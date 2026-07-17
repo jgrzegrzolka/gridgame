@@ -869,7 +869,18 @@ finally runs by default (draft never shows the tricky toggle). Applies to any **
 
 ### Refinements (2026-07-17, Jan) — BUILT on `feat/party-pick-polish` (pending PR)
 
-Two follow-ups on the shipped draft + finale, from Jan playing it:
+Three follow-ups on the shipped draft + finale, from Jan playing it:
+- **Picker identity is now server-authoritative (bug fix).** Jan (3 players): the designated picker's
+  own screen showed a *different* player choosing, while the other two correctly saw the picker. Root
+  cause: the client decided "am I the picker" by comparing its own `state.you` to the broadcast
+  picker id, which any identity hiccup breaks. Fix: `applyEnterPicking` sends **per-recipient** — the
+  picker's connection gets `youPick: true` + the hand, everyone else `youPick: false` and no hand
+  (also stops leaking the hand to watchers); `welcome` carries `youPick` for a reconnect mid-pick. The
+  client reads `youPick` instead of re-deriving it (with an old-server fallback to the id compare,
+  since client + PartyKit deploy independently). Verified end-to-end with two real clients on separate
+  origins: the captured picking messages show `youPick:true`+hand to the picker only, `false`+no-hand
+  to the watcher. (The clean 3-player + mid-game-reconnect flows were already correct in testing; this
+  hardens the one fragile path that produced the symptom.)
 - **Statistics rounds are never veiled.** The veil is a flag / outline recognition challenge; on a
   "which grows the most coffee?" round the flag is incidental, so hiding it tested the wrong skill
   (and a latent bug meant non-population stats got the *heavy* flag veil timing). `veilActive()` now
