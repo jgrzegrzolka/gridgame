@@ -577,6 +577,19 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .pick-watch-name { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary-color); text-align: center; }
 /* The "'s pick" attribution suffix on the round pill: quieter than the pill text. */
 .pill-pick { color: var(--muted-color); font-weight: 600; }
+/* The final-block "Double points" badge on the pill: a pink pill-within-the-pill
+   so the stakes read at a glance. */
+.pill-double {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--secondary-color);
+  color: var(--surface-color);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 
 /* Finish-screen choreography — the scoreboard cascades in bottom-to-top so the
    winner's row lands last (with a small victory bounce), then the sole winner

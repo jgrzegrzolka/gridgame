@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   CORRECT_POINTS,
   SPEED_BONUS,
+  FINAL_BLOCK_MULTIPLIER,
   speedBonusForRank,
   scoreRound,
 } from './partyScore.js';
@@ -50,4 +51,25 @@ test('scoreRound: solo (applySpeedBonus false) awards base only', () => {
 
 test('scoreRound: empty round scores nobody', () => {
   assert.deepEqual(scoreRound([]), {});
+});
+
+test('scoreRound: the multiplier scales base + speed bonus, wrong stays 0', () => {
+  const buzzes = [
+    { playerId: 'a', correct: true },   // base + speed[0]
+    { playerId: 'b', correct: false },  // 0
+    { playerId: 'c', correct: true },   // base + speed[1]
+  ];
+  const doubled = scoreRound(buzzes, { multiplier: FINAL_BLOCK_MULTIPLIER });
+  assert.equal(doubled.a, (CORRECT_POINTS + SPEED_BONUS[0]) * FINAL_BLOCK_MULTIPLIER);
+  assert.equal(doubled.b, 0, 'a wrong answer is 0 regardless of the multiplier');
+  assert.equal(doubled.c, (CORRECT_POINTS + SPEED_BONUS[1]) * FINAL_BLOCK_MULTIPLIER);
+});
+
+test('scoreRound: multiplier defaults to 1 (unchanged scoring)', () => {
+  const buzzes = [{ playerId: 'a', correct: true }];
+  assert.deepEqual(scoreRound(buzzes), scoreRound(buzzes, { multiplier: 1 }));
+});
+
+test('FINAL_BLOCK_MULTIPLIER is 2', () => {
+  assert.equal(FINAL_BLOCK_MULTIPLIER, 2);
 });

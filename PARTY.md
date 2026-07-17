@@ -850,12 +850,25 @@ guarantees a picker). Two findings accepted, not fixed:
   used), so left alone here. Cosmetic sibling: the "X's pick" attribution card doesn't survive a
   reconnect mid-drafted-block (the block / scores / question all do).
 
-**Deferred from Iteration 9 (a follow-up slice, noted so it isn't lost):**
-- **The final block being double points + always tricky.** The draft mechanic ships first; this is a
-  scoring/veil polish on top (double-points touches `partyScore` / `toReveal`; always-tricky-final
-  forces the veil on the last block). Parked to keep the draft PR focused, and because Jan may want
-  to react to the base draft before layering the finale stakes on.
-- **The full "next block" title card** (a big card, not just the pill attribution). The client now has
+### Final-block polish — double points + always tricky — BUILT on `feat/party-final-block` (pending PR)
+
+The block that decides the game now **scores double and is always played tricky**, so a trailing
+player who chose its terrain (draft) or just gets hot at the end can still swing it, and the veil
+finally runs by default (draft never shows the tricky toggle). Applies to any **2+-block** game
+(draft or setlist); a single-block game has no "final block" (nothing to contrast), so it's exempt.
+
+- `flags/partyPlan.js` — `isFinalBlock(index, total)` (false for a single-block game) (+ tested).
+- `flags/partyScore.js` — `scoreRound`'s `multiplier` (`FINAL_BLOCK_MULTIPLIER = 2`) scales base +
+  speed bonus; wrong stays 0; defaults to 1 (+ tested).
+- `flags/partyRoom.js` — `toReveal` doubles on the final block and rides `doubled` on the reveal (+ tested).
+- `flagParty/page.js` — the veil runs on the final block regardless of the host's tricky setting
+  (`veilActive()`), and the pill shows a pink "Double points" badge.
+- `flagParty/index.css` + i18n — `.pill-double` badge, `party.doublePoints` (en + pl).
+- Verified in-browser (solo draft, fresh-port serve): block 2/2 shows the "Double points" badge and
+  its tiles veil with tricky off; the doubled scoring is unit-pinned. 2886 tests green.
+
+**Still deferred:**
+- **The full "next block" title card** (a big card, not just the pill attribution). The client has
   what it needs (`lastPick`), so this is pure presentation whenever it's wanted.
 
 Still deferred (unchanged): the TV / Display surface; preset packs (probably dead — Draft supersedes,
