@@ -175,13 +175,9 @@ Easy mode *relaxes* the generator (fewer exclusiveGroup collisions once the metr
 
 ---
 
-## Backlog
-
-Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
-
 ### Feature V: flagQuiz — three new decks (weird flags, outlines, facts), and delete the scope toggle
 
-**Status:** designed 2026-07-16 over six mockup rounds with Jan, **no code written**. **Parked in Backlog 2026-07-17**, Jan deferred it to free the day for other work and expects to revisit the week of 2026-07-20. Promote back to `## Now` to begin.
+**Status:** designed 2026-07-16 over six mockup rounds with Jan; UI re-cut and prototyped 2026-07-17. Parked in Backlog the same morning, then **promoted to `## Now` 2026-07-17** when Jan said *"ok, you know what. lets start building."* **Phase 1a shipped.** Next step: **Phase 1b**.
 
 **The UI was re-cut on 2026-07-17** (same day, a separate conversation) and two rounds of working prototype settled it. Jan approved: *"yes. that make sense. lets do this this way."* The play-screen design below is the approved one. **What changed: `playModeEl` no longer becomes a button that opens the burger.** Jan rejected that (*"there is this dropdown for changing mode and it is opening burger, which i dont like"*), and the deck switcher moved into the burger instead. Phase 1 is untouched by all of this and remains the next step.
 
@@ -288,7 +284,7 @@ The 14 `:all` entries are thin: 4 devices hold `countries:60s:all`, the other 8 
 
 That table, not the data, is why Phase 1 is three PRs.
 
-- [ ] **Phase 1a — make the read paths shape-tolerant. Ship this alone, first.** Teach all four guards to accept **2- or 3-part** keys (`quizCompute`, `lowerWinsFromConfigKey`, `bestKeyFromConfigKey`, and widen `CONFIG_KEY_RE` to `(:(sov|all))?`). **Zero behaviour change** — nothing writes 2-part keys yet. This disarms the badge trap before it can fire and covers the stale-client window: SWA ships client + API in one deploy, but a browser with cached JS keeps POSTing 3-part keys for a while, and those must keep working. Tests pin both shapes.
+- [x] **Phase 1a — make the read paths shape-tolerant. Ship this alone, first.** *(Shipped 2026-07-17.)* Taught all four guards to accept **2- or 3-part** keys (`quizCompute`, `lowerWinsFromConfigKey`, `bestKeyFromConfigKey`, and widened `CONFIG_KEY_RE` to `(:(sov|all))?`). **Zero behaviour change** — nothing writes 2-part keys yet. Disarms the badge trap before it can fire and covers the stale-client window: SWA ships client + API in one deploy, but a browser with cached JS keeps POSTing 3-part keys for a while, and those must keep working. **Two more pinning sites turned up than the research found**: `validate.test.js` pinned the old shape via `validateQuizRecord` *and* `validateConfigKeyParam` (the leaderboard route's URL param). Six call sites total, not four. Verified against the 23 real prod configKeys: all still pass, and `computeQuiz` fed the real key set still counts rather than zeroing.
 - [ ] **Phase 1b — flip the client.** `quizRecordConfigKey` drops its third part; `bestKey` drops `includeAll`; delete the toggle and its storage key; add `weird` to `VARIANTS`. **`weird` / `outlines` / `facts` start recording for free** — `quizRecordKey.js` deliberately does not enumerate variants *"so we don't have to redeploy the API every time a new variant ships in the client"*. Only `sovPoolSizes` in `dailyMe.js` needs new entries, and only if the new decks should count toward `quiz60sClearedVariants` (see the achievements open call — the current lean is no).
 - [ ] **Phase 1c — backfill, once 1b has settled.** Rename 102 `:sov` entries to bare, **drop the 14 `:all`**, bump `v: 2`. Follow `infra/operations.md`'s migration policy; `scripts/backfill-quiz-v1.cjs` is the working template (pure `planRow()`, dry-run by default, idempotent, system fields stripped). 48 docs is a seconds-long run. Per the policy, do **not** set `backfilled: true`: no analytical field is being defaulted in, this is a key rename plus a delete.
 
@@ -318,7 +314,13 @@ That table, not the data, is why Phase 1 is three PRs.
 - [Round 6 — superseded 2026-07-17; the "label opens the burger" design](https://claude.ai/code/artifact/e356a3e9-d3f7-4890-b9dd-c7ce623ff9aa)
 - [**2026-07-17 prototype — the approved design**](https://claude.ai/code/artifact/033111e7-79e9-44ef-8c17-c6e8efa3f574). Live: four real 375 × 553 iframes, real tokens, real assets (the actual `gl` / `fo` / `pr` / `hk` flags and `contours/it.svg`). Tap the indicator, open the burger, switch decks. Phones 1 vs 2 are the argument for the icon (identical screens, different pool); 3 vs 4 are the reactive burger side by side.
 
+
 ---
+
+## Backlog
+
+Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
+
 
 ### Feature Q: Observability for the player-facing site (Application Insights)
 

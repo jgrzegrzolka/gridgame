@@ -233,12 +233,24 @@ test('validateQuizRecord: short deviceId → invalid_deviceId', () => {
 
 test('validateQuizRecord: malformed configKey → invalid_configKey', () => {
   const b = validQuizBody();
-  b.configKey = 'countries:60s';
-  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
   b.configKey = 'countries:60s:wat';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+  b.configKey = 'countries';
+  assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+  b.configKey = 'countries:60s:sov:extra';
   assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
   b.configKey = '';
   assert.deepEqual(validateQuizRecord(b), { ok: false, error: 'invalid_configKey' });
+});
+
+// Feature V Phase 1a: the scope segment is optional now. Both shapes have to
+// pass the gate at once — cached clients keep POSTing the 3-part form.
+test('validateQuizRecord: accepts both configKey shapes', () => {
+  const b = validQuizBody();
+  for (const k of ['countries:60s', 'weird:60s', 'facts:60s', 'countries:60s:sov', 'countries:60s:all']) {
+    b.configKey = k;
+    assert.equal(validateQuizRecord(b).ok, true, `expected ${k} accepted`);
+  }
 });
 
 test('validateQuizRecord: oversize configKey → invalid_configKey', () => {
@@ -541,9 +553,17 @@ test('validateConfigKeyParam: rejects non-string / empty / oversized', () => {
 });
 
 test('validateConfigKeyParam: rejects shape-violating strings', () => {
-  assert.deepEqual(validateConfigKeyParam('countries:60s'), { ok: false, error: 'invalid_configKey' });
   assert.deepEqual(validateConfigKeyParam('Countries:60s:sov'), { ok: false, error: 'invalid_configKey' });
   assert.deepEqual(validateConfigKeyParam('countries:60s:wat'), { ok: false, error: 'invalid_configKey' });
+  assert.deepEqual(validateConfigKeyParam('countries'), { ok: false, error: 'invalid_configKey' });
+});
+
+// The leaderboard route reads `{configKey}` off the URL, so it has to accept
+// the 2-part shape the moment the client starts asking for it.
+test('validateConfigKeyParam: accepts both configKey shapes', () => {
+  for (const k of ['countries:60s', 'weird:60s', 'countries:60s:sov']) {
+    assert.equal(validateConfigKeyParam(k).ok, true, `expected ${k} accepted`);
+  }
 });
 
 const { validateProfileDeletionBody } = require('./validate');
