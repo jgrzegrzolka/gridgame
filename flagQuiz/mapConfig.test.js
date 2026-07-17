@@ -72,13 +72,13 @@ test('no cropExcludes entry is dead — each code is in its own variant pool', (
   assert.deepEqual(dead, [], dead.join('; '));
 });
 
-test('the two whole-world decks are the only uncropped ones', () => {
+test('only the whole-world decks are uncropped', () => {
   const uncropped = Object.entries(QUIZ_MAP_CONFIG)
     .filter(([, cfg]) => !cfg.crop)
     .map(([key]) => key)
     .sort();
-  // `countries` and `weird` are both global pools — there's no meaningful bbox
-  // to crop to. Every continent deck must crop, or it renders the whole world
-  // for a regional round.
-  assert.deepEqual(uncropped, ['countries', 'weird']);
+  // countries / weird / outlines are all global pools — there's no meaningful
+  // bbox to crop to. Every continent deck must crop, or it renders the whole
+  // world for a regional round.
+  assert.deepEqual(uncropped, ['countries', 'outlines', 'weird']);
 });

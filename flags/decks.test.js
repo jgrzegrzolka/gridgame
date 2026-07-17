@@ -35,10 +35,10 @@ test('every deck has an icon, and every icon has a deck or is a future phase', (
   for (const d of DECKS) {
     assert.ok(/** @type {readonly string[]} */ (DECK_ICON_IDS).includes(d.id), `deck "${d.id}" has no icon`);
   }
-  // outlines + facts have icons already (they ship in flagParty) but no deck
-  // until Phases 3/4. That's expected, not drift.
+  // `facts` has an icon already (it ships in flagParty) but no deck until
+  // Phase 4. That's expected, not drift.
   const pending = DECK_ICON_IDS.filter((id) => !DECKS.some((d) => d.id === id));
-  assert.deepEqual([...pending], ['outlines', 'facts'], 'unexpected icon/deck mismatch');
+  assert.deepEqual([...pending], ['facts'], 'unexpected icon/deck mismatch');
 });
 
 test('deckOf maps each variant to its deck', () => {

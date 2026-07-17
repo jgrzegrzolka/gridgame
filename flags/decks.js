@@ -46,6 +46,15 @@ export const DECKS = [
     label: 'Weird',
     variants: ['weird'],
   },
+  // World-only: contour coverage is microstate-shaped (Oceania is 3/14), so
+  // there's no continent slice worth offering. One variant means
+  // `deckHasScopes` is false and the burger renders no scope list — derived,
+  // not declared, so this entry is the whole change.
+  {
+    id: 'outlines',
+    label: 'Shapes',
+    variants: ['outlines'],
+  },
 ];
 
 /** Fallback for a variant no deck claims — treated as an ordinary flags deck. */

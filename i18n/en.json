@@ -706,7 +706,8 @@
     "north-america": "North America",
     "south-america": "South America",
     "oceania": "Oceania",
-    "weird": "Weird flags"
+    "weird": "Weird flags",
+    "outlines": "Outlines"
   },
   "month": {
     "jan": "Jan",

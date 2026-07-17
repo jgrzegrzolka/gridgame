@@ -39,8 +39,11 @@ import {
   isQuizShowMap,
   setQuizShowMap,
   variantHasLeaderboard,
+  artKindFor,
+  artBaseFor,
 } from './quiz.js';
 import { loadCountries } from './group.js';
+import { CONTOUR_CODES, CONTOUR_CODE_SET } from './contourPool.js';
 import {
   sovereignPool,
   nonSovereignPool,
@@ -127,7 +130,7 @@ test('pickQuestion throws if input is too small', () => {
   );
 });
 
-test('VARIANTS contains the expected 8 keys in display order, weird last', () => {
+test('VARIANTS contains the expected 9 keys in display order, new decks last', () => {
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
     'europe',
@@ -137,6 +140,7 @@ test('VARIANTS contains the expected 8 keys in display order, weird last', () =>
     'south-america',
     'oceania',
     'weird',
+    'outlines',
   ]);
 });
 
@@ -1144,4 +1148,50 @@ test('variantHasLeaderboard is true only for the All-countries variant', () => {
   }
   // Unknown / junk variant keys never get a board.
   assert.equal(variantHasLeaderboard('atlantis'), false);
+});
+
+// Feature V Phase 3. The first variant whose RENDERER differs: Outlines asks
+// the same question ("which of these is Italy?") but the choices are contour
+// silhouettes, not flags. That's a different asset directory, so the variant
+// has to declare what it's made of rather than every call site guessing.
+test('VARIANTS carries an art kind, defaulting to flags', () => {
+  assert.equal(artKindFor('countries'), 'flag');
+  assert.equal(artKindFor('europe'), 'flag');
+  assert.equal(artKindFor('weird'), 'flag', 'weird is a different POOL, not different art');
+  assert.equal(artKindFor('outlines'), 'contour');
+});
+
+test('artKindFor falls back to flag for an unknown variant', () => {
+  // A stale ?v= must render something rather than 404 on a bogus directory.
+  assert.equal(artKindFor('mars'), 'flag');
+});
+
+test('artBaseFor maps the kind to its asset directory', () => {
+  assert.equal(artBaseFor('countries'), '../flags/svg/');
+  assert.equal(artBaseFor('outlines'), '../flags/contours/');
+});
+
+test('poolFor("outlines") is exactly the contour pool', () => {
+  const pool = poolFor('outlines', countries);
+  assert.deepEqual(pool.map((c) => c.code).sort(), [...CONTOUR_CODES].sort());
+  assert.equal(pool.length, 157);
+});
+
+// The contract that keeps the deck playable: every code it can deal must have
+// an asset on disk, or a round renders a broken image. contourPool.js is
+// generated from the assets, so this pins the join rather than trusting it.
+test('every outlines answer has a contour asset, and is sovereign', () => {
+  for (const c of poolFor('outlines', countries)) {
+    assert.ok(CONTOUR_CODE_SET.has(c.code), `${c.code} has no contour`);
+    assert.ok(isSovereignFlag(c), `${c.code} is not sovereign — outlines is a sovereign deck`);
+  }
+});
+
+test('outlines is a strict subset of the countries deck', () => {
+  const sovereign = new Set(poolFor('countries', countries).map((c) => c.code));
+  for (const c of poolFor('outlines', countries)) {
+    assert.ok(sovereign.has(c.code), `${c.code} is in outlines but not in countries`);
+  }
+  assert.ok(poolFor('outlines', countries).length < sovereign.size,
+    'outlines must be narrower than countries — 38 sovereigns have no contour');
 });
