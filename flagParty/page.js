@@ -7,8 +7,9 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from '../flags/partyPlan.js';
+import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, buildPartyPlan, isBlockBoundary, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
+import { blockBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
@@ -106,7 +107,6 @@ const SETUP_ICONS = {
   'flags-all': deckIconHtml('flags', { className: 'gs-thumb' }),
   'flags-territories': deckIconHtml('weird', { className: 'gs-thumb' }),
   'map-outlines': deckIconHtml('outlines', { className: 'gs-contour' }),
-  worldFacts: deckIconHtml('facts'),
 };
 
 /** Metric key (the flags/metrics registry) for a superlative round id. The
@@ -198,7 +198,7 @@ export function bootFlagParty() {
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
   const statusEl = $('party-status');
   const sections = {
-    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), final: $('pt-final'),
+    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), break: $('pt-break'), final: $('pt-final'),
   };
   const roomCodeEl = $('room-code');
   const playersEl = $('players');
@@ -215,6 +215,10 @@ export function bootFlagParty() {
   const footEl = $('round-foot');
   const finalSub = $('final-sub');
   const finalBoard = $('final-board');
+  const breakPill = $('break-pill');
+  const breakMvp = $('break-mvp');
+  const breakStandingsLabel = $('break-standings-label');
+  const breakBoard = $('break-board');
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
   const roundToSettingsBtn = /** @type {HTMLButtonElement} */ ($('round-to-settings'));
   const joinError = $('join-error');
@@ -299,7 +303,7 @@ export function bootFlagParty() {
   }
   function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
-  function showSection(/** @type {'start'|'lobby'|'round'|'final'|null} */ which) {
+  function showSection(/** @type {'start'|'lobby'|'round'|'break'|'final'|null} */ which) {
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
   }
 
@@ -308,13 +312,14 @@ export function bootFlagParty() {
   }
 
   // ---- game setup (host-only lobby plan) ----
-  // The host picks which modes play and how many rounds each. The fixed picture
-  // trio (flags / territories / map) each get a stepper + toggle; the
-  // open-ended world-facts family collapses to one shared count spread across
-  // the metrics the host enables via chips. The choice is local (persisted per
-  // device) until Start, when buildPartyPlan() turns it into a segment plan that
-  // rides the 'start' message and the server validates; this is just the picker.
-  /** @typedef {{ picture: Record<string, { on: boolean, n: number }>, facts: { on: boolean, n: number, metrics: Record<string, boolean> } }} SetupState */
+  // The host picks which modes play. Under the block model every enabled mode is
+  // one 5-round block, so a mode is simply on or off. The fixed picture trio
+  // (flags / territories / map) each get a toggle; the world-facts family is a
+  // row of colour chips, and each chosen statistic is its own block (five rounds
+  // of that one metric). The choice is local (persisted per device) until Start,
+  // when buildPartyPlan() turns it into a segment plan that rides the 'start'
+  // message and the server validates; this is just the picker.
+  /** @typedef {{ picture: Record<string, { on: boolean }>, facts: { metrics: Record<string, boolean> } }} SetupState */
   /** @type {SetupState} */
   const setupState = loadSetup();
   // Game-wide tricky-mode toggle (not per-mode). Persisted per device like the
@@ -357,78 +362,71 @@ export function bootFlagParty() {
     try { window.localStorage.setItem(REVEAL_KEY, JSON.stringify(revealState)); } catch { /* private mode */ }
   }
 
-  // A function declaration (hoisted) rather than a const arrow: defaultSetup()
-  // calls it via the `const setupState = loadSetup()` init above, which runs
-  // before a const would be initialized (temporal dead zone).
-  function clampRounds(/** @type {number} */ n) { return Math.min(MAX_ROUNDS_PER_MODE, Math.max(1, Math.floor(n))); }
-
-  /** True when the setup would produce at least one round (a game needs rounds). */
+  /** True when the setup would produce at least one block (a game needs rounds). */
   function hasAnyRounds(/** @type {SetupState} */ s) {
     if (PICTURE_MODES.some((m) => s.picture[m.id] && s.picture[m.id].on)) return true;
-    return s.facts.on && METRIC_MODES.some((m) => s.facts.metrics[m.id]);
+    return METRIC_MODES.some((m) => s.facts.metrics[m.id]);
   }
 
-  /** The default setup: everything on, ~2 rounds per mode. Every picture mode is
-   *  2 rounds; the world-facts group is on with all metrics chosen and a shared
-   *  count of 2 per metric (so a fresh game is 3 picture modes × 2 + the facts,
-   *  the "2 of each" default Jan asked for). Scales as metrics are added — the
-   *  facts count tracks 2 × the metric count (clamped). */
+  /** The default setup: 3 blocks on, not everything. Flags: countries and Map:
+   *  outlines play, plus one statistic block (Population — the most familiar
+   *  metric). Flags: others and every other statistic start off, so a fresh game
+   *  is 3 blocks / 15 rounds. Since each statistic is now its own block,
+   *  everything-on would be dozens of blocks, so the default deliberately picks a
+   *  single stat to keep the length sane. */
   function defaultSetup() {
-    /** @type {Record<string, { on: boolean, n: number }>} */
+    /** @type {Record<string, { on: boolean }>} */
     const picture = {};
-    for (const m of PICTURE_MODES) picture[m.id] = { on: true, n: 2 };
+    for (const m of PICTURE_MODES) picture[m.id] = { on: m.id !== 'flags-territories' };
     /** @type {Record<string, boolean>} */
     const metrics = {};
-    for (const m of METRIC_MODES) metrics[m.id] = true;
-    return { picture, facts: { on: true, n: clampRounds(2 * METRIC_MODES.length), metrics } };
+    for (const m of METRIC_MODES) metrics[m.id] = m.id === 'superlative-pop';
+    return { picture, facts: { metrics } };
   }
 
   /** Coerce a stored / partial setup to a valid one, filling gaps from the
-   *  default and never returning an all-off (zero-round) state. */
+   *  default and never returning an all-off (zero-block) state. Reads only `on`
+   *  for picture modes and the per-metric booleans; a stored per-mode count (`n`,
+   *  the retired stepper) or the old facts master toggle (`facts.on`) is dropped. */
   function sanitizeSetup(/** @type {any} */ raw) {
     const def = defaultSetup();
-    /** @type {Record<string, { on: boolean, n: number }>} */
+    /** @type {Record<string, { on: boolean }>} */
     const picture = {};
     for (const m of PICTURE_MODES) {
       const e = raw && raw.picture && raw.picture[m.id];
-      picture[m.id] = e && typeof e.n === 'number' && e.n >= 1
-        ? { on: !!e.on, n: clampRounds(e.n) } : def.picture[m.id];
+      picture[m.id] = e && typeof e === 'object' ? { on: !!e.on } : def.picture[m.id];
     }
+    // An old store carried a facts master toggle: if it was off, treat every
+    // metric as off regardless of the per-metric flags (they were inert then).
+    const factsWasOff = raw && raw.facts && typeof raw.facts.on === 'boolean' && !raw.facts.on;
     /** @type {Record<string, boolean>} */
     const metrics = {};
     for (const m of METRIC_MODES) {
       const v = raw && raw.facts && raw.facts.metrics ? raw.facts.metrics[m.id] : undefined;
-      metrics[m.id] = v == null ? def.facts.metrics[m.id] : !!v;
+      metrics[m.id] = factsWasOff ? false : (v == null ? def.facts.metrics[m.id] : !!v);
     }
-    const fRaw = raw && raw.facts;
-    const n = fRaw && typeof fRaw.n === 'number' && fRaw.n >= 1 ? clampRounds(fRaw.n) : def.facts.n;
-    let on = fRaw ? !!fRaw.on : def.facts.on;
-    if (on && !METRIC_MODES.some((m) => metrics[m.id])) on = false;
-    const s = { picture, facts: { on, n, metrics } };
+    const s = { picture, facts: { metrics } };
     return hasAnyRounds(s) ? s : def;
   }
 
   /** One-time migration of a returning host's old per-mode plan (PLAN_KEY) into
-   *  the new grouped shape: picture modes carry over 1:1; the metric modes fold
-   *  into the facts group, their counts summing to the shared count. */
+   *  the block shape: any picture mode with a positive count carries over as on;
+   *  each metric that had rounds becomes its own statistic block. Round counts are
+   *  dropped — a mode is now a block, not a count. */
   function migrateModeState(/** @type {any} */ raw) {
-    /** @type {Record<string, { on: boolean, n: number }>} */
+    /** @type {Record<string, { on: boolean }>} */
     const picture = {};
     for (const m of PICTURE_MODES) {
       const e = raw[m.id];
-      picture[m.id] = e && typeof e.n === 'number' && e.n >= 1 ? { on: !!e.on, n: clampRounds(e.n) } : { on: true, n: 1 };
+      picture[m.id] = { on: !!(e && e.on && (typeof e.n !== 'number' || e.n >= 1)) };
     }
     /** @type {Record<string, boolean>} */
     const metrics = {};
-    let n = 0;
     for (const m of METRIC_MODES) {
       const e = raw[m.id];
-      const on = !!(e && e.on);
-      metrics[m.id] = on;
-      if (on && e && typeof e.n === 'number') n += clampRounds(e.n);
+      metrics[m.id] = !!(e && e.on);
     }
-    const anyMetric = METRIC_MODES.some((m) => metrics[m.id]);
-    return sanitizeSetup({ picture, facts: { on: anyMetric, n: Math.max(1, n), metrics } });
+    return sanitizeSetup({ picture, facts: { metrics } });
   }
 
   function loadSetup() {
@@ -446,14 +444,16 @@ export function bootFlagParty() {
   function saveSetup() {
     try { window.localStorage.setItem(SETUP_KEY, JSON.stringify(setupState)); } catch { /* private mode */ }
   }
-  /** The plan to send on Start: picture segments + the world-facts deal. */
+  /** The plan to send on Start: one block per enabled mode (picture or statistic). */
   function currentPlan() {
     return buildPartyPlan(setupState);
   }
-  /** Effective world-facts round count (0 unless the group is on with >=1 metric). */
-  function factsRounds() {
-    return setupState.facts.on && METRIC_MODES.some((m) => setupState.facts.metrics[m.id])
-      ? setupState.facts.n : 0;
+  /** How many blocks the current setup plays: enabled picture modes + enabled statistics. */
+  function blocksOn() {
+    let n = 0;
+    for (const m of PICTURE_MODES) if (setupState.picture[m.id] && setupState.picture[m.id].on) n += 1;
+    for (const m of METRIC_MODES) if (setupState.facts.metrics[m.id]) n += 1;
+    return n;
   }
 
   // Thin `t()` wrappers over the pure resolvers (modeFullLabel / modeShortLabel
@@ -482,21 +482,6 @@ export function bootFlagParty() {
     s.dataset.i18nKey = key;
     return s;
   }
-  /** A −/count/+ stepper wired to callbacks. @param {() => number} getN @param {(d: number) => void} onStep */
-  function stepperEl(getN, onStep) {
-    const stepper = el('span', 'gs-stepper');
-    const minus = el('button', 'gs-step', '−');
-    /** @type {HTMLButtonElement} */ (minus).type = 'button';
-    minus.setAttribute('aria-label', t('party.fewer', 'Fewer rounds'));
-    minus.addEventListener('click', () => onStep(-1));
-    const count = el('span', 'gs-count', String(getN()));
-    const plus = el('button', 'gs-step', '+');
-    /** @type {HTMLButtonElement} */ (plus).type = 'button';
-    plus.setAttribute('aria-label', t('party.more', 'More rounds'));
-    plus.addEventListener('click', () => onStep(1));
-    stepper.append(minus, count, plus);
-    return stepper;
-  }
   /** The site's shared switch, wired to callbacks. @param {() => boolean} getOn @param {(on: boolean) => void} onToggle @param {string} ariaLabel */
   function toggleEl(getOn, onToggle, ariaLabel) {
     const sw = document.createElement('label');
@@ -516,34 +501,26 @@ export function bootFlagParty() {
   function buildSetup() {
     gsModesEl.innerHTML = '';
 
-    // The fixed picture trio — a picture icon, a stepper, and a toggle each.
+    // The fixed picture trio — a picture icon, a name, and a toggle each. Every
+    // enabled mode is exactly one 5-round block, so there's no per-mode count and
+    // no need to label each row "1 block": on or off.
     gsModesEl.appendChild(sectionLabel('party.groupPictures', 'Flags & maps'));
     for (const m of PICTURE_MODES) {
       const row = el('div', 'gs-mode');
       row.dataset.mode = m.id;
       row.appendChild(iconSpan(SETUP_ICONS[m.id]));
       row.appendChild(el('span', 'gs-name', modeLabel(m.id)));
-      row.appendChild(stepperEl(() => setupState.picture[m.id].n, (d) => stepPicture(m.id, d)));
       row.appendChild(toggleEl(() => setupState.picture[m.id].on, (on) => togglePicture(m.id, on), modeLabel(m.id)));
       gsModesEl.appendChild(row);
     }
 
-    // The open-ended world-facts family: one shared "Guess the stat" control
-    // (a stepper for how many facts rounds + a master toggle) with colour chips
-    // below for which facts are in play. The shared count is spread across the
-    // enabled metrics at Start (buildPartyPlan / distributeWorldFacts), so a new
-    // metric costs one chip here, not one more row.
+    // The world-facts family: a row of colour chips, one per statistic. Each
+    // chosen statistic is its own block (five rounds of that metric), so a chip is
+    // a block toggle — no master switch. A new metric costs one chip here.
     gsModesEl.appendChild(sectionLabel('party.groupFacts', 'World facts'));
-    const factsRow = el('div', 'gs-mode gs-facts');
-    factsRow.id = 'gs-facts';
-    factsRow.appendChild(iconSpan(SETUP_ICONS.worldFacts));
-    const factsName = el('span', 'gs-name');
-    factsName.appendChild(el('span', 'gs-opt-title', t('party.factsLead', 'Guess the stat')));
-    factsName.appendChild(el('span', 'gs-opt-hint', t('party.factsHint', 'Picked at random from the facts you choose')));
-    factsRow.appendChild(factsName);
-    factsRow.appendChild(stepperEl(() => setupState.facts.n, stepFacts));
-    factsRow.appendChild(toggleEl(() => setupState.facts.on, toggleFacts, t('party.factsLead', 'Guess the stat')));
-    gsModesEl.appendChild(factsRow);
+    const factsHint = el('p', 'gs-facts-hint', t('party.factsHint2', 'Each statistic you pick is its own block'));
+    factsHint.id = 'gs-facts-hint';
+    gsModesEl.appendChild(factsHint);
 
     const chips = el('div', 'gs-chips');
     chips.id = 'gs-chips';
@@ -644,101 +621,51 @@ export function bootFlagParty() {
   }
 
   // ---- setup mutations ----
-  function stepPicture(/** @type {string} */ id, /** @type {number} */ d) {
-    const st = setupState.picture[id];
-    st.n = clampRounds(st.n + d);
-    saveSetup();
-    updateSetup();
-  }
   function togglePicture(/** @type {string} */ id, /** @type {boolean} */ on) {
-    // A game needs rounds — refuse a toggle-off that would zero everything.
-    const tentative = { ...setupState, picture: { ...setupState.picture, [id]: { ...setupState.picture[id], on } } };
+    // A game needs at least one block — refuse a toggle-off that would zero everything.
+    const tentative = { ...setupState, picture: { ...setupState.picture, [id]: { on } } };
     if (!hasAnyRounds(tentative)) { updateSetup(); return; }
     setupState.picture[id].on = on;
     saveSetup();
     updateSetup();
   }
-  function stepFacts(/** @type {number} */ d) {
-    setupState.facts.n = clampRounds(setupState.facts.n + d);
-    saveSetup();
-    updateSetup();
-  }
-  function toggleFacts(/** @type {boolean} */ on) {
-    // Turning the group on with no fact chosen enables them all (a sensible
-    // default over an on-but-empty state that plays nothing).
-    if (on && !METRIC_MODES.some((m) => setupState.facts.metrics[m.id])) {
-      for (const m of METRIC_MODES) setupState.facts.metrics[m.id] = true;
-    }
-    const tentative = { ...setupState, facts: { ...setupState.facts, on } };
-    if (!hasAnyRounds(tentative)) { updateSetup(); return; }
-    setupState.facts.on = on;
-    saveSetup();
-    updateSetup();
-  }
   function toggleMetric(/** @type {string} */ id) {
     const metrics = setupState.facts.metrics;
-    // Tapping a chip while the group is off re-activates the group with just it.
-    if (!setupState.facts.on) {
-      for (const m of METRIC_MODES) metrics[m.id] = m.id === id;
-      setupState.facts.on = true;
-      saveSetup();
-      updateSetup();
-      return;
-    }
     const next = !metrics[id];
-    const enabledAfter = METRIC_MODES.filter((m) => (m.id === id ? next : metrics[m.id]));
-    // Never leave the group on with zero facts (turn it off via its own toggle
-    // instead) — snap the chip back.
-    if (!next && enabledAfter.length === 0) { updateSetup(); return; }
+    // Each statistic is its own block — a chip is a block toggle. A game needs at
+    // least one block, so refuse a toggle-off that would zero everything.
+    const tentative = { ...setupState, facts: { metrics: { ...metrics, [id]: next } } };
+    if (!hasAnyRounds(tentative)) { updateSetup(); return; }
     metrics[id] = next;
     saveSetup();
     updateSetup();
   }
 
-  /** Repaint counts, toggles, chips, the round total, and the collapsed mix. */
+  /** Repaint toggles, chips, the block count, and the collapsed mode mix. */
   function updateSetup() {
-    let total = 0;
     gsMixEl.innerHTML = '';
     for (const m of PICTURE_MODES) {
       const st = setupState.picture[m.id];
       const row = /** @type {HTMLElement | null} */ (gsModesEl.querySelector(`[data-mode="${m.id}"]`));
       if (row) {
         row.classList.toggle('off', !st.on);
-        const c = row.querySelector('.gs-count'); if (c) c.textContent = String(st.n);
         const inp = /** @type {HTMLInputElement | null} */ (row.querySelector('input')); if (inp) inp.checked = st.on;
       }
-      if (st.on) {
-        total += st.n;
-        const part = el('span');
-        part.append(document.createTextNode(`${modeShort(m.id)} `), el('span', 'n', String(st.n)));
-        gsMixEl.appendChild(part);
-      }
+      if (st.on) gsMixEl.appendChild(el('span', '', modeShort(m.id)));
     }
-    // World-facts lead row: count, toggle, off state.
-    const factsRow = /** @type {HTMLElement | null} */ (gsModesEl.querySelector('#gs-facts'));
-    if (factsRow) {
-      factsRow.classList.toggle('off', !setupState.facts.on);
-      const c = factsRow.querySelector('.gs-count'); if (c) c.textContent = String(setupState.facts.n);
-      const inp = /** @type {HTMLInputElement | null} */ (factsRow.querySelector('input')); if (inp) inp.checked = setupState.facts.on;
-    }
-    // Chips: coloured (on) when the group is on and the metric is chosen.
+    // Chips: each is a block toggle, coloured (on) when its statistic is chosen.
     for (const m of METRIC_MODES) {
       const chip = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"]`);
       if (chip) {
-        const active = setupState.facts.on && !!setupState.facts.metrics[m.id];
+        const active = !!setupState.facts.metrics[m.id];
         chip.classList.toggle('on', active);
         chip.classList.toggle('off', !active);
         chip.setAttribute('aria-pressed', String(active));
+        if (active) gsMixEl.appendChild(el('span', '', modeShort(m.id)));
       }
     }
-    const fr = factsRounds();
-    if (fr > 0) {
-      total += fr;
-      const part = el('span');
-      part.append(document.createTextNode(`${t('party.groupFacts', 'World facts')} `), el('span', 'n', String(fr)));
-      gsMixEl.appendChild(part);
-    }
-    gsRoundsEl.textContent = String(total);
+    // The meta reads "N blocks" — the game's length unit is now the block.
+    gsRoundsEl.textContent = String(blocksOn());
   }
 
   /** On a language switch, repaint the JS-set labels (sections, rows, chips, mix). */
@@ -751,10 +678,8 @@ export function bootFlagParty() {
       const nm = row && row.querySelector('.gs-name');
       if (nm) nm.textContent = modeLabel(m.id);
     }
-    const factsTitle = gsModesEl.querySelector('#gs-facts .gs-opt-title');
-    if (factsTitle) factsTitle.textContent = t('party.factsLead', 'Guess the stat');
-    const factsHint = gsModesEl.querySelector('#gs-facts .gs-opt-hint');
-    if (factsHint) factsHint.textContent = t('party.factsHint', 'Picked at random from the facts you choose');
+    const factsHint = gsModesEl.querySelector('#gs-facts-hint');
+    if (factsHint) factsHint.textContent = t('party.factsHint2', 'Each statistic you pick is its own block');
     for (const m of METRIC_MODES) {
       const lbl = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"] .gs-chip-label`);
       if (lbl) lbl.textContent = modeShort(m.id);
@@ -920,7 +845,10 @@ export function bootFlagParty() {
     // present player got it right) snaps on; a miss holds so the correct flag
     // can be read. Question time is fixed. (flagQuiz's correct-fast/wrong-slow.)
     const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
-    clockTotalMs = (mode === 'reveal' ? revealSecondsFor(clean) : QUESTION_SECONDS) * 1000;
+    // A block-boundary reveal holds longer (the standings break) than an ordinary
+    // reveal; the host counts this down before sending `next`, same as any reveal.
+    const revealSecs = atBlockBreak() ? BLOCK_BREAK_SECONDS : revealSecondsFor(clean);
+    clockTotalMs = (mode === 'reveal' ? revealSecs : QUESTION_SECONDS) * 1000;
     clockDeadline = Date.now() + clockTotalMs;
     // Only the question phase shows the shrinking bar. The reveal has no timer of
     // its own — a sub-second bar read as a flicker — so it runs its clock unseen
@@ -973,6 +901,31 @@ export function bootFlagParty() {
     footEl.innerHTML = '';
   }
 
+  // ---- between-blocks break ----
+  // The break is a longer reveal, not a room phase: at a block boundary the room
+  // stays in `reveal`, the host just holds BLOCK_BREAK_SECONDS instead of the
+  // usual reveal beat, and every client paints the standings break in place of
+  // the answer. `prevBreakBoard` is the scoreboard snapshot from the last break
+  // (null before the first), so each break diffs against the last to show block
+  // gains and rank movement. Reset when a fresh game begins (lobby).
+  /** @type {Array<{ playerId: string, nickname: string, score: number }> | null} */
+  let prevBreakBoard = null;
+  /** The baseline for the NEXT break, captured when a break is first shown but
+   *  not committed to `prevBreakBoard` until the next block's question arrives —
+   *  so re-renders of the same break keep diffing against the old baseline
+   *  (committing early would zero the deltas mid-break). */
+  let pendingBreakBoard = null;
+  /** Guards the once-per-break capture against repeated renders of one break. */
+  let breakSnapToken = null;
+
+  /** True when the current reveal is a between-blocks break (a boundary round
+   *  with another block to follow). Client-derived from roundIndex + totalRounds
+   *  — no plan needed. */
+  function atBlockBreak() {
+    return state.phase === 'reveal' && !!state.reveal
+      && isBlockBoundary(state.roundIndex, state.totalRounds);
+  }
+
   // ---- render ----
   function render() {
     if (!activeRoom) { stopClock(); stopVeil(); showSection('start'); return; }
@@ -990,6 +943,13 @@ export function bootFlagParty() {
       if (action === 'reload') { markUpdateReload(); stopClock(); stopVeil(); window.location.reload(); return; }
       if (action === 'blocked') { stopClock(); stopVeil(); showSection('round'); renderUpdateNotice(); return; }
       clearUpdateReload();
+      // Leaving a break (the next block's first question is here): the standings
+      // we just showed become the baseline the following break diffs against.
+      if (state.phase === 'question' && pendingBreakBoard) { prevBreakBoard = pendingBreakBoard; pendingBreakBoard = null; }
+      // At a block boundary the reveal becomes the standings break instead of the
+      // answer tiles. The clock still runs (host advances after the break beat),
+      // just against the break duration; syncClock reads atBlockBreak() for it.
+      if (atBlockBreak()) { stopVeil(); showSection('break'); renderBreak(); syncClock(); return; }
       showSection('round'); renderRound(); syncClock();
       // The veil + name reveal animate during the question only; the reveal phase
       // always shows crisp tiles (stopVeil pins `--veil-p` to 1 and clears
@@ -998,7 +958,12 @@ export function bootFlagParty() {
       if (state.phase === 'question' && (state.tricky || nameActive())) startVeil(); else stopVeil();
     }
     else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
-    else { stopClock(); stopVeil(); showSection('lobby'); renderLobby(); }
+    else {
+      // Lobby = a fresh game (or play-again reset): forget the block baselines so
+      // the first break of the next game shows gains-from-zero, no deltas.
+      prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null;
+      stopClock(); stopVeil(); showSection('lobby'); renderLobby();
+    }
   }
 
   function renderLobby() {
@@ -1031,7 +996,12 @@ export function bootFlagParty() {
     // whole room); guests just have Home. The adjacent `·` hides itself via CSS
     // when this button is hidden, so there's nothing else to toggle.
     roundToSettingsBtn.hidden = !state.isHost;
-    roundPill.textContent = fmt(t('party.round', 'Round {n} of {total}'), {
+    // The pill carries the act structure: which block of how many, and the round
+    // within the whole game. Makes the block boundaries legible during play, not
+    // just at the break.
+    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
+    roundPill.textContent = fmt(t('party.roundBlock', 'Block {b}/{blocks} · Round {n}/{total}'), {
+      b: blockIndexForRound(state.roundIndex) + 1, blocks: totalBlocks,
       n: state.roundIndex + 1, total: state.totalRounds,
     });
     const isReveal = state.phase === 'reveal' && state.reveal;
@@ -1176,6 +1146,61 @@ export function bootFlagParty() {
       node.appendChild(strip);
     }
     return node;
+  }
+
+  /** The between-blocks standings break: the block's MVP, then the full board
+   *  with rank movement since the last break and each player's own gap to the
+   *  leader. Paints in `#pt-break`; the host's clock advances to the next block
+   *  after BLOCK_BREAK_SECONDS. */
+  function renderBreak() {
+    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
+    const endedBlock = blockIndexForRound(state.roundIndex) + 1;
+    breakPill.textContent = fmt(t('party.afterBlock', 'After block {n} of {total}'), { n: endedBlock, total: totalBlocks });
+
+    const board = state.scoreboard || [];
+    const { rows, mvp } = blockBreak(prevBreakBoard, board);
+
+    // MVP banner — hidden when nobody scored in the block.
+    const mvpRow = mvp ? rows.find((r) => r.playerId === mvp) : null;
+    breakMvp.innerHTML = '';
+    breakMvp.hidden = !mvpRow;
+    if (mvpRow) {
+      breakMvp.appendChild(buildAvatar(mvpRow.playerId));
+      const txt = el('span', 'break-mvp-text');
+      txt.append(document.createTextNode(`${t('party.blockMvp', 'Best of the block')} · `), el('span', 'break-mvp-name', mvpRow.nickname));
+      breakMvp.appendChild(txt);
+      breakMvp.appendChild(el('span', 'break-mvp-gain', `+${mvpRow.blockGain}`));
+    }
+
+    breakStandingsLabel.textContent = t('party.standings', 'Standings');
+
+    breakBoard.innerHTML = '';
+    rows.forEach((r, i) => {
+      const you = r.playerId === state.you;
+      const row = el('div', 'scoreline' + (you ? ' you' : ' other'));
+      row.appendChild(el('span', 'rank', String(i + 1)));
+      row.appendChild(buildAvatar(r.playerId));
+      row.appendChild(el('span', 'nm', r.nickname));
+      // The gap to the leader reads on your own row only — it's your race to run.
+      if (you && r.gapToLeader > 0) {
+        row.appendChild(el('span', 'gap', fmt(t('party.behind', '{n} behind'), { n: r.gapToLeader })));
+      }
+      // Rank movement since the last break (null on the first break — no prior
+      // standing to move from).
+      if (r.rankDelta != null && r.rankDelta !== 0) {
+        const up = r.rankDelta > 0;
+        row.appendChild(el('span', `delta ${up ? 'up' : 'down'}`, `${up ? '▲' : '▼'}${Math.abs(r.rankDelta)}`));
+      }
+      row.appendChild(el('span', 'sc', String(r.score)));
+      breakBoard.appendChild(row);
+    });
+
+    // Capture this board as the baseline for the next break, once per break.
+    const token = String(state.roundIndex);
+    if (breakSnapToken !== token) {
+      breakSnapToken = token;
+      pendingBreakBoard = board.map((e) => ({ playerId: e.playerId, nickname: e.nickname, score: e.score }));
+    }
   }
 
   function renderRevealFoot() {

@@ -13,19 +13,13 @@ import {
   validatePlan,
   PICTURE_MODES,
   METRIC_MODES,
-  distributeWorldFacts,
   buildPartyPlan,
+  BLOCK_ROUNDS,
+  blockIndexForRound,
+  blockCount,
+  isBlockEnd,
+  isBlockBoundary,
 } from './partyPlan.js';
-
-/** Small seeded LCG so the shuffle-based helpers are deterministic in tests.
- *  @param {number} seed */
-function seeded(seed) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-}
 
 test('DEFAULT_PLAN: 4 of each — sovereign flag, non-sovereign flag, sovereign map, superlative', () => {
   assert.deepEqual(DEFAULT_PLAN, [
@@ -152,101 +146,126 @@ test('PARTY_MODES: split into a fixed picture trio and the metric family', () =>
   for (const m of METRIC_MODES) assert.equal(m.group, 'metric');
 });
 
-test('distributeWorldFacts: no metrics or n<=0 yields []', () => {
-  assert.deepEqual(distributeWorldFacts(4, [], seeded(1)), []);
-  assert.deepEqual(distributeWorldFacts(0, ['superlative-pop'], seeded(1)), []);
-  assert.deepEqual(distributeWorldFacts(-3, ['superlative-pop'], seeded(1)), []);
-});
-
-test('distributeWorldFacts: deals exactly n rounds, only from enabled metrics', () => {
-  const deal = distributeWorldFacts(7, ['superlative-pop', 'superlative-area'], seeded(42));
-  assert.equal(deal.length, 7);
-  for (const id of deal) assert.ok(['superlative-pop', 'superlative-area'].includes(id));
-});
-
-test('distributeWorldFacts: balances the deal (counts differ by at most one)', () => {
-  const deal = distributeWorldFacts(7, ['superlative-pop', 'superlative-area', 'superlative-density'], seeded(7));
-  /** @type {Record<string, number>} */
-  const counts = {};
-  for (const id of deal) counts[id] = (counts[id] || 0) + 1;
-  const vals = Object.values(counts);
-  assert.equal(vals.reduce((a, b) => a + b, 0), 7);
-  assert.ok(Math.max(...vals) - Math.min(...vals) <= 1, `unbalanced: ${JSON.stringify(counts)}`);
-  // 6 across 3 is a perfect 2/2/2
-  const even = distributeWorldFacts(6, ['superlative-pop', 'superlative-area', 'superlative-density'], seeded(3));
-  /** @type {Record<string, number>} */
-  const c2 = {};
-  for (const id of even) c2[id] = (c2[id] || 0) + 1;
-  assert.deepEqual(Object.values(c2).sort(), [2, 2, 2]);
-});
-
-test('distributeWorldFacts: drops unknown / non-metric ids', () => {
-  const deal = distributeWorldFacts(4, ['superlative-pop', 'flags-all', 'nope'], seeded(9));
-  assert.equal(deal.length, 4);
-  for (const id of deal) assert.equal(id, 'superlative-pop');
-});
-
-test('distributeWorldFacts: deterministic under a seeded rng', () => {
-  const a = distributeWorldFacts(6, ['superlative-pop', 'superlative-area', 'superlative-density'], seeded(123));
-  const b = distributeWorldFacts(6, ['superlative-pop', 'superlative-area', 'superlative-density'], seeded(123));
-  assert.deepEqual(a, b);
-});
-
-test('buildPartyPlan: picture modes become one segment each, off/zero dropped', () => {
+test('buildPartyPlan: each on picture mode is one BLOCK_ROUNDS block, off dropped', () => {
   const plan = buildPartyPlan({
     picture: {
-      'flags-all': { on: true, n: 3 },
-      'flags-territories': { on: false, n: 2 },
-      'map-outlines': { on: true, n: 4 },
+      'flags-all': { on: true },
+      'flags-territories': { on: false },
+      'map-outlines': { on: true },
     },
-    facts: { on: false, n: 4, metrics: {} },
-  }, seeded(1));
+    facts: { metrics: {} },
+  });
   assert.deepEqual(plan, [
-    { poolId: 'sovereign', roundId: 'flagPick', rounds: 3 },
-    { poolId: 'sovereign', roundId: 'mapPick', rounds: 4 },
+    { poolId: 'sovereign', roundId: 'flagPick', rounds: BLOCK_ROUNDS },
+    { poolId: 'sovereign', roundId: 'mapPick', rounds: BLOCK_ROUNDS },
   ]);
 });
 
-test('buildPartyPlan: world-facts expands to n one-round metric segments', () => {
+test('buildPartyPlan: each enabled statistic is its own BLOCK_ROUNDS block', () => {
   const plan = buildPartyPlan({
-    picture: { 'flags-all': { on: true, n: 2 } },
-    facts: { on: true, n: 5, metrics: { 'superlative-pop': true, 'superlative-area': true } },
-  }, seeded(5));
-  assert.equal(totalRounds(plan), 7); // 2 flag + 5 facts
-  const factsSegs = plan.filter((s) => s.roundId.startsWith('superlative'));
-  assert.equal(factsSegs.reduce((sum, s) => sum + s.rounds, 0), 5);
-  for (const s of factsSegs) {
-    assert.equal(s.rounds, 1);
-    assert.ok(['superlative', 'superlative-area'].includes(s.roundId));
-  }
+    picture: { 'flags-all': { on: true } },
+    facts: { metrics: { 'superlative-pop': true, 'superlative-coffee': true } },
+  });
+  assert.deepEqual(plan, [
+    { poolId: 'sovereign', roundId: 'flagPick', rounds: BLOCK_ROUNDS },
+    { poolId: 'sovereign', roundId: 'superlative', rounds: BLOCK_ROUNDS },       // population
+    { poolId: 'sovereign', roundId: 'superlative-coffee', rounds: BLOCK_ROUNDS },
+  ]);
+  // three enabled modes = three whole blocks
+  assert.equal(blockCount(plan), 3);
+  // every stat block is one metric only (never mixed)
+  for (const s of plan) assert.equal(s.rounds, BLOCK_ROUNDS);
 });
 
-test('buildPartyPlan: facts on but no metric enabled contributes nothing', () => {
+test('buildPartyPlan: statistic blocks follow the catalog order, after the picture blocks', () => {
   const plan = buildPartyPlan({
-    picture: { 'map-outlines': { on: true, n: 3 } },
-    facts: { on: true, n: 4, metrics: { 'superlative-pop': false } },
-  }, seeded(2));
-  assert.deepEqual(plan, [{ poolId: 'sovereign', roundId: 'mapPick', rounds: 3 }]);
+    picture: { 'map-outlines': { on: true } },
+    facts: { metrics: { 'superlative-area': true, 'superlative-pop': true } }, // pop precedes area in the catalog
+  });
+  assert.deepEqual(plan.map((s) => s.roundId), ['mapPick', 'superlative', 'superlative-area']);
+});
+
+test('buildPartyPlan: no metric enabled contributes no stat blocks', () => {
+  const plan = buildPartyPlan({
+    picture: { 'map-outlines': { on: true } },
+    facts: { metrics: { 'superlative-pop': false } },
+  });
+  assert.deepEqual(plan, [{ poolId: 'sovereign', roundId: 'mapPick', rounds: BLOCK_ROUNDS }]);
+});
+
+test('buildPartyPlan: blockCount equals enabled picture modes + enabled statistics', () => {
+  const plan = buildPartyPlan({
+    picture: { 'flags-all': { on: true }, 'flags-territories': { on: true }, 'map-outlines': { on: false } },
+    facts: { metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-gdp': true } },
+  });
+  // 2 picture + 3 statistics = 5 blocks
+  assert.equal(blockCount(plan), 5);
 });
 
 test('buildPartyPlan: output always survives validatePlan', () => {
   const plan = buildPartyPlan({
     picture: {
-      'flags-all': { on: true, n: 3 },
-      'flags-territories': { on: true, n: 2 },
-      'map-outlines': { on: true, n: 2 },
+      'flags-all': { on: true },
+      'flags-territories': { on: true },
+      'map-outlines': { on: true },
     },
-    facts: { on: true, n: 4, metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-density': true } },
-  }, seeded(11));
+    facts: { metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-density': true } },
+  });
   const cleaned = validatePlan(plan);
   assert.ok(cleaned, 'built plan should validate');
   assert.equal(totalRounds(/** @type {any} */ (cleaned)), totalRounds(plan));
 });
 
-test('buildPartyPlan: deterministic under a seeded rng', () => {
-  const setup = {
-    picture: { 'flags-all': { on: true, n: 2 } },
-    facts: { on: true, n: 6, metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-density': true } },
-  };
-  assert.deepEqual(buildPartyPlan(setup, seeded(99)), buildPartyPlan(setup, seeded(99)));
+// ---- blocks (Iteration 8) ----
+
+test('BLOCK_ROUNDS is 5', () => {
+  assert.equal(BLOCK_ROUNDS, 5);
+});
+
+test('blockIndexForRound: 0-4 -> 0, 5-9 -> 1, 10-14 -> 2', () => {
+  assert.deepEqual([0, 1, 4, 5, 9, 10, 14].map(blockIndexForRound), [0, 0, 0, 1, 1, 2, 2]);
+});
+
+test('blockCount: one block per 5 rounds, final short block rounds up', () => {
+  const three = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 15 }];
+  assert.equal(blockCount(three), 3);
+  // three whole 5-round segments = 3 blocks
+  assert.equal(blockCount([
+    { poolId: 'sovereign', roundId: 'flagPick', rounds: 5 },
+    { poolId: 'nonSovereign', roundId: 'flagPick', rounds: 5 },
+    { poolId: 'sovereign', roundId: 'mapPick', rounds: 5 },
+  ]), 3);
+  // a stray short tail still counts as its own block
+  assert.equal(blockCount([{ poolId: 'sovereign', roundId: 'flagPick', rounds: 7 }]), 2);
+});
+
+test('isBlockEnd: true at each 5-round boundary except the game\'s final round', () => {
+  const plan = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 15 }]; // 3 blocks, 15 rounds
+  const ends = [];
+  for (let i = 0; i < totalRounds(plan); i++) if (isBlockEnd(plan, i)) ends.push(i);
+  // breaks after round 4 (end of block 1) and round 9 (end of block 2), NOT round 14 (final board)
+  assert.deepEqual(ends, [4, 9]);
+});
+
+test('isBlockEnd fires exactly blockCount - 1 times', () => {
+  const plan = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 20 }]; // 4 blocks
+  let breaks = 0;
+  for (let i = 0; i < totalRounds(plan); i++) if (isBlockEnd(plan, i)) breaks++;
+  assert.equal(breaks, blockCount(plan) - 1);
+});
+
+test('isBlockEnd: a single short block never breaks (nothing follows it)', () => {
+  const plan = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 3 }];
+  assert.equal(isBlockEnd(plan, 2), false);
+});
+
+test('isBlockBoundary: keyed on index + total, matches isBlockEnd for a plan', () => {
+  const plan = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 15 }]; // 15 rounds
+  for (let i = 0; i < 15; i++) {
+    assert.equal(isBlockBoundary(i, 15), isBlockEnd(plan, i), `round ${i}`);
+  }
+  // the client's view: boundaries at 4 and 9, never at the final round 14
+  assert.equal(isBlockBoundary(4, 15), true);
+  assert.equal(isBlockBoundary(9, 15), true);
+  assert.equal(isBlockBoundary(14, 15), false);
 });
