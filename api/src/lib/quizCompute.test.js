@@ -123,10 +123,59 @@ test('cleared: a variant not in the pool-size map is silently skipped (drift saf
   assert.deepEqual(out.quiz60sClearedVariants, ['oceania']);
 });
 
+// Feature V Phase 1a. THE dangerous one: this loop `continue`s past any key
+// it can't parse, so a 2-part key that isn't handled here doesn't error, it
+// just makes every achievement read as if the player never played. These
+// tests are the tripwire.
+test('2-part configKeys count toward every 60s counter', () => {
+  const out = computeQuiz({
+    records: {
+      'europe:60s': { score: 40, attempts: 3 },
+      'weird:60s': { score: 22, attempts: 2 },
+    },
+  }, POOL);
+  assert.equal(out.quizAttempts60s, 5);
+  assert.equal(out.quizVariantsTouched60s, 2);
+  assert.equal(out.quizBestScore60s, 40);
+});
+
+test('2-part configKeys count toward every endurance counter', () => {
+  const out = computeQuiz({
+    records: { 'countries:all': { score: 0, attempts: 4 } },
+  }, POOL);
+  assert.equal(out.quizAttemptsAll, 4);
+  assert.equal(out.quizVariantsTouchedAll, 1);
+  assert.equal(out.quizAllLowWrongAny, 0);
+  assert.deepEqual(out.quizAllPerfectedVariants, ['countries']);
+});
+
+test('2-part and 3-part keys for the same variant fold into one variant', () => {
+  // The mid-migration state: 1b writes "europe:60s" while the pre-1c doc
+  // still holds "europe:60s:sov". Same deck, so touched-count must not
+  // double and best must span both.
+  const out = computeQuiz({
+    records: {
+      'europe:60s:sov': { score: 30, attempts: 2 },
+      'europe:60s': { score: 44, attempts: 1 },
+    },
+  }, POOL);
+  assert.equal(out.quizVariantsTouched60s, 1);
+  assert.equal(out.quizAttempts60s, 3);
+  assert.equal(out.quizBestScore60s, 44);
+});
+
+test('2-part key clears a variant when it meets the sov pool size', () => {
+  const out = computeQuiz({
+    records: { 'oceania:60s': { score: POOL.oceania, attempts: 1 } },
+  }, POOL);
+  assert.deepEqual(out.quiz60sClearedVariants, ['oceania']);
+});
+
 test('malformed configKey (wrong segment count) is skipped, not crashed', () => {
   const out = computeQuiz({
     records: {
       'bad-key': { score: 100, attempts: 5 },
+      'a:b:c:d': { score: 100, attempts: 5 },
       'europe:60s:sov': { score: 10, attempts: 1 },
     },
   }, POOL);

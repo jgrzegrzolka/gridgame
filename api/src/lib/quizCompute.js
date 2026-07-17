@@ -101,7 +101,15 @@ function computeQuiz(doc, sovPoolSizes) {
   for (const [configKey, entry] of Object.entries(doc.records)) {
     if (!entry || typeof entry !== 'object') continue;
     const parts = configKey.split(':');
-    if (parts.length !== 3) continue;
+    // Both configKey shapes: "<variant>:<mode>" (current) and the legacy
+    // "<variant>:<mode>:<sov|all>". Variant and mode sit at the same indices
+    // either way, and the dropped scope segment never fed this compute.
+    //
+    // This `continue` is load-bearing and silent: a shape this loop can't
+    // parse doesn't throw, it just makes every quiz counter read as if the
+    // player never played, which would revoke already-earned achievements.
+    // Widen the gate BEFORE any client emits a new shape, never after.
+    if (parts.length !== 2 && parts.length !== 3) continue;
     const [variant, mode] = parts;
 
     const score = typeof entry.score === 'number' && Number.isFinite(entry.score) ? entry.score : null;

@@ -50,19 +50,30 @@ const NICKNAME_KEY = 'gridgame.nickname';
  * pushing parsing into quiz.js would couple it to a server format
  * that doesn't belong there.
  *
- * Returns null when configKey doesn't match the expected three-part
- * shape — defensive against malformed server responses (the row
- * wouldn't have been written via the normal client path either way,
- * but a stale backfill could leave odd keys).
+ * Accepts both wire shapes (Feature V Phase 1a):
+ *   "<variant>:<mode>"           — current; sovereign pool, so it maps to
+ *                                  the same unsuffixed key `bestKey(v, m)`
+ *                                  builds. A legacy `:sov` key and its
+ *                                  renamed 2-part form therefore land on
+ *                                  the same slot, which is what lets the
+ *                                  Phase 1c rename be a no-op for players.
+ *   "<variant>:<mode>:<sov|all>" — legacy, pre-Feature-V.
+ *
+ * Returns null for any other shape — defensive against malformed server
+ * responses (the row wouldn't have been written via the normal client path
+ * either way, but a stale backfill could leave odd keys). Note the failure
+ * here is silent by nature: return null and the device simply never
+ * restores that PB, with nothing logged. Widen before the wire changes.
  *
  * @param {string} configKey
  * @returns {string | null}
  */
 function bestKeyFromConfigKey(configKey) {
   const parts = configKey.split(':');
-  if (parts.length !== 3) return null;
+  if (parts.length !== 2 && parts.length !== 3) return null;
   const [variant, mode, scope] = parts;
-  if (!variant || !mode || (scope !== 'sov' && scope !== 'all')) return null;
+  if (!variant || !mode) return null;
+  if (parts.length === 3 && scope !== 'sov' && scope !== 'all') return null;
   const base = mode === 'all'
     ? `flagquiz.best.${variant}.${mode}.v2`
     : `flagquiz.best.${variant}.${mode}`;

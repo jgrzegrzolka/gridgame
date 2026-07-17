@@ -135,20 +135,68 @@ test('applyHydratePayload: quiz records write to bestKey-shaped storage keys', (
   );
 });
 
-test('applyHydratePayload: skips quiz entries with malformed configKey shape', () => {
-  // Anything other than three colon-separated parts (with scope ∈ {sov,all})
-  // is suspect — likely a stale row from an older schema. Don't write
-  // something nonsensical to the user's localStorage.
+// Feature V Phase 1a. This is the silent one: if the 2-part shape isn't
+// parsed here, a linked device stops restoring quiz PBs entirely and says
+// nothing about it. The 2-part key means "sovereign pool", which is exactly
+// what bestKey() emits with no suffix — so these must land on the same
+// storage keys the 3-part `:sov` form does.
+test('applyHydratePayload: 2-part configKeys hydrate onto the sovereign bestKey', () => {
   const store = makeStore();
   const counts = applyHydratePayload({
     store,
     payload: {
       daily: [],
       records: {
-        'europe:60s': { score: 1, durationMs: 1 },           // missing scope
+        'europe:60s': { score: 45, durationMs: 54566 },
+        'countries:all': { score: 12, durationMs: 180000 },
+        'weird:60s': { score: 22, durationMs: 60000 },
+      },
+    },
+  });
+  assert.equal(counts.quizWritten, 3);
+  assert.equal(
+    store.getItem('flagquiz.best.europe.60s'),
+    JSON.stringify({ score: 45, time: 54566 }),
+  );
+  // `all` mode keeps its .v2 semantic-switch segment, and gains no .all suffix.
+  assert.equal(
+    store.getItem('flagquiz.best.countries.all.v2'),
+    JSON.stringify({ score: 12, time: 180000 }),
+  );
+  assert.equal(
+    store.getItem('flagquiz.best.weird.60s'),
+    JSON.stringify({ score: 22, time: 60000 }),
+  );
+});
+
+test('applyHydratePayload: 2-part and 3-part sovereign keys agree on the storage key', () => {
+  // The rename in Phase 1c turns "europe:60s:sov" into "europe:60s". Both
+  // must resolve to the same localStorage slot or the backfill would strand
+  // a PB under a second key.
+  const a = makeStore();
+  applyHydratePayload({ store: a, payload: { daily: [], records: { 'europe:60s:sov': { score: 9, durationMs: 5 } } } });
+  const b = makeStore();
+  applyHydratePayload({ store: b, payload: { daily: [], records: { 'europe:60s': { score: 9, durationMs: 5 } } } });
+  assert.deepEqual([...a.map.keys()], [...b.map.keys()]);
+});
+
+test('applyHydratePayload: skips quiz entries with malformed configKey shape', () => {
+  // Two or three colon-separated parts (scope, when present, ∈ {sov,all}).
+  // Anything else is suspect — likely a stale row from an older schema.
+  // Don't write something nonsensical to the user's localStorage.
+  const store = makeStore();
+  const counts = applyHydratePayload({
+    store,
+    payload: {
+      daily: [],
+      records: {
         'europe:60s:bogus': { score: 1, durationMs: 1 },     // unknown scope
         ':60s:sov': { score: 1, durationMs: 1 },             // empty variant
         'europe::sov': { score: 1, durationMs: 1 },          // empty mode
+        ':60s': { score: 1, durationMs: 1 },                 // empty variant, 2-part
+        'europe:': { score: 1, durationMs: 1 },              // empty mode, 2-part
+        'europe': { score: 1, durationMs: 1 },               // one part
+        'a:b:c:d': { score: 1, durationMs: 1 },              // four parts
         'europe:60s:sov': { score: 1, durationMs: 1 },       // OK
       },
     },
