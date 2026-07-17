@@ -181,7 +181,9 @@ Items here are not blocking current work but deserve durable memory — the next
 
 ### Feature V: flagQuiz — three new decks (weird flags, outlines, facts), and delete the scope toggle
 
-**Status:** designed 2026-07-16 over six mockup rounds with Jan, **no code written**. **Parked in Backlog 2026-07-17** — Jan deferred it to free the day for other work, and expects to revisit the week of 2026-07-20. Nothing is blocked: the design is settled, Phase 1 is the next step whenever it starts, and the open calls listed at the bottom are small. Promote back to `## Now` to begin.
+**Status:** designed 2026-07-16 over six mockup rounds with Jan, **no code written**. **Parked in Backlog 2026-07-17**, Jan deferred it to free the day for other work and expects to revisit the week of 2026-07-20. Promote back to `## Now` to begin.
+
+**The UI was re-cut on 2026-07-17** (same day, a separate conversation) and two rounds of working prototype settled it. Jan approved: *"yes. that make sense. lets do this this way."* The play-screen design below is the approved one. **What changed: `playModeEl` no longer becomes a button that opens the burger.** Jan rejected that (*"there is this dropdown for changing mode and it is opening burger, which i dont like"*), and the deck switcher moved into the burger instead. Phase 1 is untouched by all of this and remains the next step.
 
 **Goal.** Flag Party has three question types; flagQuiz has one. Bring the other two over (`mapPick` → "Outlines", `superlative` → "Facts"), plus the non-sovereign pool as its own deck ("Weird flags" — Jan's name, and better than "Territories & other flags"). Along the way, delete the "Include territories & other flags" toggle and the first-visit picker.
 
@@ -201,13 +203,19 @@ Ten decks, one axis. **There is no new URL param and no new axis**: `?v=` alread
 
 \* open call — see below. **17 configurations, down from today's 28** (7 variants × 2 modes × 2 scopes), while adding three question types.
 
-#### Why the UI change is one label
+#### The UI: one subtle indicator, and a burger that reacts (approved 2026-07-17)
 
-Rounds 2–5 designed a type-chip row, then a three-pill picker (`Flags ▾ | Europe ▾ | 60s ▾`), then a result-screen picker. **All of it was wrong and Jan called it** — *"maybe we should keep what we have now? its kind of nice and minimal."*
+Rounds 2–5 designed a type-chip row, then a three-pill picker (`Flags ▾ | Europe ▾ | 60s ▾`), then a result-screen picker. **All of it was wrong and Jan called it**: *"maybe we should keep what we have now? its kind of nice and minimal."* Round 6 landed on "the label opens the burger", and **Jan rejected that too**. The approved design has three parts:
 
-The play row already solved this. `Europe · 60s | all · 0:47.231` — the variant is a **label**, the mode is a **switcher**, because *two options fit inline and seven don't*. Ten decks still don't fit inline. The rule was already right; the only gap was that nothing on the play screen says the burger holds nine other games.
+1. **The play screen carries one icon**, in the existing `.play-timer` row, showing which deck you are in. It is tappable but deliberately carries no affordance. Jan: *"it does not need to indicate that its clickable... we can keep screen cleaner."* Tapping it opens a small popover with the four decks.
+2. **The burger holds the four-way deck switcher**, as four `.pill`s.
+3. **The burger reacts to the deck.** Jan: *"when you press wierd flag eg, than burger change so it does not allow to pick europe anymore."* Only Flags has scopes, so under Weird / Outlines / Facts the continent list is **not rendered at all**. Not disabled, not greyed: absent. The deck decides which scopes are legal, and the menu says so by its shape.
 
-**So: `playModeEl` becomes a button that opens the burger.** Dead text becomes the door. No new component, no vertical cost — and the play screen ends up *lighter* than today, because `60s | all` vanishes on Facts via the `:not(:empty)::after` rules that already exist (`flagQuiz/index.css`, `.play-mode` / `.mode-toggle`).
+**Why one icon and not a four-way toggle in the row.** A four-way toggle was prototyped and measured first. It fits the default (312px of 327px available) but **overflows the moment a continent is scoped**: 375px for Europe, 422px for South America. Four 44px targets cost 176px, over half the row, and no tuning closes it (the three `·` separators are 21px each; deleting all of them claws back 63px). One icon needs **160px, leaving 167px of slack**, and every state fits including the worst case. The row ends up quieter than today's.
+
+**Why the icon earns its place at all**, which is narrower than it looks: Outlines and Facts are self-evident from the screen (you are looking at a contour or a stat question). **Flags and Weird flags are the only pair that render identically**, four flag tiles either way, and nothing else on screen tells you whether you are in the 195-flag country pool or the 54-flag territory pool. That one disambiguation is most of the icon's job, which is exactly why "very subtle" is right.
+
+The play screen also ends up *lighter* than today, because `60s | all` vanishes on Facts via the `:not(:empty)::after` rules that already exist (`flagQuiz/index.css`, `.play-mode` / `.mode-toggle`).
 
 #### Findings that shaped this (measured 2026-07-16, don't re-derive)
 
@@ -215,7 +223,24 @@ The play row already solved this. `Europe · 60s | all · 0:47.231` — the vari
 - **Scope isn't in the URL**, so a shared `?v=africa` plays a different pool per recipient. Making it a variant fixes that.
 - **Contour coverage is microstate-shaped.** 157/195 sovereigns have one. The 38 without are *every* microstate and island nation, plus **Russia** (antimeridian, same reason the US is excluded from the NA crop). Per continent: SA 12/12, Africa 49/54, Asia 42/47, Europe 37/45, **NA 14/23** (whole Caribbean gone), **Oceania 3/14 — dead**. This is why world-only matters: it deletes the "can I have Europe outlines?" question entirely.
 - **The phone has no headroom.** iPhone SE / Safari = 553 px visible. `--page-top: 104px` is spent before any game (reserving for a 70 px `--strip-height`). Flags get ~240 px; the contour map already falls past the fold. Any added row is expensive — which is why the pills died.
-- **The pill-dropdown mechanism already exists** in `common.css` (`.pill`, `.color-count-side` / `.color-count-options`), consumer: `colorCountPicker.js`. Not needed by this design, but noted — if a picker is ever wanted, promote that rather than write one.
+- **The pill-dropdown mechanism already exists** in `common.css` (`.pill`, `.color-count-side` / `.color-count-options`), consumer: `colorCountPicker.js`. **This design uses it**: the play-screen popover is `.color-count-side` / `.color-count-options`, the burger's four-way row is four `.pill`s. Promote, do not write a new one.
+
+#### Findings from the 2026-07-17 prototype (measured, don't re-derive)
+
+- **All four deck icons already ship.** `flagParty/page.js`'s `SETUP_ICONS` has exactly these four, designed as a matched set: `flags-all` (a France tricolour thumbnail, `flags/svg/fr.svg`), `flags-territories` (**the Jolly Roger**, inline SVG), `map-outlines` (the real `flags/contours/it.svg`), `worldFacts` (an ascending stat-bar chart). Sizing is `.gs-thumb` (24 × 18) / `.gs-contour` (22 × 22) in `flagParty/index.css`. **Promote these with Flag Party as the second consumer; do not redraw.** The repo's "wait for the second consumer" rule is satisfied exactly now.
+- **The Jolly Roger is the right icon and its own code comment says why**: *"a flag with no country ... unmistakably not a specific country."* It reads as a symbol *for* the non-sovereign pool rather than a sample *from* it. (The intuitive alternative, Nepal's pennant, is actively wrong: Nepal is sovereign, so the one flag everyone would draw for "weird flags" is in the **other** deck.)
+- **Row width at natural size, against 327px available** (375 minus 2 × 24px page padding), measured in a real 375 × 553 viewport:
+
+  | state | four-way toggle | one icon |
+  |---|---|---|
+  | Default (All countries, 60s) | 312px (+15) | **160px (+167)** |
+  | Scoped, Europe | 375px (**−48**) | 243px (+84) |
+  | Scoped, South America | 422px (**−95**) | 290px (+37) |
+  | Facts | 246px (+81) | 114px (+213) |
+
+- **Labels are free at a 44px tap target.** Icon-plus-label measures byte-identical to pictures-only, because the text fits *inside* the target. What buys width is the tap target, not the picture. Only below 44px do labels start costing.
+- **The four icons do not read as a set at small sizes.** Flags and Weird are solid colour rectangles; Outlines and Facts are thin dark marks on nothing. Two carry visual weight, two do not. This never showed in Flag Party because there they sit in a vertical list with labels and room to breathe. Fix when building: give the contour and the chart a matching rounded surface tile so all four occupy the same footprint.
+- **Two prototype traps, both cost a rebuild.** (1) A phone mocked from `<div>`s resolves `.choices`'s `min(90vw, 480px)` and `.burger-panel`'s `max-width: 600px` override against the *host page*, not the phone: the flags render 480px wide and the fold reading is garbage. Use a real 375 × 553 iframe. (2) Summing a flex row's children reports the **clamped** width, because the row compresses to fit its container and hides the overflow. Measure with `width: max-content; position: absolute` or the prototype will tell you everything fits.
 
 #### ⚠️ Landmine for Phase 4 (Facts)
 
@@ -224,22 +249,25 @@ The play row already solved this. `Europe · 60s | all · 0:47.231` — the vari
 #### Phases (each = one branch off `main` + one PR; Jan merges)
 
 - [ ] **Phase 1 — scope toggle → `weird` deck.** Delete `isQuizIncludeAll` / `setQuizIncludeAll` / `buildScopeToggleLi` / the `gridgame.flagquiz.includeAll` key / `bestKey`'s `.all` branch / `flagsGamePool`'s `includeAll` arg at this call site. Add `weird` to `VARIANTS` — **a plain filter, no `type` field needed**, since it asks the same question ("which flag is X?") over a different pool. **Ships with an API change**: `api/src/lib/quizRecordKey.js`'s `CONFIG_KEY_RE` drops its `(sov|all)` segment, and `quizRecordConfigKey` drops the third part — client and API must deploy in lockstep. Needs a read-path migration for existing `.all`-suffixed personal bests. *Highest-risk phase; do it alone, while the only thing that can break is understood.*
-- [ ] **Phase 2 — delete the picker, make the label the door.** Remove `buildVariantPicker`, `#quiz-picker`, the `.picker-tile` CSS block, `flagQuiz/continents/*.svg`, and the `isFirstVisit` branch in `page.js`. **Keep `getQuizLastVariant`/`setQuizLastVariant`** — that's what makes a bare `flagQuiz/` resume your last deck. Make `playModeEl` a button that opens the burger (+ a chevron). Pure UI, no data risk.
+- [ ] **Phase 2 — delete the picker; add the indicator + the reactive burger.** *(Rewritten 2026-07-17; the old "make the label the door" version is dead.)* Remove `buildVariantPicker`, `#quiz-picker`, the `.picker-tile` CSS block, `flagQuiz/continents/*.svg`, and the `isFirstVisit` branch in `page.js`. **Keep `getQuizLastVariant`/`setQuizLastVariant`** — that's what makes a bare `flagQuiz/` resume your last deck. Then: (a) promote `SETUP_ICONS` + its `.gs-thumb` / `.gs-contour` sizing out of `flagParty/` into shared code, with Flag Party as a consumer; (b) add the single deck indicator to `.play-timer`, opening a `.color-count-side` / `.color-count-options` popover; (c) rebuild the burger as a four-`.pill` deck row plus a scope list that only renders under `flags`. `playModeEl` **keeps its existing job** and just says where you are. Pure UI, no data risk. **Fix the four icons' visual weight while you're in there** (a surface tile behind the contour + chart) rather than shipping the mismatch. Per the repo's UI-consistency rule this is one PR, not one per polish round.
 - [ ] **Phase 3 — Outlines.** `VARIANTS.outlines` with `filter: c => CONTOUR_CODE_SET.has(c.code)` and the first real `type` field, because the *renderer* changes (`flags/contours/<code>.svg` instead of `flags/svg/<code>.svg`). `availableModes()` grows a variant argument here.
 - [ ] **Phase 4 — Facts.** Read the landmine above first. Port `superlative.js`'s quartet logic (`GAP_RATIO = 1.25`, `drawFourDistinct`, the `lookalikesOf` guard) behind a browser-safe data path.
 
 #### Open calls (small; settle when the phase starts)
 
-- **Burger: bare dividers or headings?** Leaning **dividers** — that's exactly how it groups today (`menu.js`'s `WIDE_GROUP` already splits "All countries" from the continents), and nobody's confused by it. Final shape is today's burger **minus one row, plus three**: toggle out; Weird flags / Outlines / Facts in as a third group.
+- **SETTLED 2026-07-17 — burger shape.** The old "dividers or headings, plus three rows" question is dead: the three new decks never become menu rows. The burger is a **four-`.pill` deck row**, then the scope list **only under `flags`**, then the existing divider + coffee. The prototype captions the two groups ("Deck" / "Part of the world"); that caption is the one cosmetic call left.
+- **NEW — does a deck pill play immediately, or does Flags reveal its scopes?** The prototype does the former: tapping any pill starts that deck at its default scope and closes the burger, because Weird / Outlines / Facts have no scope left to pick and waiting would be a dead end. Cost: Flags also starts immediately at All countries, so reaching Europe means reopening the burger. The alternative (Flags alone waits and reveals the seven scopes) is one tap shorter but makes one pill behave unlike the other three. **Recommendation: keep the prototype's behaviour**, consistency over the one tap.
+- **NEW — how subtle can the indicator be before it stops reading?** "Very subtle" and "flag thumbnail" pull against each other: a 24 × 18 tricolour is the most colourful thing in a row of 14px grey text. The prototype offers 24 × 18 / 20 × 15 / 16 × 12. Monochrome would resolve it outright but forfeits the Jolly Roger and the Flag Party reuse, which is most of why this is cheap. Settle by looking, not arguing.
 - **Does `all` mode apply to Weird flags and Outlines?** Jan's first message said "for flag" only, but that's a rule with no reason behind it — both are finite pools (54, 157), so "play through every one" works unchanged. Only Facts genuinely can't (nothing to exhaust). Proposed rule: **the mode switcher appears wherever a finite pool exists**; Facts is the single exception.
 - **Do the new decks feed the existing 60s achievements?** `quizBestScore60s >= 30/40/50` has no notion of deck, so a harder or easier deck would inflate/deflate badges earned for flags. Type-aware snapshot fields are the clean answer but touch released badges (stable-id rule — see `.claude/skills/add-achievement`). **The real one to think about; the others are cosmetic.**
 - **Cartographer / `QUIZ_60S_VARIANTS`.** Reads "all 7 continents (plus All Countries)", `quizVariantsTouched60s >= 7`. Proposal: the three new decks stay **out** of that list — none is a continent, so the released badge keeps its exact meaning.
 - **Does Outlines keep the contour map under the answers?** Unresolved since round 1. The map fills in where the answer was, but in an Outlines round the question already *is* a shape. Redundant, or the best teaching moment on the site? Prototype both rather than guess.
-- **Burger link should carry the current mode.** Today it hardcodes `?v=europe&n=60s` (`menu.js`: `defaultMode`), so switching continent silently resets a player out of `all`. Worth fixing here; fall back to 60s where `all` isn't legal.
+- **Burger link should carry the current mode.** Today it hardcodes `?v=europe&n=60s` (`menu.js`: `defaultMode`), so switching continent silently resets a player out of `all`. Phase 2 rebuilds this menu anyway, so fix it there; fall back to 60s where `all` isn't legal.
 
 #### Out of scope (all considered and rejected — don't re-propose without new information)
 
-- **Type chips / a pill row / a result-screen picker.** Four rounds of this. The play row's label-vs-switcher split is already correct; anything added there costs 40+ px the phone doesn't have, and the pills read as three buttons shouting above the four flags that are the actual game. Rejected by Jan on sight, correctly.
+- **Any deck switcher *on the play screen* bigger than one icon.** Type chips, a pill row, a result-screen picker, and (2026-07-17) a four-way icon toggle in the play row. The first three died across four rounds because they cost 40+ px the phone doesn't have and shout above the four flags that are the actual game. The four-way toggle died on measurement: **−95px on a scoped row**, see the table above. **Note the distinction**: pills *in the burger* are the approved design. What is rejected is spending play-screen space, not the mechanism.
+- **`playModeEl` as a button that opens the burger.** Round 6's answer, rejected by Jan on sight in the 2026-07-17 conversation. The indicator replaced it. Don't revive it: it puts a control on the play screen whose only job is to open another control.
 - **Per-continent Outlines.** Oceania is 3/14. Requires a coverage floor, a shrinking grid, and an explanation. World-only deletes all three problems.
 - **Per-continent Facts.** "Europe: most populous" works; "Europe: most coffee" is all zeros. Its own sparse matrix; not worth opening.
 - **A `?q=` type param / a fourth axis.** Unnecessary once the new decks are world-only — they're just variants.
@@ -248,7 +276,8 @@ The play row already solved this. `Europe · 60s | all · 0:47.231` — the vari
 **Mockups** (private artifacts on Jan's claude.ai; the load-bearing numbers are written above so this entry stands alone if they rot):
 - [Round 1 — the analysis + contour coverage](https://claude.ai/code/artifact/c1aba2e9-d1b0-48ee-8ba1-c7d896f71856)
 - [Round 3 — the phone budget, measured against the fold](https://claude.ai/code/artifact/1f3f812c-3cc0-4a5e-a772-1764b7429df0)
-- [Round 6 — **the design being built**](https://claude.ai/code/artifact/e356a3e9-d3f7-4890-b9dd-c7ce623ff9aa)
+- [Round 6 — superseded 2026-07-17; the "label opens the burger" design](https://claude.ai/code/artifact/e356a3e9-d3f7-4890-b9dd-c7ce623ff9aa)
+- [**2026-07-17 prototype — the approved design**](https://claude.ai/code/artifact/033111e7-79e9-44ef-8c17-c6e8efa3f574). Live: four real 375 × 553 iframes, real tokens, real assets (the actual `gl` / `fo` / `pr` / `hk` flags and `contours/it.svg`). Tap the indicator, open the burger, switch decks. Phones 1 vs 2 are the argument for the icon (identical screens, different pool); 3 vs 4 are the reactive burger side by side.
 
 ---
 
