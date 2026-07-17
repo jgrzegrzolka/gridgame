@@ -57,7 +57,9 @@
     "hideMap": "Ukryj mapę",
     "wideScreen": "Pełna szerokość",
     "fullscreen": "Pełny ekran",
-    "sync": "Synchronizuj urządzenia"
+    "sync": "Synchronizuj urządzenia",
+    "deck": "Talia",
+    "partOfWorld": "Część świata"
   },
   "nickname": {
     "label": "Pseudonim",
@@ -1659,5 +1661,11 @@
     "ye": "Jemen",
     "zm": "Zambia",
     "zw": "Zimbabwe"
+  },
+  "deck": {
+    "flags": "Flagi",
+    "weird": "Dziwne",
+    "outlines": "Kształty",
+    "facts": "Fakty"
   }
 }
