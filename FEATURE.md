@@ -179,6 +179,79 @@ Easy mode *relaxes* the generator (fewer exclusiveGroup collisions once the metr
 
 Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.
 
+### Feature V: flagQuiz — three new decks (weird flags, outlines, facts), and delete the scope toggle
+
+**Status:** designed 2026-07-16 over six mockup rounds with Jan, **no code written**. **Parked in Backlog 2026-07-17** — Jan deferred it to free the day for other work, and expects to revisit the week of 2026-07-20. Nothing is blocked: the design is settled, Phase 1 is the next step whenever it starts, and the open calls listed at the bottom are small. Promote back to `## Now` to begin.
+
+**Goal.** Flag Party has three question types; flagQuiz has one. Bring the other two over (`mapPick` → "Outlines", `superlative` → "Facts"), plus the non-sovereign pool as its own deck ("Weird flags" — Jan's name, and better than "Territories & other flags"). Along the way, delete the "Include territories & other flags" toggle and the first-visit picker.
+
+**Jan's two cuts, which are what make this small.** (1) *"Instead of include territories switch we should always play sovereign, but we should have separate mode for non-sovereign flag only."* (2) *"Outlines and facts might as well be only for whole world? And only for 60s version."* The second cut deleted an entire sparse matrix — see the contour numbers below — and the first is a bug fix, not just tidying.
+
+#### The model
+
+Ten decks, one axis. **There is no new URL param and no new axis**: `?v=` already carries this, because a deck *is* a variant.
+
+| deck | `?v=` | pool | 60s | all |
+|---|---|---|---|---|
+| All countries | `countries` | 195 sovereign | ✓ | ✓ |
+| Europe … Oceania (6) | `europe` … | 45 / 47 / 54 / 23 / 12 / 14 | ✓ | ✓ |
+| Weird flags | `weird` | 54 (`nonSovereignPool`) | ✓ | ✓ * |
+| Outlines | `outlines` | 157 (`CONTOUR_CODE_SET`) | ✓ | ✓ * |
+| Facts | `facts` | world, 32 metrics | ✓ | ✗ |
+
+\* open call — see below. **17 configurations, down from today's 28** (7 variants × 2 modes × 2 scopes), while adding three question types.
+
+#### Why the UI change is one label
+
+Rounds 2–5 designed a type-chip row, then a three-pill picker (`Flags ▾ | Europe ▾ | 60s ▾`), then a result-screen picker. **All of it was wrong and Jan called it** — *"maybe we should keep what we have now? its kind of nice and minimal."*
+
+The play row already solved this. `Europe · 60s | all · 0:47.231` — the variant is a **label**, the mode is a **switcher**, because *two options fit inline and seven don't*. Ten decks still don't fit inline. The rule was already right; the only gap was that nothing on the play screen says the burger holds nine other games.
+
+**So: `playModeEl` becomes a button that opens the burger.** Dead text becomes the door. No new component, no vertical cost — and the play screen ends up *lighter* than today, because `60s | all` vanishes on Facts via the `:not(:empty)::after` rules that already exist (`flagQuiz/index.css`, `.play-mode` / `.mode-toggle`).
+
+#### Findings that shaped this (measured 2026-07-16, don't re-derive)
+
+- **The scope toggle can ask unanswerable questions today.** On = pool jumps 195 → 269. Party curates the same idea to **54** because `flags/flagPools.js` drops organisations (EU/UN/ASEAN — not places) and the 13 `SHARED_PARENT_FLAG` codes whose flag *is* the parent's. **The quiz can currently ask "Which flag is Réunion?" and offer the French tricolour.** Party fixed this; the quiz never adopted it. Switching to `nonSovereignPool` is a correctness fix.
+- **Scope isn't in the URL**, so a shared `?v=africa` plays a different pool per recipient. Making it a variant fixes that.
+- **Contour coverage is microstate-shaped.** 157/195 sovereigns have one. The 38 without are *every* microstate and island nation, plus **Russia** (antimeridian, same reason the US is excluded from the NA crop). Per continent: SA 12/12, Africa 49/54, Asia 42/47, Europe 37/45, **NA 14/23** (whole Caribbean gone), **Oceania 3/14 — dead**. This is why world-only matters: it deletes the "can I have Europe outlines?" question entirely.
+- **The phone has no headroom.** iPhone SE / Safari = 553 px visible. `--page-top: 104px` is spent before any game (reserving for a 70 px `--strip-height`). Flags get ~240 px; the contour map already falls past the fold. Any added row is expensive — which is why the pills died.
+- **The pill-dropdown mechanism already exists** in `common.css` (`.pill`, `.color-count-side` / `.color-count-options`), consumer: `colorCountPicker.js`. Not needed by this design, but noted — if a picker is ever wanted, promote that rather than write one.
+
+#### ⚠️ Landmine for Phase 4 (Facts)
+
+`flags/partyRounds/superlative.js` **statically imports 32 metric JSONs** (`import population from '../metrics/population.json' with { type: 'json' }`). Its own header says it *"runs only on the server (PartyKit; the page never imports it), so the browser 'fetch JSON, never import' rule doesn't apply."* **The flagQuiz page cannot import it.** Doing so ships a blank page in real browsers (Playwright Chromium hides it — this broke prod in #767, fixed in #769). Phase 4 needs a browser-safe path: fetch the metric JSON and inject it, splitting the pure quartet-picking logic from the data loading.
+
+#### Phases (each = one branch off `main` + one PR; Jan merges)
+
+- [ ] **Phase 1 — scope toggle → `weird` deck.** Delete `isQuizIncludeAll` / `setQuizIncludeAll` / `buildScopeToggleLi` / the `gridgame.flagquiz.includeAll` key / `bestKey`'s `.all` branch / `flagsGamePool`'s `includeAll` arg at this call site. Add `weird` to `VARIANTS` — **a plain filter, no `type` field needed**, since it asks the same question ("which flag is X?") over a different pool. **Ships with an API change**: `api/src/lib/quizRecordKey.js`'s `CONFIG_KEY_RE` drops its `(sov|all)` segment, and `quizRecordConfigKey` drops the third part — client and API must deploy in lockstep. Needs a read-path migration for existing `.all`-suffixed personal bests. *Highest-risk phase; do it alone, while the only thing that can break is understood.*
+- [ ] **Phase 2 — delete the picker, make the label the door.** Remove `buildVariantPicker`, `#quiz-picker`, the `.picker-tile` CSS block, `flagQuiz/continents/*.svg`, and the `isFirstVisit` branch in `page.js`. **Keep `getQuizLastVariant`/`setQuizLastVariant`** — that's what makes a bare `flagQuiz/` resume your last deck. Make `playModeEl` a button that opens the burger (+ a chevron). Pure UI, no data risk.
+- [ ] **Phase 3 — Outlines.** `VARIANTS.outlines` with `filter: c => CONTOUR_CODE_SET.has(c.code)` and the first real `type` field, because the *renderer* changes (`flags/contours/<code>.svg` instead of `flags/svg/<code>.svg`). `availableModes()` grows a variant argument here.
+- [ ] **Phase 4 — Facts.** Read the landmine above first. Port `superlative.js`'s quartet logic (`GAP_RATIO = 1.25`, `drawFourDistinct`, the `lookalikesOf` guard) behind a browser-safe data path.
+
+#### Open calls (small; settle when the phase starts)
+
+- **Burger: bare dividers or headings?** Leaning **dividers** — that's exactly how it groups today (`menu.js`'s `WIDE_GROUP` already splits "All countries" from the continents), and nobody's confused by it. Final shape is today's burger **minus one row, plus three**: toggle out; Weird flags / Outlines / Facts in as a third group.
+- **Does `all` mode apply to Weird flags and Outlines?** Jan's first message said "for flag" only, but that's a rule with no reason behind it — both are finite pools (54, 157), so "play through every one" works unchanged. Only Facts genuinely can't (nothing to exhaust). Proposed rule: **the mode switcher appears wherever a finite pool exists**; Facts is the single exception.
+- **Do the new decks feed the existing 60s achievements?** `quizBestScore60s >= 30/40/50` has no notion of deck, so a harder or easier deck would inflate/deflate badges earned for flags. Type-aware snapshot fields are the clean answer but touch released badges (stable-id rule — see `.claude/skills/add-achievement`). **The real one to think about; the others are cosmetic.**
+- **Cartographer / `QUIZ_60S_VARIANTS`.** Reads "all 7 continents (plus All Countries)", `quizVariantsTouched60s >= 7`. Proposal: the three new decks stay **out** of that list — none is a continent, so the released badge keeps its exact meaning.
+- **Does Outlines keep the contour map under the answers?** Unresolved since round 1. The map fills in where the answer was, but in an Outlines round the question already *is* a shape. Redundant, or the best teaching moment on the site? Prototype both rather than guess.
+- **Burger link should carry the current mode.** Today it hardcodes `?v=europe&n=60s` (`menu.js`: `defaultMode`), so switching continent silently resets a player out of `all`. Worth fixing here; fall back to 60s where `all` isn't legal.
+
+#### Out of scope (all considered and rejected — don't re-propose without new information)
+
+- **Type chips / a pill row / a result-screen picker.** Four rounds of this. The play row's label-vs-switcher split is already correct; anything added there costs 40+ px the phone doesn't have, and the pills read as three buttons shouting above the four flags that are the actual game. Rejected by Jan on sight, correctly.
+- **Per-continent Outlines.** Oceania is 3/14. Requires a coverage floor, a shrinking grid, and an explanation. World-only deletes all three problems.
+- **Per-continent Facts.** "Europe: most populous" works; "Europe: most coffee" is all zeros. Its own sparse matrix; not worth opening.
+- **A `?q=` type param / a fourth axis.** Unnecessary once the new decks are world-only — they're just variants.
+- **`--page-top: 104px`** (34 px of pure air above the fold, ~19% of the phone's budget). A bigger win than anything in this feature and a one-line change, but **site-wide** — its own conversation, not this one.
+
+**Mockups** (private artifacts on Jan's claude.ai; the load-bearing numbers are written above so this entry stands alone if they rot):
+- [Round 1 — the analysis + contour coverage](https://claude.ai/code/artifact/c1aba2e9-d1b0-48ee-8ba1-c7d896f71856)
+- [Round 3 — the phone budget, measured against the fold](https://claude.ai/code/artifact/1f3f812c-3cc0-4a5e-a772-1764b7429df0)
+- [Round 6 — **the design being built**](https://claude.ai/code/artifact/e356a3e9-d3f7-4890-b9dd-c7ce623ff9aa)
+
+---
+
 ### Feature Q: Observability for the player-facing site (Application Insights)
 
 **Status:** parked 2026-06-16, updated 2026-06-17 after Feature R demolition. Jan plans to revisit ~next session. Gap surfaced during the Feature P cleanup audit; **widened** by Feature R Phase 3 which deleted the only AI instance in the resource group along with the Function App that owned it.
