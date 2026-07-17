@@ -952,9 +952,11 @@ export function bootFlagParty() {
     // can be read. Question time is fixed. (flagQuiz's correct-fast/wrong-slow.)
     // The draft pick has its own fixed window.
     const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
-    // A block-boundary reveal holds longer (the standings break) than an ordinary
-    // reveal; the host counts this down before sending `next`, same as any reveal.
-    const revealSecs = atBlockBreak() ? BLOCK_BREAK_SECONDS : revealSecondsFor(clean);
+    // A block-boundary reveal plays two beats — the answer tiles for a normal
+    // reveal, then the standings break — so the host holds the sum before sending
+    // `next`, keeping the break its full duration after the answer is shown. An
+    // ordinary reveal is just its own beat.
+    const revealSecs = atBlockBreak() ? revealSecondsFor(clean) + BLOCK_BREAK_SECONDS : revealSecondsFor(clean);
     // The pick has no visible countdown (choosing isn't a race); its clock is the
     // long invisible anti-stall fallback that force-picks only an absent picker.
     const secs = mode === 'picking' ? PICK_TIMEOUT_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
@@ -1059,6 +1061,36 @@ export function bootFlagParty() {
     blockIntroTimer = 0;
     blockIntroToken = null;
     blockIntroActive = false;
+    resetBlockBreakAnswer();
+  }
+
+  // ---- block-boundary answer beat ----
+  // A block ends on its 5th round, and the client shows the standings break in
+  // place of that reveal — which meant the block's LAST round never got to show
+  // its correct / wrong answers. So a boundary reveal now plays two beats: first
+  // the answer tiles for a normal reveal beat (proper/wrong answers, like every
+  // other round), then the standings break. A client-side hold flips between
+  // them, exactly like the block-intro card; the host holds the whole window
+  // (answer beat + break) before it sends `next`, so the break keeps its full
+  // duration. `blockBreakToken` guards the once-per-boundary arm against
+  // render()'s re-runs; `blockBreakAnswerActive` is true while the answer tiles
+  // are on screen, false once we've flipped to the standings.
+  let blockBreakTimer = 0;
+  /** @type {string | null} */
+  let blockBreakToken = null;
+  let blockBreakAnswerActive = false;
+  function armBlockBreakAnswer(/** @type {string} */ token) {
+    blockBreakToken = token;
+    blockBreakAnswerActive = true;
+    window.clearTimeout(blockBreakTimer);
+    const clean = isCleanReveal(state.roster, state.reveal);
+    blockBreakTimer = window.setTimeout(() => { blockBreakAnswerActive = false; render(); }, revealSecondsFor(clean) * 1000);
+  }
+  function resetBlockBreakAnswer() {
+    window.clearTimeout(blockBreakTimer);
+    blockBreakTimer = 0;
+    blockBreakToken = null;
+    blockBreakAnswerActive = false;
   }
 
   /** True when the current reveal is a between-blocks break (a boundary round
@@ -1107,7 +1139,16 @@ export function bootFlagParty() {
       // At a block boundary the reveal becomes the standings break instead of the
       // answer tiles. The clock still runs (host advances after the break beat),
       // just against the break duration; syncClock reads atBlockBreak() for it.
-      if (atBlockBreak()) { stopVeil(); showSection('break'); renderBreak(); syncClock(); return; }
+      // A block-boundary reveal plays two beats: the answer tiles first (so the
+      // block's last round shows proper/wrong answers like any other round), then
+      // the standings break. The client-side hold flips between them; syncClock
+      // holds the whole window (answer beat + break) so the break keeps its beat.
+      if (atBlockBreak()) {
+        const token = String(state.roundIndex);
+        if (blockBreakToken !== token) armBlockBreakAnswer(token);
+        if (blockBreakAnswerActive) { stopVeil(); showSection('round'); renderRound(); syncClock(); return; }
+        stopVeil(); showSection('break'); renderBreak(); syncClock(); return;
+      }
       showSection('round'); renderRound(); syncClock();
       // The veil + name reveal animate during the question only; the reveal phase
       // always shows crisp tiles (stopVeil pins `--veil-p` to 1 and clears
