@@ -13,8 +13,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // fixed in #769). The core must stay loadable by the browser, so it must never
 // import JSON — directly or through anything it imports.
 test('the core imports no JSON, directly or transitively', () => {
+  /** @type {Set<string>} */
   const seen = new Set();
+  /** @type {string[]} */
   const offenders = [];
+  /** @param {string} file */
   const walk = (file) => {
     if (seen.has(file)) return;
     seen.add(file);
@@ -34,8 +37,9 @@ test('the core imports no JSON, directly or transitively', () => {
 
 test('a round generates a quartet with a clear extreme', () => {
   // A fake metric: powers of ten, so the gap rule is trivially satisfied.
+  /** @type {Record<string, number>} */
   const values = { a: 1, b: 10, c: 100, d: 1000, e: 10000, f: 100000 };
-  const metric = { has: (c) => c in values, valueOf: (c) => values[c] };
+  const metric = { has: (/** @type {string} */ c) => c in values, valueOf: (/** @type {string} */ c) => values[c] };
   const pool = Object.keys(values).map((code) => ({ code }));
   const round = createSuperlativeRound(metric, 'test-round');
   const q = round.generate(pool, new Set(), () => 0.5);
@@ -43,14 +47,15 @@ test('a round generates a quartet with a clear extreme', () => {
   assert.ok(['most', 'least'].includes(q.prompt));
   assert.ok(q.options.includes(q.answer));
   // the answer really is the extreme among the four it offered
-  const vals = q.options.map((c) => values[c]);
+  const vals = q.options.map((/** @type {string} */ c) => values[c]);
   const want = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
   assert.equal(values[q.answer], want);
 });
 
 test('direction can be locked to one extreme', () => {
+  /** @type {Record<string, number>} */
   const values = { a: 1, b: 10, c: 100, d: 1000, e: 10000 };
-  const metric = { has: (c) => c in values, valueOf: (c) => values[c] };
+  const metric = { has: (/** @type {string} */ c) => c in values, valueOf: (/** @type {string} */ c) => values[c] };
   const pool = Object.keys(values).map((code) => ({ code }));
   const round = createSuperlativeRound(metric, 'r', { direction: 'most' });
   for (let i = 0; i < 8; i++) {
@@ -59,10 +64,15 @@ test('direction can be locked to one extreme', () => {
 });
 
 test('isCorrect only accepts the answer', () => {
+  /** @type {Record<string, number>} */
   const values = { a: 1, b: 10, c: 100, d: 1000 };
-  const metric = { has: (c) => c in values, valueOf: (c) => values[c] };
+  const metric = { has: (/** @type {string} */ c) => c in values, valueOf: (/** @type {string} */ c) => values[c] };
   const round = createSuperlativeRound(metric, 'r');
   const q = round.generate(Object.keys(values).map((code) => ({ code })), new Set(), () => 0.5);
   assert.equal(round.isCorrect(q, q.answer), true);
-  assert.equal(round.isCorrect(q, q.options.find((o) => o !== q.answer)), false);
+  // `.find` is string|undefined to the checker; the question always has a
+  // non-answer option, so assert that rather than casting the doubt away.
+  const other = q.options.find((/** @type {string} */ o) => o !== q.answer);
+  assert.ok(other, 'a quartet must contain a non-answer option');
+  assert.equal(round.isCorrect(q, other), false);
 });
