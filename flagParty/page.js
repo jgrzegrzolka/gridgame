@@ -1511,12 +1511,9 @@ export function bootFlagParty() {
       if (you && r.gapToLeader > 0) {
         row.appendChild(el('span', 'gap', fmt(t('party.behind', '{n} behind'), { n: r.gapToLeader })));
       }
-      // Rank movement since the last break (null on the first break — no prior
-      // standing to move from).
-      if (r.rankDelta != null && r.rankDelta !== 0) {
-        const up = r.rankDelta > 0;
-        row.appendChild(el('span', `delta ${up ? 'up' : 'down'}`, `${up ? '▲' : '▼'}${Math.abs(r.rankDelta)}`));
-      }
+      // No ▲/▼ delta arrow: the rank movement is shown by the row physically
+      // sliding to its new place (animateStandingsMovement, from the same
+      // `rankDelta`), so a second numeric indicator would be redundant.
       row.appendChild(el('span', 'sc', String(r.score)));
       breakBoard.appendChild(row);
       rowNodes.push(row);

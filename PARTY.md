@@ -941,21 +941,26 @@ reveal clock simply starts after the card, like everyone else's).
 
 Iteration 8 planned "the row movement animated" but only ever shipped the ▲/▼ delta *arrows* — the
 rows themselves just appeared in the new order. Jan's ask: when the standings show, **see** one player
-climb and another drop. Now the break board plays a FLIP: each row starts at the slot it held at the
-previous break and slides to its new one, so a climber rises past the players it overtook and the
-overtaken visibly falls, the two crossing. The climber gets a lifted `z-index` so it reads as passing
-over. Driven by `rankDelta` (places climbed since the last break, already computed + tested in
+climb and another drop, and **drop the arrows** — the motion is the indicator. Now the break board
+plays a FLIP: each row starts at the slot it held at the previous break and slides to its new one, so a
+climber rises past the players it overtook and the overtaken visibly falls, the two crossing. The
+climber gets a lifted `z-index` so it reads as passing over. The ▲/▼ delta arrows are **gone** (a
+second numeric cue is redundant once the row physically moves); the gap-to-leader on your own row
+stays. Driven by `rankDelta` (places climbed since the last break, already computed + tested in
 `flags/partyBreak.js`): rows are uniform height, so one measured stride converts a rank delta to a
 pixel offset. Pure decoration, so it's skipped under `prefers-reduced-motion` (unlike the tricky veil,
 it carries no gameplay advantage). Once per break (its own token guards render()'s re-runs).
 
-- `flagParty/page.js` — `animateStandingsMovement(nodes, rows)` + the `breakAnimToken` guard; no new
-  pure logic (the offset is `rankDelta × stride`, and `rankDelta` is already unit-tested).
-- `flagParty/index.css` — `.scoreline { position: relative }` so the climber's `z-index` lift applies.
+- `flagParty/page.js` — `animateStandingsMovement(nodes, rows)` + the `breakAnimToken` guard; the ▲/▼
+  delta-arrow render removed. No new pure logic (the offset is `rankDelta × stride`, and `rankDelta` is
+  already unit-tested).
+- `flagParty/index.css` — `.scoreline { position: relative }` so the climber's `z-index` lift applies;
+  the dead `.scoreline .delta` rules removed with the arrows.
 - `npm run validate` green (2895 tests) + **verified in-browser** (two real clients on separate origins,
   an engineered overtake: player B swept block 2 to pass A). Captured the live mid-slide computed
   transforms — climber at `translateY(+58px)` rising, dropper at `translateY(-58px)` falling — and the
-  settled break showing B at #1 `▲1` (75), A at #2 `▼1` (45, "30 behind"). 0 party-code console errors.
+  settled break showing B risen to #1 (75) and A dropped to #2 (45, "30 behind"), no arrows. 0
+  party-code console errors.
 
 ## Open decisions (settle as they come up, not now)
 
