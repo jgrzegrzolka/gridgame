@@ -30,8 +30,11 @@
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
  *   seat whose turn it is to choose the next block; null otherwise.
+ * @property {boolean} youPick  whether THIS client is the picker — set
+ *   server-authoritatively (not re-derived from `you === picker`), so a stale
+ *   identity can't make the picker miss their own hand. False off the pick phase.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
- *   choose from; null otherwise.
+ *   choose from; null otherwise (and never sent to a watcher).
  * @property {{ picker: string, modeId: string } | null} lastPick  who picked the
  *   current block and which mode, for the "Zosia's pick" attribution; null in a
  *   non-drafted block.
@@ -57,6 +60,7 @@ export function initialPartyClientState() {
     reveal: null,
     scoreboard: null,
     picker: null,
+    youPick: false,
     hand: null,
     lastPick: null,
     statusOverride: null,
@@ -107,8 +111,12 @@ export function reducePartyMessage(state, message) {
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
           // A reconnect mid-pick resumes the draft turn (picker + hand ride the
-          // welcome); otherwise these are null.
+          // welcome); otherwise these are null. `youPick` is server-authoritative,
+          // with the same old-server fallback as the `picking` case.
           picker: message.picker ?? null,
+          youPick: message.youPick !== undefined
+            ? message.youPick === true
+            : (message.you != null && message.you === message.picker),
           hand: message.hand ?? null,
           // A reconnect can't recover whether we already buzzed this question;
           // treat as fresh — the server ignores a duplicate buzz anyway.
@@ -141,6 +149,7 @@ export function reducePartyMessage(state, message) {
           scoreboard: null,
           myChoice: null,
           picker: null,
+          youPick: false,
           hand: null,
           lastPick: null,
         },
@@ -148,13 +157,21 @@ export function reducePartyMessage(state, message) {
       };
     }
     case 'picking': {
-      // Draft: the room paused to let one seat choose the next block.
+      // Draft: the room paused to let one seat choose the next block. `youPick`
+      // is server-authoritative — the client shows the hand because the server
+      // told it it's the picker, not because it matched its own id.
       return {
         state: {
           ...state,
           phase: 'picking',
           picker: message.picker ?? null,
-          hand: Array.isArray(message.hand) ? message.hand : [],
+          // Server-authoritative when present; fall back to the old id comparison
+          // only for an older server that predates `youPick` (client and PartyKit
+          // deploy independently, so they can be briefly out of sync).
+          youPick: message.youPick !== undefined
+            ? message.youPick === true
+            : (state.you != null && state.you === message.picker),
+          hand: Array.isArray(message.hand) ? message.hand : null,
           roundIndex: message.roundIndex ?? state.roundIndex,
           totalRounds: message.totalRounds ?? state.totalRounds,
           reveal: null,
@@ -178,6 +195,7 @@ export function reducePartyMessage(state, message) {
           // The picking turn is over; a drafted block's first question carries who
           // picked it (for the attribution card), else this clears.
           picker: null,
+          youPick: false,
           hand: null,
           lastPick: message.draftPick ?? null,
         },

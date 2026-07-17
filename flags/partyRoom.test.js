@@ -482,16 +482,24 @@ test('pendingPickAfterReveal: true at a draft block boundary, not on the last ro
   assert.equal(pendingPickAfterReveal(setlist), false);
 });
 
-test('applyEnterPicking: reveal -> picking, records picker + hand, broadcasts to all', () => {
-  const room = draftRevealAtBoundary(4);
+test('applyEnterPicking: reveal -> picking; the picker gets youPick+hand, watchers get neither', () => {
+  const room = draftRevealAtBoundary(4); // alice (host) + bob, both present; picker bob
   const hand = ['map-outlines', 'superlative-coffee', 'superlative-beer'];
   const r = applyEnterPicking(room, 'alice', 'bob', hand);
   assert.equal(r.room.phase, 'picking');
   assert.equal(r.room.picker, 'bob');
   assert.deepEqual(r.room.hand, hand);
-  const m = msg(r, 'picking');
-  assert.equal(m.picker, 'bob');
-  assert.deepEqual(m.hand, hand);
+  // The picker's message is server-authoritative: youPick true + the hand.
+  const toBob = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'bob')?.message);
+  assert.ok(toBob);
+  assert.equal(toBob.youPick, true);
+  assert.deepEqual(toBob.hand, hand);
+  // A watcher is told youPick false and never gets the hand.
+  const toAlice = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'alice')?.message);
+  assert.ok(toAlice);
+  assert.equal(toAlice.youPick, false);
+  assert.equal(toAlice.picker, 'bob');
+  assert.equal(toAlice.hand, undefined, 'the hand is not leaked to a watcher');
 });
 
 test('applyEnterPicking: ignored for a non-host or with no picker', () => {

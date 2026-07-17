@@ -42,11 +42,12 @@ function mockParty(conns) {
   return { storage: mockStorage(), getConnection: (/** @type {string} */ id) => conns.find((c) => c.id === id), getConnections: () => conns };
 }
 
-/** @param {string} pid */
-function ctxFor(pid) {
+/** @param {string} pid @param {'create'|'join'} [intent] @param {string} [nick] */
+function ctxFor(pid, intent = 'create', nick) {
   const url = new URL('wss://example.test/parties/party/ABC12');
   url.searchParams.set('pid', pid);
-  url.searchParams.set('intent', 'create');
+  url.searchParams.set('intent', intent);
+  if (nick) url.searchParams.set('nick', nick);
   return { request: /** @type {any} */ ({ url: url.toString() }) };
 }
 
@@ -160,4 +161,51 @@ test('draft: the last block ends in the final board, no pick', async () => {
   await playBlock(srv, conn);                 // block 2 (the last) -> final
   assert.equal(srv.room.phase, 'final');
   assert.ok(conn.last('final'), 'the final board was broadcast');
+});
+
+test('draft (3 players): the picking broadcast names the same picker for everyone', async () => {
+  const a = mockConn('a'), b = mockConn('b'), c = mockConn('c');
+  const srv = new PartyGameServer(mockParty([a, b, c]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+  await srv.onConnect(c, ctxFor('carol', 'join', 'Carol'));
+
+  // Each player's own welcome must carry their own id as `you`.
+  assert.equal(a.last('welcome').you, 'alice');
+  assert.equal(b.last('welcome').you, 'bob');
+  assert.equal(c.last('welcome').you, 'carol');
+
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true }), a);
+  // Play block 1: every present seat buzzes, then the host advances.
+  for (let i = 0; i < BLOCK_ROUNDS; i++) {
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), b);
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), c);
+    await srv.onMessage(JSON.stringify({ type: 'next' }), a);
+  }
+  assert.equal(srv.room.phase, 'picking');
+
+  // All three clients receive a picking broadcast naming the SAME picker.
+  const pa = a.last('picking'), pb = b.last('picking'), pc = c.last('picking');
+  assert.ok(pa && pb && pc, 'everyone got a picking broadcast');
+  assert.equal(pa.picker, pb.picker);
+  assert.equal(pb.picker, pc.picker);
+  assert.ok(['alice', 'bob', 'carol'].includes(pa.picker), 'picker is a real seat');
+
+  // Server-authoritative youPick: EXACTLY the picker's own connection is told
+  // youPick=true (and given the hand); the other two get youPick=false and no
+  // hand. This is the "player3 sees the wrong picker" fix — the picker's client
+  // never has to re-derive its role, so a stale id can't hide their hand.
+  const byId = { alice: a, bob: b, carol: c };
+  for (const [id, conn] of Object.entries(byId)) {
+    const p = conn.last('picking');
+    if (id === pa.picker) {
+      assert.equal(p.youPick, true, `${id} is the picker -> youPick true`);
+      assert.ok(Array.isArray(p.hand) && p.hand.length === 5, 'the picker gets the hand');
+    } else {
+      assert.equal(p.youPick, false, `${id} is a watcher -> youPick false`);
+      assert.equal(p.hand, undefined, 'a watcher never receives the hand');
+    }
+  }
 });

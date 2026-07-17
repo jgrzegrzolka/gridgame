@@ -867,6 +867,31 @@ finally runs by default (draft never shows the tricky toggle). Applies to any **
 - Verified in-browser (solo draft, fresh-port serve): block 2/2 shows the "Double points" badge and
   its tiles veil with tricky off; the doubled scoring is unit-pinned. 2886 tests green.
 
+### Refinements (2026-07-17, Jan) — BUILT on `feat/party-pick-polish` (pending PR)
+
+Three follow-ups on the shipped draft + finale, from Jan playing it:
+- **Picker identity is now server-authoritative (bug fix).** Jan (3 players): the designated picker's
+  own screen showed a *different* player choosing, while the other two correctly saw the picker. Root
+  cause: the client decided "am I the picker" by comparing its own `state.you` to the broadcast
+  picker id, which any identity hiccup breaks. Fix: `applyEnterPicking` sends **per-recipient** — the
+  picker's connection gets `youPick: true` + the hand, everyone else `youPick: false` and no hand
+  (also stops leaking the hand to watchers); `welcome` carries `youPick` for a reconnect mid-pick. The
+  client reads `youPick` instead of re-deriving it (with an old-server fallback to the id compare,
+  since client + PartyKit deploy independently). Verified end-to-end with two real clients on separate
+  origins: the captured picking messages show `youPick:true`+hand to the picker only, `false`+no-hand
+  to the watcher. (The clean 3-player + mid-game-reconnect flows were already correct in testing; this
+  hardens the one fragile path that produced the symptom.)
+- **Statistics rounds are never veiled.** The veil is a flag / outline recognition challenge; on a
+  "which grows the most coffee?" round the flag is incidental, so hiding it tested the wrong skill
+  (and a latent bug meant non-population stats got the *heavy* flag veil timing). `veilActive()` now
+  returns false for metric rounds, so tricky mode and the always-tricky final block both skip stat
+  blocks. Double points still applies to a stat finale — that was never the problem. Stat rounds keep
+  their own name-reveal for the flag-identity issue.
+- **No pick countdown.** Choosing a category isn't a race, so the visible pick timer is gone.
+  `PICK_SECONDS` (10 s, visible) became `PICK_TIMEOUT_SECONDS` (45 s, invisible) — a long safety net
+  that force-picks *only* a truly absent picker so the room can't hang; a present player picks long
+  before it, with no clock on screen.
+
 **Still deferred:**
 - **The full "next block" title card** (a big card, not just the pill attribution). The client has
   what it needs (`lastPick`), so this is pure presentation whenever it's wanted.

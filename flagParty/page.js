@@ -7,7 +7,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, PICK_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, isFinalBlock, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
 import { blockBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
@@ -246,8 +246,6 @@ export function bootFlagParty() {
   const modeDraftBtn = $('mode-draft');
   const modeCustomBtn = $('mode-custom');
   const pickPill = $('pick-pill');
-  const pickTimer = $('pick-timer');
-  const pickTimerFill = $('pick-timer-fill');
   const pickLead = $('pick-lead');
   const pickHand = $('pick-hand');
   const pickWatch = $('pick-watch');
@@ -858,8 +856,13 @@ export function bootFlagParty() {
     return !!(state.question && isMetricRound(state.question.roundId) && state.question.nameFrac != null);
   }
   /** True when this question's tiles are veiled: the host's tricky mode, or the
-   *  always-tricky final block (regardless of the host's setting). */
+   *  always-tricky final block (regardless of the host's setting). **Never on a
+   *  statistics round** — the veil is a flag / outline recognition challenge, but
+   *  on a "which grows the most coffee?" round the flag is incidental, so hiding it
+   *  tests the wrong thing. Stat rounds have the name-reveal for their own
+   *  flag-identity problem (see `nameActive`). */
   function veilActive() {
+    if (state.question && isMetricRound(state.question.roundId)) return false;
     return state.tricky || isFinalBlock(state.roundIndex, state.totalRounds);
   }
   function startVeil() {
@@ -906,11 +909,13 @@ export function bootFlagParty() {
     // A block-boundary reveal holds longer (the standings break) than an ordinary
     // reveal; the host counts this down before sending `next`, same as any reveal.
     const revealSecs = atBlockBreak() ? BLOCK_BREAK_SECONDS : revealSecondsFor(clean);
-    const secs = mode === 'picking' ? PICK_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
+    // The pick has no visible countdown (choosing isn't a race); its clock is the
+    // long invisible anti-stall fallback that force-picks only an absent picker.
+    const secs = mode === 'picking' ? PICK_TIMEOUT_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
     clockTotalMs = secs * 1000;
     clockDeadline = Date.now() + clockTotalMs;
-    // Only the question phase shows the round bar. The reveal is bar-less (a
-    // sub-second bar read as a flicker); the pick draws its own bar (below).
+    // Only the question phase shows the round bar. The reveal and the pick are
+    // bar-less (the reveal is sub-second; the pick shouldn't feel timed).
     timerEl.hidden = mode !== 'question';
     timerEl.setAttribute('data-mode', mode);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
@@ -921,14 +926,13 @@ export function bootFlagParty() {
     const mode = clockMode();
     const now = Date.now();
     const left = secondsLeft(clockDeadline, now);
-    // The question paints the round bar; the pick paints its own bar; the reveal
-    // is bar-less (its clock still runs below to advance the room).
+    // Only the question paints a bar; the reveal and the pick are bar-less (their
+    // clocks still run below — the reveal to advance the room, the pick as the
+    // invisible force-pick fallback).
     if (mode === 'question') {
       timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
       timerEl.classList.toggle('low', left <= 5);
       timerLabel.textContent = String(left);
-    } else if (mode === 'picking') {
-      pickTimerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
     }
     if (left <= 0 && !clockFired) {
       clockFired = true;
@@ -1253,7 +1257,9 @@ export function bootFlagParty() {
     const nextBlock = blockIndexForRound(state.roundIndex) + 2; // 1-based: the block being chosen
     pickPill.textContent = fmt(t('party.choosingBlock', 'Choosing block {n} of {total}'), { n: nextBlock, total: totalBlocks });
 
-    const youPick = state.you != null && state.you === state.picker;
+    // Server-authoritative: the server told us whether we're the picker (never
+    // re-derived from `you === picker`, which a stale identity could get wrong).
+    const youPick = state.youPick;
     const pickerSeat = state.roster.find((r) => r.playerId === state.picker);
     const pickerName = pickerSeat ? pickerSeat.nickname : t('party.aPlayer', 'A player');
 
