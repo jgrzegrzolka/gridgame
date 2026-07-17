@@ -194,6 +194,21 @@ export function bootFlagQuiz() {
   // a bare visit starts DEFAULT_VARIANT and saving that is the truth.
   setQuizLastVariant(window.localStorage, currentVariantKey);
 
+  // Click-away + Escape close the deck popover, matching colorCountPicker's
+  // behaviour. Bound once on the document rather than per-render, so
+  // re-rendering the indicator each round can't stack listeners.
+  //
+  // MUST stay above the `return fetch(...)` below. These are statements, not
+  // function declarations, so they don't hoist: sitting after the return they
+  // were unreachable and the popover simply never closed. Nothing catches
+  // that — it typechecks, it tests, it just quietly does nothing.
+  document.addEventListener('click', () => {
+    if (deckSideEl) deckSideEl.classList.remove('is-expanded');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && deckSideEl) deckSideEl.classList.remove('is-expanded');
+  });
+
   return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
@@ -295,16 +310,6 @@ export function bootFlagQuiz() {
       btn.setAttribute('aria-expanded', String(open));
     });
   }
-
-  // Click-away + Escape close the popover, matching colorCountPicker's
-  // behaviour. Bound once on the document, not per-render, so re-rendering
-  // the indicator each round can't stack listeners.
-  document.addEventListener('click', () => {
-    if (deckSideEl) deckSideEl.classList.remove('is-expanded');
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && deckSideEl) deckSideEl.classList.remove('is-expanded');
-  });
 
   function renderModeToggle(key, mode, modes) {
     modeToggleEl.innerHTML = '';
