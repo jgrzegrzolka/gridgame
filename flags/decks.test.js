@@ -31,14 +31,17 @@ test('every variant belongs to exactly one deck', () => {
   assert.equal(decksCoverVariants(), true);
 });
 
-test('every deck has an icon, and every icon has a deck or is a future phase', () => {
+test('every deck has an icon, and every icon has a deck', () => {
   for (const d of DECKS) {
     assert.ok(/** @type {readonly string[]} */ (DECK_ICON_IDS).includes(d.id), `deck "${d.id}" has no icon`);
   }
-  // `facts` has an icon already (it ships in flagParty) but no deck until
-  // Phase 4. That's expected, not drift.
+  // Feature V is complete, so the two lists finally match exactly. `facts` was
+  // the last icon without a deck — it shipped in flagParty before flagQuiz had
+  // the deck — and this test carried that exception until Phase 4b-ii landed it.
+  // No exceptions left: an icon with no deck is now drift, not a work in
+  // progress, and so is a deck with no icon.
   const pending = DECK_ICON_IDS.filter((id) => !DECKS.some((d) => d.id === id));
-  assert.deepEqual([...pending], ['facts'], 'unexpected icon/deck mismatch');
+  assert.deepEqual([...pending], [], 'every icon should now have a deck');
 });
 
 test('deckOf maps each variant to its deck', () => {

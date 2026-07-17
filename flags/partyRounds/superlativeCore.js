@@ -20,6 +20,7 @@
  */
 
 import { lookalikesOf } from '../quiz.js';
+import { createMetric } from '../metrics.js';
 
 /** The only import here, and it must stay that way: quiz.js and its whole
  *  chain (flagPools, group, contourPool) are free of JSON imports, so this
@@ -169,4 +170,51 @@ export function createSuperlativeRound(metric, roundId, opts = {}) {
     generate: (pool, exclude, rng = Math.random) => generateFor(metric, pool, exclude, rng, forcedDirection),
     isCorrect: (question, choice) => choice === question.answer,
   };
+}
+
+/**
+ * Drop the real zeros from a metric's `values`, so they're never *selected*.
+ *
+ * A landlocked country's 0 km of coast and a desert's 0.0% forest cover are real
+ * values, not gaps — but a quartet drawn from four of them ties at zero, which is
+ * a question with no answer (and degenerates the GAP_RATIO gate). Removing them
+ * from `values` makes `metric.has` false, the same mechanism that already
+ * restricts a sparse crop metric to its growers.
+ *
+ * @param {import('../metrics.js').MetricData} raw
+ * @returns {import('../metrics.js').MetricData}
+ */
+function positiveOnly(raw) {
+  return {
+    ...raw,
+    values: Object.fromEntries(Object.entries(raw.values).filter(([, v]) => v > 0)),
+  };
+}
+
+/**
+ * Turn a catalog entry plus its raw values file into a playable round: apply the
+ * zero-filter, build the metric, lock the direction.
+ *
+ * **This is the single definition of "apply the catalog's rules", and it lives
+ * here for the same reason the catalog does.** Two consumers need it and they
+ * load their data by completely different routes — `superlative.js` imports 32
+ * JSONs statically (server-only), flagQuiz's Facts deck fetches them — so the
+ * one thing they must NOT do is each decide for themselves what `zeroFiltered`
+ * means. A second copy is precisely the silent drift Phase 4b-i existed to
+ * prevent: nothing fails when one of them forgets that coastline has landlocked
+ * zeros, it just starts asking questions with no answer.
+ *
+ * Takes the raw data rather than fetching it, so this file stays JSON-free and
+ * browser-loadable — the whole point of the core/data split.
+ *
+ * @param {import('./superlativeCatalog.js').SuperlativeMetric} entry
+ * @param {import('../metrics.js').MetricData} raw the metric's values file
+ * @returns {ReturnType<typeof createSuperlativeRound>}
+ */
+export function buildSuperlativeRound(entry, raw) {
+  return createSuperlativeRound(
+    createMetric(entry.zeroFiltered ? positiveOnly(raw) : raw, []),
+    entry.roundId,
+    entry.direction ? { direction: entry.direction } : {},
+  );
 }

@@ -41,6 +41,7 @@ import {
   variantHasLeaderboard,
   artKindFor,
   artBaseFor,
+  askKindFor,
 } from './quiz.js';
 import { loadCountries } from './group.js';
 import { CONTOUR_CODES, CONTOUR_CODE_SET } from './contourPool.js';
@@ -130,7 +131,7 @@ test('pickQuestion throws if input is too small', () => {
   );
 });
 
-test('VARIANTS contains the expected 9 keys in display order, new decks last', () => {
+test('VARIANTS contains the expected 10 keys in display order, new decks last', () => {
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
     'europe',
@@ -141,6 +142,7 @@ test('VARIANTS contains the expected 9 keys in display order, new decks last', (
     'oceania',
     'weird',
     'outlines',
+    'facts',
   ]);
 });
 
@@ -460,6 +462,33 @@ test('availableModes offers both 60s and all for any pool size — the timed mod
   assert.deepEqual(availableModes(19), ['60s', 'all']);
   assert.deepEqual(availableModes(4), ['60s', 'all']);
   assert.deepEqual(availableModes(0), ['60s', 'all']);
+});
+
+test('availableModes: a variant restricts to its declared modes — Facts is 60s-only', () => {
+  // The argument Phases 2 and 3 deferred. Facts has nothing to exhaust, so `all`
+  // would never end; the variant declares `modes: ['60s']` and this is where it
+  // takes effect.
+  assert.deepEqual(availableModes(195, 'facts'), ['60s']);
+  assert.deepEqual(availableModes(0, 'facts'), ['60s']);
+});
+
+test('availableModes: a variant with no modes declared offers all of them', () => {
+  assert.deepEqual(availableModes(195, 'countries'), ['60s', 'all']);
+  assert.deepEqual(availableModes(54, 'weird'), ['60s', 'all']);
+  assert.deepEqual(availableModes(157, 'outlines'), ['60s', 'all']);
+});
+
+test('availableModes: an unknown variant offers everything rather than silently narrowing', () => {
+  assert.deepEqual(availableModes(195, 'mars'), ['60s', 'all']);
+});
+
+test('defaultModeFor / resolveMode thread the variant through to Facts', () => {
+  assert.equal(defaultModeFor(195, 'facts'), '60s');
+  // `all` is not offered on Facts, so a ?n=all deep-link falls back to 60s.
+  assert.equal(resolveMode('all', 195, 'facts'), '60s');
+  assert.equal(resolveMode('60s', 195, 'facts'), '60s');
+  // Unchanged for a normal deck: the URL mode is honoured.
+  assert.equal(resolveMode('all', 195, 'countries'), 'all');
 });
 
 test('defaultModeFor returns "60s" — the time-attack is the headline mode', () => {
@@ -1164,6 +1193,24 @@ test('VARIANTS carries an art kind, defaulting to flags', () => {
 test('artKindFor falls back to flag for an unknown variant', () => {
   // A stale ?v= must render something rather than 404 on a bogus directory.
   assert.equal(artKindFor('mars'), 'flag');
+});
+
+test('Facts deals flags, not a new art kind — only its PROMPT differs', () => {
+  // The trap the FEATURE.md entry warns about: Facts feels like a new kind of
+  // round, but the tiles are four flags exactly like flag-pick. art stays 'flag';
+  // what's new is the prompt.
+  assert.equal(artKindFor('facts'), 'flag');
+});
+
+test('askKindFor: every deck names a country except Facts, which asks a superlative', () => {
+  assert.equal(askKindFor('countries'), 'country');
+  assert.equal(askKindFor('weird'), 'country');
+  assert.equal(askKindFor('outlines'), 'country', 'outlines still asks "which is Italy?", just with a contour');
+  assert.equal(askKindFor('facts'), 'superlative');
+});
+
+test('askKindFor falls back to country for an unknown variant', () => {
+  assert.equal(askKindFor('mars'), 'country');
 });
 
 test('artBaseFor maps the kind to its asset directory', () => {

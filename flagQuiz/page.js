@@ -16,6 +16,7 @@ import {
   poolFor,
   targetFor,
   artBaseFor,
+  askKindFor,
   isQuizShowMap,
   setQuizShowMap,
   getQuizLastVariant,
@@ -34,6 +35,10 @@ import { runCelebration } from '../confetti.js';
 import { buildQuizMenu } from './menu.js';
 import { DECKS, deckOf, defaultVariantForDeck } from '../flags/decks.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
+import { createFactsQuiz } from '../flags/factsQuiz.js';
+import { SUPERLATIVE_METRICS } from '../flags/partyRounds/superlativeCatalog.js';
+import { METRIC_FILES } from '../flags/metrics/index.js';
+import { METRIC_HUES, metricIconSpan } from '../flags/metricVisuals.js';
 import { QUIZ_MAP_CONFIG } from './mapConfig.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { bumpShare, bumpQuiz60sDay, pushEngagementBlob } from '../flags/engagementCounters.js';
@@ -229,7 +234,7 @@ export function bootFlagQuiz() {
         buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), raw, {
           relativeBase: '',
           currentVariantKey,
-          currentMode: resolveMode(urlMode, poolFor(currentVariantKey, raw).length),
+          currentMode: resolveMode(urlMode, poolFor(currentVariantKey, raw).length, currentVariantKey),
           statsCurrent: false,
         });
         mountNicknameMenuItem({
@@ -242,13 +247,23 @@ export function bootFlagQuiz() {
 
       const variantKey = currentVariantKey;
       let pool = poolFor(variantKey, raw);
-      let modeKey = resolveMode(urlMode, pool.length);
+      let modeKey = resolveMode(urlMode, pool.length, variantKey);
 
-      game = startGame(variantKey, modeKey, raw);
-      document.addEventListener('langchanged', () => {
-        rebuildMenu();
-        game.refreshI18n();
-      });
+      // Facts is the one deck whose questions come from world-metric data, not
+      // from the country list — so it (and only it) fetches the metric JSONs
+      // before the round can start. Every other deck starts synchronously.
+      const startWith = (factsMetrics) => {
+        game = startGame(variantKey, modeKey, raw, factsMetrics);
+        document.addEventListener('langchanged', () => {
+          rebuildMenu();
+          game.refreshI18n();
+        });
+      };
+      if (askKindFor(variantKey) === 'superlative') {
+        return loadFactsMetrics().then(startWith);
+      }
+      startWith(null);
+      return undefined;
     })
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
@@ -271,6 +286,25 @@ export function bootFlagQuiz() {
    * @param {Country[]} raw  the full country list (this fn is defined outside
    *   the fetch closure, so it can't close over it)
    */
+  /**
+   * Fetch every catalog metric's values file, tolerantly — a file that fails to
+   * load just drops that one metric from the deck, the way flagParty treats a
+   * failed metric fetch. JSON is FETCHED, never imported: `superlative.js` can
+   * import it because it only runs on the server, but this is the browser, and a
+   * static JSON import ships a blank page (#767). Returns `{ entry, data }[]`.
+   *
+   * @returns {Promise<Array<{ entry: any, data: any }>>}
+   */
+  function loadFactsMetrics() {
+    const fileByKey = Object.fromEntries(METRIC_FILES.map((m) => [m.key, m.file]));
+    return Promise.all(SUPERLATIVE_METRICS.map((entry) =>
+      fetch(`../flags/metrics/${fileByKey[entry.key]}`)
+        .then((r) => r.json())
+        .then((data) => ({ entry, data }))
+        .catch(() => null)))
+      .then((list) => /** @type {Array<{ entry: any, data: any }>} */ (list.filter(Boolean)));
+  }
+
   function renderDeckIndicator(key, mode, raw) {
     if (!deckSideEl) return;
     const active = deckOf(key);
@@ -291,9 +325,11 @@ export function bootFlagQuiz() {
       if (!to) continue;
       const pool = poolFor(to, raw);
       // Keep the player's mode across the switch when the target deck allows
-      // it; fall back to that deck's default rather than dead-ending.
-      const modes = availableModes(pool.length);
-      const nextMode = modes.includes(mode) ? mode : defaultModeFor(pool.length);
+      // it; fall back to that deck's default rather than dead-ending. Threading
+      // `to` matters for Facts: it's 60s-only, so a player in `all` mode landing
+      // on the Facts pill must get `n=60s`, not a self-correcting `n=all` link.
+      const modes = availableModes(pool.length, to);
+      const nextMode = modes.includes(mode) ? mode : defaultModeFor(pool.length, to);
       if (nextMode === null) continue;
       const a = document.createElement('a');
       a.className = 'deck-opt';
@@ -337,15 +373,22 @@ export function bootFlagQuiz() {
     });
   }
 
-  function startGame(key, mode, raw) {
+  function startGame(key, mode, raw, factsMetrics) {
     const pool = poolFor(key, raw);
     const target = targetFor(mode, pool);
-    const quiz = createQuiz(pool, target);
+    // What the prompt asks: a country name (every deck) or a superlative
+    // criterion (Facts). Facts draws its questions from world-metric data rather
+    // than the pool, so it uses a different source — same shape, so the round
+    // loop below is unchanged.
+    const ask = askKindFor(key);
+    const quiz = ask === 'superlative'
+      ? createFactsQuiz({ metrics: /** @type {any} */ (factsMetrics) || [], pool })
+      : createQuiz(pool, target);
     const timed = isTimedMode(mode);
     const modeDef = MODES[mode];
     const budgetMs = timed && modeDef.kind === 'timed' ? modeDef.budgetMs : 0;
     const penaltyMs = timed && modeDef.kind === 'timed' ? modeDef.penaltyMs : 0;
-    const modes = availableModes(pool.length);
+    const modes = availableModes(pool.length, key);
     // What this deck's choice tiles are made of. Outlines deals contour
     // silhouettes from a different directory; every other deck deals flags.
     const artBase = artBaseFor(key);
@@ -768,9 +811,35 @@ export function bootFlagQuiz() {
       return Math.max(0, target - wrongCount);
     }
 
+    /**
+     * Paint the prompt line for a question. Country decks name the country
+     * (`#country-name` is a plain string); Facts asks a superlative criterion,
+     * led by the metric's icon and tinted with its hue — the same per-metric
+     * identity Flag Party's prompt wears, from the same `metricVisuals` source.
+     * Split out so the language-switch refresh re-paints it the same way.
+     * @param {any} q
+     */
+    function paintPrompt(q) {
+      if (ask === 'superlative') {
+        countryNameEl.classList.add('superlative');
+        countryNameEl.style.setProperty('--mc', METRIC_HUES[q.prompt.metricKey] || 'currentColor');
+        countryNameEl.innerHTML = '';
+        countryNameEl.appendChild(metricIconSpan(q.prompt.metricKey, 'facts-prompt-ic'));
+        const label = document.createElement('span');
+        label.textContent = t(q.prompt.hint.key, q.prompt.hint.fallback);
+        countryNameEl.appendChild(label);
+      } else {
+        countryNameEl.textContent = countryName(q.answer);
+      }
+    }
+
+    /** The question on screen, so a language switch can re-paint its prompt. */
+    let currentQ = null;
+
     function render(q) {
       currentAnswer = q.answer;
-      countryNameEl.textContent = countryName(q.answer);
+      currentQ = q;
+      paintPrompt(q);
       choicesEl.innerHTML = '';
       for (const c of q.choices) {
         const tile = document.createElement('button');
@@ -1199,7 +1268,7 @@ export function bootFlagQuiz() {
       refreshI18n() {
         playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
         renderModeToggle(key, mode, modes);
-        if (currentAnswer) countryNameEl.textContent = countryName(currentAnswer);
+        if (currentQ) paintPrompt(currentQ);
         paintResultLabels();
         // The share button itself stays mounted across a lang switch —
         // re-rendering it would clear any in-flight `.copied` flash and

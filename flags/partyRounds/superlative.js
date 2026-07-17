@@ -30,8 +30,7 @@ import happiness from '../metrics/happiness.json' with { type: 'json' };
 import corruption from '../metrics/corruption.json' with { type: 'json' };
 import tourismPerCapita from '../metrics/tourismPerCapita.json' with { type: 'json' };
 import electricityPerCapita from '../metrics/electricityPerCapita.json' with { type: 'json' };
-import { createMetric } from '../metrics.js';
-import { createSuperlativeRound } from './superlativeCore.js';
+import { buildSuperlativeRound } from './superlativeCore.js';
 import { SUPERLATIVE_METRICS } from './superlativeCatalog.js';
 
 /**
@@ -79,42 +78,18 @@ const DATA = {
 };
 
 /**
- * Drop the real zeros from a metric's `values`, so they're never *selected*.
- *
- * A landlocked country's 0 km of coast and a desert's 0.0% forest cover are real
- * values, not gaps — but a quartet drawn from four of them ties at zero, which
- * is a question with no answer (and degenerates the GAP_RATIO gate). Removing
- * them from `values` makes `metric.has` false, which is the same mechanism that
- * already restricts a sparse crop metric to its growers. Which metrics need this
- * is the catalog's `zeroFiltered`, not a decision made here.
- *
- * @param {import('../metrics.js').MetricData} raw
- * @returns {import('../metrics.js').MetricData}
- */
-function positiveOnly(raw) {
-  return {
-    ...raw,
-    values: Object.fromEntries(Object.entries(raw.values).filter(([, v]) => v > 0)),
-  };
-}
-
-/**
  * Every superlative round, keyed by metric key — one per catalog entry, built by
  * one factory. This replaced 32 hand-written `createSuperlativeRound(...)` calls
  * whose only differences were the three fields the catalog now states.
  *
- * @type {Record<string, ReturnType<typeof createSuperlativeRound>>}
+ * @type {Record<string, ReturnType<typeof buildSuperlativeRound>>}
  */
 const ROUNDS = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => {
   const raw = DATA[m.key];
   if (!raw) throw new Error(`No metric data for catalog entry "${m.key}"`);
   return [
     m.key,
-    createSuperlativeRound(
-      createMetric(m.zeroFiltered ? positiveOnly(raw) : raw, []),
-      m.roundId,
-      m.direction ? { direction: m.direction } : {},
-    ),
+    buildSuperlativeRound(m, raw),
   ];
 }));
 

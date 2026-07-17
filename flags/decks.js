@@ -55,6 +55,15 @@ export const DECKS = [
     label: 'Shapes',
     variants: ['outlines'],
   },
+  // World-only for the same reason Outlines is, but arrived at from the other
+  // side: "Europe: most populous" would work, "Europe: most coffee" is all
+  // zeros. A per-continent Facts deck is its own sparse matrix, and world-only
+  // deletes it. One variant, so no scope list — same silence as the two above.
+  {
+    id: 'facts',
+    label: 'Facts',
+    variants: ['facts'],
+  },
 ];
 
 /** Fallback for a variant no deck claims — treated as an ordinary flags deck. */
