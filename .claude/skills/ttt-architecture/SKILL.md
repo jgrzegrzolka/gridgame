@@ -99,7 +99,7 @@ export function setFindIncludeAll(store, value) { writeBoolSetting(store, FIND_I
 
 `readBoolSetting` / `writeBoolSetting` (`flags/group.js:798-811`) are **default-off by construction** (`getItem(key) === 'true'`, and `false` removes the key). For a default-*on* setting they're the wrong helper; use the `getItem(K) !== 'false'` idiom from `flagsdata/page.js:37-41` instead.
 
-**Key naming:** `gridgame.<surface>.<setting>`. The `ttt` namespace is already claimed (`gridgame.ttt.hostRoom`, `flags/tttHostMemory.js:24`, which is **sessionStorage**, not localStorage). Existing keys: `gridgame.flagfind.includeAll`, `gridgame.flagquiz.includeAll` / `.lastVariant` / `.showMap`, `gridgame.flagsdata.showMap` / `.wide`, `gridgame.party.setup` / `.plan` / `.tricky` / `.reveal`.
+**Key naming:** `gridgame.<surface>.<setting>`. The `ttt` namespace is already claimed (`gridgame.ttt.hostRoom`, `flags/tttHostMemory.js:24`, which is **sessionStorage**, not localStorage). Existing keys: `gridgame.flagfind.includeAll`, `gridgame.flagquiz.lastVariant` / `.showMap`, `gridgame.flagsdata.showMap` / `.wide`, `gridgame.party.setup` / `.plan` / `.tricky` / `.reveal`. (`gridgame.flagquiz.includeAll` was deleted by Feature V — flagQuiz's include-territories toggle became the `weird` deck. findFlag still has its own.)
 
 **One setting reaches puzzle generation: "Advanced mode"** (`gridgame.ttt.advanced`), mounted on **all three** boards, **twice each** (burger + "How to play"). It's the worked example of everything above, so copy it rather than the findFlag original if you're adding a second one.
 

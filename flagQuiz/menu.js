@@ -1,6 +1,5 @@
-import { VARIANTS, defaultModeFor, resolveMode, isQuizIncludeAll, setQuizIncludeAll } from '../flags/quiz.js';
+import { VARIANTS, defaultModeFor, resolveMode } from '../flags/quiz.js';
 import { t } from '../i18n.js';
-import { buildToggleLi } from '../common.js';
 
 /** @typedef {import('../flags/group.js').Country} Country */
 
@@ -20,12 +19,15 @@ import { buildToggleLi } from '../common.js';
  *   - `statsCurrent`: true on the stats page. Marks the "Your stats"
  *     link with aria-current="page".
  *
- * The scope toggle is built here too so the toggle's wiring (label,
- * track, thumb, delayed reload) lives in one place.
- *
  * The map's show/hide is driven entirely by the toggle chip on the map
  * itself (present as a "show" chip even on the collapsed strip), so the
  * burger menu carries no map toggle.
+ *
+ * The "Include territories & other flags" toggle used to be built here.
+ * Feature V replaced it with the `weird` deck, which needs no wiring at
+ * all: it's an ordinary `VARIANTS` entry, so the loop below renders it as
+ * a link like every other deck. Phase 2 replaces this list with the pill
+ * switcher + a scope list that only appears under `flags`.
  *
  * @param {HTMLUListElement} menuEl
  * @param {Country[]} all
@@ -33,11 +35,11 @@ import { buildToggleLi } from '../common.js';
  */
 export function buildQuizMenu(menuEl, all, opts) {
   const { relativeBase, currentVariantKey, statsCurrent } = opts;
-  const includeAll = isQuizIncludeAll();
 
-  menuEl.appendChild(buildScopeToggleLi(includeAll));
-
+  // "All countries" stands apart from the continent list; `weird` stands
+  // apart from both — it's a different pool, not a slice of the world.
   const WIDE_GROUP = new Set(['countries']);
+  const OWN_GROUP = new Set(['weird']);
   let dividerPlaced = false;
   let firstVariantPlaced = false;
   for (const [key, variant] of Object.entries(VARIANTS)) {
@@ -46,9 +48,9 @@ export function buildQuizMenu(menuEl, all, opts) {
     if (defaultMode === null) continue;
     const li = document.createElement('li');
     if (!firstVariantPlaced) {
-      // Separates the scope toggle from the variant list.
-      li.className = 'menu-divider';
       firstVariantPlaced = true;
+    } else if (OWN_GROUP.has(key)) {
+      li.className = 'menu-divider';
     } else if (!dividerPlaced && !WIDE_GROUP.has(key)) {
       li.className = 'menu-divider';
       dividerPlaced = true;
@@ -123,6 +125,12 @@ export function buildVariantPicker(pickerListEl, all, opts) {
     'north-america': 'north-america.svg',
     'south-america': 'south-america.svg',
     oceania: 'oceania.svg',
+    // Not a continent, so not a landmass: the Jolly Roger, matching the icon
+    // Flag Party already uses for the same non-sovereign pool ("a flag with
+    // no country, unmistakably not a specific country"). Authored as a
+    // monochrome alpha mask because `.picker-tile-icon` paints it via
+    // mask-image, not as artwork.
+    weird: 'weird.svg',
   });
   for (const [key, variant] of Object.entries(VARIANTS)) {
     const pool = all.filter(variant.filter);
@@ -151,14 +159,4 @@ export function buildVariantPicker(pickerListEl, all, opts) {
     li.appendChild(a);
     pickerListEl.appendChild(li);
   }
-}
-
-/** @param {boolean} includeAll */
-function buildScopeToggleLi(includeAll) {
-  return buildToggleLi({
-    label: t('menu.includeTerritories', 'Include territories & other flags'),
-    labelKey: 'menu.includeTerritories',
-    initial: includeAll,
-    onChange: (checked) => setQuizIncludeAll(localStorage, checked),
-  });
 }

@@ -19,13 +19,27 @@ const PROFILES_CONTAINER = 'profiles';
 const TTT_PAIRS_CONTAINER = 'tttPairs';
 const CACHE_TTL_MS = 60_000;
 
-// Sovereign-only ("sov") pool sizes per quiz variant. Source of truth
-// for the "Cleared <variant>" achievements — a 60s PB that meets or
-// exceeds the variant's sov pool size counts as a clear (across either
-// includeAll value). The numbers must match what `flagsGamePool(c,
-// false)` produces against `flags/countries.json`; the drift detector
-// `flags/countries.test.js` pins them so a country added or removed
-// without updating this map fails CI loudly.
+// Sovereign pool sizes per quiz variant. Source of truth for the
+// "Cleared <variant>" achievements — a 60s PB that meets or exceeds the
+// variant's pool size counts as a clear. The numbers must match what
+// `poolFor(key, countries)` produces against `flags/countries.json`; the
+// drift detector `flags/countries.test.js` pins them so a country added or
+// removed without updating this map fails CI loudly.
+//
+// **`weird` is deliberately absent and must stay absent.** Two reasons; the
+// second is the durable one:
+//   1. A variant with no entry here can never clear (see quizCompute), which
+//      keeps the 54-flag territory deck from satisfying released continent
+//      badges that claim "you know the countries of <continent>".
+//   2. Its pool GROWS. The sovereign count is politically stable (195 for
+//      years), but the non-sovereign pool is a curation decision that gains
+//      entries whenever flag data lands (gb-eng, gb-sct, es-ct, sh-ac all
+//      arrived in #724). A "cleared" threshold anchored to a moving number is
+//      broken by construction: clear it at 54, silently un-clear at 56, and
+//      every data addition forces a threshold bump that retroactively changes
+//      what an already-earned badge claims.
+// Personal bests on `weird` are kept and are fine — "your best is 22" doesn't
+// depend on pool size. It's threshold-and-count stats that can't be.
 const SOV_POOL_SIZES = {
   countries: 195,
   europe: 45,

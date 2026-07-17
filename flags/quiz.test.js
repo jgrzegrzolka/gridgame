@@ -41,6 +41,12 @@ import {
   variantHasLeaderboard,
 } from './quiz.js';
 import { loadCountries } from './group.js';
+import {
+  sovereignPool,
+  nonSovereignPool,
+  isSovereignFlag,
+  SHARED_PARENT_FLAG,
+} from './flagPools.js';
 
 /**
  * @param {Record<string, string>} [initial]
@@ -121,7 +127,7 @@ test('pickQuestion throws if input is too small', () => {
   );
 });
 
-test('VARIANTS contains the expected 7 keys in display order (sovereign only)', () => {
+test('VARIANTS contains the expected 8 keys in display order, weird last', () => {
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
     'europe',
@@ -130,6 +136,7 @@ test('VARIANTS contains the expected 7 keys in display order (sovereign only)', 
     'north-america',
     'south-america',
     'oceania',
+    'weird',
   ]);
 });
 
@@ -137,15 +144,52 @@ test('poolFor throws on an unknown variant', () => {
   assert.throws(() => poolFor('mars', countries), /Unknown variant/);
 });
 
-test('poolFor("countries") is an identity over its input (scope is applied upstream)', () => {
-  assert.equal(poolFor('countries', countries).length, countries.length);
+// Feature V: each variant now owns its whole pool. The old "scope is applied
+// upstream" split existed only to serve the include-territories toggle, and
+// it made `weird` inexpressible — its pool is not a subset of the sovereign
+// one, it's the complement.
+test('poolFor("countries") is the sovereign pool, not an identity', () => {
+  const pool = poolFor('countries', countries);
+  assert.deepEqual(pool, sovereignPool(countries));
+  assert.ok(pool.length < countries.length, 'must exclude territories + orgs');
+  for (const c of pool) assert.ok(isSovereignFlag(c), `${c.code} is not sovereign`);
 });
 
-test('poolFor("europe") narrows by continent only — scope is applied upstream', () => {
+test('poolFor("europe") narrows to sovereign Europe', () => {
   const europe = poolFor('europe', countries);
   assert.ok(europe.length > 0);
   for (const c of europe) {
     assert.equal(c.continent, 'Europe');
+    assert.ok(isSovereignFlag(c), `${c.code} is not sovereign`);
+  }
+});
+
+test('poolFor("weird") is exactly the curated non-sovereign pool', () => {
+  const weird = poolFor('weird', countries);
+  assert.deepEqual(weird, nonSovereignPool(countries));
+  assert.ok(weird.length > 0);
+  for (const c of weird) {
+    assert.ok(!isSovereignFlag(c), `${c.code} is sovereign — wrong deck`);
+    assert.equal(c.category, 'country', `${c.code} is an organisation, not a place`);
+  }
+});
+
+// The bug Feature V exists to fix: with the old toggle on, the quiz could ask
+// "Which flag is Réunion?" and offer the French tricolour, because the pool
+// was raw `includeAll` rather than Party's curated one.
+test('poolFor("weird") excludes flags that are really the parent sovereign\'s', () => {
+  const codes = new Set(poolFor('weird', countries).map((c) => c.code));
+  for (const code of SHARED_PARENT_FLAG) {
+    assert.ok(!codes.has(code), `${code} wears its parent's flag — unanswerable`);
+  }
+});
+
+test('the sovereign decks and the weird deck never overlap', () => {
+  const weird = new Set(poolFor('weird', countries).map((c) => c.code));
+  for (const key of ['countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania']) {
+    for (const c of poolFor(key, countries)) {
+      assert.ok(!weird.has(c.code), `${c.code} is in both "${key}" and "weird"`);
+    }
   }
 });
 
@@ -707,12 +751,22 @@ test('bestKey adds a .v2 segment for the all mode — orphans pre-mistakes-scori
   // semantics would render `95` as "95 mistakes". The .v2 segment
   // means the old keys are unreachable and never reloaded.
   assert.equal(bestKey('europe', 'all'), 'flagquiz.best.europe.all.v2');
-  assert.equal(bestKey('countries', 'all', true), 'flagquiz.best.countries.all.v2.all');
+  assert.equal(bestKey('countries', 'all'), 'flagquiz.best.countries.all.v2');
 });
 
-test('bestKey appends .all suffix when includeAll is true', () => {
-  assert.equal(bestKey('europe', '60s', true), 'flagquiz.best.europe.60s.all');
-  assert.equal(bestKey('europe', '60s', false), 'flagquiz.best.europe.60s');
+// Feature V: the includeAll param is gone with the toggle. The keys it used
+// to produce (`.all`-suffixed) are orphaned in players' localStorage, which
+// is harmless — the sovereign keys, which are the ones anybody has a real PB
+// under, are byte-identical before and after. That's what makes this safe.
+test('bestKey ignores any extra argument — no scope suffix survives', () => {
+  assert.equal(bestKey('europe', '60s'), 'flagquiz.best.europe.60s');
+  // @ts-expect-error — a stale 3-arg caller must not resurrect the old slot
+  assert.equal(bestKey('europe', '60s', true), 'flagquiz.best.europe.60s');
+});
+
+test('the weird deck gets its own bestKey slot', () => {
+  assert.equal(bestKey('weird', '60s'), 'flagquiz.best.weird.60s');
+  assert.equal(bestKey('weird', 'all'), 'flagquiz.best.weird.all.v2');
 });
 
 test('accuracyRatio: clean sweep is 1 (full green)', () => {
@@ -774,12 +828,12 @@ test('nextBest with lowerScoreWins still breaks score ties on faster time', () =
   assert.deepEqual(r, { best: curr, isNew: true });
 });
 
-test('recordResult writes to a different slot when includeAll is true', () => {
+test('recordResult writes each deck to its own slot', () => {
   const store = fakeStore();
-  recordResult(store, 'europe', '60s', { score: 12, time: 60000 }, false);
-  recordResult(store, 'europe', '60s', { score: 8, time: 60000 }, true);
-  assert.deepEqual(loadBest(store, bestKey('europe', '60s', false)), { score: 12, time: 60000 });
-  assert.deepEqual(loadBest(store, bestKey('europe', '60s', true)), { score: 8, time: 60000 });
+  recordResult(store, 'europe', '60s', { score: 12, time: 60000 });
+  recordResult(store, 'weird', '60s', { score: 8, time: 60000 });
+  assert.deepEqual(loadBest(store, bestKey('europe', '60s')), { score: 12, time: 60000 });
+  assert.deepEqual(loadBest(store, bestKey('weird', '60s')), { score: 8, time: 60000 });
 });
 
 test('recordResult on an empty store saves the result and reports isNew', () => {
@@ -824,11 +878,11 @@ test('recordResult with lowerScoreWins (all-mode shape) keeps the lower-mistake 
   const worse = { score: 8, time: 30000 };
   const betterMistakes = { score: 3, time: 95000 };
   assert.deepEqual(
-    recordResult(store, 'europe', 'all', worse, false, lowerScoreWins),
+    recordResult(store, 'europe', 'all', worse, lowerScoreWins),
     { best: { score: 5, time: 90000 }, isNew: false },
   );
   assert.deepEqual(
-    recordResult(store, 'europe', 'all', betterMistakes, false, lowerScoreWins),
+    recordResult(store, 'europe', 'all', betterMistakes, lowerScoreWins),
     { best: betterMistakes, isNew: true },
   );
   assert.deepEqual(loadBest(store, bestKey('europe', 'all')), betterMistakes);

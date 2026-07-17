@@ -36,6 +36,7 @@
  *   zeroScoreFinishes?: number,
  *   quizAttempts60s?: number,
  *   quizVariantsTouched60s?: number,
+ *   quiz60sTouchedVariants?: string[],
  *   quizBestScore60s?: number,
  *   quiz60sClearedVariants?: string[],
  *   quizAttemptsAll?: number,
@@ -608,9 +609,14 @@ export const QUIZ_ACHIEVEMENTS = [
     id: 'cartographer',
     icon: ICON_GLOBE,
     name: 'Cartographer',
-    description: 'Tried every 60s quiz variant — all 7 continents (plus All Countries).',
-    hint: 'Finish a 60s round in every variant.',
-    predicate: (s) => num(s.quizVariantsTouched60s) >= 7,
+    description: 'Tried every 60s quiz variant — all 6 continents (plus All Countries).',
+    hint: 'Finish a 60s round in every continent and in All Countries.',
+    // Names, not a count — see hasTouched60s. Scoped to QUIZ_60S_VARIANTS so
+    // decks that aren't slices of the world (weird / outlines / facts) can
+    // neither satisfy this badge nor, by being added, make it harder. Nobody
+    // loses a badge to this change: before `weird` existed the only way to
+    // reach 7 was to touch exactly these 7.
+    predicate: (s) => QUIZ_60S_VARIANTS.every((v) => hasTouched60s(s, v)),
   },
   // ---- Volume tier — total 60s attempts ever (every finish, PB or
   // not). The reward for sheer time invested. Counts include 0-score
@@ -703,9 +709,10 @@ export const QUIZ_ACHIEVEMENTS = [
   },
   // Per-variant "Cleared" — declared smallest pool first so the
   // easiest-to-earn tile sits at the top of the mastery cluster on
-  // the profile grid. Threshold = sov pool size for the variant;
-  // playing the with-territories pool and meeting the sov count
-  // still counts (computeQuiz takes the best across includeAll).
+  // the profile grid. Threshold = sovereign pool size for the variant.
+  // A legacy with-territories PB that met the sovereign count still
+  // counts: computeQuiz folds a variant's old and new configKeys
+  // together and takes the best.
   {
     id: 'south-america-cleared',
     icon: ICON_FLAG_SA,
@@ -1007,6 +1014,25 @@ function num(x) {
  */
 function hasCleared(snapshot, variant) {
   const arr = snapshot.quiz60sClearedVariants;
+  return Array.isArray(arr) && arr.includes(variant);
+}
+
+/**
+ * Has the player finished a 60s round in `variant`? Mirrors `hasCleared`'s
+ * defensive shape.
+ *
+ * Named lookup rather than the old `quizVariantsTouched60s >= 7` count. The
+ * count only meant "tried every variant" while exactly seven variants existed;
+ * Feature V's `weird` deck made eight, so six continents plus weird reached 7
+ * and earned Cartographer with a continent never played. Counting is wrong in
+ * principle here, not just off by one: every future deck moves the number.
+ *
+ * @param {Snapshot} snapshot
+ * @param {string} variant
+ * @returns {boolean}
+ */
+function hasTouched60s(snapshot, variant) {
+  const arr = snapshot.quiz60sTouchedVariants;
   return Array.isArray(arr) && arr.includes(variant);
 }
 

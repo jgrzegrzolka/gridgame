@@ -14,7 +14,6 @@ import {
   scoreColor,
   poolFor,
   targetFor,
-  isQuizIncludeAll,
   isQuizShowMap,
   setQuizShowMap,
   getQuizLastVariant,
@@ -25,7 +24,7 @@ import {
   countModeProgressRatio,
   variantHasLeaderboard,
 } from '../flags/quiz.js';
-import { flagsGamePool, loadCountries } from '../flags/group.js';
+import { loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
@@ -196,13 +195,10 @@ export function bootFlagQuiz() {
     setQuizLastVariant(window.localStorage, currentVariantKey);
   }
 
-  const includeAll = isQuizIncludeAll();
-
   return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
     .then((raw) => {
-      const all = flagsGamePool(raw, includeAll);
 
       // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
       // a soft language switch doesn't double the variant list. The
@@ -215,7 +211,7 @@ export function bootFlagQuiz() {
       let game = null;
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
-        buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
+        buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), raw, {
           relativeBase: '',
           // No "current variant" on first visit — nothing is highlighted
           // in the burger menu because the player hasn't chosen anything
@@ -237,20 +233,20 @@ export function bootFlagQuiz() {
       if (isFirstVisit) {
         const pickerEl = /** @type {HTMLElement} */ (document.getElementById('quiz-picker'));
         const pickerListEl = /** @type {HTMLUListElement} */ (document.getElementById('quiz-picker-list'));
-        buildVariantPicker(pickerListEl, all, { urlMode });
+        buildVariantPicker(pickerListEl, raw, { urlMode });
         pickerEl.hidden = false;
         document.addEventListener('langchanged', () => {
           rebuildMenu();
-          buildVariantPicker(pickerListEl, all, { urlMode });
+          buildVariantPicker(pickerListEl, raw, { urlMode });
         });
         return;
       }
 
       const variantKey = currentVariantKey;
-      let pool = all.filter(VARIANTS[variantKey].filter);
+      let pool = poolFor(variantKey, raw);
       let modeKey = resolveMode(urlMode, pool.length);
 
-      game = startGame(variantKey, modeKey, all, raw);
+      game = startGame(variantKey, modeKey, raw);
       document.addEventListener('langchanged', () => {
         rebuildMenu();
         game.refreshI18n();
@@ -285,8 +281,8 @@ export function bootFlagQuiz() {
     });
   }
 
-  function startGame(key, mode, all, raw) {
-    const pool = poolFor(key, all);
+  function startGame(key, mode, raw) {
+    const pool = poolFor(key, raw);
     const target = targetFor(mode, pool);
     const quiz = createQuiz(pool, target);
     const timed = isTimedMode(mode);
@@ -310,7 +306,7 @@ export function bootFlagQuiz() {
     // crops the viewBox to the variant's country codes. Future continents
     // follow the same pattern by adding an entry here. Gate: variant must
     // be in this table AND the player has the show-map toggle on.
-    const variantPool = all.filter(VARIANTS[key].filter);
+    const variantPool = pool;
     // `cropExcludes` per-variant drops countries from the bbox crop
     // computation only. The country still renders + is quizzed; it
     // just doesn't pull the viewBox toward its bbox. Used for
@@ -470,11 +466,12 @@ export function bootFlagQuiz() {
     // Click → flag zoom popup. The map is non-interactive while the
     // round is in progress (no `.is-finished` on the section); once the
     // round ends `.is-finished` is set and every country becomes a
-    // review surface. Lookup is built from `raw` (the full 270-entry
-    // country list), not the playable `all` pool — territories like Isle
-    // of Man / Guernsey / Jersey / Faroe Islands aren't quiz items in
-    // the default sovereign pool, but they're still rendered on the map
-    // and the player can click them to see the flag.
+    // review surface. Lookup is built from `raw` (the full 269-entry
+    // country list), NOT the deck's `pool` — territories like Isle of
+    // Man / Guernsey / Jersey aren't quiz items in a sovereign deck, but
+    // they're still rendered on the map and the player can click them to
+    // see the flag. (Feature V: the `weird` deck quizzes some of these;
+    // the map lookup stays the full list either way.)
     const byCode = new Map(raw.map((c) => [c.code, c]));
     function wireMapClick() {
       if (!flagMapEl || mapClickWired) return;
@@ -998,7 +995,7 @@ export function bootFlagQuiz() {
         });
 
         const { best, isNew } = recordResult(
-          localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
+          localStorage, key, mode, { score: answeredCount, time: budgetUsed },
         );
         resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed, gaveUp };
         paintResultLabels();
@@ -1021,7 +1018,7 @@ export function bootFlagQuiz() {
         }
         let cycleP;
         if (hasLeaderboard) {
-          const configKey = quizRecordConfigKey(key, mode, includeAll);
+          const configKey = quizRecordConfigKey(key, mode);
           cycleP = runLeaderboardCycle({
             submitImpl: () => maybeSubmitQuizRecord({
               deviceId, configKey,
@@ -1070,7 +1067,7 @@ export function bootFlagQuiz() {
         finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
 
         const { best, isNew } = recordResult(
-          localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
+          localStorage, key, mode, { score: wrongCount, time: elapsed }, lowerScoreWins,
         );
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
@@ -1081,7 +1078,7 @@ export function bootFlagQuiz() {
         // call back if such an achievement actually lands.
         let cycleP;
         if (hasLeaderboard) {
-          const configKey = quizRecordConfigKey(key, mode, includeAll);
+          const configKey = quizRecordConfigKey(key, mode);
           const engaged = madeAnyQuizPick({ answeredCount, wrongCount });
           cycleP = runLeaderboardCycle({
             submitImpl: () => maybeSubmitQuizRecord({
