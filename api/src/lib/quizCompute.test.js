@@ -19,6 +19,7 @@ const POOL = {
 const ZERO = {
   quizAttempts60s: 0,
   quizVariantsTouched60s: 0,
+  quiz60sTouchedVariants: [],
   quizBestScore60s: 0,
   quiz60sClearedVariants: [],
   quizAttemptsAll: 0,
@@ -54,7 +55,7 @@ test('60s attempts and `all` attempts are aggregated independently', () => {
   assert.equal(out.quizAttemptsAll, 99);
 });
 
-test('variants touched counts distinct variant keys across both includeAll values', () => {
+test('variants touched counts distinct variant keys across the legacy scope suffixes of one variant', () => {
   const out = computeQuiz({
     records: {
       'europe:60s:sov': { score: 1, attempts: 1 },
@@ -77,7 +78,7 @@ test('best score takes the max across every 60s configKey', () => {
   assert.equal(out.quizBestScore60s, 25);
 });
 
-test('cleared: score >= sov pool size → variant qualifies regardless of which includeAll variant was played', () => {
+test('cleared: score >= sov pool size → variant qualifies regardless of which legacy scope was played', () => {
   const out = computeQuiz({
     records: {
       // Cleared Oceania (14) via the all-pool play
@@ -91,7 +92,7 @@ test('cleared: score >= sov pool size → variant qualifies regardless of which 
   assert.deepEqual(out.quiz60sClearedVariants, ['oceania', 'south-america']);
 });
 
-test('cleared: best across includeAll is what counts (sov play below threshold + all play at threshold → cleared)', () => {
+test('cleared: best across the legacy scope keys of one variant is what counts (sov below threshold + all at threshold → cleared)', () => {
   const out = computeQuiz({
     records: {
       'oceania:60s:sov': { score: 13, attempts: 1 }, // below threshold
@@ -252,7 +253,7 @@ test('endurance: a perfect round (0 wrong) lands the variant in perfectedVariant
   assert.equal(out.quizAllLowWrongAny, 0);
 });
 
-test('endurance: best (lowest) across includeAll is what counts for perfected check', () => {
+test('endurance: best (lowest) across the legacy scope keys of one variant is what counts for perfected check', () => {
   const out = computeQuiz({
     records: {
       // sov side never went perfect; all side did → variant still counts.
@@ -303,4 +304,30 @@ test('full endurance snapshot: every variant perfected', () => {
   assert.deepEqual(out.quizAllPerfectedVariants.sort(), [
     'africa', 'asia', 'countries', 'europe', 'north-america', 'oceania', 'south-america',
   ]);
+});
+
+// Feature V: the Cartographer badge needs to know WHICH variants were tried,
+// not how many. A bare count let the `weird` deck stand in for a continent.
+test('emits the touched 60s variant names, not just a count', () => {
+  const out = computeQuiz({
+    records: {
+      'europe:60s': { score: 10, attempts: 1 },
+      'weird:60s': { score: 5, attempts: 1 },
+      'countries:60s:sov': { score: 8, attempts: 1 },
+      'africa:all': { score: 2, attempts: 1 },
+    },
+  }, POOL);
+  assert.deepEqual(out.quiz60sTouchedVariants, ['countries', 'europe', 'weird']);
+  assert.equal(out.quizVariantsTouched60s, 3);
+});
+
+test('touched variant names fold a variant legacy and current keys into one', () => {
+  const out = computeQuiz({
+    records: {
+      'europe:60s': { score: 10, attempts: 1 },
+      'europe:60s:sov': { score: 8, attempts: 1 },
+      'europe:60s:all': { score: 6, attempts: 1 },
+    },
+  }, POOL);
+  assert.deepEqual(out.quiz60sTouchedVariants, ['europe']);
 });

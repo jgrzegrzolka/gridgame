@@ -199,12 +199,6 @@ export function bootFlagQuiz() {
     .then((r) => r.json())
     .then(loadCountries)
     .then((raw) => {
-      // Feature V: every variant owns its whole pool now (its filter
-      // decides sovereignty itself), so decks are built from the raw
-      // country set. `flagsGamePool` scoping died with the toggle, and
-      // had to: `weird`'s pool is the complement of the sovereign one,
-      // not a subset, so no upstream scope could express it.
-      const all = raw;
 
       // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
       // a soft language switch doesn't double the variant list. The
@@ -217,7 +211,7 @@ export function bootFlagQuiz() {
       let game = null;
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
-        buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), all, {
+        buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), raw, {
           relativeBase: '',
           // No "current variant" on first visit — nothing is highlighted
           // in the burger menu because the player hasn't chosen anything
@@ -239,20 +233,20 @@ export function bootFlagQuiz() {
       if (isFirstVisit) {
         const pickerEl = /** @type {HTMLElement} */ (document.getElementById('quiz-picker'));
         const pickerListEl = /** @type {HTMLUListElement} */ (document.getElementById('quiz-picker-list'));
-        buildVariantPicker(pickerListEl, all, { urlMode });
+        buildVariantPicker(pickerListEl, raw, { urlMode });
         pickerEl.hidden = false;
         document.addEventListener('langchanged', () => {
           rebuildMenu();
-          buildVariantPicker(pickerListEl, all, { urlMode });
+          buildVariantPicker(pickerListEl, raw, { urlMode });
         });
         return;
       }
 
       const variantKey = currentVariantKey;
-      let pool = all.filter(VARIANTS[variantKey].filter);
+      let pool = poolFor(variantKey, raw);
       let modeKey = resolveMode(urlMode, pool.length);
 
-      game = startGame(variantKey, modeKey, all, raw);
+      game = startGame(variantKey, modeKey, raw);
       document.addEventListener('langchanged', () => {
         rebuildMenu();
         game.refreshI18n();
@@ -287,8 +281,8 @@ export function bootFlagQuiz() {
     });
   }
 
-  function startGame(key, mode, all, raw) {
-    const pool = poolFor(key, all);
+  function startGame(key, mode, raw) {
+    const pool = poolFor(key, raw);
     const target = targetFor(mode, pool);
     const quiz = createQuiz(pool, target);
     const timed = isTimedMode(mode);
@@ -312,7 +306,7 @@ export function bootFlagQuiz() {
     // crops the viewBox to the variant's country codes. Future continents
     // follow the same pattern by adding an entry here. Gate: variant must
     // be in this table AND the player has the show-map toggle on.
-    const variantPool = all.filter(VARIANTS[key].filter);
+    const variantPool = pool;
     // `cropExcludes` per-variant drops countries from the bbox crop
     // computation only. The country still renders + is quizzed; it
     // just doesn't pull the viewBox toward its bbox. Used for
@@ -472,11 +466,12 @@ export function bootFlagQuiz() {
     // Click → flag zoom popup. The map is non-interactive while the
     // round is in progress (no `.is-finished` on the section); once the
     // round ends `.is-finished` is set and every country becomes a
-    // review surface. Lookup is built from `raw` (the full 270-entry
-    // country list), not the playable `all` pool — territories like Isle
-    // of Man / Guernsey / Jersey / Faroe Islands aren't quiz items in
-    // the default sovereign pool, but they're still rendered on the map
-    // and the player can click them to see the flag.
+    // review surface. Lookup is built from `raw` (the full 269-entry
+    // country list), NOT the deck's `pool` — territories like Isle of
+    // Man / Guernsey / Jersey aren't quiz items in a sovereign deck, but
+    // they're still rendered on the map and the player can click them to
+    // see the flag. (Feature V: the `weird` deck quizzes some of these;
+    // the map lookup stays the full list either way.)
     const byCode = new Map(raw.map((c) => [c.code, c]));
     function wireMapClick() {
       if (!flagMapEl || mapClickWired) return;

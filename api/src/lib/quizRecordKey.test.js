@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { CONFIG_KEY_RE, CONFIG_KEY_MAX, lowerWinsFromConfigKey } = require('./quizRecordKey');
 
-test('accepts every real (variant, mode, includeAll) combo the client produces', () => {
+test('still accepts every legacy 3-part combo (cached clients keep sending these)', () => {
   const variants = ['countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania'];
   const modes = ['60s', 'all'];
   for (const v of variants) {
@@ -28,7 +28,7 @@ test('accepts the 2-part shape, including the three new decks', () => {
   }
 });
 
-test('rejects unknown includeAll suffix', () => {
+test('rejects an unknown scope suffix', () => {
   assert.doesNotMatch('countries:60s:wat', CONFIG_KEY_RE);
 });
 

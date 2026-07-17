@@ -110,10 +110,41 @@ test('first-sprint fires at quizAttempts60s >= 1', () => {
   assert.equal(rule.predicate({ quizAttempts60s: 1 }), true);
 });
 
-test('cartographer fires at quizVariantsTouched60s >= 7 (all variants)', () => {
+test('cartographer fires only when every sovereign variant has been tried', () => {
   const rule = ruleById('cartographer');
-  assert.equal(rule.predicate({ quizVariantsTouched60s: 6 }), false);
-  assert.equal(rule.predicate({ quizVariantsTouched60s: 7 }), true);
+  assert.equal(rule.predicate({ quiz60sTouchedVariants: [...QUIZ_60S_VARIANTS] }), true);
+  // Missing any one → not earned.
+  for (let i = 0; i < QUIZ_60S_VARIANTS.length; i++) {
+    const without = QUIZ_60S_VARIANTS.filter((_, j) => j !== i);
+    assert.equal(
+      rule.predicate({ quiz60sTouchedVariants: [...without] }),
+      false,
+      `missing ${QUIZ_60S_VARIANTS[i]} → not earned`,
+    );
+  }
+});
+
+// Feature V. The badge says "all 7 continents (plus All Countries)". It used
+// to be a bare `touched >= 7`, which was only correct while exactly 7 variants
+// existed. `weird` made 8, so counting let a player skip a continent and still
+// earn it. Pool-growth makes counting wrong in general: any deck we add moves
+// the number, and the non-sovereign pool grows with data work.
+test('cartographer: a non-sovereign deck cannot stand in for a continent', () => {
+  const rule = ruleById('cartographer');
+  const sixSovereign = QUIZ_60S_VARIANTS.filter((v) => v !== 'oceania');
+  assert.equal(sixSovereign.length, 6);
+  assert.equal(
+    rule.predicate({ quiz60sTouchedVariants: [...sixSovereign, 'weird'] }),
+    false,
+    'six continents + weird must NOT earn Cartographer — Oceania was never played',
+  );
+});
+
+test('cartographer tolerates a malformed / missing touched list (defensive)', () => {
+  const rule = ruleById('cartographer');
+  assert.equal(rule.predicate({}), false);
+  assert.equal(rule.predicate({ quiz60sTouchedVariants: /** @type {any} */ ('oops') }), false);
+  assert.equal(rule.predicate({ quiz60sTouchedVariants: /** @type {any} */ (null) }), false);
 });
 
 test('volume tier fires at 100 / 500 / 1000 quizAttempts60s', () => {
@@ -503,6 +534,7 @@ test('evaluateAchievements with a full snapshot earns every badge across every t
   const out = evaluateAchievements({
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, attemptedFinishes: 100, zeroScoreFinishes: 1,
     quizAttempts60s: 1000, quizVariantsTouched60s: 7, quizBestScore60s: 50,
+    quiz60sTouchedVariants: [...QUIZ_60S_VARIANTS],
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],
@@ -573,6 +605,7 @@ test('diffNewlyEarnedAchievements: returns rules in ALL_ACHIEVEMENTS declaration
   const newly = diffNewlyEarnedAchievements({}, {
     totalCompleted: 30, maxStreak: 30, cleanSweeps: 100, flawlessSweeps: 1, attemptedFinishes: 100, zeroScoreFinishes: 1,
     quizAttempts60s: 1000, quizVariantsTouched60s: 7, quizBestScore60s: 50,
+    quiz60sTouchedVariants: [...QUIZ_60S_VARIANTS],
     quiz60sClearedVariants: [...QUIZ_60S_VARIANTS],
     quizAttemptsAll: 50, quizVariantsTouchedAll: 7, quizAllLowWrongAny: 0,
     quizAllPerfectedVariants: [...QUIZ_60S_VARIANTS],

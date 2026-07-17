@@ -63,16 +63,13 @@
         scoreColor,
         isTimedMode,
         accuracyRatio,
-        isQuizIncludeAll,
         shouldShowBestTime,
         formatBestScoreLabel,
       } from '../../flags/quiz.js';
-      import { flagsGamePool } from '../../flags/group.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
       import { wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
       import { buildQuizMenu } from '../menu.js';
 
-      const includeAll = isQuizIncludeAll();
       const statsEl = document.getElementById('stats');
 
       // Mode-icon SVGs replace the per-chip text label (the PL "wszystkie"
@@ -123,7 +120,8 @@
         return fetch('../../flags/countries.json')
           .then((r) => r.json())
           .then((raw) => {
-            const all = flagsGamePool(raw, includeAll);
+            // Feature V: variants own their whole pool, so pass the raw set.
+            const all = raw;
             const menuEl = document.getElementById('quiz-menu');
             const rebuildMenu = () => {
               menuEl.innerHTML = '';
@@ -182,7 +180,7 @@
         modeEl.appendChild(srLabel);
         a.appendChild(modeEl);
 
-        const best = loadBest(localStorage, bestKey(key, mode, includeAll));
+        const best = loadBest(localStorage, bestKey(key, mode));
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
@@ -217,7 +215,7 @@
       }
 
       function renderStats(raw) {
-        const all = flagsGamePool(raw, includeAll);
+        const all = raw;
         for (const [key, variant] of Object.entries(VARIANTS)) {
           const variantPool = all.filter(variant.filter);
           const modes = availableModes(variantPool.length);

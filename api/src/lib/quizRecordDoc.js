@@ -1,15 +1,16 @@
 /**
  * Pure builder + merge logic for the Cosmos document we keep in the
  * `quizRecords` container — one row per device that holds every
- * (variant, mode, includeAll) personal-best the player has set.
+ * (variant, mode) personal-best the player has set.
  *
  * Document shape:
  *   {
  *     id:        string,                  // same as deviceId — partition key + id
  *     deviceId:  string,
  *     records: {
- *       "countries:60s:sov": { score, durationMs, submittedAt, attempts, lastPlayedAt },
- *       "africa:all:sov":    { score, durationMs, submittedAt, attempts, lastPlayedAt },
+ *       "countries:60s": { score, durationMs, submittedAt, attempts, lastPlayedAt },
+ *       "africa:all":    { score, durationMs, submittedAt, attempts, lastPlayedAt },
+ *       "weird:60s":     { score, durationMs, submittedAt, attempts, lastPlayedAt },
  *       ...
  *     },
  *     updatedAt: number,                  // unix ms — when this doc last changed
@@ -25,11 +26,17 @@
  *   - lastPlayedAt:                      most recent finish time, PB or not. Different from
  *                                        `submittedAt` (which freezes at the PB's set time).
  *
+ * Keys are `"<variant>:<mode>"`. Pre-Feature-V docs also carry legacy
+ * `"<variant>:<mode>:<sov|all>"` keys, which stay readable until the Phase 1c
+ * backfill renames the `:sov` ones and drops the `:all` ones. Nothing here
+ * parses the key — it's an opaque map key to this module.
+ *
  * Why one-doc-per-device:
  *   - PB check needs the previous entry anyway → one read returns
  *     everything we need to decide and the merged write.
- *   - 7 variants × 2 modes × 2 includeAll = 28 max entries, each ~120
- *     bytes (with attempts + lastPlayedAt) — still well under 2KB.
+ *   - 8 variants × 2 modes = 16 max entries, each ~120 bytes (with attempts +
+ *     lastPlayedAt) — well under 2KB, with room for the legacy keys still
+ *     sitting alongside them pre-backfill.
  *   - Future "show me all my records" is one read, no fan-out.
  *
  * Why the merge logic lives here (and not in flags/quiz.js's `nextBest`):

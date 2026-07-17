@@ -461,14 +461,28 @@ test('SOV_POOL_SIZES in api/dailyMe.js matches what the variants produce (drift 
 });
 
 test('the weird deck is deliberately absent from SOV_POOL_SIZES', () => {
-  // `weird` is a real variant but must NOT get a "Cleared" threshold: the
-  // released Cleared/Cartographer badges mean "you know the countries of
-  // <continent>", and letting a 54-flag territory deck satisfy them would
-  // silently change what an already-earned badge claims. computeQuiz treats
-  // a variant with no threshold as never-cleared, which is the intent — see
-  // the achievements open call in FEATURE.md Feature V.
-  assert.ok(VARIANTS.weird, 'weird should exist as a variant');
-  assert.ok(poolFor('weird', COUNTRIES).length >= 4, 'weird should be playable');
+  // `weird` is a real variant but must NOT get a "Cleared" threshold, because
+  // its pool GROWS: the sovereign count is politically stable, but the
+  // non-sovereign pool gains entries whenever flag data lands. A threshold on
+  // a moving number silently un-clears players. See the comment on
+  // SOV_POOL_SIZES in api/src/functions/dailyMe.js.
+  //
+  // This reads the real constant out of the API source. An earlier version of
+  // this test asserted only that `weird` existed and was playable, so it was
+  // green even with `weird: 54` sitting in the map — nominal coverage of the
+  // exact mistake its name claims to prevent.
+  const src = readFileSync(join(HERE, '..', 'api', 'src', 'functions', 'dailyMe.js'), 'utf8');
+  const body = src.slice(src.indexOf('const SOV_POOL_SIZES'));
+  const map = body.slice(0, body.indexOf('};') + 2);
+  assert.ok(map.includes('countries: 195'), 'sanity: found the real SOV_POOL_SIZES literal');
+  assert.doesNotMatch(
+    map,
+    /\bweird\b/,
+    'weird must not have a Cleared threshold — its pool grows, so the threshold moves',
+  );
+
+  assert.ok(VARIANTS.weird, 'weird should still exist as a variant');
+  assert.ok(poolFor('weird', COUNTRIES).length >= 4, 'weird should still be playable');
 });
 
 test('every entry has a corresponding SVG file at flags/svg/{code}.svg', () => {

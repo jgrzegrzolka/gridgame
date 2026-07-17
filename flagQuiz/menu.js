@@ -125,6 +125,12 @@ export function buildVariantPicker(pickerListEl, all, opts) {
     'north-america': 'north-america.svg',
     'south-america': 'south-america.svg',
     oceania: 'oceania.svg',
+    // Not a continent, so not a landmass: the Jolly Roger, matching the icon
+    // Flag Party already uses for the same non-sovereign pool ("a flag with
+    // no country, unmistakably not a specific country"). Authored as a
+    // monochrome alpha mask because `.picker-tile-icon` paints it via
+    // mask-image, not as artwork.
+    weird: 'weird.svg',
   });
   for (const [key, variant] of Object.entries(VARIANTS)) {
     const pool = all.filter(variant.filter);

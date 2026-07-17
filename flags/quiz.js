@@ -1,4 +1,3 @@
-import { readBoolSetting, writeBoolSetting } from './group.js';
 import { isSovereignFlag, isNonSovereignFlag } from './flagPools.js';
 
 const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
@@ -301,13 +300,14 @@ export const VARIANTS = {
 
 /**
  * Which variants get a global leaderboard (and the Cosmos writes that feed
- * it). The player base is too small to spread a competitive board across all
- * 7 continents × 2 modes × 2 scopes — every continent board sat empty, and
- * each continent finish still cost a Free-tier Cosmos write. So leaderboards
- * are limited to the flagship "All countries" variant: the four live boards
- * are countries × {60s, all} × {sov, all}. Continents keep their local
- * personal bests (`recordResult`); they just never write or show a global
- * board.
+ * it). The player base is too small to spread a competitive board across
+ * every variant × mode — the per-continent boards sat empty, and each finish
+ * still cost a Free-tier Cosmos write. So leaderboards are limited to the
+ * flagship "All countries" variant: the two live boards are countries ×
+ * {60s, all}. (It was four before Feature V, when the include-territories
+ * toggle split each board by scope; that scope segment is gone.) Every other
+ * deck, `weird` included, keeps its local personal bests via `recordResult`
+ * and simply never writes or shows a global board.
  *
  * @param {string} variantKey
  * @returns {boolean}

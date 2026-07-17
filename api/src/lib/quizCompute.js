@@ -4,7 +4,13 @@
  * Pure: no DOM, no clock, no Cosmos client. Feeds the Feature O
  * achievement evaluator via `/api/v1/daily/me`.
  *
- * The doc holds one sub-entry per `(variant, mode, includeAll)` slot.
+ * The doc holds one sub-entry per `(variant, mode)` slot, keyed
+ * `"<variant>:<mode>"` — plus, until the Phase 1c backfill runs, legacy
+ * `"<variant>:<mode>:<sov|all>"` keys from before Feature V. Both shapes are
+ * folded together here: variant and mode sit at the same indices either way,
+ * and a variant that appears under both shapes counts once (the loop keys its
+ * Maps by variant, not by configKey).
+ *
  * In `60s` (timed) mode, sub-entry `score` is the number of correct
  * answers — higher is better. In `all` (endurance) mode, `score` is
  * the wrong-guess count — *lower* is better (a perfect round = 0).
@@ -14,9 +20,16 @@
  *   60s mode →
  *     - `quizAttempts60s`        : sum of `attempts`
  *     - `quizVariantsTouched60s` : distinct variants with any 60s finish
+ *     - `quiz60sTouchedVariants` : the names of those variants, sorted.
+ *                                  Cartographer needs the names: a count
+ *                                  can be reached by any 7 decks, including
+ *                                  ones that aren't continents.
  *     - `quizBestScore60s`       : max PB score across every 60s slot
- *     - `quiz60sClearedVariants` : variants where the best 60s PB
- *                                  (across includeAll) ≥ sov pool size
+ *     - `quiz60sClearedVariants` : variants where the best 60s PB ≥ sov pool
+ *                                  size. A variant with no entry in
+ *                                  `sovPoolSizes` can never clear — that's
+ *                                  how `weird` is kept out of the released
+ *                                  continent badges.
  *
  *   `all` (endurance) mode →
  *     - `quizAttemptsAll`            : sum of `attempts`
@@ -51,6 +64,7 @@ const NO_ENDURANCE_PLAYS = Number.MAX_SAFE_INTEGER;
  * @typedef {{
  *   quizAttempts60s: number,
  *   quizVariantsTouched60s: number,
+ *   quiz60sTouchedVariants: string[],
  *   quizBestScore60s: number,
  *   quiz60sClearedVariants: string[],
  *   quizAttemptsAll: number,
@@ -70,6 +84,7 @@ function computeQuiz(doc, sovPoolSizes) {
   const empty = {
     quizAttempts60s: 0,
     quizVariantsTouched60s: 0,
+    quiz60sTouchedVariants: [],
     quizBestScore60s: 0,
     quiz60sClearedVariants: [],
     quizAttemptsAll: 0,
@@ -85,14 +100,14 @@ function computeQuiz(doc, sovPoolSizes) {
   let quizBestScore60s = 0;
   let quizAttemptsAll = 0;
   let quizAllLowWrongAny = NO_ENDURANCE_PLAYS;
-  // Per-variant best PB across `:sov` and `:all` configKeys; only the
-  // higher of the two matters for the cleared-variants check (clearing
-  // either pool sweep proves the same mastery).
+  // Keyed by variant, not configKey, so a variant's current `europe:60s` and
+  // its legacy `europe:60s:sov` / `:all` entries fold into one. Only the best
+  // matters for the cleared check — clearing any sweep of the variant proves
+  // the same mastery.
   /** @type {Map<string, number>} */
   const best60sByVariant = new Map();
-  // Per-variant lowest wrong count across both includeAll values —
-  // an endurance "perfect" round in either pool proves the player can
-  // name every flag in the variant, time pressure aside.
+  // Same folding for endurance: a "perfect" round under any of a variant's
+  // keys proves the player can name every flag in it, time pressure aside.
   /** @type {Map<string, number>} */
   const lowestWrongAllByVariant = new Map();
   const touched60s = new Set();
@@ -151,6 +166,12 @@ function computeQuiz(doc, sovPoolSizes) {
   return {
     quizAttempts60s,
     quizVariantsTouched60s: touched60s.size,
+    // Feature V: the NAMES, not just the count. Cartographer claims "tried
+    // every 60s variant", which a bare count only expressed while exactly
+    // seven variants existed — the `weird` deck made eight and let a player
+    // skip a continent and still hit 7. Any future deck would do the same, so
+    // the predicate has to name what it wants.
+    quiz60sTouchedVariants: [...touched60s].sort(),
     quizBestScore60s,
     quiz60sClearedVariants: cleared,
     quizAttemptsAll,
