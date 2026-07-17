@@ -8,32 +8,43 @@ import { createSuperlativeRound } from './superlativeCore.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-// THE reason this module exists. `superlative.js` statically imports 32 metric
+// THE reason these modules exist. `superlative.js` statically imports 32 metric
 // JSONs; in a real browser that kills the module and ships a blank page (#767,
-// fixed in #769). The core must stay loadable by the browser, so it must never
-// import JSON — directly or through anything it imports.
-test('the core imports no JSON, directly or transitively', () => {
-  /** @type {Set<string>} */
-  const seen = new Set();
-  /** @type {string[]} */
-  const offenders = [];
-  /** @param {string} file */
-  const walk = (file) => {
-    if (seen.has(file)) return;
-    seen.add(file);
-    let src;
-    try { src = readFileSync(file, 'utf8'); } catch { return; }
-    if (/with\s*\{\s*type:\s*['"]json['"]\s*\}/.test(src.replace(/^\s*\*.*$/gm, ''))) {
-      offenders.push(file.split(/[\/]/).slice(-2).join('/'));
-    }
-    for (const m of src.matchAll(/^\s*import\s[^'"]*['"](\.[^'"]+)['"]/gm)) {
-      walk(join(dirname(file), m[1]));
-    }
-  };
-  walk(join(HERE, 'superlativeCore.js'));
-  assert.deepEqual(offenders, [],
-    `these would break the browser: ${offenders.join(', ')}`);
-});
+// fixed in #769). Its browser-side halves must stay loadable, so they must never
+// import JSON — directly or through anything they import.
+//
+// This is the ONLY protection, and it has to be: Playwright's Chromium loads
+// superlative.js and all 32 JSON imports perfectly happily (verified 2026-07-17,
+// `dataHalfLoads: true`). A browser probe cannot tell safe from fatal here and
+// would argue the split was pointless right up until real users get a blank page.
+// Treat "but it works in Playwright" as no evidence at all.
+//
+// Both entry points are walked from one test rather than a copy per file: the
+// walker is the mechanism, and two copies would drift.
+for (const entry of ['superlativeCore.js', 'superlativeCatalog.js']) {
+  test(`${entry} imports no JSON, directly or transitively`, () => {
+    /** @type {Set<string>} */
+    const seen = new Set();
+    /** @type {string[]} */
+    const offenders = [];
+    /** @param {string} file */
+    const walk = (file) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      let src;
+      try { src = readFileSync(file, 'utf8'); } catch { return; }
+      if (/with\s*\{\s*type:\s*['"]json['"]\s*\}/.test(src.replace(/^\s*\*.*$/gm, ''))) {
+        offenders.push(file.split(/[\/]/).slice(-2).join('/'));
+      }
+      for (const m of src.matchAll(/^\s*import\s[^'"]*['"](\.[^'"]+)['"]/gm)) {
+        walk(join(dirname(file), m[1]));
+      }
+    };
+    walk(join(HERE, entry));
+    assert.deepEqual(offenders, [],
+      `these would break the browser: ${offenders.join(', ')}`);
+  });
+}
 
 test('a round generates a quartet with a clear extreme', () => {
   // A fake metric: powers of ten, so the gap rule is trivially satisfied.

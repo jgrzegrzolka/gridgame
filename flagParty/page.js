@@ -12,6 +12,7 @@ import { MAX_ROUNDS_PER_MODE, PICTURE_MODES, METRIC_MODES, buildPartyPlan } from
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
+import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, hintFor } from '../flags/partyRounds/superlativeCatalog.js';
 import { renderableRoundIds, roundRenderAction } from './staleGuard.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
@@ -82,195 +83,13 @@ const MODE_LABELS = {
   'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita: most' },
 };
 
-/** Per-round config for the superlative rounds, keyed by the server `roundId`.
- *  Maps each metric round to the values file it fetches for the reveal strip and
- *  the hint copy for its direction prompt. Adding a metric superlative round =
- *  one entry here + the PARTY_MODES / MODE_LABELS entries + i18n. */
-const SUPERLATIVE_MODES = {
-  'superlative': {
-    file: 'population.json',
-    hintMost: { key: 'party.hintMost', fallback: 'Most populous' },
-    hintLeast: { key: 'party.hintLeast', fallback: 'Least populous' },
-  },
-  'superlative-area': {
-    file: 'area.json',
-    hintMost: { key: 'party.hintMostArea', fallback: 'Largest area' },
-    hintLeast: { key: 'party.hintLeastArea', fallback: 'Smallest area' },
-  },
-  'superlative-density': {
-    file: 'density.json',
-    hintMost: { key: 'party.hintMostDensity', fallback: 'Highest density' },
-    hintLeast: { key: 'party.hintLeastDensity', fallback: 'Lowest density' },
-  },
-  'superlative-gdp': {
-    file: 'gdp.json',
-    hintMost: { key: 'party.hintMostGdp', fallback: 'Largest GDP' },
-    hintLeast: { key: 'party.hintLeastGdp', fallback: 'Smallest GDP' },
-  },
-  'superlative-gdppc': {
-    file: 'gdpPerCapita.json',
-    hintMost: { key: 'party.hintMostGdppc', fallback: 'Largest GDP (per capita)' },
-    hintLeast: { key: 'party.hintLeastGdppc', fallback: 'Smallest GDP (per capita)' },
-  },
-  // Crops are 'most'-only rounds (superlative.js locks direction to 'most'), so
-  // no hintLeast: "smallest producer" is an obscure question and is never dealt.
-  'superlative-coffee': {
-    file: 'coffee.json',
-    hintMost: { key: 'party.hintMostCoffee', fallback: 'Largest coffee production' },
-  },
-  'superlative-wine': {
-    file: 'wine.json',
-    hintMost: { key: 'party.hintMostWine', fallback: 'Largest wine production' },
-  },
-  'superlative-cocoa': {
-    file: 'cocoa.json',
-    hintMost: { key: 'party.hintMostCocoa', fallback: 'Largest cocoa production' },
-  },
-  'superlative-banana': {
-    file: 'banana.json',
-    hintMost: { key: 'party.hintMostBanana', fallback: 'Largest banana production' },
-  },
-  'superlative-apple': {
-    file: 'apple.json',
-    hintMost: { key: 'party.hintMostApple', fallback: 'Largest apple production' },
-  },
-  'superlative-elevation': {
-    file: 'elevation.json',
-    hintMost: { key: 'party.hintMostElevation', fallback: 'Highest point' },
-    hintLeast: { key: 'party.hintLeastElevation', fallback: 'Lowest highpoint' },
-  },
-  'superlative-coastline': {
-    file: 'coastline.json',
-    hintMost: { key: 'party.hintMostCoastline', fallback: 'Longest coast' },
-    hintLeast: { key: 'party.hintLeastCoastline', fallback: 'Shortest coast' },
-  },
-  'superlative-forest': {
-    file: 'forest.json',
-    hintMost: { key: 'party.hintMostForest', fallback: 'Most forested' },
-    hintLeast: { key: 'party.hintLeastForest', fallback: 'Least forested' },
-  },
-  'superlative-oil': {
-    file: 'oil.json',
-    hintMost: { key: 'party.hintMostOil', fallback: 'Largest oil production' },
-  },
-  'superlative-rice': {
-    file: 'rice.json',
-    hintMost: { key: 'party.hintMostRice', fallback: 'Largest rice production' },
-  },
-  'superlative-coal': {
-    file: 'coal.json',
-    hintMost: { key: 'party.hintMostCoal', fallback: 'Largest coal production' },
-  },
-  // Sheep per capita is 'most'-only (superlative.js locks direction): "more sheep
-  // than people" is the good question, "fewest" is an obscure tail, so no hintLeast.
-  'superlative-sheep': {
-    file: 'sheepPerCapita.json',
-    hintMost: { key: 'party.hintMostSheep', fallback: 'Most sheep per person' },
-  },
-  // Cattle per capita is 'most'-only for the same reason as sheep: "more cows
-  // than people" (Uruguay) is the fun question, "fewest" is an obscure tail.
-  'superlative-cattle': {
-    file: 'cattlePerCapita.json',
-    hintMost: { key: 'party.hintMostCattle', fallback: 'Most cattle per person' },
-  },
-  // Beer per capita is 'most'-only: "who drinks the most beer" (Czechia) is the
-  // fun question; "fewest" is a religion/geography quiz, not a beer one.
-  'superlative-beer': {
-    file: 'beerPerCapita.json',
-    hintMost: { key: 'party.hintMostBeer', fallback: 'Most beer consumption per person' },
-  },
-  // Tea is 'most'-only: "biggest tea producer" (China) is the good question;
-  // "smallest grower" is obscure. Sparse like coffee, so the round ranks growers.
-  'superlative-tea': {
-    file: 'tea.json',
-    hintMost: { key: 'party.hintMostTea', fallback: 'Largest tea production' },
-  },
-  // Sugar cane is 'most'-only: "biggest cane producer" (Brazil) is the good
-  // question; "smallest grower" is obscure. Sparse, so the round ranks growers.
-  'superlative-sugarcane': {
-    file: 'sugarcane.json',
-    hintMost: { key: 'party.hintMostSugarcane', fallback: 'Largest sugarcane production' },
-  },
-  // Gold is 'most'-only: "biggest gold producer" (China) is the good question;
-  // "smallest producer" is obscure. Sparse, so the round ranks producers.
-  'superlative-gold': {
-    file: 'gold.json',
-    hintMost: { key: 'party.hintMostGold', fallback: 'Largest gold production' },
-  },
-  // Alcohol per capita is 'most'-only: "who drinks the most alcohol" (Lithuania,
-  // Ireland) is the fun question; "fewest" is a religion/geography quiz.
-  'superlative-alcohol': {
-    file: 'alcoholPerCapita.json',
-    hintMost: { key: 'party.hintMostAlcohol', fallback: 'Most alcohol consumption per person' },
-  },
-  // Meat per capita is 'most'-only: "who eats the most meat" (the US, Australia)
-  // is the fun question; "least" is the low-income / vegetarian tail.
-  'superlative-meat': {
-    file: 'meatPerCapita.json',
-    hintMost: { key: 'party.hintMostMeat', fallback: 'Most meat consumption per person' },
-  },
-  // Borders is 'most'-only: "which borders the most countries" (Russia, China at
-  // 14) is the fun question; "fewest" ties every island at 0.
-  'superlative-borders': {
-    file: 'borders.json',
-    hintMost: { key: 'party.hintMostBorders', fallback: 'Most bordering countries' },
-  },
-  // Olive oil is 'most'-only: "biggest olive oil producer" (Spain) is the good
-  // question; "smallest producer" is obscure. Sparse, so the round ranks producers.
-  'superlative-olive-oil': {
-    file: 'oliveOil.json',
-    hintMost: { key: 'party.hintMostOliveOil', fallback: 'Largest olive oil production' },
-  },
-  // Honey is 'most'-only: "biggest honey producer" (China) is the good question;
-  // "smallest producer" is obscure. Sparse, so the round ranks producers.
-  'superlative-honey': {
-    file: 'honey.json',
-    hintMost: { key: 'party.hintMostHoney', fallback: 'Largest honey production' },
-  },
-  'superlative-temperature': {
-    file: 'temperature.json',
-    hintMost: { key: 'party.hintMostTemperature', fallback: 'Hottest' },
-    hintLeast: { key: 'party.hintLeastTemperature', fallback: 'Coldest' },
-  },
-  'superlative-happiness': {
-    file: 'happiness.json',
-    // Two-directional and NOT inverted (higher = happier): 'most' = happiest,
-    // 'least' = least happy, shown directly.
-    hintMost: { key: 'party.hintMostHappiness', fallback: 'Happiest' },
-    hintLeast: { key: 'party.hintLeastHappiness', fallback: 'Least happy' },
-  },
-  'superlative-corruption': {
-    file: 'corruption.json',
-    // INVERTED: the CPI runs higher = cleaner, so the round's 'most' extreme
-    // (highest CPI) is the LEAST corrupt country, and 'least' (lowest CPI) is
-    // the MOST corrupt. The party round asks these as direct "corrupt"
-    // questions (clearer than the integrity euphemism for a trivia prompt),
-    // even though the filter / TTT surfaces stay clean-pole "integrity".
-    hintMost: { key: 'party.hintMostCorruption', fallback: 'Least corrupt' },
-    hintLeast: { key: 'party.hintLeastCorruption', fallback: 'Most corrupt' },
-  },
-  // Tourism per capita is 'most'-only: "which gets the most tourists per resident"
-  // (Andorra, Monaco, the island magnets) is the fun question; "fewest" is the
-  // big-country long tail.
-  'superlative-tourism': {
-    file: 'tourismPerCapita.json',
-    hintMost: { key: 'party.hintMostTourism', fallback: 'Most tourist arrivals per resident' },
-  },
-  // Electricity per capita is 'most'-only: "which uses the most electricity per
-  // person" (Iceland, Norway, the Gulf) is the fun question; "least" is the
-  // low-income tail.
-  'superlative-electricity': {
-    file: 'electricityPerCapita.json',
-    hintMost: { key: 'party.hintMostElectricity', fallback: 'Most electricity use per person' },
-  },
-};
 
-/** Every round id this build can render: the two fixed picture rounds plus the
- *  superlative metric rounds above. The server (PartyKit, its own deploy) can be
- *  a build ahead of a still-open tab and deal a round id outside this set; when
- *  that happens {@link roundRenderAction} reloads us onto the new build rather
- *  than rendering a broken round. See `flagParty/staleGuard.js`. */
-const KNOWN_ROUND_IDS = renderableRoundIds(Object.keys(SUPERLATIVE_MODES));
+/** Every round id this build can render: the two fixed picture rounds plus every
+ *  superlative metric round in the catalog. The server (PartyKit, its own
+ *  deploy) can be a build ahead of a still-open tab and deal a round id outside
+ *  this set; when that happens {@link roundRenderAction} reloads us onto the new
+ *  build rather than rendering a broken round. See `flagParty/staleGuard.js`. */
+const KNOWN_ROUND_IDS = renderableRoundIds(SUPERLATIVE_METRICS.map((m) => m.roundId));
 
 /** Little pictures leading each setup row, distinct enough to tell apart at a
  *  glance. The artwork is shared with flagQuiz's deck indicator via
@@ -290,21 +109,25 @@ const SETUP_ICONS = {
   worldFacts: deckIconHtml('facts'),
 };
 
-/** Metric key (the flags/metrics registry) for a superlative round id,
- *  resolved via the values file both registries name: SUPERLATIVE_MODES
- *  fetches `population.json`, METRIC_FILES registers it as `population`.
- *  Feeds the shared per-metric icon + hue (flags/metricVisuals.js) so the
- *  party chips, the prompt lead, and the flagsdata / findFlag metric hub
- *  all wear one visual identity. Also covers the population round's legacy
- *  `superlative` roundId (its mode id is `superlative-pop`), which the old
- *  round-id-keyed icon table missed, so population rounds rendered their
- *  prompt without icon or hue. */
-const METRIC_KEY_BY_FILE = Object.fromEntries(METRIC_FILES.map((m) => [m.file, m.key]));
-/** @param {string} roundId @returns {string | null} */
+/** Metric key (the flags/metrics registry) for a superlative round id. The
+ *  catalog states it outright now — it used to be resolved the long way round,
+ *  via the values file both registries happened to name.
+ *
+ *  Feeds the shared per-metric icon + hue (flags/metricVisuals.js) so the party
+ *  chips, the prompt lead, and the flagsdata / findFlag metric hub all wear one
+ *  visual identity. Covers the population round's legacy `superlative` roundId
+ *  (its mode id is `superlative-pop`) like everything else, because the catalog
+ *  is keyed by roundId — an older round-id-keyed icon table missed exactly that
+ *  case and rendered population prompts with no icon or hue.
+ *
+ *  @param {string} roundId @returns {string | null} */
 function metricKeyForRound(roundId) {
-  const cfg = SUPERLATIVE_MODES[roundId];
-  return cfg ? METRIC_KEY_BY_FILE[cfg.file] ?? null : null;
+  const m = superlativeMetricByRoundId(roundId);
+  return m ? m.key : null;
 }
+
+/** Values file for a metric key, for the reveal strip's fetch. */
+const METRIC_FILE_BY_KEY = Object.fromEntries(METRIC_FILES.map((m) => [m.key, m.file]));
 
 /**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
@@ -1210,7 +1033,7 @@ export function bootFlagParty() {
     });
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.roundId === 'mapPick';
-    const superCfg = SUPERLATIVE_MODES[q.roundId] || null;
+    const superCfg = superlativeMetricByRoundId(q.roundId);
     const isSuperlative = superCfg !== null;
     // Country-name rounds (flag / map) show one prominent line, nothing else:
     // the tiles already say you're matching a flag or outline, so a "Which flag?"
@@ -1230,8 +1053,11 @@ export function bootFlagParty() {
       // The metric icon leads it, tinted with the metric's setting hue (--mc, set
       // from q.roundId via [data-metric] in index.css — the same per-metric hue
       // the setup chips use).
-      const least = q.prompt === 'least';
-      const label = least ? superCfg.hintLeast : superCfg.hintMost;
+      // `q.prompt` is off the wire, so it's a bare string to the checker; narrow
+      // it here rather than widening hintFor, so flagQuiz's typed call site keeps
+      // the check. Anything that isn't 'least' reads as 'most' — the same
+      // either-way branch this line has always been.
+      const label = hintFor(superCfg, q.prompt === 'least' ? 'least' : 'most');
       promptEl.classList.add('superlative');
       promptEl.dataset.metric = q.roundId;
       const promptMetricKey = metricKeyForRound(q.roundId);
@@ -1508,15 +1334,14 @@ export function bootFlagParty() {
   // reveal strip) load together. Metrics are best-effort: a failed fetch just
   // means that round's reveal shows no numbers, so it can't block the game;
   // countries failing still falls through to a bare render().
-  const metricEntries = Object.entries(SUPERLATIVE_MODES);
   Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
-    ...metricEntries.map(([, cfg]) =>
-      fetch(`../flags/metrics/${cfg.file}`).then((r) => r.json()).catch(() => null)),
+    ...SUPERLATIVE_METRICS.map((m) =>
+      fetch(`../flags/metrics/${METRIC_FILE_BY_KEY[m.key]}`).then((r) => r.json()).catch(() => null)),
   ])
     .then(([countries, ...metrics]) => {
       for (const c of countries) byCode.set(c.code, c);
-      metricEntries.forEach(([roundId], i) => {
+      SUPERLATIVE_METRICS.forEach(({ roundId }, i) => {
         const m = metrics[i];
         if (m && m.values) metricByRound[roundId] = { values: m.values, format: m.format || 'compact' };
       });
