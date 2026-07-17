@@ -244,6 +244,11 @@
    actually drives question -> reveal and reveal -> next (flags/partyTiming.js);
    the rest are cosmetic so the whole room feels the clock. */
 .round-timer { display: flex; align-items: center; gap: 10px; }
+/* `display:flex` outweighs the UA `[hidden]`, so spell out the hide — otherwise
+   `timerEl.hidden = true` (set for every non-question phase) wouldn't take, and
+   the stale countdown bar would leak into the reveal, which is meant to show no
+   timer at all. Same trap as `.party section[hidden]`. */
+.round-timer[hidden] { display: none; }
 .round-timer-track {
   flex: 1;
   height: 6px;
@@ -524,6 +529,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 
 /* ---- draft: the two doors (how to play) ---- */
 .party-mode { display: flex; flex-direction: column; gap: 8px; }
+/* Host + lobby only (`partyModeEl.hidden = !hostSetup`). `display:flex` outweighs
+   the UA `[hidden]`, so without this a guest in the lobby would see the host-only
+   Draft / Custom doors. Same trap as `.party section[hidden]`. */
+.party-mode[hidden] { display: none; }
 .mode-door {
   appearance: none;
   text-align: left;
@@ -546,6 +555,15 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 /* ---- draft: the pick screen (no countdown — picking isn't a race) ---- */
 .pick-hand { display: flex; flex-direction: column; gap: 9px; }
 .pick-hand.sent { opacity: 0.6; pointer-events: none; }
+/* Same trap as `.party section[hidden]` up top: a `display:flex` base rule
+   outweighs the UA `[hidden] { display: none }`, so `pickHand.hidden = true` in
+   renderPick would NOT hide it — and its cards aren't cleared, so a player who
+   picked an earlier block would keep seeing that old hand while WATCHING someone
+   else pick the next block. Spell out the hide. Same for the watch panel (a
+   picker who was a watcher last round would otherwise still show the stale
+   "X is choosing"), and for `.break-mvp` / `.blockcard-pick`, which use flex too
+   and are only saved today by having their content cleared when empty. */
+.pick-hand[hidden], .pick-watch[hidden], .break-mvp[hidden], .blockcard-pick[hidden] { display: none; }
 .pick-card {
   appearance: none;
   display: flex;

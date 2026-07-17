@@ -962,6 +962,26 @@ it carries no gameplay advantage). Once per break (its own token guards render()
   settled break showing B risen to #1 (75) and A dropped to #2 (45, "30 behind"), no arrows. 0
   party-code console errors.
 
+### Fix: a watcher saw their old hand — BUILT on `fix/party-stale-pick-hand` (pending PR)
+
+Jan (draft, 3+ blocks): a player who picked an earlier block kept **seeing that block's card hand**
+while watching someone else pick the next block. Root cause was the exact `.party section[hidden]`
+trap: `.pick-hand { display: flex }` outweighs the UA `[hidden] { display: none }`, so `renderPick`
+setting `pickHand.hidden = true` on the watcher didn't actually hide it — and its cards aren't
+cleared between picks, so the picker's own old hand stayed on screen under the "X is choosing" panel.
+Fix mirrors the section precedent — a `[hidden] { display: none }` guard for the affected class.
+Reproduced + fixed with two real clients: at the second pick the watcher's `#pick-hand` still holds 10
+stale cards but now computes `display:none`, and only the watch panel shows.
+
+**Swept the whole bug class, pinned by a test.** Rather than fix only `.pick-hand`, a new
+`flagParty/hiddenGuards.test.js` derives the invariant from source: every flagParty element with a
+bare-class flex display (index.css) that is toggled via `.hidden` (page.js) MUST have the guard. It
+found **six** — `.pick-hand`, `.pick-watch`, `.break-mvp`, `.blockcard-pick` (the pick screen), plus
+two genuine latent bugs it turned up: `.round-timer` (the countdown bar leaked into the reveal, which
+is meant to show no timer) and `.party-mode` (a guest in the lobby would see the host-only Draft /
+Custom doors). All six now guarded; the test fails if any future flex-and-hidden element misses its
+guard, so this can't bite a third time (after `.game-tile` in prod and this). Client CSS + test only.
+
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes
