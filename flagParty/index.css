@@ -484,6 +484,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   padding: 12px;
   border-radius: 12px;
   font-size: 15px;
+  /* Positioned so the between-blocks standings-movement animation can lift a
+     climbing row above the one it overtakes (z-index in page.js). No offsets, so
+     layout is unchanged. */
+  position: relative;
 }
 .scoreline.win { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
