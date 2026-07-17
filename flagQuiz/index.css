@@ -4,62 +4,6 @@ body {
   align-items: center;
 }
 
-/* First-visit category picker. Replaces the auto-started game on a
- * player's very first /flagQuiz/ visit (no ?v= URL, no saved variant).
- * After their first pick, the resulting page load sets lastVariant
- * and the picker is never shown again for that player.
- *
- * Picker tiles diverge from the burger menu's compact text list —
- * the picker is the landing experience, so each tile pairs a continent
- * silhouette with the label. The burger keeps its tight text-only
- * format because it's a navigation aid, not the centerpiece. The
- * "identical options" contract still holds: every variant the burger
- * lists, the picker lists. */
-.quiz-picker {
-  margin-top: 32px;
-}
-.quiz-picker .menu li.picker-tile {
-  margin-bottom: 8px;
-}
-.quiz-picker .menu li.picker-tile a {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 12px;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 8px;
-  /* Pin to --primary-color explicitly so the icon (mask-image painted via
-   * currentColor) + label both track the brand palette directly, not
-   * indirectly through `.menu a`'s --link-color alias. */
-  color: var(--primary-color);
-  background: var(--surface-color);
-  transition: background-color 120ms, border-color 120ms;
-}
-.quiz-picker .menu li.picker-tile a:hover {
-  background: var(--hover-color);
-  border-color: var(--muted-soft-color);
-  text-decoration: none;
-}
-.picker-tile-icon {
-  width: 36px;
-  height: 36px;
-  display: block;
-  flex-shrink: 0;
-  /* SVG mask + solid background → icon inherits the brand colour.
-   * mask-image is set inline per-tile by buildVariantPicker. */
-  background-color: var(--link-color);
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-}
-.picker-tile-label {
-  font-size: 16px;
-  font-weight: 500;
-}
-
 .progress-bar {
   position: fixed;
   /* Sits in the breathing gap between the chrome strip's hairline and
@@ -184,8 +128,21 @@ body {
   font-size: 14px;
   color: var(--muted-color);
   margin: 0 0 12px;
-  text-align: center;
   font-variant-numeric: tabular-nums;
+  /* A flex row, not a text line. It was `text-align: center` while everything
+   * in it was text — fine then, wrong once Feature V put a flag thumbnail
+   * beside the words. Inline layout aligns children on the BASELINE, an
+   * inline-flex takes its baseline from its first flex item, and that item's
+   * content is an <img> whose baseline is its bottom edge — so the flag's
+   * bottom pinned to the text baseline and it floated ~3.5px high.
+   * `vertical-align: middle` improves it but still misses by ~2px, because CSS
+   * "middle" means baseline + half x-height, not the text's true centre.
+   * Centring on the cross axis is exact, and costs nothing: the row stays
+   * centred (body is already a column flex with align-items: center) and gets
+   * 2px shorter. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Wrong-pick penalty flash in the 60s mode — the -3s jump on the
    countdown is too subtle without it. inline-block lets the transform
@@ -222,6 +179,161 @@ body {
   color: var(--primary-color);
   font-weight: 500;
 }
+/* ── Deck indicator (play row) ─────────────────────────────────────
+ * One icon saying which deck you're in. It is tappable but carries NO
+ * affordance on purpose: the burger is the discoverable path to every deck,
+ * so this is a shortcut and nobody who misses it is stuck.
+ *
+ * It earns its place on a narrow but real job. Outlines and Facts are
+ * self-evident from the screen (you're looking at a contour, or a stat
+ * question). Flags and Weird flags render IDENTICALLY — four flag tiles
+ * either way — and nothing else on screen says whether you're in the
+ * 195-flag country pool or the 54-flag territory one. That one
+ * disambiguation is most of why this exists, which is exactly why it should
+ * stay quiet.
+ *
+ * Mechanism is common.css's `.color-count-side` / `.color-count-options`
+ * (consumer: colorCountPicker.js) — same dropdown, not a new one. */
+.deck-side {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  /* `.play-timer` centres this on its cross axis (see there for why it had to
+   * become a flex row). `vertical-align` is left at its default deliberately:
+   * it does nothing to a flex item, and setting it would only mislead the next
+   * reader into thinking it's load-bearing. */
+}
+.deck-side::after {
+  content: "·";
+  padding: 0 8px;
+}
+.deck-ind {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  line-height: 0;
+  border-radius: 3px;
+}
+/* Keyboard focus still needs a mark even though pointer users get none —
+   the no-affordance rule is about resting state, not accessibility. */
+.deck-ind:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
+/* Flag artwork carries its own colours (like every flags/svg/*.svg), so the
+   thumb is framed with the same 1px inset the game tiles use rather than
+   tinted. 24×18 matches Flag Party's .gs-thumb. */
+.deck-ind .deck-ind-art {
+  width: 24px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  display: block;
+}
+
+/* Popover — floats below the icon, sized by content so it never widens the
+   row. Mirrors .color-count-options exactly. */
+.deck-options {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.deck-side.is-expanded .deck-options {
+  display: inline-flex;
+}
+.deck-opt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.deck-opt:hover {
+  background: var(--hover-color);
+}
+.deck-opt[aria-current="true"] {
+  background: var(--selected-color);
+}
+/* The four icons don't read as a set on their own: the flag artwork is a
+   solid colour rectangle, while the contour and the chart are thin marks on
+   nothing. It never showed in Flag Party's roomy labelled list; four across a
+   130px popover it does. A shared surface tile gives all four the same
+   footprint so they read as one row of options. */
+.deck-opt .deck-opt-art {
+  width: 24px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+  border-radius: 2px;
+}
+.deck-opt img.deck-opt-art,
+.deck-opt svg.deck-opt-art:not([fill="currentColor"]) {
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Deck pills (burger) ───────────────────────────────────────────
+ * The loud control: one .pill per deck, promoted from common.css rather than
+ * restyled here. */
+.menu-decks .deck-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.menu li.menu-decks {
+  margin-bottom: 12px;
+}
+.deck-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.deck-pill:hover {
+  text-decoration: none;
+}
+.deck-pill-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 12px;
+}
+.deck-pill-ico img,
+.deck-pill-ico svg {
+  width: 16px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 1px;
+  display: block;
+}
+
+/* Group caption inside the burger — quieter than a menu link, and not
+   clickable. */
+.menu-cap {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  font-weight: 600;
+  margin: 0 0 7px;
+}
+
 .mode-toggle .mode-sep {
   color: #ddd;
   padding: 0 4px;

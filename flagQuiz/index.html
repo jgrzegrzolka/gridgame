@@ -55,14 +55,13 @@
       <ul class="menu" id="quiz-menu"></ul>
     </nav>
     <h1 class="sr-only">Country flag quiz</h1>
-    <section id="quiz-picker" class="quiz-picker" hidden>
-      <ul class="menu" id="quiz-picker-list"></ul>
-      <div class="actions-row">
-        <a href="../" data-i18n="menu.home">Home</a>
-      </div>
-    </section>
     <div id="game" hidden>
       <p class="play-timer">
+        <!-- Deck indicator: says which deck you are in, and happens to be
+             tappable. Deliberately carries no affordance — the burger is the
+             discoverable path; this is a shortcut for people who poke at it.
+             Built by page.js so it can carry the popover. -->
+        <span class="deck-side" id="deck-side"></span>
         <span class="play-mode" id="play-mode"></span>
         <span class="mode-toggle" id="mode-toggle"></span>
         <span id="play-time">0:00.000</span>

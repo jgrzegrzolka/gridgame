@@ -3,6 +3,7 @@ import {
   VARIANTS,
   MODES,
   availableModes,
+  defaultModeFor,
   resolveMode,
   isTimedMode,
   timedRemainingMs,
@@ -25,9 +26,13 @@ import {
   variantHasLeaderboard,
 } from '../flags/quiz.js';
 import { loadCountries } from '../flags/group.js';
+
+/** @typedef {import('../flags/group.js').Country} Country */
 import { t, countryName } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
-import { buildQuizMenu, buildVariantPicker } from './menu.js';
+import { buildQuizMenu } from './menu.js';
+import { DECKS, deckOf, defaultVariantForDeck } from '../flags/decks.js';
+import { deckIconHtml } from '../flags/deckIcons.js';
 import { QUIZ_MAP_CONFIG } from './mapConfig.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { bumpShare, bumpQuiz60sDay, pushEngagementBlob } from '../flags/engagementCounters.js';
@@ -130,6 +135,7 @@ export function bootFlagQuiz() {
   const leaderboardBodyEl = document.getElementById('leaderboard-body');
   const playTimerEl = document.getElementById('play-time');
   const playModeEl = document.getElementById('play-mode');
+  const deckSideEl = document.getElementById('deck-side');
   const playAgainEl = /** @type {HTMLAnchorElement} */ (document.getElementById('play-again'));
   const progressBarEl = document.getElementById('progress-bar');
   const modeToggleEl = document.getElementById('mode-toggle');
@@ -178,23 +184,30 @@ export function bootFlagQuiz() {
   // players land on the category they actually play, not "All
   // countries" every time.
   const savedVariant = getQuizLastVariant(window.localStorage);
-  // First-visit signal: no URL override AND no saved pick. The
-  // picker becomes the landing state instead of forcing a default
-  // start. As soon as the player clicks a picker tile, the next
-  // page load sets savedVariant and this branch goes quiet forever.
-  const isFirstVisit = !urlVariant && !savedVariant;
   const currentVariantKey = urlVariant && VARIANTS[urlVariant]
     ? urlVariant
     : (savedVariant ?? DEFAULT_VARIANT);
-  // Persist the resolved variant so the next bare-/flagQuiz/ visit
-  // lands here. Deep-link visits write through too — if a friend
-  // shares ?v=africa and you play it, that becomes your last pick.
-  // Skipped on first visit so "I haven't picked yet" stays true
-  // until the player actually picks — otherwise we'd save the
-  // DEFAULT_VARIANT fallback and suppress the picker forever.
-  if (!isFirstVisit) {
-    setQuizLastVariant(window.localStorage, currentVariantKey);
-  }
+  // Persist the resolved variant so the next bare-/flagQuiz/ visit lands
+  // here. Deep-link visits write through too — if a friend shares ?v=africa
+  // and you play it, that becomes your last pick. Feature V deleted the
+  // first-visit picker, so there is no longer a state where we withhold this:
+  // a bare visit starts DEFAULT_VARIANT and saving that is the truth.
+  setQuizLastVariant(window.localStorage, currentVariantKey);
+
+  // Click-away + Escape close the deck popover, matching colorCountPicker's
+  // behaviour. Bound once on the document rather than per-render, so
+  // re-rendering the indicator each round can't stack listeners.
+  //
+  // MUST stay above the `return fetch(...)` below. These are statements, not
+  // function declarations, so they don't hoist: sitting after the return they
+  // were unreachable and the popover simply never closed. Nothing catches
+  // that — it typechecks, it tests, it just quietly does nothing.
+  document.addEventListener('click', () => {
+    if (deckSideEl) deckSideEl.classList.remove('is-expanded');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && deckSideEl) deckSideEl.classList.remove('is-expanded');
+  });
 
   return fetch('../flags/countries.json')
     .then((r) => r.json())
@@ -207,17 +220,15 @@ export function bootFlagQuiz() {
       // for the same reason; without that, the first langchanged would
       // wipe it.
       // Set once the round starts (below); holds the live game's
-      // language-refresh hook. Null on the first-visit picker.
+      // language-refresh hook.
       /** @type {{ refreshI18n: () => void } | null} */
       let game = null;
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
         buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), raw, {
           relativeBase: '',
-          // No "current variant" on first visit — nothing is highlighted
-          // in the burger menu because the player hasn't chosen anything
-          // yet. Returning players keep their normal aria-current marker.
-          currentVariantKey: isFirstVisit ? null : currentVariantKey,
+          currentVariantKey,
+          currentMode: resolveMode(urlMode, poolFor(currentVariantKey, raw).length),
           statsCurrent: false,
         });
         mountNicknameMenuItem({
@@ -227,21 +238,6 @@ export function bootFlagQuiz() {
       };
       rebuildMenu();
 
-      // First visit → show the picker instead of starting a game.
-      // Each picker tile is a navigation link, so the click is what
-      // actually starts the game (via the resulting page load that
-      // then takes the explicit-?v= branch above).
-      if (isFirstVisit) {
-        const pickerEl = /** @type {HTMLElement} */ (document.getElementById('quiz-picker'));
-        const pickerListEl = /** @type {HTMLUListElement} */ (document.getElementById('quiz-picker-list'));
-        buildVariantPicker(pickerListEl, raw, { urlMode });
-        pickerEl.hidden = false;
-        document.addEventListener('langchanged', () => {
-          rebuildMenu();
-          buildVariantPicker(pickerListEl, raw, { urlMode });
-        });
-        return;
-      }
 
       const variantKey = currentVariantKey;
       let pool = poolFor(variantKey, raw);
@@ -256,6 +252,64 @@ export function bootFlagQuiz() {
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
+
+  /**
+   * The play row's deck indicator: one icon, plus a popover to change deck.
+   *
+   * Mechanism is `.color-count-side` / `.color-count-options` from common.css
+   * — the same dropdown `colorCountPicker.js` uses — rather than a new
+   * component. The parked design called for exactly that promotion.
+   *
+   * No affordance by design (Jan: "it does not need to indicate that its
+   * clickable... we can keep screen cleaner"). That's sound only because the
+   * burger remains a full path to every deck: this is a shortcut, and anyone
+   * who never discovers it loses nothing.
+   *
+   * @param {string} key   current variant
+   * @param {string} mode  current mode, preserved across a deck switch when legal
+   * @param {Country[]} raw  the full country list (this fn is defined outside
+   *   the fetch closure, so it can't close over it)
+   */
+  function renderDeckIndicator(key, mode, raw) {
+    if (!deckSideEl) return;
+    const active = deckOf(key);
+    deckSideEl.innerHTML = '';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'deck-ind';
+    btn.innerHTML = deckIconHtml(active, { className: 'deck-ind-art' });
+    btn.setAttribute('aria-label', t('menu.deck', 'Deck') + ': ' + t(`deck.${active}`, active));
+    btn.setAttribute('aria-expanded', 'false');
+    deckSideEl.appendChild(btn);
+
+    const opts = document.createElement('span');
+    opts.className = 'deck-options';
+    for (const deck of DECKS) {
+      const to = defaultVariantForDeck(deck.id);
+      if (!to) continue;
+      const pool = poolFor(to, raw);
+      // Keep the player's mode across the switch when the target deck allows
+      // it; fall back to that deck's default rather than dead-ending.
+      const modes = availableModes(pool.length);
+      const nextMode = modes.includes(mode) ? mode : defaultModeFor(pool.length);
+      if (nextMode === null) continue;
+      const a = document.createElement('a');
+      a.className = 'deck-opt';
+      a.href = `?v=${deck.id === active ? key : to}&n=${nextMode}`;
+      a.title = t(`deck.${deck.id}`, deck.label);
+      if (deck.id === active) a.setAttribute('aria-current', 'true');
+      a.innerHTML = deckIconHtml(deck.id, { className: 'deck-opt-art' });
+      opts.appendChild(a);
+    }
+    deckSideEl.appendChild(opts);
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = deckSideEl.classList.toggle('is-expanded');
+      btn.setAttribute('aria-expanded', String(open));
+    });
+  }
 
   function renderModeToggle(key, mode, modes) {
     modeToggleEl.innerHTML = '';
@@ -291,7 +345,14 @@ export function bootFlagQuiz() {
     const budgetMs = timed && modeDef.kind === 'timed' ? modeDef.budgetMs : 0;
     const penaltyMs = timed && modeDef.kind === 'timed' ? modeDef.penaltyMs : 0;
     const modes = availableModes(pool.length);
-    playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
+    // The scope label keeps its original job: it says WHERE you are, and is
+    // empty on a deck's default variant so the row stays quiet. The deck
+    // indicator beside it says WHICH GAME — the one thing the screen can't
+    // otherwise tell you, since Flags and Weird flags render identically.
+    playModeEl.textContent = key === defaultVariantForDeck(deckOf(key))
+      ? ''
+      : t(`variant.${key}`, VARIANTS[key].label);
+    renderDeckIndicator(key, mode, raw);
     renderModeToggle(key, mode, modes);
 
     let currentAnswer = null;
