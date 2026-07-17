@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, superlativeMetricByKey, hintFor } from './superlativeCatalog.js';
+import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, superlativeMetricByKey, hintFor, canLabelDirection } from './superlativeCatalog.js';
 import { METRIC_FILES } from '../metrics/index.js';
 import { METRIC_MODES } from '../partyPlan.js';
 
@@ -96,12 +96,52 @@ test('hintFor picks the label for the direction', () => {
 });
 
 test('hintFor falls back to hintMost rather than crashing on a locked metric', () => {
-  // Unreachable in practice (the same `direction` field locks generation), but
-  // the old code read `.key` off undefined here, which killed the round.
+  // Belt-and-braces only. An earlier version of this comment called the case
+  // "unreachable in practice" — wrong: server and page are separate deploys of
+  // this file, so a direction flip makes it reachable. The real defence is
+  // `canLabelDirection` + `staleGuard.canRenderQuestion`, which reload the tab
+  // before a round with no label for its direction ever renders. This fallback
+  // just means a caller that skips that guard gets a wrong label instead of a
+  // dead screen — better, never right.
   const coffee = superlativeMetricByKey('coffee');
   assert.ok(coffee);
   assert.equal(coffee.hintLeast, null);
   assert.equal(hintFor(coffee, 'least').fallback, 'Largest coffee production');
+});
+
+// The predicate the skew guard is built on. Tested here, at its definition, as
+// well as through `canRenderQuestion` in staleGuard.test.js — this is the rule,
+// that is the composition.
+test('canLabelDirection: a two-directional metric can be labelled either way', () => {
+  const forest = superlativeMetricByKey('forest');
+  assert.ok(forest);
+  assert.equal(canLabelDirection(forest, 'most'), true);
+  assert.equal(canLabelDirection(forest, 'least'), true);
+});
+
+test('canLabelDirection: a locked metric cannot label the direction it never deals', () => {
+  const coffee = superlativeMetricByKey('coffee');
+  assert.ok(coffee);
+  assert.equal(canLabelDirection(coffee, 'most'), true);
+  assert.equal(canLabelDirection(coffee, 'least'), false, 'no hintLeast means no copy for it');
+});
+
+// The two must never disagree: canLabelDirection is what decides whether hintFor
+// is allowed to be asked, so "can label" must mean exactly "hintFor returns the
+// label for that direction rather than the other one".
+test('canLabelDirection agrees with hintFor for every metric and direction', () => {
+  for (const m of SUPERLATIVE_METRICS) {
+    for (const dir of /** @type {const} */ (['most', 'least'])) {
+      const wanted = dir === 'least' ? m.hintLeast : m.hintMost;
+      if (canLabelDirection(m, dir)) {
+        assert.equal(hintFor(m, dir), wanted,
+          `${m.key}: says it can label '${dir}' but hintFor returns something else`);
+      } else {
+        assert.equal(wanted, null, `${m.key}: says it cannot label '${dir}' but a hint exists`);
+        assert.equal(hintFor(m, dir), m.hintMost, `${m.key}: fallback should be hintMost`);
+      }
+    }
+  }
 });
 
 test('lookups resolve, and an unknown id is null rather than a throw', () => {
