@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { CONFIG_KEY_RE, CONFIG_KEY_MAX, lowerWinsFromConfigKey } = require('./quizRecordKey');
+const { CONFIG_KEY_RE, CONFIG_KEY_MAX, lowerWinsFromConfigKey, maxScoreForConfigKey } = require('./quizRecordKey');
 
 test('still accepts every legacy 3-part combo (cached clients keep sending these)', () => {
   const variants = ['countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania'];
@@ -91,4 +91,44 @@ test('lowerWinsFromConfigKey: malformed key → null', () => {
   assert.equal(lowerWinsFromConfigKey('countries'), null);
   assert.equal(lowerWinsFromConfigKey('countries::sov'), null);
   assert.equal(lowerWinsFromConfigKey('a:b:c:d'), null);
+});
+
+// A 60s round's score is bounded by TIME, not by the pool: you cannot answer
+// more questions than you can physically get through. This is the gap that let
+// a scripted submission store 189 correct answers in a 60-second round on
+// 2026-07-07 (the best real score in the whole container is 49) and collect
+// three skill badges off it. A pool-based cap would never have caught it —
+// 189 < the 195-flag countries pool.
+test('maxScoreForConfigKey: 60s is time-derived, and rejects the impossible', () => {
+  // Full 60s budget → 2 answers/sec is already ~2.4x the human record.
+  assert.equal(maxScoreForConfigKey('countries:60s', 60_000), 120);
+  assert.ok(maxScoreForConfigKey('countries:60s', 60_000) < 189, 'must reject the observed bot score');
+  // Finishing early shrinks the bound with the clock.
+  assert.equal(maxScoreForConfigKey('oceania:60s', 20_000), 40);
+});
+
+test('maxScoreForConfigKey: every real score on record still fits', () => {
+  // The top runs actually in prod, with room to spare.
+  assert.ok(49 <= maxScoreForConfigKey('countries:60s', 60_000));
+  assert.ok(45 <= maxScoreForConfigKey('europe:60s', 53_500));
+  assert.ok(14 <= maxScoreForConfigKey('oceania:60s', 25_000));
+});
+
+test('maxScoreForConfigKey: all-mode is pool-derived (mistakes <= target)', () => {
+  // Endurance runs for hours, so a time bound is meaningless. `page.js` keeps
+  // mistakes <= target, and target <= the largest pool (countries, 195).
+  assert.equal(maxScoreForConfigKey('countries:all', 3_600_000), 250);
+  assert.equal(maxScoreForConfigKey('countries:all', 1_000), 250);
+});
+
+test('maxScoreForConfigKey: legacy 3-part keys bound identically', () => {
+  assert.equal(maxScoreForConfigKey('countries:60s:sov', 60_000), 120);
+  assert.equal(maxScoreForConfigKey('countries:all:all', 60_000), 250);
+});
+
+test('maxScoreForConfigKey: unknown mode or shape → null (caller rejects)', () => {
+  assert.equal(maxScoreForConfigKey('countries:newmode', 60_000), null);
+  assert.equal(maxScoreForConfigKey('countries', 60_000), null);
+  assert.equal(maxScoreForConfigKey('countries:60s', -5), null);
+  assert.equal(maxScoreForConfigKey('countries:60s', 'oops'), null);
 });

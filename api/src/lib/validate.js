@@ -7,7 +7,7 @@
  * codes are stable strings so the client can localize if it ever needs to.
  */
 
-const { CONFIG_KEY_RE, CONFIG_KEY_MAX } = require('./quizRecordKey');
+const { CONFIG_KEY_RE, CONFIG_KEY_MAX, maxScoreForConfigKey } = require('./quizRecordKey');
 const { sanitizeNickname } = require('./sanitizeNickname');
 const { isOffensiveNickname } = require('./blockedNicknames');
 
@@ -34,8 +34,14 @@ const LIMITS = {
   DEVICE_ID_MAX: 64,
   // Quiz-record bounds. Score-min of 0 covers "60s round, zero correct"
   // and "endurance round, zero mistakes" — both legitimate end states.
-  // Score-max of 1000 leaves headroom past any plausible pool size
-  // (largest variant is ~250 sovereign countries; ~500 with territories).
+  //
+  // QUIZ_SCORE_MAX is only a backstop now. The real cap is per-mode and comes
+  // from `maxScoreForConfigKey` (time-derived for 60s, pool-derived for
+  // endurance); validateQuizRecord takes the min of the two. This flat cap
+  // used to be the ONLY gate, and at 1000 it accepted a scripted submission of
+  // 189 correct answers in a 60-second round (2026-07-07) — which then earned
+  // three skill badges. Note that a pool-based cap would not have helped: 189
+  // is under the 195-flag `countries` pool. A 60s score is bounded by time.
   QUIZ_SCORE_MIN: 0,
   QUIZ_SCORE_MAX: 1000,
   // 60s mode caps the round at ~60s of wall clock; endurance "all" mode
@@ -181,7 +187,8 @@ function validatePuzzleIdParam(raw) {
  *   {
  *     deviceId:      string (8..64),
  *     configKey:     string (matches CONFIG_KEY_RE, length ≤ CONFIG_KEY_MAX),
- *     score:         int (0..1000),
+ *     score:         int, 0..maxScoreForConfigKey(configKey, durationMs)
+ *                    (time-derived for 60s, pool-derived for endurance)
  *     durationMs:    int (0..6h),
  *     lowerWins:     boolean,
  *   }
@@ -211,11 +218,22 @@ function validateQuizRecord(body) {
   ) {
     return { ok: false, error: 'invalid_configKey' };
   }
-  if (!isInt(body.score, LIMITS.QUIZ_SCORE_MIN, LIMITS.QUIZ_SCORE_MAX)) {
-    return { ok: false, error: 'invalid_score' };
-  }
   if (!isInt(body.durationMs, LIMITS.QUIZ_DURATION_MS_MIN, LIMITS.QUIZ_DURATION_MS_MAX)) {
     return { ok: false, error: 'invalid_durationMs' };
+  }
+  // Score bound is per-mode, derived from the configKey + duration. The flat
+  // 0..1000 cap this replaced accepted 189 correct answers in a 60-second
+  // round (a real scripted submission, 2026-07-07 — the best human score on
+  // record is 49), which then earned three skill badges. `durationMs` is
+  // validated first because the 60s bound is derived from it.
+  const maxScore = maxScoreForConfigKey(body.configKey, body.durationMs);
+  if (maxScore === null) {
+    // Mode we don't know how to bound. Refuse rather than fall back to a
+    // permissive cap — an unbounded mode is exactly how the last one got in.
+    return { ok: false, error: 'invalid_score' };
+  }
+  if (!isInt(body.score, LIMITS.QUIZ_SCORE_MIN, Math.min(LIMITS.QUIZ_SCORE_MAX, maxScore))) {
+    return { ok: false, error: 'invalid_score' };
   }
   if (typeof body.lowerWins !== 'boolean') {
     return { ok: false, error: 'invalid_lowerWins' };
