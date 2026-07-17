@@ -38,6 +38,15 @@ export function revealSecondsFor(clean) {
   return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 
+/** Seconds a between-blocks **break** lingers before the host advances to the
+ *  next block. The break shows the block's MVP and the standings (with rank
+ *  movement) — a beat to read where everyone landed, so it holds longer than a
+ *  reveal. Host-authoritative like the reveal: the host's page counts this down
+ *  and fires `next` when it elapses; other clients just render the break. Keyed
+ *  to reading a scoreboard, not to a round, so it's a flat duration rather than
+ *  the reveal's clean/miss split. */
+export const BLOCK_BREAK_SECONDS = 6;
+
 /** Tricky mode: the reveal-timing options a host can pick per round category — a
  *  tile stays veiled until this fraction of the question window has elapsed, then
  *  it is fully clear. Every option is below 1, so a late decider always gets a

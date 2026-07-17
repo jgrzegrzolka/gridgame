@@ -689,14 +689,18 @@ Iteration 7 had, and the reason to build this one first.
   a round auto-reveals once every present seat has buzzed, so a block runs **~50 s** (everyone
   answering fast) to **~115 s** (clock expiring every round). Roughly a minute and a half typical,
   which is the right act length.
-- **Steppers are gone.** A mode is on or off; on means 5 rounds. Length granularity goes from 1 to
-  5, which is the accepted price.
-- **The world-facts group stays mixed and stays one block.** The Iteration 7 chips are untouched:
-  `distributeWorldFacts(5, enabledIds, rng)` already returns five 1-round segments, which *is* a
-  mixed block. (Iteration 9's draft deals per-metric blocks instead. Both are ordinary `Segment[]`,
-  so the server never learns the difference. See its entry.)
-- **Default is 3 blocks on, not everything on.** Everything-on would be 4 blocks = 20 rounds, a 67%
-  longer default game than today's 12, chosen by nobody.
+- **Steppers are gone.** A mode is on or off; on means 5 rounds. No per-row "1 block" label either
+  (redundant when a mode is always one block — Jan's call). Length granularity goes from 1 to 5,
+  which is the accepted price.
+- **Each statistic is its own block (revised 2026-07-17, Jan's call).** The world-facts family is no
+  longer one mixed block: every chosen statistic is a 5-round block of that one metric ("five coffee
+  questions"). So the mixed deal (`distributeWorldFacts`) is gone, and block count = enabled picture
+  modes + enabled statistics. This also lines Setlist up with Iteration 9's draft (both deal
+  per-metric blocks) and gives "I pick Coffee" its coherent little quiz. The chips became block
+  toggles (no master switch).
+- **Default is 3 blocks on, not everything on.** Flags: countries + Map: outlines + one statistic
+  (Population). Since each statistic is now its own block, everything-on would be dozens of blocks,
+  so the default deliberately picks a single stat to keep the length sane.
 - **The break shows:** block MVP ("Best of the block", a second thing to win so a player losing
   overall still has something to hold), standings with **rank deltas versus the previous break** and
   the row movement animated, and the **gap to the leader** on your own row. No timer: the break is a
@@ -709,20 +713,41 @@ Iteration 7 had, and the reason to build this one first.
   `phase: 'reveal'` and paints the reveal, not the break. Same class as Iteration 3's documented
   "reconnect mid-question starts a fresh bar", and it self-corrects on the host's next transition.
 
-**Build steps:**
+**Build steps (BUILT on `feat/party-blocks`, pending PR + Jan's merge):**
 
-- [ ] `flags/partyPlan.js` — `BLOCK_ROUNDS`; `buildPartyPlan` emits a 5-round segment per enabled
-      picture mode and a 5-round mixed facts block; `blockCount` / `blockIndexForRound` /
-      `isBlockEnd` (pure + tested). `defaultSetup()` → 3 blocks on.
-- [ ] `flags/partyTiming.js` — `BLOCK_BREAK_SECONDS` (+ test).
-- [ ] `flags/partyClient.js` — the client knows when a reveal lands on a block end (+ test).
-- [ ] `flagParty/page.js` — the break (standings + MVP + deltas + gap), the block title card, the
-      setup panel losing its steppers, the host holding the break before `next`.
-- [ ] `flagParty/index.css` — break + title card, on the eight palette vars.
-- [ ] `i18n/en.json` + `pl.json` — en + pl, no em dashes.
-- [ ] **Migration**, not a reset: fold the stored per-mode counts (`gridgame.party.setup`) to on/off
-      (count > 0 = on).
-- [ ] `npm run validate` green + end-to-end in-browser verify.
+- [x] `flags/partyPlan.js` — `BLOCK_ROUNDS`; `buildPartyPlan` emits a 5-round block per enabled
+      picture mode **and per enabled statistic** (the mixed `distributeWorldFacts` deal removed);
+      `blockCount` / `blockIndexForRound` / `isBlockEnd` + the client-callable core
+      `isBlockBoundary(index, total)` (pure + tested).
+- [x] `flags/partyTiming.js` — `BLOCK_BREAK_SECONDS = 6` (+ test).
+- [x] `flags/partyBreak.js` (new, pure + tested) — `blockBreak(prevBoard, currBoard)` computes the
+      break view (block gain, rank delta, gap-to-leader, MVP) from two scoreboard snapshots. Chosen
+      over threading it through the `partyClient` reducer: it's a view calc, not a state transition.
+- [x] `flagParty/page.js` — the break (`#pt-break`: MVP banner + standings + rank deltas + gap),
+      the during-play **block indicator** in the round pill, the setup panel losing its steppers
+      (on/off), the host holding `BLOCK_BREAK_SECONDS` before `next`. `prevBreakBoard` staged and
+      committed on the next block's first question so a re-render can't zero the deltas.
+- [x] `flagParty/index.css` — break + MVP + `.scoreline.you` / `.delta` / `.gap`, on the palette vars.
+- [x] `i18n/en.json` + `pl.json` — `roundBlock` / `afterBlock` / `blockMvp` / `standings` / `behind`
+      / `blocksLabel` / `oneBlock`, en + pl, no em dashes. Retired `roundsLabel` / `fewer` / `more`.
+- [x] **Migration**, not a reset: `sanitizeSetup` / `migrateModeState` fold the stored per-mode
+      counts (`gridgame.party.setup`) to on/off (a positive count = on).
+- [x] `npm run validate` green (2850 tests) + **end-to-end verified in-browser** (solo, dev stack):
+      setup shows 3 blocks with on/off toggles and "1 block" tags, a stale saved setup migrated to
+      1 block, the pill reads "Block 1/3 · Round 1/15", the break fired after round 5 with the MVP
+      banner + "you"-ring standings, and it auto-advanced into the block-2 map round. 0 console errors.
+
+**Deferred to Iteration 9 (deliberately, decided at build time):**
+- **The full title card** ("Next: Coffee" with the mode icon). It needs the *upcoming* block's mode,
+  which the client can't know without the plan (the next segment isn't dealt at break time), and
+  adding the plan to the wire is the server touch this iteration set out to avoid. Iteration 9's
+  draft gives the client that info naturally (the pick names the next block), so the card lands there.
+  Iteration 8 conveys block identity with the during-play pill indicator instead.
+- **The boundary reveal shows the standings break in place of the round's answer tiles** (every 5th
+  round's answer isn't shown). Accepted for now as the smallest correct cut and because the standings
+  moment is the point of the beat; the alternative (a short answer beat, then the break, as two
+  sub-phases of one reveal window) is the obvious refinement if it reads wrong in real play. **Flag
+  for Jan's reaction.**
 
 ## Iteration 9 — The draft: players pick the blocks — PLANNED (2026-07-17)
 

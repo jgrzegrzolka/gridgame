@@ -31,6 +31,68 @@ export function totalRounds(plan) {
 }
 
 /**
+ * A **block** is {@link BLOCK_ROUNDS} consecutive rounds — the show's act unit.
+ * Under the block model (Iteration 8) every enabled mode contributes exactly one
+ * block, so a game is a run of 5-round acts with a standings **break** between
+ * them. The break is a page-layer concern (a longer reveal, see
+ * `flags/partyTiming.js`), not a room phase — the helpers below are the pure
+ * arithmetic the page and client key off, derived from the plan's total alone.
+ * Blocks map to rounds, not to segments: a picture block is one 5-round segment,
+ * but the world-facts block is five 1-round metric segments, so "which block am
+ * I in" is round arithmetic, never a segment count.
+ */
+export const BLOCK_ROUNDS = 5;
+
+/**
+ * The 0-based block a given 0-based round falls in. Pure round arithmetic — a
+ * block is always {@link BLOCK_ROUNDS} rounds wide regardless of how the plan's
+ * segments happen to be sliced.
+ * @param {number} index
+ * @returns {number}
+ */
+export function blockIndexForRound(index) {
+  return Math.floor(index / BLOCK_ROUNDS);
+}
+
+/**
+ * How many blocks a plan runs. Only the final block may be short (a plan built
+ * from block-shaped modes is always a whole number of 5s, but a custom / legacy
+ * plan need not be), so round up.
+ * @param {Segment[]} plan
+ * @returns {number}
+ */
+export function blockCount(plan) {
+  return Math.ceil(totalRounds(plan) / BLOCK_ROUNDS);
+}
+
+/**
+ * The core block-boundary rule, keyed on the round index and the game's total
+ * round count alone: a 0-based round is a boundary when it's the last round of
+ * its block AND another block follows (so never the game's final round — that
+ * reveal advances to the final board, not an inter-block break). Takes the total
+ * rather than the plan so the **client** can call it (it knows `roundIndex` and
+ * `totalRounds` from every reveal, but never holds the plan). Fires exactly
+ * `blockCount - 1` times per game.
+ * @param {number} index
+ * @param {number} total  the game's total round count
+ * @returns {boolean}
+ */
+export function isBlockBoundary(index, total) {
+  return (index + 1) % BLOCK_ROUNDS === 0 && index < total - 1;
+}
+
+/**
+ * Whether a 0-based round is a block boundary in a given plan — the server-side
+ * convenience over {@link isBlockBoundary} for callers that hold the plan.
+ * @param {Segment[]} plan
+ * @param {number} index
+ * @returns {boolean}
+ */
+export function isBlockEnd(plan, index) {
+  return isBlockBoundary(index, totalRounds(plan));
+}
+
+/**
  * The segment a given 0-based round falls in. A round index past the end clamps
  * to the last segment — harmless, since the server only generates a question
  * for a round the room will actually play (the extra question on the final
@@ -79,11 +141,11 @@ export function roundIdForRound(plan, index) {
  *
  * `group` splits the catalog into the fixed **picture** trio (flags / map) and
  * the open-ended **metric** family (population / area / density / …future GDP,
- * coffee). The lobby renders the two groups differently: picture modes get a
- * per-mode stepper + toggle, the metric family collapses to one "world facts"
- * control with a shared count spread across the enabled metrics (see
- * {@link buildPartyPlan}). Adding a metric = one more `group: 'metric'` entry
- * here + its round module + i18n; the setup UI grows by one chip, not one row.
+ * coffee). The lobby renders the two groups differently — picture modes as rows,
+ * the metric family as colour chips — but each enabled mode of either group is
+ * one block (see {@link buildPartyPlan}); a statistic is its own per-metric
+ * block. Adding a metric = one more `group: 'metric'` entry here + its round
+ * module + i18n; the setup UI grows by one chip, not one row.
  *
  * @typedef {{ id: string, roundId: string, poolId: string, group: 'picture' | 'metric' }} PartyMode
  * @type {PartyMode[]}
@@ -130,9 +192,6 @@ export const PARTY_MODES = [
 export const PICTURE_MODES = PARTY_MODES.filter((m) => m.group === 'picture');
 /** The open-ended world-metric family (population / area / density / …). */
 export const METRIC_MODES = PARTY_MODES.filter((m) => m.group === 'metric');
-
-/** @type {Record<string, PartyMode>} */
-const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 
 /** Bounds a host's choices stay inside — a defence against a malformed plan
  *  over the wire as much as a sane ceiling for the lobby steppers. */
@@ -218,80 +277,36 @@ export function validatePlan(plan) {
 }
 
 /**
- * Fisher-Yates shuffle with an injectable RNG (so callers can seed it in tests).
- * Returns a new array; the input is not mutated.
- * @template T
- * @param {T[]} arr
- * @param {() => number} rng
- * @returns {T[]}
- */
-function shuffle(arr, rng) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const t = a[i]; a[i] = a[j]; a[j] = t;
-  }
-  return a;
-}
-
-/**
- * Spread `n` world-facts rounds across the enabled metric modes, as a list of
- * `n` mode ids in play order. Balanced first (round-robin so each metric gets a
- * near-equal share) then shuffled, with the leftover rounds (`n % metrics`)
- * handed to a random subset — so a 6-round / 3-metric game is always 2 each in a
- * random order, and a 7-round game is 3/2/2 with a random metric getting the
- * extra. This is the "picked at random from the facts you choose" the lobby
- * promises: which facts play is the host's pick; how many of each is the deal.
+ * Build a plan from the lobby setup shape. Under the **block model** (Iteration
+ * 8) every enabled mode is one {@link BLOCK_ROUNDS}-round block, and that now
+ * includes each statistic on its own: an on picture mode becomes one 5-round
+ * segment, and **each enabled metric becomes its own 5-round block** of that one
+ * metric (not a mixed world-facts block). So the block count is exactly the
+ * number of enabled modes: picture modes on + statistics on. The result is a
+ * normal `Segment[]` the server validates like any other plan — no server or room
+ * change is needed, the block model lives entirely in how the client turns its
+ * setup into segments here.
  *
- * Unknown / non-metric ids are dropped; `n <= 0` or no metrics yields `[]`.
+ * Order: the picture blocks (catalog order), then the statistic blocks (catalog
+ * order). A per-metric block reads as a coherent little quiz ("five coffee
+ * questions") and gives Iteration 9's draft its "I pick Coffee" moment for free.
  *
- * @param {number} n  how many world-facts rounds to deal
- * @param {string[]} metricIds  the enabled metric mode ids
- * @param {() => number} [rng]
- * @returns {string[]}  `n` metric mode ids, in play order
- */
-export function distributeWorldFacts(n, metricIds, rng = Math.random) {
-  const ids = Array.isArray(metricIds)
-    ? metricIds.filter((id) => MODE_BY_ID[id] && MODE_BY_ID[id].group === 'metric')
-    : [];
-  if (!ids.length || !Number.isFinite(n) || n <= 0) return [];
-  const rounds = Math.min(Math.floor(n), MAX_TOTAL_ROUNDS);
-  const order = shuffle(ids, rng); // randomise which metric takes the remainder
-  /** @type {string[]} */
-  const out = [];
-  for (let i = 0; i < rounds; i++) out.push(order[i % order.length]);
-  return shuffle(out, rng); // randomise play order
-}
-
-/**
- * Build a plan from the lobby setup shape: picture modes contribute one segment
- * each (their own round count, catalog order); the world-facts family expands
- * its single shared count into one-round metric segments dealt by
- * {@link distributeWorldFacts}, appended after the picture block. The result is
- * a normal `Segment[]` the server validates like any other plan — no server or
- * room change is needed to group the metric modes, the grouping lives entirely
- * in how the client turns its setup into segments here.
- *
- * @param {{ picture: Record<string, { on: boolean, n: number }>, facts: { on: boolean, n: number, metrics: Record<string, boolean> } }} setup
- * @param {() => number} [rng]
+ * @param {{ picture: Record<string, { on: boolean }>, facts: { metrics: Record<string, boolean> } }} setup
  * @returns {Segment[]}
  */
-export function buildPartyPlan(setup, rng = Math.random) {
+export function buildPartyPlan(setup) {
   /** @type {Segment[]} */
   const plan = [];
   const picture = (setup && setup.picture) || {};
   for (const m of PICTURE_MODES) {
-    const st = picture[m.id];
-    if (st && st.on && Number.isFinite(st.n) && st.n > 0) {
-      plan.push({ poolId: m.poolId, roundId: m.roundId, rounds: Math.min(Math.floor(st.n), MAX_ROUNDS_PER_MODE) });
+    if (picture[m.id] && picture[m.id].on) {
+      plan.push({ poolId: m.poolId, roundId: m.roundId, rounds: BLOCK_ROUNDS });
     }
   }
-  const facts = (setup && setup.facts) || null;
-  if (facts && facts.on && Number.isFinite(facts.n) && facts.n > 0) {
-    const enabled = METRIC_MODES.filter((m) => facts.metrics && facts.metrics[m.id]).map((m) => m.id);
-    for (const id of distributeWorldFacts(facts.n, enabled, rng)) {
-      const m = MODE_BY_ID[id];
-      plan.push({ poolId: m.poolId, roundId: m.roundId, rounds: 1 });
+  const metrics = (setup && setup.facts && setup.facts.metrics) || {};
+  for (const m of METRIC_MODES) {
+    if (metrics[m.id]) {
+      plan.push({ poolId: m.poolId, roundId: m.roundId, rounds: BLOCK_ROUNDS });
     }
   }
   return plan;
