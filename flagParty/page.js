@@ -1,5 +1,6 @@
 import { t, countryName } from '../i18n.js';
 import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
+import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
@@ -272,24 +273,21 @@ const SUPERLATIVE_MODES = {
 const KNOWN_ROUND_IDS = renderableRoundIds(Object.keys(SUPERLATIVE_MODES));
 
 /** Little pictures leading each setup row, distinct enough to tell apart at a
- *  glance. The two flag modes get real flag thumbnails (a country flag for
- *  "countries", the Jolly Roger for "others" — a flag, on-theme for a party
- *  game, and unmistakably not a specific country); the map mode gets the actual
- *  Italy contour asset (the same silhouette the round renders); the world-facts
- *  lead gets a stat-bar chart. Flag artwork carries its own colours by nature
- *  (like every `flags/svg/*.svg`); the chart is monochrome `currentColor`.
- *  Rendered via `iconSpan` (innerHTML), so `<img>` and inline `<svg>` both work;
- *  sizing is by class in index.css (`.gs-thumb` / `.gs-contour` / plain svg). */
+ *  glance. The artwork is shared with flagQuiz's deck indicator via
+ *  `flags/deckIcons.js` — promoted there when that second consumer arrived
+ *  (Feature V). Only the sizing is ours: `.gs-thumb` / `.gs-contour` in
+ *  index.css put them in a 24x24 slot leading a settings row, which is not
+ *  the box flagQuiz wants, so the shared module deliberately ships artwork
+ *  without sizing and each consumer passes its own class.
+ *
+ *  Keyed by party mode id, which is not the deck id — this table is the
+ *  mapping. Rendered via `iconSpan` (innerHTML), so `<img>` and inline `<svg>`
+ *  both work. */
 const SETUP_ICONS = {
-  // A representative country flag (France — a clean tricolour that reads as "a
-  // flag" at 20px). Swap the code to re-pick; nothing keys off which country.
-  'flags-all': '<img class="gs-thumb" src="../flags/svg/fr.svg" alt="" />',
-  // Jolly Roger — a flag with no country, for the non-sovereign "others" pool.
-  'flags-territories': '<svg class="gs-thumb" viewBox="0 0 32 24" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="24" fill="#241f22"/><g stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="10" y1="13" x2="22" y2="19"/><line x1="22" y1="13" x2="10" y2="19"/></g><g fill="#fff"><circle cx="9.4" cy="12.6" r="1.5"/><circle cx="22.6" cy="12.6" r="1.5"/><circle cx="9.4" cy="19.4" r="1.5"/><circle cx="22.6" cy="19.4" r="1.5"/></g><ellipse cx="16" cy="10.5" rx="5" ry="5.3" fill="#fff"/><rect x="12.6" y="13.6" width="6.8" height="3.4" rx="1" fill="#fff"/><circle cx="14" cy="10" r="1.4" fill="#241f22"/><circle cx="18" cy="10" r="1.4" fill="#241f22"/><rect x="15.3" y="11.6" width="1.4" height="2" fill="#241f22"/></svg>',
-  // The Italy contour asset — the same silhouette the map round shows.
-  'map-outlines': '<img class="gs-contour" src="../flags/contours/it.svg" alt="" />',
-  // World-facts lead: an ascending stat-bar chart (statistics / metrics).
-  worldFacts: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="13" width="4.4" height="8" rx="1"/><rect x="9.8" y="8" width="4.4" height="13" rx="1"/><rect x="16.6" y="4" width="4.4" height="17" rx="1"/></svg>',
+  'flags-all': deckIconHtml('flags', { className: 'gs-thumb' }),
+  'flags-territories': deckIconHtml('weird', { className: 'gs-thumb' }),
+  'map-outlines': deckIconHtml('outlines', { className: 'gs-contour' }),
+  worldFacts: deckIconHtml('facts'),
 };
 
 /** Metric key (the flags/metrics registry) for a superlative round id,
