@@ -28,6 +28,7 @@ import { loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
+import { QUIZ_MAP_CONFIG } from './mapConfig.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { bumpShare, bumpQuiz60sDay, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { warsawDayNumber } from '../flags/warsawDay.js';
@@ -301,49 +302,6 @@ export function bootFlagQuiz() {
     const startTime = Date.now();
     let timerRaf = 0;
 
-    // Per-variant contour map. Every variant mounts the shared world map
-    // (`worldMap.svg`) and, except for the whole-world "countries" view,
-    // crops the viewBox to the variant's country codes. Future continents
-    // follow the same pattern by adding an entry here. Gate: variant must
-    // be in this table AND the player has the show-map toggle on.
-    const variantPool = pool;
-    // `cropExcludes` per-variant drops countries from the bbox crop
-    // computation only. The country still renders + is quizzed; it
-    // just doesn't pull the viewBox toward its bbox. Used for
-    // antimeridian-spanning countries whose `<g>` bbox effectively
-    // wraps the whole map (US's Aleutians cross the date line, so
-    // including US in NA's crop blows the viewBox out to the world).
-    //
-    // `cropPad` extends the crop bounds in SVG units after the bbox
-    // union is computed. For NA we exclude US from the bbox math but
-    // pad the west edge by 200 units so Alaska's main body comes back
-    // into view (it sits west of Canada's westernmost point).
-    const MAP_CONFIG = /** @type {Record<string, { url: string, crop: boolean, cropExcludes?: string[], cropPad?: { left?: number, right?: number, top?: number, bottom?: number } }>} */ ({
-      // "All countries" — the whole-world view. No crop; the asset's
-      // natural viewBox already covers everything. Microstates scope
-      // is the full pool so every tiny country worldwide gets a ring.
-      countries:       { url: './worldMap.svg',  crop: false },
-      // Europe: several European countries' <g> on the world map bundle
-      // their overseas territories with the metropole (fr+French Guiana,
-      // dk+Greenland, es+Canaries, nl/pt/gb/no their Atlantic/Caribbean
-      // bits), so their bbox spans oceans — dropping them from the crop
-      // math keeps the viewBox on metropolitan Europe (same trick NA uses
-      // for the US). They still render + are quizzed; their mainland sits
-      // inside the frame the other European countries anchor. cropPad
-      // gives Iberia + the British Isles a little western breathing room.
-      europe:          { url: './worldMap.svg',  crop: true,
-                         cropExcludes: ['fr', 'es', 'pt', 'nl', 'gb', 'dk', 'no', 'ru'],
-                         cropPad: { left: 30, bottom: 15 } },
-      asia:            { url: './worldMap.svg',  crop: true  },
-      africa:          { url: './worldMap.svg',  crop: true  },
-      'north-america': { url: './worldMap.svg',  crop: true,  cropExcludes: ['us'], cropPad: { left: 200 } },
-      'south-america': { url: './worldMap.svg',  crop: true  },
-      // Fiji and Kiribati both span the antimeridian — including them
-      // would blow the crop out the same way US did for NA. Australia +
-      // NZ + the central-Pacific island chains still anchor a sensible
-      // Oceania view without them.
-      oceania:         { url: './worldMap.svg',  crop: true,  cropExcludes: ['fj', 'ki'] },
-    });
     /** @type {SVGElement | null} */
     let mapSvg = null;
     // Pan/zoom handle for the mounted map, captured so the answer fly-in
@@ -510,9 +468,9 @@ export function bootFlagQuiz() {
     }
 
     function mountMap() {
-      if (!flagMapEl || !MAP_CONFIG[key] || mapMounted) return;
-      const cfg = MAP_CONFIG[key];
-      const variantCodes = variantPool.map((c) => c.code);
+      if (!flagMapEl || !QUIZ_MAP_CONFIG[key] || mapMounted) return;
+      const cfg = QUIZ_MAP_CONFIG[key];
+      const variantCodes = pool.map((c) => c.code);
       const excludes = new Set(cfg.cropExcludes || []);
       const cropCodes = cfg.crop
         ? variantCodes.filter((c) => !excludes.has(c))
@@ -647,7 +605,7 @@ export function bootFlagQuiz() {
     // Initial paint: for any variant that has a map, show the live map or
     // the collapsed toggle chip per the saved preference. Variants with no
     // map asset leave the section hidden.
-    if (MAP_CONFIG[key]) {
+    if (QUIZ_MAP_CONFIG[key]) {
       if (isQuizShowMap()) mountMap();
       else renderCollapsedMap();
     }
