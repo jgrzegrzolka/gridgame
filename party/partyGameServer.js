@@ -293,11 +293,14 @@ export default class PartyGameServer {
           // instead of dealing the next question: the lowest-ranked seat that
           // hasn't picked chooses the next block from a dealt hand. Otherwise
           // (and always in setlist) it advances the round or ends the game.
-          if (pendingPickAfterReveal(this.room)) {
-            const picker = pickerFor(this.scoreboard(), this.room.pickedBy);
-            const hand = handFor(this.usedModes);
-            result = applyEnterPicking(this.room, playerId, picker, hand);
+          const picker = pendingPickAfterReveal(this.room)
+            ? pickerFor(this.scoreboard(), this.room.pickedBy) : null;
+          if (picker) {
+            result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes));
           } else {
+            // Not a pick boundary, or (defensively) no eligible picker — the
+            // block-count formula guarantees one, but never freeze the room on a
+            // null picker: fall through to the ordinary advance / final board.
             result = applyNext(this.room, playerId, this.generateQuestion(this.room.roundIndex + 1));
           }
           break;

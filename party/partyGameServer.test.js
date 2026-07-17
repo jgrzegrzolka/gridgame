@@ -135,6 +135,23 @@ test('draft: forcePick from the host resolves the pick with a random hand card',
   assert.equal(q.draftPick.picker, 'alice', 'attributed to the picker who timed out');
 });
 
+test('draft: a null picker at a boundary never freezes — it advances instead', async () => {
+  // Defensive: force the (normally-unreachable) state where every seat has
+  // already picked, then hit a block boundary. `next` must fall through to an
+  // ordinary advance, not sit forever in `reveal`.
+  const { srv, conn } = await startSoloDraft();
+  for (let i = 0; i < BLOCK_ROUNDS - 1; i++) {
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+    await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
+  }
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn); // round 4 -> reveal (boundary)
+  srv.room = { ...srv.room, pickedBy: ['alice'] }; // pretend the only seat already picked
+  await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
+  assert.notEqual(srv.room.phase, 'reveal', 'the room did not freeze at the boundary');
+  assert.equal(srv.room.phase, 'question', 'it advanced to the next round');
+  assert.equal(srv.room.roundIndex, BLOCK_ROUNDS);
+});
+
 test('draft: the last block ends in the final board, no pick', async () => {
   const { srv, conn } = await startSoloDraft();
   await playBlock(srv, conn);                 // block 1 -> picking

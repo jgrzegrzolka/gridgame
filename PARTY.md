@@ -838,6 +838,18 @@ partial plan, so a pick is an append.
 **Mock (the design both iterations were settled against):**
 https://claude.ai/code/artifact/f2a1acb4-12cb-40c0-831b-075f921afdad
 
+**Reviewed (adversarial correctness pass, 2026-07-17).** No reachable bug: the pick-vs-final
+boundary is exact, state resets cleanly between games, and draft fields serialize for reconnect
+mid-pick. Fixed one latent gap it found: a null picker at a boundary now falls through to the
+ordinary advance instead of freezing the room (defensive — the block-count formula already
+guarantees a picker). Two findings accepted, not fixed:
+- **A disconnected seat can be handed the pick** (`pickerFor` is lowest-*ranked*, not lowest-*present*,
+  per spec). Not a stall: the host's `forcePick` clock resolves it with a random card after 10 s.
+- **`usedCodes` isn't rebuilt after a durable-object eviction** (only `usedModes` is) — a general,
+  pre-existing server gap (affects setlist too, and the plan doesn't record which countries were
+  used), so left alone here. Cosmetic sibling: the "X's pick" attribution card doesn't survive a
+  reconnect mid-drafted-block (the block / scores / question all do).
+
 **Deferred from Iteration 9 (a follow-up slice, noted so it isn't lost):**
 - **The final block being double points + always tricky.** The draft mechanic ships first; this is a
   scoring/veil polish on top (double-points touches `partyScore` / `toReveal`; always-tricky-final
