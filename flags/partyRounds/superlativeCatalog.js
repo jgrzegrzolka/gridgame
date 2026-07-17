@@ -380,30 +380,41 @@ export function superlativeMetricByKey(key) {
 }
 
 /**
+ * Does this build have copy for a question dealt in this direction?
+ *
+ * **This is a version-skew check, not a data check.** Within one build it is
+ * always true: the same `direction` field that locks generation is the one that
+ * decides whether `hintLeast` exists. But the server (PartyKit, on Cloudflare)
+ * and the page (SWA) are separate deploys of this very file — that skew is
+ * precisely why `flagParty/staleGuard.js` exists. Flip a metric from `'most'`
+ * to `null` (a one-word edit this table is designed to make easy) and the server
+ * starts dealing 'least' while an open tab still has `hintLeast: null`. The
+ * round id is unchanged, so the id-based staleness check waves it through.
+ *
+ * A client that can't label a direction must NOT guess: showing the 'most' label
+ * over a 'least' question mis-scores every player silently, which is worse than
+ * the crash it would replace. `flagParty/staleGuard.js` composes this into
+ * `canRenderQuestion` so the tab reloads onto the new build instead — the same
+ * path a brand-new round id takes.
+ *
+ * @param {SuperlativeMetric} metric
+ * @param {'most' | 'least'} direction
+ * @returns {boolean}
+ */
+export function canLabelDirection(metric, direction) {
+  return direction !== 'least' || metric.hintLeast !== null;
+}
+
+/**
  * The criterion label to show for a question's direction.
  *
- * Falls back to `hintMost` when a 'least' question reaches a direction-locked
- * metric, because reading `.key` off `undefined` used to take the whole round
- * down.
- *
- * **This case is NOT unreachable, and an earlier draft of this comment wrongly
- * said it was.** Within one build it is: the same `direction` field locks
- * generation. But the server (PartyKit, Cloudflare) and the page (SWA) are
- * separate deploys of this file — that skew is exactly why `flagParty/staleGuard.js`
- * exists. Flip a metric from `'most'` to `null` (a one-word edit this table is
- * designed to make easy) and during the skew window the server can deal 'least'
- * while an open tab still has `hintLeast: null`. `staleGuard` will NOT catch it:
- * the `roundId` is unchanged, only the direction is new.
- *
- * The fallback then shows the 'most' label over a 'least' question, which
- * mis-scores silently. That is arguably worse than the crash it replaced, and it
- * is the one spot where Phase 4b-i is not strictly behaviour-neutral. It is left
- * as-is rather than fixed here because the honest fix is to make direction part
- * of the staleness check (a new code path, not a neutral refactor).
- *
- * **So: flipping any metric's `direction` is a wire-visible change.** Ship the
- * catalog side to both deploys before the server starts dealing the new
- * direction, or accept one skew window of wrong labels.
+ * Callers must have cleared {@link canLabelDirection} first — `flagParty` does,
+ * via `staleGuard.canRenderQuestion`, before a round ever renders. The
+ * `hintMost` fallback is belt-and-braces for a caller that doesn't (and beats
+ * reading `.key` off `undefined`, which is what this replaced), but it is not a
+ * behaviour anything should rely on: a wrong label is only better than a dead
+ * screen, never right. flagQuiz's Facts deck can't reach it at all — it
+ * generates and labels from the same in-process catalog, so no skew exists.
  *
  * @param {SuperlativeMetric} metric
  * @param {'most' | 'least'} direction
