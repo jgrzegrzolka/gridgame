@@ -52,7 +52,6 @@
     "flagsData": "Przeglądaj flagi",
     "random": "Losowa",
     "yourStats": "Twoje statystyki",
-    "includeTerritories": "Uwzględnij terytoria i inne flagi",
     "showMap": "Pokaż mapę",
     "hideMap": "Ukryj mapę",
     "wideScreen": "Pełna szerokość",
@@ -703,7 +702,8 @@
     "africa": "Afryka",
     "north-america": "Ameryka Północna",
     "south-america": "Ameryka Południowa",
-    "oceania": "Oceania"
+    "oceania": "Oceania",
+    "weird": "Dziwne flagi"
   },
   "month": {
     "jan": "Sty",

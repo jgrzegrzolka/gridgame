@@ -14,7 +14,6 @@ import {
   scoreColor,
   poolFor,
   targetFor,
-  isQuizIncludeAll,
   isQuizShowMap,
   setQuizShowMap,
   getQuizLastVariant,
@@ -25,7 +24,7 @@ import {
   countModeProgressRatio,
   variantHasLeaderboard,
 } from '../flags/quiz.js';
-import { flagsGamePool, loadCountries } from '../flags/group.js';
+import { loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
 import { buildQuizMenu, buildVariantPicker } from './menu.js';
@@ -196,13 +195,16 @@ export function bootFlagQuiz() {
     setQuizLastVariant(window.localStorage, currentVariantKey);
   }
 
-  const includeAll = isQuizIncludeAll();
-
   return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
     .then((raw) => {
-      const all = flagsGamePool(raw, includeAll);
+      // Feature V: every variant owns its whole pool now (its filter
+      // decides sovereignty itself), so decks are built from the raw
+      // country set. `flagsGamePool` scoping died with the toggle, and
+      // had to: `weird`'s pool is the complement of the sovereign one,
+      // not a subset, so no upstream scope could express it.
+      const all = raw;
 
       // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
       // a soft language switch doesn't double the variant list. The
@@ -998,7 +1000,7 @@ export function bootFlagQuiz() {
         });
 
         const { best, isNew } = recordResult(
-          localStorage, key, mode, { score: answeredCount, time: budgetUsed }, includeAll,
+          localStorage, key, mode, { score: answeredCount, time: budgetUsed },
         );
         resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed, gaveUp };
         paintResultLabels();
@@ -1021,7 +1023,7 @@ export function bootFlagQuiz() {
         }
         let cycleP;
         if (hasLeaderboard) {
-          const configKey = quizRecordConfigKey(key, mode, includeAll);
+          const configKey = quizRecordConfigKey(key, mode);
           cycleP = runLeaderboardCycle({
             submitImpl: () => maybeSubmitQuizRecord({
               deviceId, configKey,
@@ -1070,7 +1072,7 @@ export function bootFlagQuiz() {
         finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
 
         const { best, isNew } = recordResult(
-          localStorage, key, mode, { score: wrongCount, time: elapsed }, includeAll, lowerScoreWins,
+          localStorage, key, mode, { score: wrongCount, time: elapsed }, lowerScoreWins,
         );
         resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
@@ -1081,7 +1083,7 @@ export function bootFlagQuiz() {
         // call back if such an achievement actually lands.
         let cycleP;
         if (hasLeaderboard) {
-          const configKey = quizRecordConfigKey(key, mode, includeAll);
+          const configKey = quizRecordConfigKey(key, mode);
           const engaged = madeAnyQuizPick({ answeredCount, wrongCount });
           cycleP = runLeaderboardCycle({
             submitImpl: () => maybeSubmitQuizRecord({

@@ -36,12 +36,40 @@ export const SHARED_PARENT_FLAG = new Set([
 ]);
 
 /**
+ * Predicate form of {@link sovereignPool}. Exported because flagQuiz's
+ * `VARIANTS` entries are `filter: (c) => boolean` and must express their own
+ * pool — the "scope applied upstream" split that used to do this died with
+ * the include-territories toggle (Feature V).
+ *
+ * @param {Country} c
+ * @returns {boolean}
+ */
+export function isSovereignFlag(c) {
+  return sovereigntyOf(c) === 'sovereign';
+}
+
+/**
+ * Predicate form of {@link nonSovereignPool} — the "weird flags" deck's
+ * membership test. Kept as the single definition of the curation so the deck
+ * and the pool can never disagree: a place, not sovereign, not an
+ * organisation, and not wearing its parent's flag.
+ *
+ * @param {Country} c
+ * @returns {boolean}
+ */
+export function isNonSovereignFlag(c) {
+  return sovereigntyOf(c) !== 'sovereign' &&
+    c.category === 'country' &&
+    !SHARED_PARENT_FLAG.has(c.code);
+}
+
+/**
  * The sovereign flag pool — UN members and recognised sovereign states.
  * @param {Country[]} countries
  * @returns {Country[]}
  */
 export function sovereignPool(countries) {
-  return countries.filter((c) => sovereigntyOf(c) === 'sovereign');
+  return countries.filter(isSovereignFlag);
 }
 
 /**
@@ -55,8 +83,5 @@ export function sovereignPool(countries) {
  * @returns {Country[]}
  */
 export function nonSovereignPool(countries) {
-  return countries.filter((c) =>
-    sovereigntyOf(c) !== 'sovereign' &&
-    c.category === 'country' &&
-    !SHARED_PARENT_FLAG.has(c.code));
+  return countries.filter(isNonSovereignFlag);
 }

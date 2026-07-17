@@ -52,7 +52,6 @@
     "flagsData": "Browse flags",
     "random": "Random",
     "yourStats": "Your stats",
-    "includeTerritories": "Include territories & other flags",
     "showMap": "Show map",
     "hideMap": "Hide map",
     "wideScreen": "Full width",
@@ -703,7 +702,8 @@
     "africa": "Africa",
     "north-america": "North America",
     "south-america": "South America",
-    "oceania": "Oceania"
+    "oceania": "Oceania",
+    "weird": "Weird flags"
   },
   "month": {
     "jan": "Jan",

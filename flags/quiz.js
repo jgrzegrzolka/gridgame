@@ -1,23 +1,8 @@
 import { readBoolSetting, writeBoolSetting } from './group.js';
+import { isSovereignFlag, isNonSovereignFlag } from './flagPools.js';
 
-const QUIZ_INCLUDE_ALL_KEY = 'gridgame.flagquiz.includeAll';
 const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
 const QUIZ_SHOW_MAP_KEY = 'gridgame.flagquiz.showMap';
-
-/**
- * @param {{ getItem(key: string): string | null } | null | undefined} [store]
- */
-export function isQuizIncludeAll(store) {
-  return readBoolSetting(store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null), QUIZ_INCLUDE_ALL_KEY);
-}
-
-/**
- * @param {{ setItem(key: string, value: string): void, removeItem(key: string): void }} store
- * @param {boolean} value
- */
-export function setQuizIncludeAll(store, value) {
-  writeBoolSetting(store, QUIZ_INCLUDE_ALL_KEY, value);
-}
 
 /**
  * Per-device preference for showing the flagQuiz contour map.
@@ -255,41 +240,62 @@ export function createQuiz(pool, count, choiceCount = 4) {
 }
 
 /**
- * VARIANTS predicates only narrow by continent / "all". The sovereign-vs-
- * include-everything scope is applied separately at fetch time via
- * flagsGamePool, so flipping the "include territories etc." toggle
- * widens every variant uniformly without needing per-variant changes.
+ * Every variant owns its **whole** pool: its filter runs over the raw loaded
+ * country list and decides sovereignty itself.
+ *
+ * This used to be split — the filters narrowed by continent only, and scope
+ * (sovereign vs include-everything) was applied upstream at fetch time via
+ * `flagsGamePool`, so the include-territories toggle could widen every
+ * variant at once. Feature V deleted that toggle, and the split with it: the
+ * `weird` deck's pool is not a *subset* of the sovereign pool, it's the
+ * complement, so no upstream scope could express it. Self-contained filters
+ * make it an ordinary variant instead of a special case.
+ *
+ * Insertion order is display order — `menu.js` iterates `Object.entries`.
  *
  * @type {Record<string, Variant>}
  */
 export const VARIANTS = {
   countries: {
     label: 'All countries',
-    filter: () => true,
+    filter: isSovereignFlag,
   },
   europe: {
     label: 'Europe',
-    filter: (c) => c.continent === 'Europe',
+    filter: (c) => isSovereignFlag(c) && c.continent === 'Europe',
   },
   asia: {
     label: 'Asia',
-    filter: (c) => c.continent === 'Asia',
+    filter: (c) => isSovereignFlag(c) && c.continent === 'Asia',
   },
   africa: {
     label: 'Africa',
-    filter: (c) => c.continent === 'Africa',
+    filter: (c) => isSovereignFlag(c) && c.continent === 'Africa',
   },
   'north-america': {
     label: 'North America',
-    filter: (c) => c.continent === 'North America',
+    filter: (c) => isSovereignFlag(c) && c.continent === 'North America',
   },
   'south-america': {
     label: 'South America',
-    filter: (c) => c.continent === 'South America',
+    filter: (c) => isSovereignFlag(c) && c.continent === 'South America',
   },
   oceania: {
     label: 'Oceania',
-    filter: (c) => c.continent === 'Oceania',
+    filter: (c) => isSovereignFlag(c) && c.continent === 'Oceania',
+  },
+  // Feature V. The non-sovereign pool as its own deck, replacing the old
+  // "include territories & other flags" toggle. It reuses Flag Party's
+  // curated predicate rather than raw "not sovereign": that drops
+  // organisations (EU / UN / ASEAN aren't places) and the codes whose flag
+  // *is* their parent's, which is what made the old toggle able to ask
+  // "Which flag is Réunion?" and offer the French tricolour.
+  //
+  // Last in the object because insertion order is display order — the menu
+  // and the picker both iterate `Object.entries(VARIANTS)`.
+  weird: {
+    label: 'Weird flags',
+    filter: isNonSovereignFlag,
   },
 };
 
@@ -637,23 +643,27 @@ export function saveBest(store, key, value) {
 }
 
 /**
+ * Feature V dropped the trailing `.all` segment along with the
+ * include-territories toggle. The sovereign form — which is what every real
+ * PB is stored under — is **byte-identical** before and after, so no
+ * migration is needed here: existing bests keep loading. The old
+ * `.all`-suffixed keys simply become unreachable, a few dead bytes in
+ * localStorage. `weird` gets its own fresh slot like any other variant.
+ *
  * @param {string} variantKey
  * @param {string} modeKey
- * @param {boolean} [includeAll]
  * @returns {string}
  */
-export function bestKey(variantKey, modeKey, includeAll = false) {
+export function bestKey(variantKey, modeKey) {
   // The `all` mode swapped its `Result.score` semantics from "percentage
   // correct, higher wins" to "mistakes count, lower wins". Add a `.v2`
   // segment so old percentage-shaped entries don't get reloaded and
   // misinterpreted as monstrous mistake counts (e.g. `95` reading as 95
   // mistakes out of a 269-flag pool). 60s and grid keys are unaffected
   // — they always stored a count.
-  const base =
-    modeKey === 'all'
-      ? `flagquiz.best.${variantKey}.${modeKey}.v2`
-      : `flagquiz.best.${variantKey}.${modeKey}`;
-  return includeAll ? `${base}.all` : base;
+  return modeKey === 'all'
+    ? `flagquiz.best.${variantKey}.${modeKey}.v2`
+    : `flagquiz.best.${variantKey}.${modeKey}`;
 }
 
 /**
@@ -661,12 +671,11 @@ export function bestKey(variantKey, modeKey, includeAll = false) {
  * @param {string} variantKey
  * @param {string} modeKey
  * @param {Result} current
- * @param {boolean} [includeAll]
  * @param {ScoreComparator} [scoreBetter]
  * @returns {{ best: Result, isNew: boolean }}
  */
-export function recordResult(store, variantKey, modeKey, current, includeAll = false, scoreBetter) {
-  const key = bestKey(variantKey, modeKey, includeAll);
+export function recordResult(store, variantKey, modeKey, current, scoreBetter) {
+  const key = bestKey(variantKey, modeKey);
   const outcome = nextBest(loadBest(store, key), current, scoreBetter);
   if (outcome.isNew) saveBest(store, key, outcome.best);
   return outcome;

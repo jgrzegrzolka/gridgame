@@ -17,7 +17,8 @@ import {
   isFlagVisualCategory,
   suggest,
 } from './engine.js';
-import { CONTINENTS, flagsGamePool, loadCountries, attachMetrics } from './group.js';
+import { CONTINENTS, loadCountries, attachMetrics } from './group.js';
+import { VARIANTS, poolFor } from './quiz.js';
 import { METRIC_FILES } from './metrics/index.js';
 import { emptyFilters, matchesFilters } from './flagsFilter.js';
 
@@ -423,22 +424,23 @@ test('All-countries pool supports the "20" quiz mode (Flag Quiz default)', () =>
   );
 });
 
-test('SOV_POOL_SIZES in api/dailyMe.js matches what flagsGamePool produces (drift detector)', () => {
+test('SOV_POOL_SIZES in api/dailyMe.js matches what the variants produce (drift detector)', () => {
   // Pins the threshold numbers used by the "Cleared <variant>" quiz
   // achievements. If a country lands or leaves countries.json, the
   // SOV_POOL_SIZES const in `api/src/functions/dailyMe.js` goes stale
   // and the achievement either becomes impossible to earn (sizes grew)
   // or trivial (sizes shrank). This test catches both before deploy.
-  const sov = flagsGamePool(COUNTRIES, false);
-  const actual = {
-    countries: sov.length,
-    europe: sov.filter((c) => c.continent === 'Europe').length,
-    asia: sov.filter((c) => c.continent === 'Asia').length,
-    africa: sov.filter((c) => c.continent === 'Africa').length,
-    'north-america': sov.filter((c) => c.continent === 'North America').length,
-    'south-america': sov.filter((c) => c.continent === 'South America').length,
-    oceania: sov.filter((c) => c.continent === 'Oceania').length,
-  };
+  //
+  // Measured through `poolFor`, deliberately. Feature V made each VARIANT
+  // own its whole pool (sovereignty included), so VARIANTS is now the
+  // definition of what a deck contains. Re-deriving it here from
+  // `flagsGamePool` + a continent filter would be a *second* definition,
+  // free to drift from the first while this test kept passing. Going
+  // through poolFor means this pins the real thing.
+  const actual = Object.fromEntries(
+    ['countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania']
+      .map((key) => [key, poolFor(key, COUNTRIES).length]),
+  );
   // The expected values must mirror SOV_POOL_SIZES in api/src/functions/dailyMe.js.
   // If you're adding or removing a sovereign country, update both this
   // map AND the api/-side constant together.
@@ -456,6 +458,17 @@ test('SOV_POOL_SIZES in api/dailyMe.js matches what flagsGamePool produces (drif
     expected,
     'SOV_POOL_SIZES drifted from countries.json — update api/src/functions/dailyMe.js to match',
   );
+});
+
+test('the weird deck is deliberately absent from SOV_POOL_SIZES', () => {
+  // `weird` is a real variant but must NOT get a "Cleared" threshold: the
+  // released Cleared/Cartographer badges mean "you know the countries of
+  // <continent>", and letting a 54-flag territory deck satisfy them would
+  // silently change what an already-earned badge claims. computeQuiz treats
+  // a variant with no threshold as never-cleared, which is the intent — see
+  // the achievements open call in FEATURE.md Feature V.
+  assert.ok(VARIANTS.weird, 'weird should exist as a variant');
+  assert.ok(poolFor('weird', COUNTRIES).length >= 4, 'weird should be playable');
 });
 
 test('every entry has a corresponding SVG file at flags/svg/{code}.svg', () => {
