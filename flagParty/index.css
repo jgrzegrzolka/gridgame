@@ -484,6 +484,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   padding: 12px;
   border-radius: 12px;
   font-size: 15px;
+  /* Positioned so the between-blocks standings-movement animation can lift a
+     climbing row above the one it overtakes (z-index in page.js). No offsets, so
+     layout is unchanged. */
+  position: relative;
 }
 .scoreline.win { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
@@ -497,16 +501,11 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .scoreline .rank { color: var(--muted-color); width: 16px; font-variant-numeric: tabular-nums; }
 .scoreline .nm { font-weight: 500; color: var(--primary-color); }
 .scoreline .sc { margin-left: auto; font-weight: 600; color: var(--primary-color); font-variant-numeric: tabular-nums; }
-/* Break-row extras: the gap-to-leader on your own row and the rank-movement
-   arrow, both muted so the score stays the loudest thing. Only `.sc` carries
-   margin-left:auto (pushing the score to the right edge), so the gap and delta
-   sit just after the name and the row's own `gap` spaces them. Up movement takes
-   the pink accent (a good thing just happened); a drop stays muted rather than
-   shouting in a second colour. */
+/* Break-row extra: the gap-to-leader on your own row, muted so the score stays
+   the loudest thing. Only `.sc` carries margin-left:auto (pushing the score to
+   the right edge), so the gap sits just after the name. (Rank movement is shown
+   by the row sliding to its new place, not a ▲/▼ arrow.) */
 .scoreline .gap { font-size: 12px; color: var(--muted-color); font-variant-numeric: tabular-nums; }
-.scoreline .delta { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.scoreline .delta.up { color: var(--secondary-color); }
-.scoreline .delta.down { color: var(--muted-color); }
 
 /* The break screen: MVP banner over the standings. */
 .break-mvp {

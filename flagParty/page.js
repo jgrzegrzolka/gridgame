@@ -1033,6 +1033,9 @@ export function bootFlagParty() {
   let pendingBreakBoard = null;
   /** Guards the once-per-break capture against repeated renders of one break. */
   let breakSnapToken = null;
+  /** Guards the once-per-break standings-movement animation (the rows sliding from
+   *  their previous rank to the new one), so render()'s re-runs don't replay it. */
+  let breakAnimToken = null;
   /** True once this device has sent its pick for the current draft turn, so a
    *  double-tap can't fire two picks; reset when we leave the picking phase. */
   let pickSent = false;
@@ -1164,7 +1167,7 @@ export function bootFlagParty() {
       // Lobby = a fresh game (or play-again reset): forget the block baselines so
       // the first break of the next game shows gains-from-zero, no deltas, and
       // clear any pending block-intro beat.
-      prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null;
+      prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null; breakAnimToken = null;
       resetBlockIntro();
       stopClock(); stopVeil(); showSection('lobby'); renderLobby();
     }
@@ -1496,6 +1499,8 @@ export function bootFlagParty() {
     breakStandingsLabel.textContent = t('party.standings', 'Standings');
 
     breakBoard.innerHTML = '';
+    /** @type {HTMLElement[]} the row node per `rows` entry, for the slide animation */
+    const rowNodes = [];
     rows.forEach((r, i) => {
       const you = r.playerId === state.you;
       const row = el('div', 'scoreline' + (you ? ' you' : ' other'));
@@ -1506,14 +1511,12 @@ export function bootFlagParty() {
       if (you && r.gapToLeader > 0) {
         row.appendChild(el('span', 'gap', fmt(t('party.behind', '{n} behind'), { n: r.gapToLeader })));
       }
-      // Rank movement since the last break (null on the first break — no prior
-      // standing to move from).
-      if (r.rankDelta != null && r.rankDelta !== 0) {
-        const up = r.rankDelta > 0;
-        row.appendChild(el('span', `delta ${up ? 'up' : 'down'}`, `${up ? '▲' : '▼'}${Math.abs(r.rankDelta)}`));
-      }
+      // No ▲/▼ delta arrow: the rank movement is shown by the row physically
+      // sliding to its new place (animateStandingsMovement, from the same
+      // `rankDelta`), so a second numeric indicator would be redundant.
       row.appendChild(el('span', 'sc', String(r.score)));
       breakBoard.appendChild(row);
+      rowNodes.push(row);
     });
 
     // Capture this board as the baseline for the next break, once per break.
@@ -1522,6 +1525,58 @@ export function bootFlagParty() {
       breakSnapToken = token;
       pendingBreakBoard = board.map((e) => ({ playerId: e.playerId, nickname: e.nickname, score: e.score }));
     }
+
+    // Once per break, play the standings movement: each row starts at the slot it
+    // held at the last break and slides to its new one, so climbers rise past the
+    // players they overtook and the overtaken visibly drop. Guarded by its own
+    // token so render()'s re-runs during the break don't replay it.
+    if (breakAnimToken !== token) {
+      breakAnimToken = token;
+      animateStandingsMovement(rowNodes, rows);
+    }
+  }
+
+  /**
+   * Slide the break's standings rows from their previous rank to the new one — a
+   * FLIP driven by `rankDelta` (places climbed since the last break, from
+   * `blockBreak`). A row that moved up starts `rankDelta` slots lower and rises to
+   * place; one that dropped starts higher and falls. Rows are uniform height, so
+   * one measured stride (row + gap) converts a rank delta to a pixel offset. The
+   * climber gets a lifted z-index so it reads as passing over the row it overtakes.
+   *
+   * Pure decoration (the final positions are already correct in the DOM), so it's
+   * skipped entirely under `prefers-reduced-motion` — unlike the tricky veil, this
+   * carries no gameplay advantage.
+   *
+   * @param {HTMLElement[]} nodes  row node per `rows` entry, in new order
+   * @param {import('../flags/partyBreak.js').BreakRow[]} rows
+   */
+  function animateStandingsMovement(nodes, rows) {
+    if (prefersReducedMotion() || nodes.length < 2) return;
+    const stride = nodes[1].offsetTop - nodes[0].offsetTop;
+    if (!stride) return;
+    let moved = false;
+    // Seat every moving row at its OLD slot, transitions off.
+    rows.forEach((r, i) => {
+      const d = r.rankDelta;
+      if (d == null || d === 0) return;
+      moved = true;
+      const node = nodes[i];
+      node.style.transition = 'none';
+      node.style.transform = `translateY(${d * stride}px)`;
+      node.style.zIndex = d > 0 ? '2' : '1'; // climbers pass over the overtaken
+    });
+    if (!moved) return;
+    // Commit the start positions, then release to the new slots next frame.
+    void breakBoard.offsetHeight;
+    window.requestAnimationFrame(() => {
+      rows.forEach((r, i) => {
+        if (r.rankDelta == null || r.rankDelta === 0) return;
+        const node = nodes[i];
+        node.style.transition = 'transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)';
+        node.style.transform = 'translateY(0)';
+      });
+    });
   }
 
   function renderRevealFoot() {
