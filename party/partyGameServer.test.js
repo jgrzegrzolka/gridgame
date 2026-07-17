@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import PartyGameServer from './partyGameServer.js';
-import { blockCountFor } from '../flags/partyDraft.js';
+import { blockCountFor, HAND_SIZE } from '../flags/partyDraft.js';
 import { BLOCK_ROUNDS } from '../flags/partyPlan.js';
 
 /**
@@ -87,7 +87,7 @@ test('draft: a block boundary opens a pick with a hand that excludes the played 
   const picking = conn.last('picking');
   assert.ok(picking, 'a picking broadcast was sent');
   assert.equal(picking.picker, 'alice', 'the lone seat is the picker');
-  assert.equal(picking.hand.length, 5);
+  assert.equal(picking.hand.length, HAND_SIZE);
   assert.ok(!picking.hand.includes('flags-all'), 'the opening Flags mode is not offered again');
 });
 
@@ -202,7 +202,7 @@ test('draft (3 players): the picking broadcast names the same picker for everyon
     const p = conn.last('picking');
     if (id === pa.picker) {
       assert.equal(p.youPick, true, `${id} is the picker -> youPick true`);
-      assert.ok(Array.isArray(p.hand) && p.hand.length === 5, 'the picker gets the hand');
+      assert.ok(Array.isArray(p.hand) && p.hand.length === HAND_SIZE, 'the picker gets the hand');
     } else {
       assert.equal(p.youPick, false, `${id} is a watcher -> youPick false`);
       assert.equal(p.hand, undefined, 'a watcher never receives the hand');
