@@ -72,3 +72,31 @@ test('empty / missing input is safe', () => {
   assert.deepEqual(roundBreak(null, []), { rows: [], mvp: null });
   assert.deepEqual(roundBreak(null, /** @type {any} */ (undefined)), { rows: [], mvp: null });
 });
+
+test('prevScore carries the previous break total, so the count-up starts from the right number', () => {
+  const prev = board(['a', 30], ['b', 20]);
+  const curr = board(['a', 75], ['b', 20]);
+  const { rows } = roundBreak(prev, curr);
+  assert.deepEqual(rows.map((r) => r.prevScore), [30, 20]);
+  assert.deepEqual(rows.map((r) => r.roundGain), [45, 0]);
+});
+
+test('a player who was not seated at the last break counts up from 0', () => {
+  const prev = board(['a', 30]);
+  const curr = board(['a', 40], ['late', 15]);
+  const { rows } = roundBreak(prev, curr);
+  const late = rows.find((r) => r.playerId === 'late');
+  assert.ok(late);
+  assert.equal(late.prevScore, 0);
+});
+
+test('prevScore is the real prior total even where the gain clamp bites', () => {
+  // A score can only go up in play, but the clamp exists — so pin that prevScore
+  // is NOT derivable as `score - roundGain` when it does.
+  const prev = board(['a', 50]);
+  const curr = board(['a', 40]);
+  const { rows } = roundBreak(prev, curr);
+  assert.equal(rows[0].prevScore, 50);
+  assert.equal(rows[0].roundGain, 0);
+  assert.notEqual(rows[0].score - rows[0].roundGain, rows[0].prevScore);
+});

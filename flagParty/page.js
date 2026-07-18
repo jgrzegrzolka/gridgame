@@ -7,7 +7,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_HOLD_MS, LEDGER_COUNT_MS, LEDGER_SETTLE_MS, LEDGER_SLIDE_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
@@ -295,6 +295,7 @@ export function bootFlagParty() {
   const pickLead = $('pick-lead');
   const pickHand = $('pick-hand');
   const pickWatch = $('pick-watch');
+  const pickBoard = $('pick-board');
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
   const questionToSettingsBtn = /** @type {HTMLButtonElement} */ ($('question-to-settings'));
   const joinError = $('join-error');
@@ -376,6 +377,9 @@ export function bootFlagParty() {
   function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
   function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'|null} */ which) {
+    // Leaving the break ends the ledger's claim on the board, so the next break
+    // builds and animates from scratch. See `breakBuilt`.
+    if (which !== 'break') breakBuilt = false;
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
   }
 
@@ -669,9 +673,22 @@ export function bootFlagParty() {
   let pendingBreakBoard = null;
   /** Guards the once-per-break capture against repeated renders of one break. */
   let breakSnapToken = null;
-  /** Guards the once-per-break standings-movement animation (the rows sliding from
-   *  their previous rank to the new one), so render()'s re-runs don't replay it. */
+  /** True while the break currently on screen has already been built and handed to
+   *  the ledger animation. A break is identified by *being entered* (cleared in
+   *  `showSection`), deliberately NOT by `state.questionIndex`: the index changes
+   *  underneath a live break (the `picking` message carries the next one — see
+   *  `partyClient`'s picking case), so an index-keyed guard lets a second run start
+   *  on top of the first. That was survivable when this was only a FLIP — replaying
+   *  a finished slide looks like nothing — but the ledger rewinds the scores to
+   *  their pre-round values, so a second run mid-flight made the board jump to the
+   *  final total, snap back to zero, and slide before it had finished counting.
+   *  While this is true, `renderBreak` leaves the board's DOM completely alone. */
+  let breakBuilt = false;
+  /** Identifies the in-flight ledger so its deferred steps can tell whether they
+   *  still own the board; bumped once per break. */
   let breakAnimToken = null;
+  /** Monotonic break counter, the value behind `breakAnimToken`. */
+  let breakSeq = 0;
   /** True once this device has sent its pick for the current draft turn, so a
    *  double-tap can't fire two picks; reset when we leave the picking phase. */
   let pickSent = false;
@@ -806,7 +823,7 @@ export function bootFlagParty() {
       // Lobby = a fresh game (or play-again reset): forget the round baselines so
       // the first break of the next game shows gains-from-zero, no deltas, and
       // clear any pending question-intro beat.
-      prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null; breakAnimToken = null;
+      prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null; breakAnimToken = null; breakBuilt = false;
       resetRoundIntro();
       stopClock(); stopVeil(); showSection('lobby'); renderLobby();
     }
@@ -1089,6 +1106,41 @@ export function bootFlagParty() {
       pickWatch.appendChild(buildAvatar(state.picker || ''));
       pickWatch.appendChild(el('p', 'pick-watch-name', fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
     }
+
+    renderPickBoard();
+  }
+
+  /**
+   * The standings, kept on screen underneath the pick. Watchers used to get an
+   * avatar and a name and nothing else for as long as the picker took (up to
+   * PICK_TIMEOUT_SECONDS), with the board they'd just been reading gone — and with
+   * three of four players watching in a full room, that's most of the table staring
+   * at a dead screen. The scoreboard is already in client state throughout
+   * `picking`, so keeping it costs nothing on the wire.
+   *
+   * Every row but the picker's is dimmed, which does the spotlight job the old
+   * lone-avatar screen was reaching for while also answering the question the
+   * standings raise: you can see *why* this player is choosing (they're losing).
+   * The picker's own row is left at full strength rather than the board being
+   * dimmed as a whole — a child can't be more opaque than its parent, so a
+   * container fade makes "keep one row lit" impossible.
+   */
+  function renderPickBoard() {
+    const board = state.scoreboard || [];
+    // A solo game has no standings worth showing and no one to watch.
+    pickBoard.hidden = board.length < 2;
+    pickBoard.innerHTML = '';
+    if (pickBoard.hidden) return;
+    board.forEach((r, i) => {
+      const you = r.playerId === state.you;
+      const isPicker = r.playerId === state.picker;
+      const row = el('div', 'scoreline' + (you ? ' you' : ' other') + (isPicker ? ' picking' : ' dimmed'));
+      row.appendChild(el('span', 'rank', String(i + 1)));
+      row.appendChild(buildAvatar(r.playerId));
+      row.appendChild(el('span', 'nm', r.nickname));
+      row.appendChild(el('span', 'sc', String(r.score)));
+      pickBoard.appendChild(row);
+    });
   }
 
   /** The round title card: a short beat before each round's first question (the
@@ -1140,6 +1192,13 @@ export function bootFlagParty() {
    *  leader. Paints in `#pt-break`; the host's clock advances to the next round
    *  after ROUND_BREAK_SECONDS. */
   function renderBreak() {
+    // Built once per break. Nothing on this screen changes while it's up (no points
+    // are scored during a break), so a re-render has nothing to add — and rebuilding
+    // the rows underneath a running ledger is exactly the race described on
+    // `breakBuilt`. Leave the DOM as the animation left it.
+    if (breakBuilt) return;
+    breakBuilt = true;
+
     const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
     const endedRound = roundIndexAt(state.questionIndex) + 1;
     breakPill.textContent = fmt(t('party.afterRound', 'After round {n} of {total}'), { n: endedRound, total: totalRounds });
@@ -1174,6 +1233,11 @@ export function bootFlagParty() {
       if (you && r.gapToLeader > 0) {
         row.appendChild(el('span', 'gap', fmt(t('party.behind', '{n} behind'), { n: r.gapToLeader })));
       }
+      // The round's gain, beside the total. Hidden until the count-up starts and
+      // faded out once the rows have settled, so the board ends up as clean as it
+      // was before — the chip answers "what did I just get?" during the beat where
+      // that's the question, then gets out of the way.
+      row.appendChild(el('span', 'gain', `+${r.roundGain}`));
       // No ▲/▼ delta arrow: the rank movement is shown by the row physically
       // sliding to its new place (animateStandingsMovement, from the same
       // `rankDelta`), so a second numeric indicator would be redundant.
@@ -1182,65 +1246,99 @@ export function bootFlagParty() {
       rowNodes.push(row);
     });
 
-    // Capture this board as the baseline for the next break, once per break.
+    // Capture this board as the baseline for the next break. The `breakBuilt`
+    // guard above already makes this once-per-break, but the token is kept as a
+    // second belt: it also survives a reconnect that re-enters the same break.
     const token = String(state.questionIndex);
     if (breakSnapToken !== token) {
       breakSnapToken = token;
       pendingBreakBoard = board.map((e) => ({ playerId: e.playerId, nickname: e.nickname, score: e.score }));
     }
 
-    // Once per break, play the standings movement: each row starts at the slot it
-    // held at the last break and slides to its new one, so climbers rise past the
-    // players they overtook and the overtaken visibly drop. Guarded by its own
-    // token so render()'s re-runs during the break don't replay it.
-    if (breakAnimToken !== token) {
-      breakAnimToken = token;
-      animateStandingsMovement(rowNodes, rows);
-    }
+    // Play the ledger. Reached once per break (see `breakBuilt`); the sequence
+    // number it stamps is what its own deferred steps check before painting.
+    breakSeq += 1;
+    breakAnimToken = String(breakSeq);
+    playLedger(rowNodes, rows, breakAnimToken);
   }
 
   /**
-   * Slide the break's standings rows from their previous rank to the new one — a
-   * FLIP driven by `rankDelta` (places climbed since the last break, from
-   * `roundBreak`). A row that moved up starts `rankDelta` slots lower and rises to
-   * place; one that dropped starts higher and falls. Rows are uniform height, so
-   * one measured stride (row + gap) converts a rank delta to a pixel offset. The
-   * climber gets a lifted z-index so it reads as passing over the row it overtakes.
+   * Play the break's standings as a **ledger** — four beats told in the order the
+   * round actually happened, rather than handing over a finished ranking:
    *
-   * Pure decoration (the final positions are already correct in the DOM), so it's
-   * skipped entirely under `prefers-reduced-motion` — unlike the tricky veil, this
-   * carries no gameplay advantage.
+   *   1. the board arrives showing last break's totals, seated in last break's order
+   *   2. a hold, so you read where everyone stood before the round
+   *   3. every score counts up at once, each row's `+N` gain fading in beside it
+   *   4. the rows slide into their new order, climbers passing over the overtaken
+   *
+   * Beats 1 and 4 are the FLIP this function has always done (driven by `rankDelta`
+   * from `roundBreak`): a row that moved up starts `rankDelta` slots lower and rises
+   * to place. Rows are uniform height, so one measured stride (row + gap) converts a
+   * rank delta to a pixel offset. What's new is that the board *waits* between the
+   * two, and counts, so an overtake reads as caused by the points rather than
+   * coincident with them.
+   *
+   * Pure decoration — the final scores and positions are already correct in the DOM
+   * before this runs, so `prefers-reduced-motion` skips straight to them. (Unlike
+   * the tricky veil, none of this carries a gameplay advantage.) The `token` is the
+   * break's identity: every deferred step re-checks it, so a break that ends early
+   * (a fast host clock, a reconnect) can't have its timers paint over the next screen.
    *
    * @param {HTMLElement[]} nodes  row node per `rows` entry, in new order
    * @param {import('../flags/partyBreak.js').BreakRow[]} rows
+   * @param {string} token  this break's identity; see above
    */
-  function animateStandingsMovement(nodes, rows) {
-    if (prefersReducedMotion() || nodes.length < 2) return;
-    const stride = nodes[1].offsetTop - nodes[0].offsetTop;
-    if (!stride) return;
-    let moved = false;
-    // Seat every moving row at its OLD slot, transitions off.
-    rows.forEach((r, i) => {
-      const d = r.rankDelta;
-      if (d == null || d === 0) return;
-      moved = true;
-      const node = nodes[i];
-      node.style.transition = 'none';
-      node.style.transform = `translateY(${d * stride}px)`;
-      node.style.zIndex = d > 0 ? '2' : '1'; // climbers pass over the overtaken
-    });
-    if (!moved) return;
-    // Commit the start positions, then release to the new slots next frame.
-    void breakBoard.offsetHeight;
-    window.requestAnimationFrame(() => {
-      rows.forEach((r, i) => {
-        if (r.rankDelta == null || r.rankDelta === 0) return;
-        const node = nodes[i];
-        node.style.transition = 'transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)';
-        node.style.transform = 'translateY(0)';
-      });
-    });
+  function playLedger(nodes, rows, token) {
+    const gains = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.gain')));
+    const scores = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.sc')));
+    // A gain of 0 never earns a chip — "+0" is noise on the row of someone who had
+    // a bad round, and they already know.
+    const showGain = rows.map((r) => r.roundGain > 0);
+
+    if (prefersReducedMotion()) {
+      // No motion, but the round's gains are information, not decoration — so they
+      // stay, statically, instead of being animated away.
+      gains.forEach((g, i) => { g.classList.toggle('on', showGain[i]); });
+      return;
+    }
+
+    // Beat 1: rewind the board to where it stood before the round.
+    rows.forEach((r, i) => { scores[i].textContent = String(r.prevScore); });
+    const stride = nodes.length > 1 ? nodes[1].offsetTop - nodes[0].offsetTop : 0;
+    const movers = stride
+      ? rows.map((r, i) => (r.rankDelta ? i : -1)).filter((i) => i >= 0)
+      : [];
+    for (const i of movers) {
+      const d = /** @type {number} */ (rows[i].rankDelta);
+      nodes[i].style.transition = 'none';
+      nodes[i].style.transform = `translateY(${d * stride}px)`;
+      nodes[i].style.zIndex = d > 0 ? '2' : '1'; // climbers pass over the overtaken
+    }
+    void breakBoard.offsetHeight; // commit the start positions before releasing
+
+    // Beat 2 → 3: hold, then count every row up while its gain chip fades in.
+    window.setTimeout(() => {
+      if (breakAnimToken !== token) return;
+      gains.forEach((g, i) => { if (showGain[i]) g.classList.add('on'); });
+      rows.forEach((r, i) => countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => breakAnimToken !== token));
+
+      // Beat 4: a breath, then release the rows to their new slots.
+      window.setTimeout(() => {
+        if (breakAnimToken !== token) return;
+        for (const i of movers) {
+          nodes[i].style.transition = 'transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)';
+          nodes[i].style.transform = 'translateY(0)';
+        }
+        // The chips have done their job; drop them so the break settles on a clean
+        // board of totals, which is what the remaining seconds are for reading.
+        window.setTimeout(() => {
+          if (breakAnimToken !== token) return;
+          gains.forEach((g) => g.classList.remove('on'));
+        }, LEDGER_SLIDE_MS);
+      }, LEDGER_SETTLE_MS);
+    }, LEDGER_HOLD_MS);
   }
+
 
   function renderRevealFoot() {
     const list = el('div', 'toast-list');
@@ -1296,7 +1394,7 @@ export function bootFlagParty() {
         const delay = (board.length - 1 - i) * 90;
         row.classList.add('enter');
         row.style.setProperty('--enter-delay', `${delay}ms`);
-        countUp(sc, entry.score, 600, delay + 200);
+        countUp(sc, 0, entry.score, 600, delay + 200);
       }
       finalBoard.appendChild(row);
     });
@@ -1322,20 +1420,37 @@ export function bootFlagParty() {
   }
 
   /**
-   * Tick a score element from 0 up to its final value with an ease-out, so the
-   * winner's total feels earned rather than just appearing. Starts after
-   * `delayMs` (used to line up with the row's cascade landing).
-   * @param {HTMLElement} node @param {number} to @param {number} durationMs @param {number} delayMs
+   * Tick a score element from one value up to another with an ease-out, so a total
+   * feels earned rather than just appearing. Starts after `delayMs`.
+   *
+   * Both score animations on this page run through here: the final board counts
+   * each row from 0 (`delayMs` lines it up with the row's cascade landing), and the
+   * between-rounds ledger counts from the player's total at the previous break up to
+   * their new one. They are the same mechanism, so they are the same code — an
+   * earlier draft of the ledger added a *second* `countUp` beside this one, and
+   * because function declarations hoist with the last winning, every call silently
+   * resolved to whichever was later in the file. It read as "the animation just
+   * doesn't run".
+   *
+   * `isStale` lets a caller abandon a run whose screen has moved on; without one the
+   * tick always plays out.
+   *
+   * @param {HTMLElement} node @param {number} from @param {number} to
+   * @param {number} durationMs @param {number} delayMs
+   * @param {(() => boolean) | undefined} [isStale]
    */
-  function countUp(node, to, durationMs, delayMs) {
-    if (to <= 0) { node.textContent = '0'; return; }
-    node.textContent = '0';
+  function countUp(node, from, to, durationMs, delayMs, isStale) {
+    // Nothing to count (a scoreless round, or a row that sat out) — show the value.
+    if (to <= from) { node.textContent = String(to); return; }
+    node.textContent = String(from);
     window.setTimeout(() => {
+      if (isStale && isStale()) { node.textContent = String(to); return; }
       const start = performance.now();
       const step = (/** @type {number} */ now) => {
+        if (isStale && isStale()) { node.textContent = String(to); return; }
         const p = Math.min(1, (now - start) / durationMs);
         const eased = 1 - Math.pow(1 - p, 3);
-        node.textContent = String(Math.round(eased * to));
+        node.textContent = String(Math.round(from + (to - from) * eased));
         if (p < 1) requestAnimationFrame(step);
         else node.textContent = String(to);
       };

@@ -150,6 +150,10 @@
         <p class="plabel" id="pick-lead"></p>
         <div class="pick-hand" id="pick-hand"></div>
         <div class="pick-watch" id="pick-watch" hidden></div>
+        <!-- The standings stay on screen while someone picks: a watcher used to
+             get an avatar and nothing else for up to PICK_TIMEOUT_SECONDS. Same
+             `.scoreline` rows as the break, dimmed except the picker's own. -->
+        <div class="pick-board" id="pick-board" hidden></div>
       </section>
 
       <!-- Between-rounds break: the standings beat after each round (not the final one) -->

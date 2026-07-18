@@ -379,6 +379,37 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    the right edge), so the gap sits just after the name. (Rank movement is shown
    by the row sliding to its new place, not a ▲/▼ arrow.) */
 .scoreline .gap { font-size: 12px; color: var(--muted-color); font-variant-numeric: tabular-nums; }
+/* The round's gain, shown only while the break's ledger counts up (`.on`) and
+   dropped once the rows settle. `margin-left: auto` pushes it to the right with
+   `.sc` following, so the chip appearing and leaving never shifts the score.
+   Width is not reserved: it fades in place next to a number that is itself
+   moving, and the row's other content is left-anchored. */
+.scoreline .gain {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--secondary-color);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+}
+.scoreline .gain.on { opacity: 1; }
+.scoreline .gain + .sc { margin-left: 9px; }
+@media (prefers-reduced-motion: no-preference) {
+  .scoreline .gain { transition: opacity 0.25s ease; }
+}
+
+/* The standings kept under the draft pick. Same `.scoreline` rows as the break —
+   one component, so the board a watcher reads during the pick is literally the
+   board they were just reading. Everyone but the picker recedes. */
+.pick-board { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.pick-board[hidden] { display: none; }
+.scoreline.dimmed { opacity: 0.34; }
+/* The picker keeps the pink ring even when they are not you: during the pick,
+   "who is choosing" outranks "who you are" as the thing the row must say. */
+.scoreline.picking { border-color: var(--secondary-color); background: var(--selected-color); }
+@media (prefers-reduced-motion: no-preference) {
+  .scoreline.dimmed { transition: opacity 0.5s ease; }
+}
 
 /* The break screen: MVP banner over the standings. */
 .break-mvp {
