@@ -14,6 +14,11 @@ import {
   veilProgress,
   namesRevealed,
   veilActive,
+  ROUND_BREAK_SECONDS,
+  LEDGER_HOLD_MS,
+  LEDGER_COUNT_MS,
+  LEDGER_SETTLE_MS,
+  LEDGER_SLIDE_MS,
 } from './partyTiming.js';
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
@@ -174,4 +179,11 @@ test('veilProgress: clamps to [0, 1] and is divide-by-zero safe', () => {
   assert.equal(veilProgress(now + 30_000, now, 20_000, 0.9), 0, 'somehow-early clamps to 0');
   assert.equal(veilProgress(now, now, 0, 0.9), 1, 'a non-positive total is a safe clear');
   assert.equal(veilProgress(now, now, 20_000, 0), 1, 'a zero clear fraction is a safe clear');
+});
+
+test('the ledger animation fits inside the break with reading time left over', () => {
+  const motion = LEDGER_HOLD_MS + LEDGER_COUNT_MS + LEDGER_SETTLE_MS + LEDGER_SLIDE_MS;
+  assert.ok(motion < ROUND_BREAK_SECONDS * 1000, 'ledger must finish before the host advances');
+  // The break exists to be read, not watched: at least a third of it stays still.
+  assert.ok(ROUND_BREAK_SECONDS * 1000 - motion >= ROUND_BREAK_SECONDS * 1000 / 3);
 });

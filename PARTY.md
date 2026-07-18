@@ -185,6 +185,12 @@ was renamed (#963), the world-facts name reveal became a fixed 3 s instead of a 
 fraction (#965), the picker can veil their own round (#971), and **Custom setup was retired — the
 draft is the only way a game starts** (Iteration 10 below).
 
+**BUILT on `feat/party-break-polish`** (pending PR + Jan's merge): the between-rounds beat reads as
+one continuous moment instead of three unrelated screens — the standings arrive as a **ledger** that
+counts up from the previous round's totals, each row wears its **round gain**, and the board **stays
+on screen under the draft pick** instead of a watcher getting a lone avatar for up to 45 s. See
+Iteration 11 below.
+
 Still open:
 
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
@@ -1098,6 +1104,102 @@ guard, so this can't bite a third time (after `.game-tile` in prod and this). Cl
   room. `applyHello` rejects a **new** seat past the cap with reason `room-full`
   (`party.reject.roomFull`, en + pl); **reconnects are always welcomed** (a known
   playerId already holds a seat). Raise it if the TV/Display surface lands.
+
+## Iteration 11 — the between-rounds beat: ledger standings + the board under the pick — BUILT (2026-07-19)
+
+Goal: make the gap between two rounds feel like **one continuous moment** instead of three unrelated
+screens. Jan, after playing: "score table appear too quick... maybe when it appears there should be
+point accumulating partially from last score? also when a person is picking the next game, others can
+still see a dimmed version of the scoreboard? I just feel that gameplay is not smooth."
+
+Both instincts landed on real defects, and two of them were things the code already computed and
+threw away. Client-only again: no server, room, or wire-protocol touch.
+
+**What was actually wrong (measured, not guessed):**
+
+- **The board had no arrival.** `showSection('break')` flipped a `hidden` attribute and nothing else —
+  rows at final position, scores at final value. The cascade animation Jan was asking for already
+  existed (`.scoreline.enter`, 90 ms stagger) but only the **final** board used it.
+- **Every player's round gain was computed and discarded.** `roundBreak` returned `roundGain` per row;
+  only the MVP's was rendered. So the board could say where you stood but never what just happened.
+- **The pick screen was the real dead spot, not the break.** `PICK_TIMEOUT_SECONDS = 45`, and for that
+  whole stretch a non-picker saw an avatar and "X is choosing…" — the standings they had just been
+  reading, gone. With four players three of them are watching. `state.scoreboard` is in client state
+  throughout `picking`, so keeping it cost nothing on the wire.
+
+**Decisions:**
+
+- **The standings play as a ledger, in the order the round happened**: arrive showing the previous
+  break's totals → hold → every score counts up at once with its `+N` chip → rows slide into the new
+  order → chips retire. Chosen over "cascade in, already correct, counting as they land": that reads
+  as decoration on a finished ranking, where the ledger makes an overtake something you *watch*, caused
+  by the points rather than coincident with them. The slide is the FLIP that was already there; what's
+  new is that the board waits between the two halves.
+- **Timings live in `flags/partyTiming.js`** with the rest of the show's clock (`LEDGER_HOLD_MS` 500,
+  `LEDGER_COUNT_MS` 700, `LEDGER_SETTLE_MS` 180, `LEDGER_SLIDE_MS` 800). 2180 ms of motion inside a
+  6 s break leaves ~3.8 s of stillness, which a test pins. **`ROUND_BREAK_SECONDS` stays 6** — if the
+  break ever feels rushed, raise it rather than compressing the animation; reading time is the scarce
+  thing.
+- **A `+0` chip is never shown.** It's noise on the row of someone who had a bad round, and they know.
+- **The picker is spotlit, everyone else recedes** (`opacity: 0.34`). Rows are dimmed *individually*,
+  never the container — a child cannot be more opaque than its parent, so a container fade makes
+  "keep one row lit" impossible. **Open judgment call for Jan:** your own row dims too, so the
+  spotlight is unambiguous but your own score gets quiet. Exempting `.you` is a one-line change.
+- **The pick board hides below two players.** A solo game has no standings worth showing.
+- **The picker doesn't get the board (Jan, 2026-07-19).** It was briefly shown to everyone. The screen
+  exists to give the *waiting* players something to read; the picker already has a decision in front
+  of them, and standings under it are one more thing to look past. The empty-screen problem this
+  solves was never theirs.
+- **`prevScore` is now on `BreakRow`** rather than the client re-deriving `score - roundGain` — those
+  differ wherever the gain clamp bites, and the count-up needs the real prior total.
+- **A break is identified by being *entered*, not by `state.questionIndex`.** The index changes
+  underneath a live break (the `picking` message carries the next one), so an index-keyed guard let a
+  second `playLedger` start on top of the first. Survivable when this was only a FLIP — replaying a
+  finished slide looks like nothing — but the ledger rewinds scores, so a second run mid-flight made
+  the board jump to the final total, snap back to zero, and slide before it finished counting. Now
+  `breakBuilt` is cleared in `showSection` and `renderBreak` leaves the DOM alone once built.
+
+**The bug worth remembering: two `function countUp` in one closure.** The ledger's first draft added
+its own count-up helper beside the final board's existing one. Function declarations hoist and the
+**last one wins**, so every call silently resolved to the other function with a different signature —
+`to` received `prevScore`, `durationMs` received the score. Its `if (to <= 0)` guard is exactly why
+the first break of a game pinned at `"0"` forever (`prevScore` is 0 at the first break). It presented
+as "the animation just doesn't run", with no error anywhere. Unit tests could not have caught it and
+neither could a screenshot; it took a DOM trace showing the helper was never entered. The fix is the
+CLAUDE.md rule applied literally — same mechanism, same code: **one** generalised
+`countUp(node, from, to, durationMs, delayMs, isStale)`, with the final board passing `from = 0`.
+
+**Build steps (BUILT on `feat/party-break-polish`, pending PR + Jan's merge):**
+
+- [x] `flags/partyBreak.js` — `prevScore` on `BreakRow` (+ 3 tests, including that it is *not*
+      `score - roundGain` where the clamp bites).
+- [x] `flags/partyTiming.js` — the four `LEDGER_*` constants (+ a test that the motion fits inside
+      `ROUND_BREAK_SECONDS` with at least a third of the break left still).
+- [x] `flagParty/page.js` — `playLedger` (the four beats, cancel-safe via a per-break sequence number);
+      the duplicate `countUp` removed and the survivor generalised with `from` + `isStale`;
+      `renderPickBoard`; `breakBuilt` replacing the index-keyed animation guard.
+- [x] `flagParty/index.html` — `#pick-board`.
+- [x] `flagParty/index.css` — `.scoreline .gain` / `.gain.on`, `.pick-board`, `.scoreline.dimmed`,
+      `.scoreline.picking`; palette vars only, motion behind `prefers-reduced-motion: no-preference`.
+- [x] **No new i18n**: the gain chip is a number (`+15`) and the pick board reuses existing strings.
+- [x] `npm run validate` green (2912 tests) + **end-to-end verified in-browser** with **two real
+      clients** (`localhost` + `127.0.0.1`, separate localStorage origins so they are genuinely two
+      seats). Traced the break at 70 ms resolution: hold to 481 ms at the old totals, count 4 → 8 → 11
+      → 13 → 14 → 15 from 553 ms, chips retiring at 1548 ms; the `+0` row correctly wore no chip. The
+      watcher's pick screen showed both rows with the picker at `opacity: 1` + pink border and the
+      other at `0.34`. 0 console errors.
+
+**Reduced motion:** the whole ledger is skipped — final scores and positions are already correct in
+the DOM before it runs — but the gain chips still render statically, because a round's gains are
+information, not decoration.
+
+**Deferred (deliberately):**
+- **Spectators watching the hand being chosen.** The most exciting option in the mock, and the only
+  one needing a server change: the hand is withheld from watchers on purpose in `applyEnterPicking`,
+  and live hover state is a new message on a hot path. Revisit once the dimmed board has been played
+  with — it may already have fixed the emptiness.
+- **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
+  liked it, so it wasn't built. The hard swap stays.
 
 ## Out of scope (don't sweep in)
 

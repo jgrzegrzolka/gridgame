@@ -13,6 +13,11 @@
  * @property {string} playerId
  * @property {string} nickname
  * @property {number} score       cumulative total now
+ * @property {number} prevScore   cumulative total at the previous break (0 for a
+ *   player who wasn't seated then, and on the first break of the game). The break
+ *   screen counts each row up from this to `score`, so it needs the real prior
+ *   total rather than `score - roundGain` — those differ whenever the gain clamp
+ *   below bites.
  * @property {number} roundGain   points earned in the round that just ended
  * @property {number | null} rankDelta  places climbed since the previous break
  *   (positive = moved up, negative = dropped, 0 = held); null on the first break,
@@ -54,6 +59,7 @@ export function roundBreak(prevBoard, currBoard) {
       playerId: r.playerId,
       nickname: r.nickname,
       score: r.score,
+      prevScore: wasScore,
       roundGain: Math.max(0, r.score - wasScore),
       rankDelta,
       gapToLeader: Math.max(0, leaderScore - r.score),

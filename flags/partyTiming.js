@@ -54,6 +54,28 @@ export const PICK_TIMEOUT_SECONDS = 45;
  *  the reveal's clean/miss split. */
 export const ROUND_BREAK_SECONDS = 6;
 
+/** The break's standings play as a **ledger**: the board arrives showing where
+ *  everyone stood *before* the round, holds a beat, counts every score up to its
+ *  new total, and only then slides the rows into their new order. Told in that
+ *  order, an overtake is something you watch happen rather than a final ranking
+ *  you're handed — the board's whole job is to say what the round just did.
+ *
+ *  These are milliseconds (the animation's unit) where the constants above are
+ *  seconds (the host clock's unit). The four phases run back to back and must fit
+ *  inside ROUND_BREAK_SECONDS with room left to actually read the result:
+ *  500 + 700 + 180 + 800 = 2180 ms of motion, leaving ~3.8 s of stillness. If the
+ *  break ever starts feeling rushed, raise ROUND_BREAK_SECONDS rather than
+ *  compressing these — the reading time is what's scarce, not the animation. */
+export const LEDGER_HOLD_MS = 500;
+/** How long every row's score takes to count from `prevScore` up to `score`. */
+export const LEDGER_COUNT_MS = 700;
+/** A breath between the counting finishing and the rows starting to move, so the
+ *  two motions read as cause and effect instead of one blur. */
+export const LEDGER_SETTLE_MS = 180;
+/** The row-movement slide. Matches the transition duration in
+ *  `animateStandingsMovement` — change both together. */
+export const LEDGER_SLIDE_MS = 800;
+
 /** Seconds the **round title card** holds before the first question of a new round
  *  begins (round 2..N — the opening round starts play straight away). A short
  *  beat announcing "Round 2 of 3 · Coffee · 5 questions" with who picked it; the
