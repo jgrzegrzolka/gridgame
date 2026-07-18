@@ -115,6 +115,49 @@ test('draft start: tricky mode is forced off even if a stale client sends it', a
   assert.equal(conn.last('question').tricky, false, 'and clients are told not to veil');
 });
 
+// The no-repeat sets are the server's memory of what this show has already used:
+// `usedCodes` stops a country being dealt twice, `usedModes` stops a mode being
+// re-offered in a later draft hand. A `start` resets both, which is right at the
+// top of a game -- but the reset ran BEFORE applyStart decided whether the start
+// was allowed, so anyone who could send the message could wipe them, mid-game,
+// without starting anything. The room correctly refused (wrong phase, wrong
+// sender) and play continued on an emptied memory.
+test('a non-host start mid-game leaves the no-repeat sets alone', async () => {
+  const a = mockConn('a'), b = mockConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+  await srv.onMessage(JSON.stringify({ type: 'start', picks: 1 }), a);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
+  await srv.onMessage(JSON.stringify({ type: 'next' }), a);
+
+  const codes = new Set(srv.usedCodes);
+  const modes = new Set(srv.usedModes);
+  assert.ok(codes.size > 0, 'the game has dealt something to remember');
+  assert.ok(modes.size > 0, 'and has an opening mode on the board');
+  const questionIndex = srv.room.questionIndex;
+
+  await srv.onMessage(JSON.stringify({ type: 'start', picks: 4 }), b);
+
+  assert.equal(srv.room.questionIndex, questionIndex, 'the guest did not restart the game');
+  assert.deepEqual(srv.usedCodes, codes, 'and did not clear the dealt-country memory');
+  assert.deepEqual(srv.usedModes, modes, 'nor the played-mode memory');
+});
+
+// Same guard, the other way in: the host is allowed to start, but only from the
+// lobby. A duplicate Start from an already-playing host must not reset either.
+test('a second start from the host mid-game leaves the no-repeat sets alone', async () => {
+  const { srv, conn } = await startSoloDraft();
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
+  const codes = new Set(srv.usedCodes);
+
+  await srv.onMessage(JSON.stringify({ type: 'start', picks: 4 }), conn);
+
+  assert.deepEqual(srv.usedCodes, codes, 'a mid-game restart is refused, memory intact');
+});
+
 test('draft: a round boundary opens a pick with a hand that excludes the played mode', async () => {
   const { srv, conn } = await startSoloDraft();
   await playBlock(srv, conn); // 5 questions of Flags, then next -> picking

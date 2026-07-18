@@ -4,6 +4,7 @@ import {
   createRoom,
   applyHello,
   applyStart,
+  canStart,
   applyBuzz,
   applyForceReveal,
   applyNext,
@@ -128,6 +129,25 @@ test('applyStart: non-host cannot start; empty lobby cannot start', () => {
   room = applyHello(room, 'bob', 'Bob').room;
   assert.equal(applyStart(room, 'bob', q('jp')).broadcasts.length, 0);
   assert.equal(applyStart(createRoom(), 'ghost', q('jp')).broadcasts.length, 0);
+});
+
+// `canStart` is the guard applyStart applies, exported so a caller with side
+// effects (party/partyGameServer.js clears its no-repeat sets and generates
+// question 0) can ask BEFORE it commits to them rather than after.
+test('canStart: only the host, only from the lobby, only with a seat taken', () => {
+  let room = createRoom(3);
+  assert.equal(canStart(room, 'alice'), false, 'nobody has said hello yet');
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  assert.equal(canStart(room, 'alice'), true, 'the host, in the lobby');
+  assert.equal(canStart(room, 'bob'), false, 'a guest never starts');
+  assert.equal(canStart(room, 'ghost'), false, 'nor a stranger');
+
+  // The case the applyStart tests above never covered: a game already running.
+  const playing = applyStart(room, 'alice', q('jp')).room;
+  assert.equal(playing.phase, 'question');
+  assert.equal(canStart(playing, 'alice'), false, 'not even the host restarts mid-game');
+  assert.equal(canStart(playing, 'bob'), false);
 });
 
 test('applyStart: the host plan + its question count are stored on the room', () => {

@@ -8,6 +8,7 @@ import {
   createRoom,
   applyHello,
   applyStart,
+  canStart,
   applyBuzz,
   applyForceReveal,
   applyNext,
@@ -250,6 +251,13 @@ export default class PartyGameServer {
       let result = null;
       switch (parsed.type) {
         case 'start': {
+          // Ask before touching anything. Clearing the no-repeat sets and
+          // generating question 0 are real side effects, and applyStart's refusal
+          // comes too late to undo them: a guest (or a stale tab re-sending its
+          // lobby Start) would leave the running game with no memory of the
+          // countries and modes it had already used. `canStart` is the same three
+          // conditions the reducer applies.
+          if (!canStart(this.room, playerId)) break;
           this.usedCodes = new Set();
           this.usedModes = new Set();
           // Draft is the only way a game starts. The plan grows one round per
