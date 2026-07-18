@@ -57,7 +57,7 @@ test('roundModeId: a draft pick names the exact mode, over the question id', () 
   // A picked stat round: the specific metric, not the generic superlative.
   assert.equal(roundModeId({ picker: 'p1', modeId: 'superlative-coffee' }, 'superlative-coffee'), 'superlative-coffee');
   // A picked flag round: the pool the pick chose, which the question id can't reveal.
-  assert.equal(roundModeId({ picker: 'p1', modeId: 'flags-territories' }, 'flagPick'), 'flags-territories');
+  assert.equal(roundModeId({ picker: 'p1', modeId: 'flags-weird' }, 'flagPick'), 'flags-weird');
   assert.equal(roundModeId({ picker: 'p1', modeId: 'flags-all' }, 'flagPick'), 'flags-all');
 });
 

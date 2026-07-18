@@ -153,6 +153,33 @@ test('handFor: surfaces the unused picture modes (they are few and characterful)
   for (const id of remainingPics) assert.ok(hand.includes(id), `expected ${id} in the hand`);
 });
 
+test('handFor: the picture modes always lead, in catalog order', () => {
+  // The common choice must not be a search through ten cards, and a returning
+  // player should find them where they were last time.
+  const picIds = PICTURE_MODES.map((m) => m.id);
+  for (const seed of [1, 2, 3, 42, 999]) {
+    const hand = handFor([], seeded(seed));
+    assert.deepEqual(hand.slice(0, picIds.length), picIds, `seed ${seed}`);
+  }
+});
+
+test('handFor: already-played picture modes drop out without disturbing the order', () => {
+  const hand = handFor([OPENING_MODE_ID], seeded(5));
+  const remaining = PICTURE_MODES.filter((m) => m.id !== OPENING_MODE_ID).map((m) => m.id);
+  assert.deepEqual(hand.slice(0, remaining.length), remaining, 'the rest still lead, still in order');
+});
+
+test('handFor: the statistics below stay shuffled', () => {
+  // Fixed order up top is deliberate; fixed order across 30-odd metrics would
+  // just favour whatever sorts first.
+  const metricIds = new Set(METRIC_MODES.map((m) => m.id));
+  const tails = new Set();
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    tails.add(handFor([], seeded(seed)).filter((id) => metricIds.has(id)).join(','));
+  }
+  assert.ok(tails.size > 1, 'different seeds give different statistics');
+});
+
 test('handFor: fills the rest with statistics', () => {
   const hand = handFor([OPENING_MODE_ID], seeded(3));
   const metricIds = new Set(METRIC_MODES.map((m) => m.id));

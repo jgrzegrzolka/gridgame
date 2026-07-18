@@ -113,7 +113,7 @@ test('validatePlan: non-array, empty, or all-invalid input returns null', () => 
 // ---- grouped setup: picture trio vs the world-metric family ----
 
 test('PARTY_MODES: split into a fixed picture trio and the metric family', () => {
-  assert.deepEqual(PICTURE_MODES.map((m) => m.id), ['flags-all', 'flags-territories', 'map-outlines']);
+  assert.deepEqual(PICTURE_MODES.map((m) => m.id), ['flags-all', 'flags-weird', 'map-outlines']);
   assert.deepEqual(METRIC_MODES.map((m) => m.id), ['superlative-pop', 'superlative-area', 'superlative-density', 'superlative-gdp', 'superlative-gdppc', 'superlative-coffee', 'superlative-wine', 'superlative-cocoa', 'superlative-banana', 'superlative-apple', 'superlative-elevation', 'superlative-coastline', 'superlative-forest', 'superlative-oil', 'superlative-rice', 'superlative-coal', 'superlative-sheep', 'superlative-cattle', 'superlative-beer', 'superlative-tea', 'superlative-sugarcane', 'superlative-gold', 'superlative-alcohol', 'superlative-meat', 'superlative-borders', 'superlative-olive-oil', 'superlative-honey', 'superlative-temperature', 'superlative-happiness', 'superlative-corruption', 'superlative-tourism', 'superlative-electricity']);
   for (const m of PICTURE_MODES) assert.equal(m.group, 'picture');
   for (const m of METRIC_MODES) assert.equal(m.group, 'metric');
@@ -123,7 +123,7 @@ test('buildPartyPlan: each on picture mode is one ROUND_QUESTIONS round, off dro
   const plan = buildPartyPlan({
     picture: {
       'flags-all': { on: true },
-      'flags-territories': { on: false },
+      'flags-weird': { on: false },
       'map-outlines': { on: true },
     },
     facts: { metrics: {} },
@@ -168,7 +168,7 @@ test('buildPartyPlan: no metric enabled contributes no stat rounds', () => {
 
 test('buildPartyPlan: roundCount equals enabled picture modes + enabled statistics', () => {
   const plan = buildPartyPlan({
-    picture: { 'flags-all': { on: true }, 'flags-territories': { on: true }, 'map-outlines': { on: false } },
+    picture: { 'flags-all': { on: true }, 'flags-weird': { on: true }, 'map-outlines': { on: false } },
     facts: { metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-gdp': true } },
   });
   // 2 picture + 3 statistics = 5 rounds
@@ -179,7 +179,7 @@ test('buildPartyPlan: output always survives validatePlan', () => {
   const plan = buildPartyPlan({
     picture: {
       'flags-all': { on: true },
-      'flags-territories': { on: true },
+      'flags-weird': { on: true },
       'map-outlines': { on: true },
     },
     facts: { metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-density': true } },

@@ -53,7 +53,7 @@ const VEIL_ORDER = [0, 4, 2, 5, 1, 3];
  *  collapsed summary mix. */
 const MODE_LABELS = {
   'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
-  'flags-territories': { key: 'party.mode.flagsTerritories', full: 'Flags: others', shortKey: 'party.modeShort.flagsTerritories', short: 'Others' },
+  'flags-weird': { key: 'party.mode.flagsWeird', full: 'Weird flags', shortKey: 'party.modeShort.flagsWeird', short: 'Weird' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least' },
   'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest' },
@@ -110,7 +110,7 @@ const KNOWN_QUESTION_IDS = renderableQuestionIds(SUPERLATIVE_METRICS.map((m) => 
  *  both work. */
 const SETUP_ICONS = {
   'flags-all': deckIconHtml('flags', { className: 'gs-thumb' }),
-  'flags-territories': deckIconHtml('weird', { className: 'gs-thumb' }),
+  'flags-weird': deckIconHtml('weird', { className: 'gs-thumb' }),
   'map-outlines': deckIconHtml('outlines', { className: 'gs-contour' }),
 };
 
@@ -162,7 +162,7 @@ function modeHue(/** @type {string} */ modeId) {
  *  generic Flags card instead). */
 function roundCardIconHtml(/** @type {string} */ modeId) {
   if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'roundcard-thumb' });
-  if (modeId === 'flags-territories') return deckIconHtml('weird', { className: 'roundcard-thumb' });
+  if (modeId === 'flags-weird') return deckIconHtml('weird', { className: 'roundcard-thumb' });
   if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'roundcard-contour' });
   const mode = MODE_BY_ID[modeId];
   const key = mode ? metricKeyForQuestion(mode.questionId) : null;
@@ -510,7 +510,7 @@ export function bootFlagParty() {
   function defaultSetup() {
     /** @type {Record<string, { on: boolean }>} */
     const picture = {};
-    for (const m of PICTURE_MODES) picture[m.id] = { on: m.id !== 'flags-territories' };
+    for (const m of PICTURE_MODES) picture[m.id] = { on: m.id !== 'flags-weird' };
     /** @type {Record<string, boolean>} */
     const metrics = {};
     for (const m of METRIC_MODES) metrics[m.id] = m.id === 'superlative-pop';

@@ -805,3 +805,30 @@ test('i18n placeholders match between en, pl, and each call site fallback', asyn
   // quietly going green.
   assert.ok(checked >= 20, `expected to check 20+ placeholder-carrying t() call sites, saw ${checked}`);
 });
+
+test('no party string still uses the retired block vocabulary', async () => {
+  // Why this test exists: the block->round/round->question rename swept code and
+  // i18n *keys*, but the codemod never covered the JSON *values*. The pick screen
+  // shipped reading "Your pick, choose the next block" — invisible to 2900 tests,
+  // caught only by looking at a screenshot. A round is five questions; nothing in
+  // Flag Party is a block any more.
+  const root = resolve(dirname(fileURLToPath(import.meta.url)));
+  const langs = {
+    en: JSON.parse(await readFile(join(root, 'i18n', 'en.json'), 'utf8')),
+    pl: JSON.parse(await readFile(join(root, 'i18n', 'pl.json'), 'utf8')),
+  };
+  /** @type {string[]} */
+  const offenders = [];
+  for (const [lang, dict] of Object.entries(langs)) {
+    /** @param {any} node @param {string} path */
+    const walk = (node, path) => {
+      if (node && typeof node === 'object') {
+        for (const [k, v] of Object.entries(node)) walk(v, path ? `${path}.${k}` : k);
+      } else if (typeof node === 'string' && /\b(block|blocks|blok|bloku|bloki|blokiem)\b/i.test(node)) {
+        offenders.push(`${lang}.${path} = ${JSON.stringify(node)}`);
+      }
+    };
+    walk(dict.party, 'party');
+  }
+  assert.deepEqual(offenders, [], offenders.join('\n'));
+});
