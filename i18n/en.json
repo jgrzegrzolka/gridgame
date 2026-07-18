@@ -552,8 +552,6 @@
     "tricky": "Tricky mode",
     "trickyHint": "Flags start hidden and clear as the clock runs",
     "revealHint": "Clear the flag after…",
-    "nameRevealHint": "Show country names after…",
-    "namesOff": "Off",
     "groupPictures": "Flags & maps",
     "groupFacts": "World facts",
     "factsHint2": "Each statistic you pick is its own round",

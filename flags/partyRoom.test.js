@@ -203,13 +203,18 @@ test('question broadcast: a stamped clearFrac reaches clients so the veil clears
   assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
 });
 
-test('question broadcast: a stamped nameFrac reaches clients so world-facts names appear on time', () => {
+test('question broadcast: no name timing rides the wire', () => {
   let room = createRoom(3);
   room = applyHello(room, 'alice', 'Alice').room;
-  // A world-facts question carries nameFrac (stamped server-side); the room passes it
-  // through so every client fades the country names on at the same instant.
-  const r = applyStart(room, 'alice', { prompt: 'most', options: ['br', 'vn'], answer: 'br', questionId: 'superlative-coffee', nameFrac: 0.5 }, undefined, undefined, false);
-  assert.equal(msg(r, 'question').nameFrac, 0.5, 'the name timing rides the question');
+  // The world-facts name reveal fires at a fixed beat every client computes from
+  // the questionId, so nothing about it is stamped or broadcast. A stale field on
+  // the input must not leak into the public question either.
+  // The cast is the assertion: `nameFrac` is no longer part of Question, and a
+  // client that still sends it must not get it echoed back.
+  const stale = /** @type {any} */ ({ prompt: 'most', options: ['br', 'vn'], answer: 'br', questionId: 'superlative-coffee', nameFrac: 0.5 });
+  const r = applyStart(room, 'alice', stale, undefined, undefined, false);
+  assert.equal(msg(r, 'question').nameFrac, undefined, 'no name timing on the wire');
+  assert.equal(msg(r, 'question').questionId, 'superlative-coffee', 'the id the client needs is there');
   assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
 });
 

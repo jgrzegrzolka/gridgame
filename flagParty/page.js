@@ -7,7 +7,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
@@ -463,11 +463,11 @@ export function bootFlagParty() {
   // plan; rides on the 'start' message and the server broadcasts it back so
   // every client veils the tiles in step.
   let trickyOn = loadTricky();
-  // Per-category reveal timing (fraction of the window each veil clears at). The
-  // flag/map/metric veil fractions are only meaningful when tricky is on; `name`
-  // (the world-facts name-reveal point, null = off) is independent of tricky.
-  // Persisted and sent with the plan on start.
-  /** @type {{ flag: number, map: number, metric: number, name: number | null }} */
+  // Per-category reveal timing (fraction of the window each veil clears at), only
+  // meaningful when tricky is on. Persisted and sent with the plan on start. The
+  // world-facts name reveal used to live here as a fifth value; it is a fixed beat
+  // now (NAME_REVEAL_SECONDS) and needs no config.
+  /** @type {{ flag: number, map: number, metric: number }} */
   let revealState = loadReveal();
 
   function loadTricky() {
@@ -484,15 +484,11 @@ export function bootFlagParty() {
     try { raw = JSON.parse(window.localStorage.getItem(REVEAL_KEY) || 'null'); } catch { /* private mode */ }
     const pick = (/** @type {any} */ v, /** @type {number} */ def) =>
       (REVEAL_OPTIONS.includes(v) ? v : def);
-    // Names: null is explicit "off"; a missing field (older store) defaults on.
-    const pickName = (/** @type {any} */ v) =>
-      (v === null ? null : (NAME_REVEAL_OPTIONS.includes(v) ? v : DEFAULT_REVEAL.name));
     const r = raw && typeof raw === 'object' ? raw : {};
     return {
       flag: pick(r.flag, DEFAULT_REVEAL.flag),
       map: pick(r.map, DEFAULT_REVEAL.map),
       metric: pick(r.metric, DEFAULT_REVEAL.metric),
-      name: pickName(r.name),
     };
   }
   function saveReveal() {
@@ -674,39 +670,6 @@ export function bootFlagParty() {
     }
     gsModesEl.appendChild(chips);
 
-    // World-facts name reveal: on a facts question the challenge is the fact, not
-    // flag recognition, so the country names fade onto the tiles partway through
-    // the clock (or never, if the host picks "Off"). Independent of tricky mode —
-    // it fires in a normal game too — so it lives here on the facts round, not in
-    // the tricky reveal box below. A native <select> with an Off option + the
-    // allowed fractions, mirroring the tricky reveal pickers' look.
-    const namesBox = el('div', 'gs-reveal gs-names');
-    const namesRow = el('div', 'gs-reveal-row');
-    namesRow.appendChild(el('span', 'gs-reveal-name', t('party.nameRevealHint', 'Show country names after…')));
-    const namesSel = document.createElement('select');
-    namesSel.className = 'gs-reveal-pick';
-    namesSel.setAttribute('aria-label', t('party.nameRevealHint', 'Show country names after…'));
-    const offOpt = document.createElement('option');
-    offOpt.value = 'off';
-    offOpt.textContent = t('party.namesOff', 'Off');
-    if (revealState.name === null) offOpt.selected = true;
-    namesSel.appendChild(offOpt);
-    for (const opt of NAME_REVEAL_OPTIONS) {
-      const o = document.createElement('option');
-      o.value = String(opt);
-      o.textContent = `${Math.round(opt * 100)}%`;
-      if (opt === revealState.name) o.selected = true;
-      namesSel.appendChild(o);
-    }
-    namesSel.addEventListener('change', () => {
-      if (namesSel.value === 'off') { revealState.name = null; saveReveal(); return; }
-      const v = Number(namesSel.value);
-      if (NAME_REVEAL_OPTIONS.includes(v)) { revealState.name = v; saveReveal(); }
-    });
-    namesRow.appendChild(namesSel);
-    namesBox.appendChild(namesRow);
-    gsModesEl.appendChild(namesBox);
-
     // Game-wide tricky toggle (a mode-frame row with no stepper) + the
     // per-category reveal-timing pickers shown only while tricky is on.
     const trickyRow = el('div', 'gs-mode gs-option');
@@ -832,10 +795,6 @@ export function bootFlagParty() {
       const nameEl = nm && nm.previousElementSibling;
       if (nameEl) nameEl.textContent = t(cat.labelKey, cat.label);
     }
-    const namesLabel = gsModesEl.querySelector('.gs-names .gs-reveal-name');
-    if (namesLabel) namesLabel.textContent = t('party.nameRevealHint', 'Show country names after…');
-    const namesOff = gsModesEl.querySelector('.gs-names option[value="off"]');
-    if (namesOff) namesOff.textContent = t('party.namesOff', 'Off');
     updateSetup();
   }
 
@@ -936,18 +895,20 @@ export function bootFlagParty() {
   //   • the tricky-mode veil — a single `--veil-p` (0 hidden → 1 clear) on the
   //     grid for a smooth grey/blur/panel resolve; CSS does the rest.
   //   • the world-facts name reveal — a `names-shown` class on the grid that fades
-  //     the country-name strips onto metric tiles once `nameFrac` of the window
-  //     has passed (independent of tricky; see `nameActive`).
+  //     the country-name strips onto metric tiles once NAME_REVEAL_SECONDS have
+  //     passed (independent of tricky; see `nameActive`).
   // Both live on the grid (which persists across tile rebuilds — only its
   // innerHTML is replaced), so a re-render mid-question (a late join, a buzz
   // notification) never resets either animation. The timings ride on the question
-  // itself (`clearFrac` / `nameFrac`, stamped server-side from the host's config),
-  // so every client flips in step and each question can differ.
+  // The veil timing rides on the question itself (`clearFrac`, stamped server-side
+  // from the host's config) so each question can differ; the name reveal is a
+  // fixed beat every client computes locally. Either way they flip in step.
   let veilRaf = 0;
-  /** True when this question should fade country names on (world-facts question with
-   *  the host's name reveal enabled). */
+  /** True when this question fades country names on — every world-facts question
+   *  does, at a fixed beat. Nothing to configure and nothing stamped on the wire:
+   *  the questionId is enough to know, so a client can decide this alone. */
   function nameActive() {
-    return !!(state.question && isMetricQuestion(state.question.questionId) && state.question.nameFrac != null);
+    return isMetricQuestion(state.question?.questionId);
   }
   /** True when this question's tiles are veiled: the host's tricky mode, and
    *  nothing else. The final round used to veil regardless of the setting, which
@@ -972,8 +933,7 @@ export function bootFlagParty() {
         const p = veilProgress(clockDeadline, now, clockTotalMs, clearFrac);
         gridEl.style.setProperty('--veil-p', p.toFixed(4));
       }
-      const nameFrac = state.question ? state.question.nameFrac : null;
-      gridEl.classList.toggle('names-shown', namesRevealed(clockDeadline, now, clockTotalMs, nameFrac));
+      gridEl.classList.toggle('names-shown', nameActive() && namesRevealed(clockDeadline, now, clockTotalMs));
       veilRaf = window.requestAnimationFrame(step);
     };
     veilRaf = window.requestAnimationFrame(step);
@@ -1361,7 +1321,7 @@ export function bootFlagParty() {
         // passes the host's name-reveal point (the grid's `names-shown` class,
         // toggled by the veil loop). The strip is pre-rendered here; CSS keeps it
         // hidden until then. Name only, no value — the value would leak the answer.
-        const named = isSuperlative && q.nameFrac != null;
+        const named = isSuperlative;
         gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: veilActive(), named }));
       }
     }
