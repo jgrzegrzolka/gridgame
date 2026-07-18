@@ -1404,6 +1404,11 @@ export function bootFlagParty() {
       pickWatch.hidden = true;
       pickHand.hidden = false;
       pickHand.innerHTML = '';
+      // Drive the disabled look from `pickSent` rather than only adding it on
+      // click: the click handler used to add `.sent` (pointer-events: none) and
+      // nothing ever took it off, so from the second pick of a game the hand
+      // rendered fine and ignored every tap until a refresh.
+      pickHand.classList.toggle('sent', pickSent);
       for (const modeId of state.hand || []) {
         const card = el('button', 'pick-card');
         /** @type {HTMLButtonElement} */ (card).type = 'button';
