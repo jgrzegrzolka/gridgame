@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, superlativeMetricByKey, hintFor, canLabelDirection } from './superlativeCatalog.js';
+import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, superlativeMetricByKey, hintFor, canLabelDirection } from './superlativeCatalog.js';
 import { METRIC_FILES } from '../metrics/index.js';
 import { METRIC_MODES } from '../partyPlan.js';
 
@@ -27,27 +27,27 @@ function lookup(bundle, key) {
 // THE drift test, and the reason the catalog names rather than imports. A metric
 // added to flags/metrics/index.js but forgotten here would simply never be asked
 // about; one added here but not there names a values file that doesn't exist, so
-// the round resolves no data and deals nothing. Neither fails loudly on its own.
+// the question resolves no data and deals nothing. Neither fails loudly on its own.
 test('every registered metric has exactly one catalog entry, and vice versa', () => {
   const registered = METRIC_FILES.map((m) => m.key).sort();
   const cataloged = SUPERLATIVE_METRICS.map((m) => m.key).sort();
   assert.deepEqual(cataloged, registered);
 });
 
-// The other half of the same drift: `roundId` is what the server deals and what
-// flagParty looks a question up by. A mismatch here means a dealt round whose
+// The other half of the same drift: `questionId` is what the server deals and what
+// flagParty looks a question up by. A mismatch here means a dealt question whose
 // prompt has no label.
 test('every metric party mode has exactly one catalog entry, and vice versa', () => {
-  const modeRoundIds = METRIC_MODES.map((m) => m.roundId).sort();
-  const cataloged = SUPERLATIVE_METRICS.map((m) => m.roundId).sort();
-  assert.deepEqual(cataloged, modeRoundIds);
+  const modeQuestionIds = METRIC_MODES.map((m) => m.questionId).sort();
+  const cataloged = SUPERLATIVE_METRICS.map((m) => m.questionId).sort();
+  assert.deepEqual(cataloged, modeQuestionIds);
 });
 
-test('keys and round ids are unique', () => {
+test('keys and question ids are unique', () => {
   const keys = SUPERLATIVE_METRICS.map((m) => m.key);
   assert.equal(new Set(keys).size, keys.length, 'duplicate metric key');
-  const ids = SUPERLATIVE_METRICS.map((m) => m.roundId);
-  assert.equal(new Set(ids).size, ids.length, 'duplicate roundId');
+  const ids = SUPERLATIVE_METRICS.map((m) => m.questionId);
+  assert.equal(new Set(ids).size, ids.length, 'duplicate questionId');
 });
 
 // The invariant `hintFor` leans on: a locked metric never needs a 'least' label,
@@ -100,7 +100,7 @@ test('hintFor falls back to hintMost rather than crashing on a locked metric', (
   // "unreachable in practice" — wrong: server and page are separate deploys of
   // this file, so a direction flip makes it reachable. The real defence is
   // `canLabelDirection` + `staleGuard.canRenderQuestion`, which reload the tab
-  // before a round with no label for its direction ever renders. This fallback
+  // before a question with no label for its direction ever renders. This fallback
   // just means a caller that skips that guard gets a wrong label instead of a
   // dead screen — better, never right.
   const coffee = superlativeMetricByKey('coffee');
@@ -145,22 +145,22 @@ test('canLabelDirection agrees with hintFor for every metric and direction', () 
 });
 
 test('lookups resolve, and an unknown id is null rather than a throw', () => {
-  // A still-open tab can be dealt a round id by a newer server; that must read
+  // A still-open tab can be dealt a question id by a newer server; that must read
   // as "I don't know this" and reach the stale-client guard, not explode.
-  const pop = superlativeMetricByRoundId('superlative');
-  const forest = superlativeMetricByRoundId('superlative-forest');
+  const pop = superlativeMetricByQuestionId('superlative');
+  const forest = superlativeMetricByQuestionId('superlative-forest');
   assert.ok(pop && forest);
   assert.equal(pop.key, 'population');
   assert.equal(forest.key, 'forest');
-  assert.equal(superlativeMetricByRoundId('superlative-unobtainium'), null);
+  assert.equal(superlativeMetricByQuestionId('superlative-unobtainium'), null);
   assert.equal(superlativeMetricByKey('nope'), null);
 });
 
-// The population round predates the metric suffix, and its id is on the wire in
+// The population question predates the metric suffix, and its id is on the wire in
 // every live room. Pinned because a "tidy-up" rename is a plausible future edit
-// and would break every game mid-round.
-test('the population round keeps its legacy unsuffixed id', () => {
+// and would break every game mid-question.
+test('the population question keeps its legacy unsuffixed id', () => {
   const pop = superlativeMetricByKey('population');
   assert.ok(pop);
-  assert.equal(pop.roundId, 'superlative');
+  assert.equal(pop.questionId, 'superlative');
 });

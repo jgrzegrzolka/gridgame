@@ -31,23 +31,23 @@ test('id is stable', () => {
 });
 
 // This module's whole job is now to bring the data the catalog names. A catalog
-// entry with no `DATA` entry throws at import (the round could never resolve a
+// entry with no `DATA` entry throws at import (the question could never resolve a
 // value), but the reverse — data for a metric no catalog entry asks about — is
 // silent dead weight, so pin both directions. Together with the catalog's own
 // drift test this chains: metrics/index.js <-> catalog <-> DATA.
-test('every catalog metric is built, and every built round is in the catalog', () => {
+test('every catalog metric is built, and every built question is in the catalog', () => {
   for (const m of SUPERLATIVE_METRICS) {
-    const round = roundFor(m.roundId);
-    assert.ok(round, `catalog names "${m.key}" (${m.roundId}) but no round was built for it`);
-    assert.equal(typeof round.generate, 'function', `${m.key}: round cannot generate`);
-    assert.equal(typeof round.isCorrect, 'function', `${m.key}: round cannot score`);
+    const question = roundFor(m.questionId);
+    assert.ok(question, `catalog names "${m.key}" (${m.questionId}) but no question was built for it`);
+    assert.equal(typeof question.generate, 'function', `${m.key}: question cannot generate`);
+    assert.equal(typeof question.isCorrect, 'function', `${m.key}: question cannot score`);
   }
 });
 
-// The one that matters, and the one my first attempt got wrong. `ROUNDS` is
-// built FROM the catalog, so any test that counts "built rounds" against
+// The one that matters, and the one my first attempt got wrong. `QUESTIONS` is
+// built FROM the catalog, so any test that counts "built questions" against
 // `SUPERLATIVE_METRICS.length` is tautological: retire a catalog entry and both
-// sides drop together while `export const honeyRound = ROUNDS.honey;` is left
+// sides drop together while `export const honeyQuestion = QUESTIONS.honey;` is left
 // behind as `undefined`. That is not a cosmetic leftover —
 // `party/partyGameServer.js:41` lists these exports BY NAME and reads `.id` off
 // each to build its registry, so an undefined one throws at module load and
@@ -56,38 +56,38 @@ test('every catalog metric is built, and every built round is in the catalog', (
 // Verified by mutation: retiring honey from the catalog while leaving its export
 // dangling left this file green except for honey's own legacy per-metric test —
 // exactly the test a dev deletes when retiring a metric.
-test('every *Round export is a live round the catalog claims', () => {
-  const roundExports = exportedEntries().filter(([name]) => name.endsWith('Round'));
-  for (const [name, round] of roundExports) {
-    assert.ok(round,
+test('every *Question export is a live question the catalog claims', () => {
+  const roundExports = exportedEntries().filter(([name]) => name.endsWith('Question'));
+  for (const [name, question] of roundExports) {
+    assert.ok(question,
       `export "${name}" is undefined — its catalog entry is gone but the export was left behind. `
       + 'party/partyGameServer.js reads .id off it and throws at import, killing every room.');
-    assert.equal(typeof round.id, 'string', `export "${name}" is not a round`);
-    assert.equal(typeof round.generate, 'function', `export "${name}" cannot generate`);
-    assert.ok(SUPERLATIVE_METRICS.some((m) => m.roundId === round.id),
-      `export "${name}" deals round "${round.id}" that no catalog entry claims`);
+    assert.equal(typeof question.id, 'string', `export "${name}" is not a question`);
+    assert.equal(typeof question.generate, 'function', `export "${name}" cannot generate`);
+    assert.ok(SUPERLATIVE_METRICS.some((m) => m.questionId === question.id),
+      `export "${name}" deals question "${question.id}" that no catalog entry claims`);
   }
-  // All but population, which is exported flat rather than as a `<key>Round`.
+  // All but population, which is exported flat rather than as a `<key>Question`.
   assert.equal(roundExports.length, SUPERLATIVE_METRICS.length - 1,
-    'every catalog metric but population needs exactly one <key>Round export');
+    'every catalog metric but population needs exactly one <key>Question export');
 });
 
 /** This module's exports, as opaque entries: the checker sees a union of string
- *  (the flat `id`), two functions, and 31 round objects, so probing `.id` needs
+ *  (the flat `id`), two functions, and 31 question objects, so probing `.id` needs
  *  the cast. @returns {[string, any][]} */
 const exportedEntries = () => /** @type {[string, any][]} */ (Object.entries(superlative));
 
 /** @returns {any[]} */
 const exportedValues = () => exportedEntries().map(([, v]) => v);
 
-/** The round for a catalog entry. The population round is exported FLAT (id /
+/** The question for a catalog entry. The population question is exported FLAT (id /
  *  generate / isCorrect, the shape it shipped in before there was a second
- *  metric), so reassemble it; every other metric exports a round object.
- *  @param {string} roundId */
-const roundFor = (roundId) => (
-  roundId === id
+ *  metric), so reassemble it; every other metric exports a question object.
+ *  @param {string} questionId */
+const roundFor = (questionId) => (
+  questionId === id
     ? { id, generate, isCorrect }
-    : exportedValues().find((r) => r && r.id === roundId)
+    : exportedValues().find((r) => r && r.id === questionId)
 );
 
 /** A metric's raw values map, loaded the way the module itself does.
@@ -117,7 +117,7 @@ test('every direction-locked metric only ever deals its locked direction', async
       .map(([code]) => ({ code }));
     assert.ok(pool.length >= 4, `${m.key}: need 4+ distinct values to test`);
     for (let i = 0; i < 20; i++) {
-      const q = roundFor(m.roundId).generate(pool, undefined, seeded(i + 1));
+      const q = roundFor(m.questionId).generate(pool, undefined, seeded(i + 1));
       assert.equal(q.prompt, m.direction,
         `${m.key} is locked to '${m.direction}' but dealt '${q.prompt}'`);
     }
@@ -141,7 +141,7 @@ test('every zero-filtered metric excludes its real zeros from selection', async 
       .map(([code]) => ({ code }));
     const pool = [...nonZero, ...zeros.slice(0, 6).map((code) => ({ code }))];
     for (let i = 0; i < 40; i++) {
-      const q = roundFor(m.roundId).generate(pool, undefined, seeded(i + 1));
+      const q = roundFor(m.questionId).generate(pool, undefined, seeded(i + 1));
       for (const opt of q.options) {
         assert.ok(!zeros.includes(opt), `${m.key}: zero-valued ${opt} was offered as an option`);
       }
@@ -172,10 +172,10 @@ test('every two-directional metric deals both directions', async () => {
       .slice(0, 12)
       .map(([code]) => ({ code }));
     assert.ok(pool.length >= 4, `${m.key}: need 4+ distinct values to test`);
-    const round = roundFor(m.roundId);
-    assert.equal(round.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least',
+    const question = roundFor(m.questionId);
+    assert.equal(question.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least',
       `${m.key} is two-directional but never deals 'least'`);
-    assert.equal(round.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most',
+    assert.equal(question.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most',
       `${m.key} is two-directional but never deals 'most'`);
   }
   // A floor, not an exact count: the loop must not pass vacuously. Pinning the
@@ -268,15 +268,15 @@ test('isCorrect: only the answer code is correct', () => {
 
 // ---- area instance (the km² twin, id 'superlative-area') --------------------
 
-test('areaRound: id and a correct extreme-by-area answer', async () => {
-  const { areaRound } = await import('./superlative.js');
+test('areaQuestion: id and a correct extreme-by-area answer', async () => {
+  const { areaQuestion } = await import('./superlative.js');
   const areaJson = (await import('../metrics/area.json', { with: { type: 'json' } })).default;
   const AREA = /** @type {Record<string, number>} */ (areaJson.values);
-  assert.equal(areaRound.id, 'superlative-area');
+  assert.equal(areaQuestion.id, 'superlative-area');
   // Large, area-distinct sovereigns, all present in area.json.
   const pool = ['ru', 'ca', 'cn', 'us', 'br', 'au', 'in', 'ar', 'kz', 'dz', 'mn', 'nl'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = areaRound.generate(pool, undefined, seeded(i + 1));
+    const q = areaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => AREA[c]);
@@ -287,15 +287,15 @@ test('areaRound: id and a correct extreme-by-area answer', async () => {
 
 // ---- density instance (people per km², id 'superlative-density') ------------
 
-test('densityRound: id and a correct extreme-by-density answer', async () => {
-  const { densityRound } = await import('./superlative.js');
+test('densityQuestion: id and a correct extreme-by-density answer', async () => {
+  const { densityQuestion } = await import('./superlative.js');
   const densityJson = (await import('../metrics/density.json', { with: { type: 'json' } })).default;
   const DENSITY = /** @type {Record<string, number>} */ (densityJson.values);
-  assert.equal(densityRound.id, 'superlative-density');
+  assert.equal(densityQuestion.id, 'superlative-density');
   // Density-distinct sovereigns spanning ~4 orders of magnitude, all in density.json.
   const pool = ['mc', 'sg', 'bd', 'nl', 'mn', 'au', 'ca', 'ru', 'na', 'kz', 'in', 'jp'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = densityRound.generate(pool, undefined, seeded(i + 1));
+    const q = densityQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => DENSITY[c]);
@@ -306,15 +306,15 @@ test('densityRound: id and a correct extreme-by-density answer', async () => {
 
 // ---- gdp instance (total economy in US$, id 'superlative-gdp') --------------
 
-test('gdpRound: id and a correct extreme-by-gdp answer', async () => {
-  const { gdpRound } = await import('./superlative.js');
+test('gdpQuestion: id and a correct extreme-by-gdp answer', async () => {
+  const { gdpQuestion } = await import('./superlative.js');
   const gdpJson = (await import('../metrics/gdp.json', { with: { type: 'json' } })).default;
   const GDP = /** @type {Record<string, number>} */ (gdpJson.values);
-  assert.equal(gdpRound.id, 'superlative-gdp');
+  assert.equal(gdpQuestion.id, 'superlative-gdp');
   // GDP-distinct sovereigns spanning many orders of magnitude, all in gdp.json.
   const pool = ['us', 'cn', 'jp', 'de', 'in', 'br', 'ng', 'gh', 'is', 'fj', 'to', 'ws'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = gdpRound.generate(pool, undefined, seeded(i + 1));
+    const q = gdpQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => GDP[c]);
@@ -325,15 +325,15 @@ test('gdpRound: id and a correct extreme-by-gdp answer', async () => {
 
 // ---- gdp-per-capita instance (US$ per head, id 'superlative-gdppc') ---------
 
-test('gdpPerCapitaRound: id and a correct extreme-by-gdp-per-capita answer', async () => {
-  const { gdpPerCapitaRound } = await import('./superlative.js');
+test('gdpPerCapitaQuestion: id and a correct extreme-by-gdp-per-capita answer', async () => {
+  const { gdpPerCapitaQuestion } = await import('./superlative.js');
   const pcJson = (await import('../metrics/gdpPerCapita.json', { with: { type: 'json' } })).default;
   const PC = /** @type {Record<string, number>} */ (pcJson.values);
-  assert.equal(gdpPerCapitaRound.id, 'superlative-gdppc');
+  assert.equal(gdpPerCapitaQuestion.id, 'superlative-gdppc');
   // Per-capita-distinct sovereigns spanning ~3 orders of magnitude, all in gdpPerCapita.json.
   const pool = ['lu', 'no', 'us', 'de', 'cn', 'in', 'ng', 'et', 'bi', 'mw', 'cd', 'ne'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = gdpPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = gdpPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => PC[c]);
@@ -344,20 +344,20 @@ test('gdpPerCapitaRound: id and a correct extreme-by-gdp-per-capita answer', asy
 
 // ---- coffee instance (green-coffee tonnes, id 'superlative-coffee') ---------
 
-test('coffeeRound: biggest-only, correct extreme-by-coffee answer, growers only', async () => {
-  const { coffeeRound } = await import('./superlative.js');
+test('coffeeQuestion: biggest-only, correct extreme-by-coffee answer, growers only', async () => {
+  const { coffeeQuestion } = await import('./superlative.js');
   const coffeeJson = (await import('../metrics/coffee.json', { with: { type: 'json' } })).default;
   const COF = /** @type {Record<string, number>} */ (coffeeJson.values);
-  assert.equal(coffeeRound.id, 'superlative-coffee');
+  assert.equal(coffeeQuestion.id, 'superlative-coffee');
   // Coffee-distinct sovereign GROWERS spanning many orders of magnitude, all in
   // coffee.json. A non-grower (e.g. Germany) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['br', 'vn', 'co', 'et', 'in', 'mx', 'pe', 'gt', 'cu', 'th', 'rw', 'bo', 'de'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = coffeeRound.generate(pool, undefined, seeded(i + 1));
+    const q = coffeeQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Coffee is locked to 'most' — "smallest grower" is an obscure question, so
-    // it's never dealt (Jan). Every round asks for the biggest producer.
+    // it's never dealt (Jan). Every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: coffee is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('de'), 'a non-grower is never an option (sparse metric.has filter)');
@@ -368,17 +368,17 @@ test('coffeeRound: biggest-only, correct extreme-by-coffee answer, growers only'
 
 // ---- tea instance (green-tea-leaf tonnes, id 'superlative-tea') --------------
 
-test('teaRound: biggest-only, correct extreme-by-tea answer, growers only', async () => {
-  const { teaRound } = await import('./superlative.js');
+test('teaQuestion: biggest-only, correct extreme-by-tea answer, growers only', async () => {
+  const { teaQuestion } = await import('./superlative.js');
   const teaJson = (await import('../metrics/tea.json', { with: { type: 'json' } })).default;
   const TEA = /** @type {Record<string, number>} */ (teaJson.values);
-  assert.equal(teaRound.id, 'superlative-tea');
+  assert.equal(teaQuestion.id, 'superlative-tea');
   // Tea-distinct sovereign GROWERS spanning many orders of magnitude, all in
-  // tea.json. A non-grower (e.g. Germany) mixed in must be dropped by the round's
+  // tea.json. A non-grower (e.g. Germany) mixed in must be dropped by the question's
   // `metric.has` filter, never appear as an option.
   const pool = ['cn', 'in', 'ke', 'lk', 'tr', 'vn', 'id', 'jp', 'np', 'mm', 'rw', 'ge', 'de'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = teaRound.generate(pool, undefined, seeded(i + 1));
+    const q = teaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Tea is locked to 'most' — "smallest grower" is obscure, so it's never dealt.
     assert.equal(q.prompt, 'most', `seed ${i}: tea is biggest-only, never 'least'`);
@@ -391,17 +391,17 @@ test('teaRound: biggest-only, correct extreme-by-tea answer, growers only', asyn
 
 // ---- sugar cane instance (tonnes of cane, id 'superlative-sugarcane') --------
 
-test('sugarcaneRound: biggest-only, correct extreme-by-cane answer, growers only', async () => {
-  const { sugarcaneRound } = await import('./superlative.js');
+test('sugarcaneQuestion: biggest-only, correct extreme-by-cane answer, growers only', async () => {
+  const { sugarcaneQuestion } = await import('./superlative.js');
   const scJson = (await import('../metrics/sugarcane.json', { with: { type: 'json' } })).default;
   const SC = /** @type {Record<string, number>} */ (scJson.values);
-  assert.equal(sugarcaneRound.id, 'superlative-sugarcane');
+  assert.equal(sugarcaneQuestion.id, 'superlative-sugarcane');
   // Cane-distinct sovereign GROWERS spanning many orders of magnitude, all in
   // sugarcane.json. A non-grower (e.g. Germany) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['br', 'in', 'cn', 'th', 'pk', 'mx', 'au', 'us', 'co', 'pe', 'fj', 'bb', 'de'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = sugarcaneRound.generate(pool, undefined, seeded(i + 1));
+    const q = sugarcaneQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Sugar cane is locked to 'most' — "smallest grower" is obscure, never dealt.
     assert.equal(q.prompt, 'most', `seed ${i}: sugarcane is biggest-only, never 'least'`);
@@ -414,19 +414,19 @@ test('sugarcaneRound: biggest-only, correct extreme-by-cane answer, growers only
 
 // ---- gold instance (tonnes of mined gold, id 'superlative-gold') -------------
 
-test('goldRound: biggest-only, correct extreme-by-gold answer, producers only', async () => {
-  const { goldRound } = await import('./superlative.js');
+test('goldQuestion: biggest-only, correct extreme-by-gold answer, producers only', async () => {
+  const { goldQuestion } = await import('./superlative.js');
   const goldJson = (await import('../metrics/gold.json', { with: { type: 'json' } })).default;
   const GLD = /** @type {Record<string, number>} */ (goldJson.values);
-  assert.equal(goldRound.id, 'superlative-gold');
+  assert.equal(goldQuestion.id, 'superlative-gold');
   // Gold-distinct sovereign PRODUCERS spanning the range, all in gold.json. A
-  // non-producer (e.g. Germany) mixed in must be dropped by the round's
+  // non-producer (e.g. Germany) mixed in must be dropped by the question's
   // `metric.has` filter, never appear as an option.
   // Distinct-value producers (gold has several tied tonnages: 130×3, 100×3,
   // 70×2, 60×3) so every quartet has an unambiguous biggest.
   const pool = ['cn', 'ru', 'au', 'ca', 'us', 'kz', 'uz', 'za', 'br', 'co', 'de'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = goldRound.generate(pool, undefined, seeded(i + 1));
+    const q = goldQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Gold is locked to 'most' — "smallest producer" is obscure, never dealt.
     assert.equal(q.prompt, 'most', `seed ${i}: gold is biggest-only, never 'least'`);
@@ -439,18 +439,18 @@ test('goldRound: biggest-only, correct extreme-by-gold answer, producers only', 
 
 // ---- olive oil instance (tonnes, id 'superlative-olive-oil') -----------------
 
-test('oliveOilRound: biggest-only, correct extreme-by-oil answer, producers only', async () => {
-  const { oliveOilRound } = await import('./superlative.js');
+test('oliveOilQuestion: biggest-only, correct extreme-by-oil answer, producers only', async () => {
+  const { oliveOilQuestion } = await import('./superlative.js');
   const oliveOilJson = (await import('../metrics/oliveOil.json', { with: { type: 'json' } })).default;
   const OIL = /** @type {Record<string, number>} */ (oliveOilJson.values);
-  assert.equal(oliveOilRound.id, 'superlative-olive-oil');
+  assert.equal(oliveOilQuestion.id, 'superlative-olive-oil');
   // Distinct-value sovereign PRODUCERS spanning the range, all in oliveOil.json
   // (olive oil has some tied tonnages, so pick codes with unambiguous values). A
-  // non-producer (e.g. Germany) mixed in must be dropped by the round's
+  // non-producer (e.g. Germany) mixed in must be dropped by the question's
   // `metric.has` filter, never appear as an option.
   const pool = ['es', 'it', 'gr', 'tr', 'tn', 'sy', 'ma', 'pt', 'dz', 'eg', 'de'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = oliveOilRound.generate(pool, undefined, seeded(i + 1));
+    const q = oliveOilQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Olive oil is locked to 'most' — "smallest producer" is obscure, never dealt.
     assert.equal(q.prompt, 'most', `seed ${i}: oliveOil is biggest-only, never 'least'`);
@@ -463,17 +463,17 @@ test('oliveOilRound: biggest-only, correct extreme-by-oil answer, producers only
 
 // ---- honey instance (tonnes, id 'superlative-honey') ------------------------
 
-test('honeyRound: biggest-only, correct extreme-by-honey answer, producers only', async () => {
-  const { honeyRound } = await import('./superlative.js');
+test('honeyQuestion: biggest-only, correct extreme-by-honey answer, producers only', async () => {
+  const { honeyQuestion } = await import('./superlative.js');
   const honeyJson = (await import('../metrics/honey.json', { with: { type: 'json' } })).default;
   const HNY = /** @type {Record<string, number>} */ (honeyJson.values);
-  assert.equal(honeyRound.id, 'superlative-honey');
+  assert.equal(honeyQuestion.id, 'superlative-honey');
   // Distinct-value sovereign PRODUCERS spanning the range, all in honey.json. A
   // non-producer (e.g. Japan, not in the top-55 set) mixed in must be dropped by
-  // the round's `metric.has` filter, never appear as an option.
+  // the question's `metric.has` filter, never appear as an option.
   const pool = ['cn', 'tr', 'ir', 'in', 'ar', 'ru', 'mx', 'ua', 'br', 'us', 'jp'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = honeyRound.generate(pool, undefined, seeded(i + 1));
+    const q = honeyQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Honey is locked to 'most' — "smallest producer" is obscure, never dealt.
     assert.equal(q.prompt, 'most', `seed ${i}: honey is biggest-only, never 'least'`);
@@ -486,20 +486,20 @@ test('honeyRound: biggest-only, correct extreme-by-honey answer, producers only'
 
 // ---- wine instance (wine tonnes, id 'superlative-wine') ---------------------
 
-test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', async () => {
-  const { wineRound } = await import('./superlative.js');
+test('wineQuestion: biggest-only, correct extreme-by-wine answer, makers only', async () => {
+  const { wineQuestion } = await import('./superlative.js');
   const wineJson = (await import('../metrics/wine.json', { with: { type: 'json' } })).default;
   const WIN = /** @type {Record<string, number>} */ (wineJson.values);
-  assert.equal(wineRound.id, 'superlative-wine');
+  assert.equal(wineQuestion.id, 'superlative-wine');
   // Wine-distinct sovereign MAKERS spanning many orders of magnitude, all in
   // wine.json. A non-maker (e.g. Afghanistan) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['fr', 'it', 'es', 'us', 'cn', 'cl', 'au', 'za', 'ar', 'pt', 'de', 'af'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = wineRound.generate(pool, undefined, seeded(i + 1));
+    const q = wineQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Wine is locked to 'most'; "smallest maker" is an obscure question, so
-    // it's never dealt. Every round asks for the biggest producer.
+    // it's never dealt. Every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: wine is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('af'), 'a non-maker is never an option (sparse metric.has filter)');
@@ -510,20 +510,20 @@ test('wineRound: biggest-only, correct extreme-by-wine answer, makers only', asy
 
 // ---- cocoa instance (cocoa-bean tonnes, id 'superlative-cocoa') -------------
 
-test('cocoaRound: biggest-only, correct extreme-by-cocoa answer, growers only', async () => {
-  const { cocoaRound } = await import('./superlative.js');
+test('cocoaQuestion: biggest-only, correct extreme-by-cocoa answer, growers only', async () => {
+  const { cocoaQuestion } = await import('./superlative.js');
   const cocoaJson = (await import('../metrics/cocoa.json', { with: { type: 'json' } })).default;
   const COC = /** @type {Record<string, number>} */ (cocoaJson.values);
-  assert.equal(cocoaRound.id, 'superlative-cocoa');
+  assert.equal(cocoaQuestion.id, 'superlative-cocoa');
   // Cocoa-distinct sovereign GROWERS spanning many orders of magnitude, all in
   // cocoa.json. A non-grower (e.g. Afghanistan) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['ci', 'id', 'gh', 'ec', 'ng', 'cm', 'br', 'pe', 'sl', 'co', 'af'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = cocoaRound.generate(pool, undefined, seeded(i + 1));
+    const q = cocoaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     // Cocoa is locked to 'most'; "smallest grower" is an obscure question, so
-    // it's never dealt. Every round asks for the biggest producer.
+    // it's never dealt. Every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: cocoa is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('af'), 'a non-grower is never an option (sparse metric.has filter)');
@@ -534,19 +534,19 @@ test('cocoaRound: biggest-only, correct extreme-by-cocoa answer, growers only', 
 
 // ---- banana instance (banana tonnes, id 'superlative-banana') ---------------
 
-test('bananaRound: biggest-only, correct extreme-by-banana answer, producers only', async () => {
-  const { bananaRound } = await import('./superlative.js');
+test('bananaQuestion: biggest-only, correct extreme-by-banana answer, producers only', async () => {
+  const { bananaQuestion } = await import('./superlative.js');
   const bananaJson = (await import('../metrics/banana.json', { with: { type: 'json' } })).default;
   const BAN = /** @type {Record<string, number>} */ (bananaJson.values);
-  assert.equal(bananaRound.id, 'superlative-banana');
+  assert.equal(bananaQuestion.id, 'superlative-banana');
   // Banana-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
   // banana.json. A non-producer (e.g. Afghanistan) mixed in must be dropped by
-  // the round's `metric.has` filter, never appear as an option.
+  // the question's `metric.has` filter, never appear as an option.
   const pool = ['in', 'cn', 'id', 'ec', 'br', 'ng', 'ph', 'gt', 'ke', 'cr', 'af'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = bananaRound.generate(pool, undefined, seeded(i + 1));
+    const q = bananaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Banana is locked to 'most'; every round asks for the biggest producer.
+    // Banana is locked to 'most'; every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: banana is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('af'), 'a non-producer is never an option (sparse metric.has filter)');
@@ -557,19 +557,19 @@ test('bananaRound: biggest-only, correct extreme-by-banana answer, producers onl
 
 // ---- apple instance (apple tonnes, id 'superlative-apple') ------------------
 
-test('appleRound: biggest-only, correct extreme-by-apple answer, producers only', async () => {
-  const { appleRound } = await import('./superlative.js');
+test('appleQuestion: biggest-only, correct extreme-by-apple answer, producers only', async () => {
+  const { appleQuestion } = await import('./superlative.js');
   const appleJson = (await import('../metrics/apple.json', { with: { type: 'json' } })).default;
   const APP = /** @type {Record<string, number>} */ (appleJson.values);
-  assert.equal(appleRound.id, 'superlative-apple');
+  assert.equal(appleQuestion.id, 'superlative-apple');
   // Apple-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
   // apple.json. A non-producer (e.g. Nigeria) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['cn', 'us', 'tr', 'pl', 'it', 'jp', 'nz', 'au', 'ng'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = appleRound.generate(pool, undefined, seeded(i + 1));
+    const q = appleQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Apple is locked to 'most'; every round asks for the biggest producer.
+    // Apple is locked to 'most'; every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: apple is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('ng'), 'a non-producer is never an option (sparse metric.has filter)');
@@ -580,16 +580,16 @@ test('appleRound: biggest-only, correct extreme-by-apple answer, producers only'
 
 // ---- elevation instance (highest point in metres, id 'superlative-elevation') ---
 
-test('elevationRound: two-directional, correct extreme-by-elevation answer', async () => {
-  const { elevationRound } = await import('./superlative.js');
+test('elevationQuestion: two-directional, correct extreme-by-elevation answer', async () => {
+  const { elevationQuestion } = await import('./superlative.js');
   const elevJson = (await import('../metrics/elevation.json', { with: { type: 'json' } })).default;
   const ELEV = /** @type {Record<string, number>} */ (elevJson.values);
-  assert.equal(elevationRound.id, 'superlative-elevation');
+  assert.equal(elevationQuestion.id, 'superlative-elevation');
   // Elevation-distinct sovereigns spanning three orders of magnitude, all in
   // elevation.json (Nepal 8849 ... Maldives 2). Dense metric: every code has a value.
   const pool = ['np', 'cl', 'ke', 'ch', 'ma', 'gb', 'de', 'nl', 'dk', 'mv', 'tv', 'bh'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = elevationRound.generate(pool, undefined, seeded(i + 1));
+    const q = elevationQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => ELEV[c]);
@@ -604,23 +604,23 @@ test('elevationRound: two-directional, correct extreme-by-elevation answer', asy
     let n = 0;
     return () => (n++ === 0 ? first : rest());
   };
-  assert.equal(elevationRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
-  assert.equal(elevationRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+  assert.equal(elevationQuestion.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(elevationQuestion.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
 
 // ---- temperature instance (°C, id 'superlative-temperature') ----------------
 
-test('temperatureRound: two-directional over hot and sub-zero places, correct extreme answer', async () => {
-  const { temperatureRound } = await import('./superlative.js');
+test('temperatureQuestion: two-directional over hot and sub-zero places, correct extreme answer', async () => {
+  const { temperatureQuestion } = await import('./superlative.js');
   const tempJson = (await import('../metrics/temperature.json', { with: { type: 'json' } })).default;
   const TEMP = /** @type {Record<string, number>} */ (tempJson.values);
-  assert.equal(temperatureRound.id, 'superlative-temperature');
+  assert.equal(temperatureQuestion.id, 'superlative-temperature');
   // Temperature-distinct places spanning hot to below freezing, all in
   // temperature.json (dense). Includes negatives so the extreme-pick is proven
   // sign-safe: Burkina 30.4 ... Greenland -18.68.
   const pool = ['bf', 'ae', 'sg', 'gr', 'gb', 'de', 'no', 'is', 'ru', 'ca', 'gl', 'sj'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = temperatureRound.generate(pool, undefined, seeded(i + 1));
+    const q = temperatureQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => TEMP[c]);
@@ -633,22 +633,22 @@ test('temperatureRound: two-directional over hot and sub-zero places, correct ex
     let n = 0;
     return () => (n++ === 0 ? first : rest());
   };
-  assert.equal(temperatureRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
-  assert.equal(temperatureRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+  assert.equal(temperatureQuestion.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(temperatureQuestion.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
 
 // ---- happiness instance (WHR ladder 0-10, id 'superlative-happiness') -------
 
-test('happinessRound: two-directional, correct extreme-happiness answer, covered places only', async () => {
-  const { happinessRound } = await import('./superlative.js');
+test('happinessQuestion: two-directional, correct extreme-happiness answer, covered places only', async () => {
+  const { happinessQuestion } = await import('./superlative.js');
   const happyJson = (await import('../metrics/happiness.json', { with: { type: 'json' } })).default;
   const HAPPY = /** @type {Record<string, number>} */ (happyJson.values);
-  assert.equal(happinessRound.id, 'superlative-happiness');
+  assert.equal(happinessQuestion.id, 'superlative-happiness');
   // Happiness-distinct sovereigns spanning the ladder, all covered by Gallup.
   const pool = ['fi', 'dk', 'is', 'cr', 'us', 'de', 'jp', 'br', 'in', 'ke', 'np', 'af'].map((code) => ({ code }));
   for (const c of pool) assert.ok(c.code in HAPPY, `${c.code} must be covered by happiness.json`);
   for (let i = 0; i < 100; i++) {
-    const q = happinessRound.generate(pool, undefined, seeded(i + 1));
+    const q = happinessQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => HAPPY[c]);
@@ -658,50 +658,50 @@ test('happinessRound: two-directional, correct extreme-happiness answer, covered
   }
 });
 
-test('happinessRound: deals both directions across seeds', async () => {
-  const { happinessRound } = await import('./superlative.js');
+test('happinessQuestion: deals both directions across seeds', async () => {
+  const { happinessQuestion } = await import('./superlative.js');
   const pool = ['fi', 'dk', 'is', 'cr', 'us', 'de', 'jp', 'br', 'in', 'ke', 'np', 'af'].map((code) => ({ code }));
   const firstThen = (/** @type {number} */ first, /** @type {() => number} */ rest) => {
     let n = 0;
     return () => (n++ === 0 ? first : rest());
   };
-  assert.equal(happinessRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
-  assert.equal(happinessRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+  assert.equal(happinessQuestion.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(happinessQuestion.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
 
-test('happinessRound: the unsurveyed no-data places are excluded from selection', async () => {
-  const { happinessRound } = await import('./superlative.js');
+test('happinessQuestion: the unsurveyed no-data places are excluded from selection', async () => {
+  const { happinessQuestion } = await import('./superlative.js');
   const happyJson = (await import('../metrics/happiness.json', { with: { type: 'json' } })).default;
   const HAPPY = /** @type {Record<string, number>} */ (happyJson.values);
   // Four covered places plus codes Gallup does not survey (a sub-national part
   // and polar territories, all absent from happiness.json, absence:'unknown').
-  // Those must never surface as an option: the round's metric.has drops them.
+  // Those must never surface as an option: the question's metric.has drops them.
   const covered = ['fi', 'dk', 'us', 'jp'];
   const noData = ['gb-wls', 'aq', 'gl'].filter((code) => !(code in HAPPY));
   assert.ok(noData.length >= 1, 'expected at least one uncovered code for the test');
   const pool = [...covered, ...noData].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = happinessRound.generate(pool, undefined, seeded(i + 1));
+    const q = happinessQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) assert.ok(!noData.includes(opt), `no-data place ${opt} must be excluded`);
   }
 });
 
 // ---- corruption instance (CPI 0-100, id 'superlative-corruption') -----------
 
-test('corruptionRound: two-directional, the extreme CPI is the answer, scored places only', async () => {
-  const { corruptionRound } = await import('./superlative.js');
+test('corruptionQuestion: two-directional, the extreme CPI is the answer, scored places only', async () => {
+  const { corruptionQuestion } = await import('./superlative.js');
   const corrJson = (await import('../metrics/corruption.json', { with: { type: 'json' } })).default;
   const CORR = /** @type {Record<string, number>} */ (corrJson.values);
-  assert.equal(corruptionRound.id, 'superlative-corruption');
+  assert.equal(corruptionQuestion.id, 'superlative-corruption');
   // CPI-distinct sovereigns spanning clean to corrupt, all scored by TI.
   const pool = ['dk', 'fi', 'sg', 'de', 'us', 'jp', 'br', 'in', 'mx', 'ru', 'ng', 'ke'].map((code) => ({ code }));
   for (const c of pool) assert.ok(c.code in CORR, `${c.code} must be scored by corruption.json`);
   for (let i = 0; i < 100; i++) {
-    const q = corruptionRound.generate(pool, undefined, seeded(i + 1));
+    const q = corruptionQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => CORR[c]);
-    // Round 'most' picks the HIGHEST CPI (shown as "Least corrupt"); 'least'
+    // Question 'most' picks the HIGHEST CPI (shown as "Least corrupt"); 'least'
     // picks the LOWEST CPI (shown as "Most corrupt"). The value comparison here
     // is by CPI, not by the inverted hint wording.
     const extreme = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
@@ -713,12 +713,12 @@ test('corruptionRound: two-directional, the extreme CPI is the answer, scored pl
     let n = 0;
     return () => (n++ === 0 ? first : rest());
   };
-  assert.equal(corruptionRound.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
-  assert.equal(corruptionRound.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
+  assert.equal(corruptionQuestion.generate(pool, undefined, firstThen(0.1, seeded(1))).prompt, 'least');
+  assert.equal(corruptionQuestion.generate(pool, undefined, firstThen(0.9, seeded(1))).prompt, 'most');
 });
 
-test('corruptionRound: the unscored no-data places are excluded from selection', async () => {
-  const { corruptionRound } = await import('./superlative.js');
+test('corruptionQuestion: the unscored no-data places are excluded from selection', async () => {
+  const { corruptionQuestion } = await import('./superlative.js');
   const corrJson = (await import('../metrics/corruption.json', { with: { type: 'json' } })).default;
   const CORR = /** @type {Record<string, number>} */ (corrJson.values);
   // Four scored places plus codes TI does not score (a sub-national part and
@@ -728,23 +728,23 @@ test('corruptionRound: the unscored no-data places are excluded from selection',
   assert.ok(noData.length >= 1, 'expected at least one unscored code for the test');
   const pool = [...scored, ...noData].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = corruptionRound.generate(pool, undefined, seeded(i + 1));
+    const q = corruptionQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) assert.ok(!noData.includes(opt), `no-data place ${opt} must be excluded`);
   }
 });
 
 // ---- coastline instance (km of coast, id 'superlative-coastline') -----------
 
-test('coastlineRound: two-directional over coastal places, correct extreme answer', async () => {
-  const { coastlineRound } = await import('./superlative.js');
+test('coastlineQuestion: two-directional over coastal places, correct extreme answer', async () => {
+  const { coastlineQuestion } = await import('./superlative.js');
   const coastJson = (await import('../metrics/coastline.json', { with: { type: 'json' } })).default;
   const COAST = /** @type {Record<string, number>} */ (coastJson.values);
-  assert.equal(coastlineRound.id, 'superlative-coastline');
+  assert.equal(coastlineQuestion.id, 'superlative-coastline');
   // Coastal sovereigns spanning four orders of magnitude (Canada 202,080 ...
-  // Monaco 4). All strictly > 0, so none is filtered out of the round's pool.
+  // Monaco 4). All strictly > 0, so none is filtered out of the question's pool.
   const pool = ['ca', 'id', 'no', 'us', 'gb', 'mx', 'it', 'fr', 'de', 'mc', 'gi', 'be'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = coastlineRound.generate(pool, undefined, seeded(i + 1));
+    const q = coastlineQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => COAST[c]);
@@ -753,16 +753,16 @@ test('coastlineRound: two-directional over coastal places, correct extreme answe
   }
 });
 
-test('coastlineRound: landlocked (0 km) places are excluded from selection', async () => {
-  const { coastlineRound } = await import('./superlative.js');
-  // The round metric is zero-filtered, so a landlocked code never has a value:
+test('coastlineQuestion: landlocked (0 km) places are excluded from selection', async () => {
+  const { coastlineQuestion } = await import('./superlative.js');
+  // The question metric is zero-filtered, so a landlocked code never has a value:
   // even a pool of all-landlocked places falls back to nothing usable and would
   // never surface one as an answer. Give a mixed pool and prove no landlocked
   // code ever appears as an option.
   const landlocked = new Set(['ch', 'at', 'bo', 'np', 'xk', 'hu', 'rs', 'ml', 'td']);
   const pool = ['ca', 'no', 'gb', 'it', 'ch', 'at', 'bo', 'np', 'xk', 'hu'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = coastlineRound.generate(pool, undefined, seeded(i + 1));
+    const q = coastlineQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!landlocked.has(opt), `seed ${i}: landlocked ${opt} must not be an option`);
     }
@@ -771,16 +771,16 @@ test('coastlineRound: landlocked (0 km) places are excluded from selection', asy
 
 // ---- forest instance (% of land area, id 'superlative-forest') --------------
 
-test('forestRound: two-directional over forested places, correct extreme answer', async () => {
-  const { forestRound } = await import('./superlative.js');
+test('forestQuestion: two-directional over forested places, correct extreme answer', async () => {
+  const { forestQuestion } = await import('./superlative.js');
   const forestJson = (await import('../metrics/forest.json', { with: { type: 'json' } })).default;
   const FOREST = /** @type {Record<string, number>} */ (forestJson.values);
-  assert.equal(forestRound.id, 'superlative-forest');
+  assert.equal(forestQuestion.id, 'superlative-forest');
   // Forested sovereigns with distinct values spanning the range (Suriname 94.5%
-  // ... Ireland 11.5%). All strictly > 0, so none is filtered out of the round.
+  // ... Ireland 11.5%). All strictly > 0, so none is filtered out of the question.
   const pool = ['sr', 'fi', 'jp', 'br', 'ru', 'us', 'cn', 'au', 'ma', 'ie'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = forestRound.generate(pool, undefined, seeded(i + 1));
+    const q = forestQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => FOREST[c]);
@@ -789,15 +789,15 @@ test('forestRound: two-directional over forested places, correct extreme answer'
   }
 });
 
-test('forestRound: treeless (0%) places are excluded from selection', async () => {
-  const { forestRound } = await import('./superlative.js');
-  // The round metric is zero-filtered, so a treeless code (desert / ice /
+test('forestQuestion: treeless (0%) places are excluded from selection', async () => {
+  const { forestQuestion } = await import('./superlative.js');
+  // The question metric is zero-filtered, so a treeless code (desert / ice /
   // city-state at 0.0%) never has a value. Give a mixed pool and prove no
   // treeless code ever surfaces as an option.
   const treeless = new Set(['eg', 'qa', 'gl', 'mc', 'va', 'om', 'nr']);
   const pool = ['fi', 'br', 'ru', 'us', 'eg', 'qa', 'gl', 'mc', 'va', 'om'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = forestRound.generate(pool, undefined, seeded(i + 1));
+    const q = forestQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!treeless.has(opt), `seed ${i}: treeless ${opt} must not be an option`);
     }
@@ -806,19 +806,19 @@ test('forestRound: treeless (0%) places are excluded from selection', async () =
 
 // ---- oil instance (oil production in TWh, id 'superlative-oil') --------------
 
-test('oilRound: biggest-only, correct extreme-by-oil answer, producers only', async () => {
-  const { oilRound } = await import('./superlative.js');
+test('oilQuestion: biggest-only, correct extreme-by-oil answer, producers only', async () => {
+  const { oilQuestion } = await import('./superlative.js');
   const oilJson = (await import('../metrics/oil.json', { with: { type: 'json' } })).default;
   const OIL = /** @type {Record<string, number>} */ (oilJson.values);
-  assert.equal(oilRound.id, 'superlative-oil');
+  assert.equal(oilQuestion.id, 'superlative-oil');
   // Oil-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
   // oil.json. A non-producer (e.g. Switzerland) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['us', 'ru', 'sa', 'cn', 'no', 'qa', 'ch'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = oilRound.generate(pool, undefined, seeded(i + 1));
+    const q = oilQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Oil is locked to 'most'; every round asks for the biggest producer.
+    // Oil is locked to 'most'; every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: oil is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('ch'), 'a non-producer is never an option (sparse metric.has filter)');
@@ -829,19 +829,19 @@ test('oilRound: biggest-only, correct extreme-by-oil answer, producers only', as
 
 // ---- rice instance (rice paddy tonnes, id 'superlative-rice') ---------------
 
-test('riceRound: biggest-only, correct extreme-by-rice answer, growers only', async () => {
-  const { riceRound } = await import('./superlative.js');
+test('riceQuestion: biggest-only, correct extreme-by-rice answer, growers only', async () => {
+  const { riceQuestion } = await import('./superlative.js');
   const riceJson = (await import('../metrics/rice.json', { with: { type: 'json' } })).default;
   const RICE = /** @type {Record<string, number>} */ (riceJson.values);
-  assert.equal(riceRound.id, 'superlative-rice');
+  assert.equal(riceQuestion.id, 'superlative-rice');
   // Rice-distinct sovereign GROWERS spanning many orders of magnitude, all in
-  // rice.json. A non-grower (e.g. Canada) mixed in must be dropped by the round's
+  // rice.json. A non-grower (e.g. Canada) mixed in must be dropped by the question's
   // `metric.has` filter, never appear as an option.
   const pool = ['in', 'cn', 'id', 'vn', 'th', 'jp', 'it', 'ca'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = riceRound.generate(pool, undefined, seeded(i + 1));
+    const q = riceQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Rice is locked to 'most'; every round asks for the biggest grower.
+    // Rice is locked to 'most'; every question asks for the biggest grower.
     assert.equal(q.prompt, 'most', `seed ${i}: rice is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('ca'), 'a non-grower is never an option (sparse metric.has filter)');
@@ -852,19 +852,19 @@ test('riceRound: biggest-only, correct extreme-by-rice answer, growers only', as
 
 // ---- coal instance (coal production in TWh, id 'superlative-coal') -----------
 
-test('coalRound: biggest-only, correct extreme-by-coal answer, producers only', async () => {
-  const { coalRound } = await import('./superlative.js');
+test('coalQuestion: biggest-only, correct extreme-by-coal answer, producers only', async () => {
+  const { coalQuestion } = await import('./superlative.js');
   const coalJson = (await import('../metrics/coal.json', { with: { type: 'json' } })).default;
   const COAL = /** @type {Record<string, number>} */ (coalJson.values);
-  assert.equal(coalRound.id, 'superlative-coal');
+  assert.equal(coalQuestion.id, 'superlative-coal');
   // Coal-distinct sovereign PRODUCERS spanning many orders of magnitude, all in
   // coal.json. A non-producer (e.g. France) mixed in must be dropped by the
-  // round's `metric.has` filter, never appear as an option.
+  // question's `metric.has` filter, never appear as an option.
   const pool = ['cn', 'in', 'id', 'au', 'us', 'ru', 'za', 'fr'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = coalRound.generate(pool, undefined, seeded(i + 1));
+    const q = coalQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Coal is locked to 'most'; every round asks for the biggest producer.
+    // Coal is locked to 'most'; every question asks for the biggest producer.
     assert.equal(q.prompt, 'most', `seed ${i}: coal is biggest-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     assert.ok(!q.options.includes('fr'), 'a non-producer is never an option (sparse metric.has filter)');
@@ -875,18 +875,18 @@ test('coalRound: biggest-only, correct extreme-by-coal answer, producers only', 
 
 // ---- sheep-per-capita instance (sheep/person, id 'superlative-sheep') --------
 
-test('sheepPerCapitaRound: most-only, correct biggest-per-person answer, sheep-raising only', async () => {
-  const { sheepPerCapitaRound } = await import('./superlative.js');
+test('sheepPerCapitaQuestion: most-only, correct biggest-per-person answer, sheep-raising only', async () => {
+  const { sheepPerCapitaQuestion } = await import('./superlative.js');
   const sheepJson = (await import('../metrics/sheepPerCapita.json', { with: { type: 'json' } })).default;
   const SHEEP = /** @type {Record<string, number>} */ (sheepJson.values);
-  assert.equal(sheepPerCapitaRound.id, 'superlative-sheep');
+  assert.equal(sheepPerCapitaQuestion.id, 'superlative-sheep');
   // Sheep-raising sovereigns with distinct values spanning the range (Mongolia
-  // 7.0 ... Norway 0.39). All strictly > 0, so none is filtered out of the round.
+  // 7.0 ... Norway 0.39). All strictly > 0, so none is filtered out of the question.
   const pool = ['mn', 'nz', 'au', 'td', 'uy', 'is', 'ie', 'ro', 'gb', 'no'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = sheepPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = sheepPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Locked to 'most': every round asks for the biggest, never 'least'.
+    // Locked to 'most': every question asks for the biggest, never 'least'.
     assert.equal(q.prompt, 'most', `seed ${i}: sheep per capita is most-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => SHEEP[c]);
@@ -894,15 +894,15 @@ test('sheepPerCapitaRound: most-only, correct biggest-per-person answer, sheep-r
   }
 });
 
-test('sheepPerCapitaRound: no-sheep (0) places are excluded from selection', async () => {
-  const { sheepPerCapitaRound } = await import('./superlative.js');
-  // The round metric is zero-filtered, so a place with no sheep (Singapore,
+test('sheepPerCapitaQuestion: no-sheep (0) places are excluded from selection', async () => {
+  const { sheepPerCapitaQuestion } = await import('./superlative.js');
+  // The question metric is zero-filtered, so a place with no sheep (Singapore,
   // Japan's negligible flock rounding to 0, Korea, Panama) never has a value.
   // Give a mixed pool and prove no such code ever surfaces as an option.
   const noSheep = new Set(['sg', 'jp', 'kr', 'pa']);
   const pool = ['mn', 'nz', 'au', 'uy', 'sg', 'jp', 'kr', 'pa'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = sheepPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = sheepPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!noSheep.has(opt), `seed ${i}: no-sheep ${opt} must not be an option`);
     }
@@ -911,18 +911,18 @@ test('sheepPerCapitaRound: no-sheep (0) places are excluded from selection', asy
 
 // ---- cattle-per-capita instance (cattle/person, id 'superlative-cattle') -----
 
-test('cattlePerCapitaRound: most-only, correct biggest-per-person answer, cattle-raising only', async () => {
-  const { cattlePerCapitaRound } = await import('./superlative.js');
+test('cattlePerCapitaQuestion: most-only, correct biggest-per-person answer, cattle-raising only', async () => {
+  const { cattlePerCapitaQuestion } = await import('./superlative.js');
   const cattleJson = (await import('../metrics/cattlePerCapita.json', { with: { type: 'json' } })).default;
   const CATTLE = /** @type {Record<string, number>} */ (cattleJson.values);
-  assert.equal(cattlePerCapitaRound.id, 'superlative-cattle');
+  assert.equal(cattlePerCapitaQuestion.id, 'superlative-cattle');
   // Cattle-raising sovereigns with distinct values spanning the range (Uruguay
-  // 3.53 ... France 0.24). All strictly > 0, so none is filtered out of the round.
+  // 3.53 ... France 0.24). All strictly > 0, so none is filtered out of the question.
   const pool = ['uy', 'td', 'py', 'nz', 'mn', 'ie', 'ar', 'au', 'br', 'fr'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = cattlePerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = cattlePerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Locked to 'most': every round asks for the biggest, never 'least'.
+    // Locked to 'most': every question asks for the biggest, never 'least'.
     assert.equal(q.prompt, 'most', `seed ${i}: cattle per capita is most-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => CATTLE[c]);
@@ -930,15 +930,15 @@ test('cattlePerCapitaRound: most-only, correct biggest-per-person answer, cattle
   }
 });
 
-test('cattlePerCapitaRound: no-cattle (0) places are excluded from selection', async () => {
-  const { cattlePerCapitaRound } = await import('./superlative.js');
-  // The round metric is zero-filtered, so a place with no cattle (Singapore,
+test('cattlePerCapitaQuestion: no-cattle (0) places are excluded from selection', async () => {
+  const { cattlePerCapitaQuestion } = await import('./superlative.js');
+  // The question metric is zero-filtered, so a place with no cattle (Singapore,
   // Monaco, Hong Kong, Vatican) never has a value. Give a mixed pool and prove
   // no such code ever surfaces as an option.
   const noCattle = new Set(['sg', 'mc', 'hk', 'va']);
   const pool = ['uy', 'nz', 'au', 'br', 'sg', 'mc', 'hk', 'va'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = cattlePerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = cattlePerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!noCattle.has(opt), `seed ${i}: no-cattle ${opt} must not be an option`);
     }
@@ -947,18 +947,18 @@ test('cattlePerCapitaRound: no-cattle (0) places are excluded from selection', a
 
 // ---- beer-per-capita instance (litres of beer/person, id 'superlative-beer') --
 
-test('beerPerCapitaRound: most-only, correct biggest-per-person answer, beer-drinking only', async () => {
-  const { beerPerCapitaRound } = await import('./superlative.js');
+test('beerPerCapitaQuestion: most-only, correct biggest-per-person answer, beer-drinking only', async () => {
+  const { beerPerCapitaQuestion } = await import('./superlative.js');
   const beerJson = (await import('../metrics/beerPerCapita.json', { with: { type: 'json' } })).default;
   const BEER = /** @type {Record<string, number>} */ (beerJson.values);
-  assert.equal(beerPerCapitaRound.id, 'superlative-beer');
+  assert.equal(beerPerCapitaQuestion.id, 'superlative-beer');
   // Beer-drinking sovereigns spanning the range (Czechia ~131 ... Japan ~26).
-  // All strictly > 0, so none is filtered out of the round.
+  // All strictly > 0, so none is filtered out of the question.
   const pool = ['cz', 'at', 'de', 'pl', 'br', 'us', 'gb', 'fr', 'it', 'jp'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = beerPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = beerPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
-    // Locked to 'most': every round asks for the biggest, never 'least'.
+    // Locked to 'most': every question asks for the biggest, never 'least'.
     assert.equal(q.prompt, 'most', `seed ${i}: beer per capita is most-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
     const vals = q.options.map((c) => BEER[c]);
@@ -966,15 +966,15 @@ test('beerPerCapitaRound: most-only, correct biggest-per-person answer, beer-dri
   }
 });
 
-test('beerPerCapitaRound: dry (0) and unknown-gap places are excluded from selection', async () => {
-  const { beerPerCapitaRound } = await import('./superlative.js');
+test('beerPerCapitaQuestion: dry (0) and unknown-gap places are excluded from selection', async () => {
+  const { beerPerCapitaQuestion } = await import('./superlative.js');
   // Zero-filtered, so the dry states (Saudi Arabia, Iran, Kuwait, Libya) never
   // have a value; and the absence:'unknown' gap (Wales, Greenland) has none
   // either. Neither should ever surface as an option.
   const excluded = new Set(['sa', 'ir', 'kw', 'ly', 'gb-wls', 'gl']);
   const pool = ['cz', 'de', 'pl', 'br', 'sa', 'ir', 'kw', 'ly', 'gb-wls', 'gl'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = beerPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = beerPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
     }
@@ -983,15 +983,15 @@ test('beerPerCapitaRound: dry (0) and unknown-gap places are excluded from selec
 
 // ---- alcohol-per-capita instance (litres of pure alcohol, 'superlative-alcohol')
 
-test('alcoholPerCapitaRound: most-only, correct biggest-per-person answer', async () => {
-  const { alcoholPerCapitaRound } = await import('./superlative.js');
+test('alcoholPerCapitaQuestion: most-only, correct biggest-per-person answer', async () => {
+  const { alcoholPerCapitaQuestion } = await import('./superlative.js');
   const alcJson = (await import('../metrics/alcoholPerCapita.json', { with: { type: 'json' } })).default;
   const ALC = /** @type {Record<string, number>} */ (alcJson.values);
-  assert.equal(alcoholPerCapitaRound.id, 'superlative-alcohol');
+  assert.equal(alcoholPerCapitaQuestion.id, 'superlative-alcohol');
   // Drinking sovereigns spanning the range (Lithuania high ... Italy lower).
   const pool = ['lt', 'ie', 'de', 'fr', 'pl', 'us', 'gb', 'it', 'br', 'jp'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = alcoholPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = alcoholPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.equal(q.prompt, 'most'); // locked to 'most'
     const answerVal = ALC[q.answer];
@@ -999,13 +999,13 @@ test('alcoholPerCapitaRound: most-only, correct biggest-per-person answer', asyn
   }
 });
 
-test('alcoholPerCapitaRound: dry (0) and unknown-gap places are excluded from selection', async () => {
-  const { alcoholPerCapitaRound } = await import('./superlative.js');
+test('alcoholPerCapitaQuestion: dry (0) and unknown-gap places are excluded from selection', async () => {
+  const { alcoholPerCapitaQuestion } = await import('./superlative.js');
   // Fully-dry (recorded 0) states + the absence:'unknown' gap (Wales, Greenland).
   const excluded = new Set(['ir', 'kw', 'ly', 'af', 'gb-wls', 'gl']);
   const pool = ['lt', 'de', 'pl', 'br', 'ir', 'kw', 'ly', 'af', 'gb-wls', 'gl'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = alcoholPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = alcoholPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
     }
@@ -1014,14 +1014,14 @@ test('alcoholPerCapitaRound: dry (0) and unknown-gap places are excluded from se
 
 // ---- meat-per-capita instance (kg of meat, 'superlative-meat') --------------
 
-test('meatPerCapitaRound: most-only, correct biggest-per-person answer', async () => {
-  const { meatPerCapitaRound } = await import('./superlative.js');
+test('meatPerCapitaQuestion: most-only, correct biggest-per-person answer', async () => {
+  const { meatPerCapitaQuestion } = await import('./superlative.js');
   const meatJson = (await import('../metrics/meatPerCapita.json', { with: { type: 'json' } })).default;
   const MEAT = /** @type {Record<string, number>} */ (meatJson.values);
-  assert.equal(meatPerCapitaRound.id, 'superlative-meat');
+  assert.equal(meatPerCapitaQuestion.id, 'superlative-meat');
   const pool = ['us', 'au', 'ar', 'de', 'fr', 'cn', 'jp', 'in', 'et', 'ng'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = meatPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = meatPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.equal(q.prompt, 'most');
     const answerVal = MEAT[q.answer];
@@ -1031,15 +1031,15 @@ test('meatPerCapitaRound: most-only, correct biggest-per-person answer', async (
 
 // ---- borders instance (land borders, 'superlative-borders') -----------------
 
-test('bordersRound: most-only, correct biggest-border answer, islands excluded', async () => {
-  const { bordersRound } = await import('./superlative.js');
+test('bordersQuestion: most-only, correct biggest-border answer, islands excluded', async () => {
+  const { bordersQuestion } = await import('./superlative.js');
   const borJson = (await import('../metrics/borders.json', { with: { type: 'json' } })).default;
   const BOR = /** @type {Record<string, number>} */ (borJson.values);
-  assert.equal(bordersRound.id, 'superlative-borders');
+  assert.equal(bordersQuestion.id, 'superlative-borders');
   // Land-bordered countries spanning the range (China 14 ... Portugal 1).
   const pool = ['cn', 'ru', 'br', 'de', 'fr', 'pl', 'es', 'us', 'ie', 'pt'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = bordersRound.generate(pool, undefined, seeded(i + 1));
+    const q = bordersQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.equal(q.prompt, 'most');
     const answerVal = BOR[q.answer];
@@ -1047,12 +1047,12 @@ test('bordersRound: most-only, correct biggest-border answer, islands excluded',
   }
 });
 
-test('bordersRound: 0-border islands are excluded from selection', async () => {
-  const { bordersRound } = await import('./superlative.js');
+test('bordersQuestion: 0-border islands are excluded from selection', async () => {
+  const { bordersQuestion } = await import('./superlative.js');
   const excluded = new Set(['is', 'jp', 'au', 'nz']); // all border nobody (value 0)
   const pool = ['cn', 'ru', 'de', 'fr', 'is', 'jp', 'au', 'nz'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = bordersRound.generate(pool, undefined, seeded(i + 1));
+    const q = bordersQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!excluded.has(opt), `seed ${i}: island ${opt} must not be an option`);
     }
@@ -1061,15 +1061,15 @@ test('bordersRound: 0-border islands are excluded from selection', async () => {
 
 // ---- tourism-per-capita instance (arrivals per resident, 'superlative-tourism')
 
-test('tourismPerCapitaRound: most-only, correct biggest-per-resident answer', async () => {
-  const { tourismPerCapitaRound } = await import('./superlative.js');
+test('tourismPerCapitaQuestion: most-only, correct biggest-per-resident answer', async () => {
+  const { tourismPerCapitaQuestion } = await import('./superlative.js');
   const tourJson = (await import('../metrics/tourismPerCapita.json', { with: { type: 'json' } })).default;
   const TOUR = /** @type {Record<string, number>} */ (tourJson.values);
-  assert.equal(tourismPerCapitaRound.id, 'superlative-tourism');
+  assert.equal(tourismPerCapitaQuestion.id, 'superlative-tourism');
   // Sovereigns spanning the range (Croatia high ... India near zero). All > 0.
   const pool = ['hr', 'me', 'is', 'gr', 'es', 'fr', 'us', 'cn', 'in', 'br'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = tourismPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = tourismPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.equal(q.prompt, 'most', `seed ${i}: tourism per capita is most-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
@@ -1078,14 +1078,14 @@ test('tourismPerCapitaRound: most-only, correct biggest-per-resident answer', as
   }
 });
 
-test('tourismPerCapitaRound: zero and unknown-gap places are excluded from selection', async () => {
-  const { tourismPerCapitaRound } = await import('./superlative.js');
-  // Zero-filtered, so the ~0-arrival places (Bangladesh, Chad round to 0) never
+test('tourismPerCapitaQuestion: zero and unknown-gap places are excluded from selection', async () => {
+  const { tourismPerCapitaQuestion } = await import('./superlative.js');
+  // Zero-filtered, so the ~0-arrival places (Bangladesh, Chad question to 0) never
   // have a value; and the absence:'unknown' gap (North Korea, Venezuela) has none.
   const excluded = new Set(['bd', 'td', 'kp', 've']);
   const pool = ['hr', 'is', 'gr', 'es', 'bd', 'td', 'kp', 've'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = tourismPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = tourismPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
     }
@@ -1094,15 +1094,15 @@ test('tourismPerCapitaRound: zero and unknown-gap places are excluded from selec
 
 // ---- electricity-per-capita instance (kWh per person, 'superlative-electricity')
 
-test('electricityPerCapitaRound: most-only, correct biggest-per-person answer', async () => {
-  const { electricityPerCapitaRound } = await import('./superlative.js');
+test('electricityPerCapitaQuestion: most-only, correct biggest-per-person answer', async () => {
+  const { electricityPerCapitaQuestion } = await import('./superlative.js');
   const elecJson = (await import('../metrics/electricityPerCapita.json', { with: { type: 'json' } })).default;
   const ELEC = /** @type {Record<string, number>} */ (elecJson.values);
-  assert.equal(electricityPerCapitaRound.id, 'superlative-electricity');
+  assert.equal(electricityPerCapitaQuestion.id, 'superlative-electricity');
   // Sovereigns spanning the range (Iceland ~49k ... Chad ~14). All > 0.
   const pool = ['is', 'no', 'qa', 'us', 'cn', 'fr', 'de', 'in', 'et', 'td'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = electricityPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = electricityPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     assert.equal(q.options.length, 4);
     assert.equal(q.prompt, 'most', `seed ${i}: electricity per capita is most-only, never 'least'`);
     assert.ok(q.options.includes(q.answer), 'answer among options');
@@ -1111,14 +1111,14 @@ test('electricityPerCapitaRound: most-only, correct biggest-per-person answer', 
   }
 });
 
-test('electricityPerCapitaRound: unknown-gap places are excluded from selection', async () => {
-  const { electricityPerCapitaRound } = await import('./superlative.js');
+test('electricityPerCapitaQuestion: unknown-gap places are excluded from selection', async () => {
+  const { electricityPerCapitaQuestion } = await import('./superlative.js');
   // The absence:'unknown' gap (the micro-states the World Bank does not meter:
   // Andorra, Monaco, Liechtenstein) has no value and must never surface.
   const excluded = new Set(['ad', 'mc', 'li']);
   const pool = ['is', 'no', 'us', 'de', 'ad', 'mc', 'li'].map((code) => ({ code }));
   for (let i = 0; i < 100; i++) {
-    const q = electricityPerCapitaRound.generate(pool, undefined, seeded(i + 1));
+    const q = electricityPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
     for (const opt of q.options) {
       assert.ok(!excluded.has(opt), `seed ${i}: excluded ${opt} must not be an option`);
     }

@@ -15,7 +15,7 @@ import {
   applyPick,
   serializeRoom,
   deserializeRoom,
-  DEFAULT_ROUNDS,
+  DEFAULT_QUESTIONS,
   MAX_SEATS,
 } from './partyRoom.js';
 import { CORRECT_POINTS } from './partyScore.js';
@@ -46,12 +46,12 @@ function startedTwoPlayer(question = q('jp')) {
 
 // ---- createRoom ----
 
-test('createRoom: empty lobby, no host, default rounds', () => {
+test('createRoom: empty lobby, no host, default questions', () => {
   const room = createRoom();
   assert.equal(room.phase, 'lobby');
   assert.equal(room.hostId, null);
   assert.equal(room.seats.size, 0);
-  assert.equal(room.totalRounds, DEFAULT_ROUNDS);
+  assert.equal(room.totalQuestions, DEFAULT_QUESTIONS);
 });
 
 // ---- applyHello ----
@@ -130,23 +130,23 @@ test('applyStart: non-host cannot start; empty lobby cannot start', () => {
   assert.equal(applyStart(createRoom(), 'ghost', q('jp')).broadcasts.length, 0);
 });
 
-test('applyStart: the host plan + its round count are stored on the room', () => {
+test('applyStart: the host plan + its question count are stored on the room', () => {
   let room = createRoom(11);
   room = applyHello(room, 'alice', 'Alice').room;
-  const plan = [{ poolId: 'sovereign', roundId: 'mapPick', rounds: 2 }];
+  const plan = [{ poolId: 'sovereign', questionId: 'mapPick', questions: 2 }];
   const r = applyStart(room, 'alice', q('jp'), plan, 2);
   assert.deepEqual(r.room.plan, plan, 'chosen plan is stored');
-  assert.equal(r.room.totalRounds, 2, 'totalRounds follows the plan, not the opening default');
-  assert.equal(msg(r, 'question').totalRounds, 2, 'the broadcast carries the new total');
+  assert.equal(r.room.totalQuestions, 2, 'totalQuestions follows the plan, not the opening default');
+  assert.equal(msg(r, 'question').totalQuestions, 2, 'the broadcast carries the new total');
 });
 
 test('applyStart: omitting the plan keeps whatever the room opened with', () => {
-  const opening = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 4 }];
+  const opening = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 4 }];
   let room = createRoom(4, opening);
   room = applyHello(room, 'alice', 'Alice').room;
   const r = applyStart(room, 'alice', q('jp')); // 3-arg form, no plan
   assert.deepEqual(r.room.plan, opening);
-  assert.equal(r.room.totalRounds, 4);
+  assert.equal(r.room.totalQuestions, 4);
 });
 
 test('applyStart: tricky defaults off and rides every question broadcast', () => {
@@ -188,7 +188,7 @@ test('applyStart: the host reveal config is stored on the room', () => {
   assert.equal(room.reveal, null, 'a fresh room has no reveal config');
   const reveal = { flag: 0.8, map: 0.4, metric: 0.2, name: 0.5 };
   const r = applyStart(room, 'alice', q('jp'), undefined, undefined, true, reveal);
-  assert.deepEqual(r.room.reveal, reveal, 'chosen reveal config is stored for later rounds');
+  assert.deepEqual(r.room.reveal, reveal, 'chosen reveal config is stored for later questions');
   const kept = applyStart(createRoom(3, null), 'x', q('jp')); // omitted keeps null
   assert.equal(kept.room.reveal, null);
 });
@@ -196,9 +196,9 @@ test('applyStart: the host reveal config is stored on the room', () => {
 test('question broadcast: a stamped clearFrac reaches clients so the veil clears on time', () => {
   let room = createRoom(3);
   room = applyHello(room, 'alice', 'Alice').room;
-  // The server stamps clearFrac on the question (per the round's category); the
+  // The server stamps clearFrac on the question (per the question's category); the
   // room just passes it through to the public question.
-  const r = applyStart(room, 'alice', { prompt: 'jp', options: ['jp', 'kr'], answer: 'jp', roundId: 'mapPick', clearFrac: 0.4 }, undefined, undefined, true);
+  const r = applyStart(room, 'alice', { prompt: 'jp', options: ['jp', 'kr'], answer: 'jp', questionId: 'mapPick', clearFrac: 0.4 }, undefined, undefined, true);
   assert.equal(msg(r, 'question').clearFrac, 0.4, 'the veil timing rides the question');
   assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
 });
@@ -206,9 +206,9 @@ test('question broadcast: a stamped clearFrac reaches clients so the veil clears
 test('question broadcast: a stamped nameFrac reaches clients so world-facts names appear on time', () => {
   let room = createRoom(3);
   room = applyHello(room, 'alice', 'Alice').room;
-  // A world-facts round carries nameFrac (stamped server-side); the room passes it
+  // A world-facts question carries nameFrac (stamped server-side); the room passes it
   // through so every client fades the country names on at the same instant.
-  const r = applyStart(room, 'alice', { prompt: 'most', options: ['br', 'vn'], answer: 'br', roundId: 'superlative-coffee', nameFrac: 0.5 }, undefined, undefined, false);
+  const r = applyStart(room, 'alice', { prompt: 'most', options: ['br', 'vn'], answer: 'br', questionId: 'superlative-coffee', nameFrac: 0.5 }, undefined, undefined, false);
   assert.equal(msg(r, 'question').nameFrac, 0.5, 'the name timing rides the question');
   assert.equal(msg(r, 'question').answer, undefined, 'the answer is still withheld');
 });
@@ -234,7 +234,7 @@ test('applyBuzz: a second buzz from the same player is ignored', () => {
   assert.equal(r.room.buzzes.length, 1);
 });
 
-test('applyBuzz: when all present seats have buzzed, the round reveals and scores', () => {
+test('applyBuzz: when all present seats have buzzed, the question reveals and scores', () => {
   let room = startedTwoPlayer();
   room = applyBuzz(room, 'alice', 'jp', true).room; // first correct
   const r = applyBuzz(room, 'bob', 'kr', false); // wrong
@@ -282,12 +282,12 @@ test('applyNext: host advances to the next question', () => {
   room = applyBuzz(room, 'bob', 'jp', true).room; // reveal
   const r = applyNext(room, 'alice', q('fr', ['fr', 'de', 'it', 'es']));
   assert.equal(r.room.phase, 'question');
-  assert.equal(r.room.roundIndex, 1);
+  assert.equal(r.room.questionIndex, 1);
   assert.equal(msg(r, 'question').prompt, 'fr');
 });
 
-test('applyNext: after the last round it goes to the final board', () => {
-  let room = createRoom(1); // single-round game
+test('applyNext: after the last question it goes to the final board', () => {
+  let room = createRoom(1); // single-question game
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyHello(room, 'bob', 'Bob').room;
   room = applyStart(room, 'alice', q('jp')).room;
@@ -324,22 +324,22 @@ test('applyPlayAgain: host resets scores and returns to the lobby', () => {
 // ---- applyReturnToLobby ----
 
 test('applyReturnToLobby: host aborts a running question back to the lobby', () => {
-  // Play round 1 to completion so there's a banked score to wipe (scores land
-  // at reveal, not on the buzz), then abort during round 2's live question.
+  // Play question 1 to completion so there's a banked score to wipe (scores land
+  // at reveal, not on the buzz), then abort during question 2's live question.
   let room = startedTwoPlayer(q('jp'));
   room = applyBuzz(room, 'alice', 'jp', true).room;
   room = applyBuzz(room, 'bob', 'jp', true).room; // reveal -> scores bank
-  room = applyNext(room, 'alice', q('fr', ['fr', 'de', 'it', 'es'])).room; // round 2 question
+  room = applyNext(room, 'alice', q('fr', ['fr', 'de', 'it', 'es'])).room; // question 2 question
   assert.equal(room.phase, 'question');
   assert.ok((room.seats.get('alice')?.score ?? 0) > 0, 'precondition: a banked score');
   const r = applyReturnToLobby(room, 'alice');
   assert.equal(r.room.phase, 'lobby');
-  assert.equal(r.room.roundIndex, 0, 'round counter rewinds');
+  assert.equal(r.room.questionIndex, 0, 'question counter rewinds');
   assert.equal(r.room.question, null);
   assert.equal(r.room.seats.get('alice')?.score, 0, 'scores wiped');
   assert.equal(r.room.seats.size, 2, 'seats are kept');
   // Same dedicated 'lobby' message as play-again, so every client leaves the
-  // round view for the settings screen.
+  // question view for the settings screen.
   assert.equal(msg(r, 'lobby').hostId, 'alice');
   assert.equal(msg(r, 'lobby').roster.length, 2);
 });
@@ -411,13 +411,13 @@ test('serialize/deserialize: round-trips state and resets presence', () => {
 });
 
 test('serialize/deserialize: the chosen plan survives an eviction (so mid-game generation stays correct)', () => {
-  const plan = [{ poolId: 'nonSovereign', roundId: 'flagPick', rounds: 2 }, { poolId: 'sovereign', roundId: 'mapPick', rounds: 3 }];
+  const plan = [{ poolId: 'nonSovereign', questionId: 'flagPick', questions: 2 }, { poolId: 'sovereign', questionId: 'mapPick', questions: 3 }];
   let room = createRoom(11);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyStart(room, 'alice', q('jp'), plan, 5).room;
   const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
   assert.deepEqual(restored.plan, plan);
-  assert.equal(restored.totalRounds, 5);
+  assert.equal(restored.totalQuestions, 5);
 });
 
 test('serialize/deserialize: tricky survives an eviction and defaults off for legacy snapshots', () => {
@@ -430,7 +430,7 @@ test('serialize/deserialize: tricky survives an eviction and defaults off for le
   assert.equal(legacy.tricky, false, 'a pre-tricky snapshot defaults to off');
 });
 
-test('serialize/deserialize: the reveal config survives an eviction (so later rounds stamp the right timing)', () => {
+test('serialize/deserialize: the reveal config survives an eviction (so later questions stamp the right timing)', () => {
   const reveal = { flag: 0.6, map: 0.4, metric: 0.2, name: null };
   let room = createRoom(3);
   room = applyHello(room, 'alice', 'Alice').room;
@@ -442,26 +442,26 @@ test('serialize/deserialize: the reveal config survives an eviction (so later ro
 
 // ---- draft mode (Iteration 9) ----
 
-/** A draft room fast-forwarded to a reveal at a block boundary (roundIndex 4 of a
- *  15-round / 3-block game). Reducers are pure, so setting phase/roundIndex on the
+/** A draft room fast-forwarded to a reveal at a round boundary (questionIndex 4 of a
+ *  15-question / 3-round game). Reducers are pure, so setting phase/questionIndex on the
  *  started room is a legitimate way to exercise the pick reducers in isolation. */
-function draftRevealAtBoundary(roundIndex = 4, targetBlocks = 3) {
+function draftRevealAtBoundary(questionIndex = 4, targetRounds = 3) {
   let room = createRoom(15);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyHello(room, 'bob', 'Bob').room;
-  const openingPlan = [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 5 }];
-  room = applyStart(room, 'alice', q('jp'), openingPlan, 15, false, null, { draft: true, targetBlocks }).room;
-  return { ...room, phase: /** @type {any} */ ('reveal'), roundIndex };
+  const openingPlan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 5 }];
+  room = applyStart(room, 'alice', q('jp'), openingPlan, 15, false, null, { draft: true, targetRounds }).room;
+  return { ...room, phase: /** @type {any} */ ('reveal'), questionIndex };
 }
 
-test('applyStart: draft mode records draft + targetBlocks and clears pick state', () => {
+test('applyStart: draft mode records draft + targetRounds and clears pick state', () => {
   let room = createRoom(15);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyHello(room, 'bob', 'Bob').room;
-  const r = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 5 }], 15, false, null, { draft: true, targetBlocks: 3 });
+  const r = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', questionId: 'flagPick', questions: 5 }], 15, false, null, { draft: true, targetRounds: 3 });
   assert.equal(r.room.draft, true);
-  assert.equal(r.room.targetBlocks, 3);
-  assert.equal(r.room.totalRounds, 15);
+  assert.equal(r.room.targetRounds, 3);
+  assert.equal(r.room.totalQuestions, 15);
   assert.deepEqual(r.room.pickedBy, []);
   assert.equal(r.room.picker, null);
 });
@@ -469,14 +469,14 @@ test('applyStart: draft mode records draft + targetBlocks and clears pick state'
 test('applyStart: a non-draft game leaves draft off', () => {
   const room = startedTwoPlayer();
   assert.equal(room.draft, false);
-  assert.equal(room.targetBlocks, 0);
+  assert.equal(room.targetRounds, 0);
 });
 
-test('pendingPickAfterReveal: true at a draft block boundary, not on the last round or in setlist', () => {
-  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(4)), true);   // end of block 1
-  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(9)), true);   // end of block 2
-  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(14)), false); // final round -> final board
-  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(2)), false);  // mid-block
+test('pendingPickAfterReveal: true at a draft round boundary, not on the last question or in setlist', () => {
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(4)), true);   // end of round 1
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(9)), true);   // end of round 2
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(14)), false); // final question -> final board
+  assert.equal(pendingPickAfterReveal(draftRevealAtBoundary(2)), false);  // mid-round
   // setlist (non-draft) never opens a pick
   const setlist = { ...draftRevealAtBoundary(4), draft: false };
   assert.equal(pendingPickAfterReveal(setlist), false);
@@ -508,14 +508,14 @@ test('applyEnterPicking: ignored for a non-host or with no picker', () => {
   assert.equal(applyEnterPicking(room, 'alice', null, ['map-outlines']).broadcasts.length, 0);
 });
 
-test('applyPick: the picker chooses -> block appended, advances to its first question', () => {
+test('applyPick: the picker chooses -> round appended, advances to its first question', () => {
   let room = draftRevealAtBoundary(4);
   room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
-  const segment = { poolId: 'sovereign', roundId: 'mapPick', rounds: 5 };
+  const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
   const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
   assert.equal(r.room.phase, 'question');
-  assert.equal(r.room.roundIndex, 5);               // first round of block 2
-  assert.deepEqual(r.room.plan?.[r.room.plan.length - 1], segment); // block appended
+  assert.equal(r.room.questionIndex, 5);               // first question of round 2
+  assert.deepEqual(r.room.plan?.[r.room.plan.length - 1], segment); // round appended
   assert.deepEqual(r.room.pickedBy, ['bob']);       // no-repeat set updated
   assert.equal(r.room.picker, null);
   assert.equal(r.room.hand, null);
@@ -527,7 +527,7 @@ test('applyPick: the picker chooses -> block appended, advances to its first que
 test('applyPick: only the designated picker can pick, and only in the picking phase', () => {
   let room = draftRevealAtBoundary(4);
   room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
-  const seg = { poolId: 'sovereign', roundId: 'mapPick', rounds: 5 };
+  const seg = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
   assert.equal(applyPick(room, 'alice', 'map-outlines', seg, q('pa')).broadcasts.length, 0, 'wrong picker ignored');
   const notPicking = draftRevealAtBoundary(4); // still in reveal
   assert.equal(applyPick(notPicking, 'bob', 'map-outlines', seg, q('pa')).broadcasts.length, 0, 'wrong phase ignored');
@@ -538,35 +538,35 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
   room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
   const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
   assert.equal(restored.draft, true);
-  assert.equal(restored.targetBlocks, 3);
+  assert.equal(restored.targetRounds, 3);
   assert.equal(restored.picker, 'bob');
   assert.deepEqual(restored.hand, ['map-outlines', 'superlative-coffee']);
   const legacy = deserializeRoom({ phase: 'lobby' });
   assert.equal(legacy.draft, false);
-  assert.equal(legacy.targetBlocks, 0);
+  assert.equal(legacy.targetRounds, 0);
   assert.deepEqual(legacy.pickedBy, []);
   assert.equal(legacy.picker, null);
 });
 
-// ---- final-block double points (final-block polish) ----
+// ---- final-round double points (final-round polish) ----
 
-test('final block: the reveal doubles points and flags doubled; earlier blocks do not', () => {
-  // A 10-round (2-block) game. Round 0 is block 1 (single), round 5 is the final block.
+test('final round: the reveal doubles points and flags doubled; earlier rounds do not', () => {
+  // A 10-question (2-round) game. Question 0 is round 1 (single), question 5 is the final round.
   let room = createRoom(10);
   room = applyHello(room, 'alice', 'Alice').room;
-  room = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', roundId: 'flagPick', rounds: 10 }], 10).room;
+  room = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', questionId: 'flagPick', questions: 10 }], 10).room;
 
-  // Round 0 (block 1): a correct solo answer scores the base, not doubled.
+  // Question 0 (round 1): a correct solo answer scores the base, not doubled.
   let r = applyBuzz(room, 'alice', 'jp', true);
   let rev = msg(r, 'reveal');
   assert.equal(rev.doubled, false);
   assert.equal(rev.points.alice, CORRECT_POINTS);
 
-  // Fast-forward to a final-block round (index 5) and answer correctly.
-  const atFinal = { ...r.room, phase: /** @type {any} */ ('question'), roundIndex: 5, question: q('kr'), buzzes: [] };
+  // Fast-forward to a final-round question (index 5) and answer correctly.
+  const atFinal = { ...r.room, phase: /** @type {any} */ ('question'), questionIndex: 5, question: q('kr'), buzzes: [] };
   r = applyBuzz(atFinal, 'alice', 'kr', true);
   rev = msg(r, 'reveal');
-  assert.equal(rev.doubled, true, 'the final block is flagged doubled');
+  assert.equal(rev.doubled, true, 'the final round is flagged doubled');
   assert.equal(rev.points.alice, CORRECT_POINTS * 2, 'points are doubled');
   // and the seat's running total reflects the doubled award
   assert.equal(r.room.seats.get('alice')?.score, CORRECT_POINTS + CORRECT_POINTS * 2);

@@ -11,7 +11,7 @@ import {
   NAME_REVEAL_OPTIONS,
   DEFAULT_REVEAL,
   revealCategoryFor,
-  isMetricRound,
+  isMetricQuestion,
   clampReveal,
   clampNameReveal,
   validateReveal,
@@ -82,22 +82,22 @@ test('DEFAULT_REVEAL: flags obscured longest, metrics shortest, all an allowed o
 test('revealCategoryFor: maps, metrics, and everything-else-is-flags', () => {
   assert.equal(revealCategoryFor('mapPick'), 'map');
   assert.equal(revealCategoryFor('superlative'), 'metric');
-  assert.equal(revealCategoryFor('flagPick'), 'flag', 'flag-pick is a flag round');
-  assert.equal(revealCategoryFor(undefined), 'flag', 'an unknown/absent round defaults to flag');
+  assert.equal(revealCategoryFor('flagPick'), 'flag', 'flag-pick is a flag question');
+  assert.equal(revealCategoryFor(undefined), 'flag', 'an unknown/absent question defaults to flag');
 });
 
-test('isMetricRound: every superlative id is metric, catching the ones revealCategoryFor misses', () => {
-  assert.equal(isMetricRound('superlative'), true, 'population');
-  assert.equal(isMetricRound('superlative-area'), true, 'area');
-  assert.equal(isMetricRound('superlative-coffee'), true, 'a crop');
-  assert.equal(isMetricRound('superlative-gold'), true, 'the newest metric');
-  assert.equal(isMetricRound('flagPick'), false, 'flags are not metric');
-  assert.equal(isMetricRound('mapPick'), false, 'maps are not metric');
-  assert.equal(isMetricRound(undefined), false, 'an absent round is not metric');
+test('isMetricQuestion: every superlative id is metric, catching the ones revealCategoryFor misses', () => {
+  assert.equal(isMetricQuestion('superlative'), true, 'population');
+  assert.equal(isMetricQuestion('superlative-area'), true, 'area');
+  assert.equal(isMetricQuestion('superlative-coffee'), true, 'a crop');
+  assert.equal(isMetricQuestion('superlative-gold'), true, 'the newest metric');
+  assert.equal(isMetricQuestion('flagPick'), false, 'flags are not metric');
+  assert.equal(isMetricQuestion('mapPick'), false, 'maps are not metric');
+  assert.equal(isMetricQuestion(undefined), false, 'an absent question is not metric');
   // The gap this closes: revealCategoryFor only calls the literal 'superlative'
-  // id metric, so the other superlative rounds would slip past a category check.
+  // id metric, so the other superlative questions would slip past a category check.
   assert.notEqual(revealCategoryFor('superlative-area'), 'metric');
-  assert.equal(isMetricRound('superlative-area'), true);
+  assert.equal(isMetricQuestion('superlative-area'), true);
 });
 
 test('clampReveal: snaps to the nearest option, falls back on non-numbers', () => {

@@ -1,5 +1,5 @@
 /**
- * What each world metric's superlative round asks, and how it asks it.
+ * What each world metric's superlative question asks, and how it asks it.
  *
  * Three facts per metric that are *not* derivable from the metric data:
  *
@@ -24,8 +24,8 @@
  * when one copy forgets that coastline has landlocked zeros, you just start
  * dealing unanswerable questions. One table, three consumers:
  *
- *   - `superlative.js` (server) — builds its 32 rounds from this + its imports.
- *   - `flagParty/page.js` (browser) — the in-round prompt's criterion label.
+ *   - `superlative.js` (server) — builds its 32 questions from this + its imports.
+ *   - `flagParty/page.js` (browser) — the in-question prompt's criterion label.
  *   - flagQuiz's Facts deck (browser) — both.
  *
  * Like `flags/metrics/index.js`, this file **names** metrics and never imports
@@ -34,16 +34,16 @@
  * users. `superlativeCore.test.js` walks the import graph and fails if any JSON
  * import appears.
  *
- * `key` is the `flags/metrics/index.js` metric key; `roundId` is the
- * `flags/partyPlan.js` PARTY_MODES roundId. Both are pinned against their
+ * `key` is the `flags/metrics/index.js` metric key; `questionId` is the
+ * `flags/partyPlan.js` PARTY_MODES questionId. Both are pinned against their
  * registries by `superlativeCatalog.test.js` — a metric added to one and
- * forgotten in the other fails CI rather than shipping a round that can't
+ * forgotten in the other fails CI rather than shipping a question that can't
  * resolve its own data.
  *
  * @typedef {{ key: string, fallback: string }} Hint
  * @typedef {Object} SuperlativeMetric
  * @property {string} key metric key, as in `flags/metrics/index.js`
- * @property {string} roundId stable round id, as in `flags/partyPlan.js`
+ * @property {string} questionId stable question id, as in `flags/partyPlan.js`
  * @property {'most' | null} direction locked to one extreme, or null for both
  * @property {boolean} zeroFiltered drop real-0 places from selection
  * @property {Hint} hintMost criterion label for a 'most' question
@@ -51,7 +51,7 @@
  */
 
 /**
- * The 32 metric rounds, in `flags/metrics/index.js` order.
+ * The 32 metric questions, in `flags/metrics/index.js` order.
  *
  * The i18n keys are `party.*` because Flag Party shipped them first and they
  * are the same strings wherever a superlative is asked. Renaming 62 live keys
@@ -64,9 +64,9 @@
 export const SUPERLATIVE_METRICS = [
   {
     key: 'population',
-    // The original round, and the only id without a metric suffix: it predates
+    // The original question, and the only id without a metric suffix: it predates
     // the others. Renaming it would break every open tab mid-game.
-    roundId: 'superlative',
+    questionId: 'superlative',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMost', fallback: 'Most populous' },
@@ -74,7 +74,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'area',
-    roundId: 'superlative-area',
+    questionId: 'superlative-area',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostArea', fallback: 'Largest area' },
@@ -82,7 +82,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'density',
-    roundId: 'superlative-density',
+    questionId: 'superlative-density',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostDensity', fallback: 'Highest density' },
@@ -90,7 +90,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'gdp',
-    roundId: 'superlative-gdp',
+    questionId: 'superlative-gdp',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostGdp', fallback: 'Largest GDP' },
@@ -98,7 +98,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'gdpPerCapita',
-    roundId: 'superlative-gdppc',
+    questionId: 'superlative-gdppc',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostGdppc', fallback: 'Largest GDP (per capita)' },
@@ -110,7 +110,7 @@ export const SUPERLATIVE_METRICS = [
   // has an opinion about; "smallest grower" is a data-entry trivia question.
   {
     key: 'coffee',
-    roundId: 'superlative-coffee',
+    questionId: 'superlative-coffee',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostCoffee', fallback: 'Largest coffee production' },
@@ -118,7 +118,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'wine',
-    roundId: 'superlative-wine',
+    questionId: 'superlative-wine',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostWine', fallback: 'Largest wine production' },
@@ -126,7 +126,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'cocoa',
-    roundId: 'superlative-cocoa',
+    questionId: 'superlative-cocoa',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostCocoa', fallback: 'Largest cocoa production' },
@@ -134,7 +134,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'banana',
-    roundId: 'superlative-banana',
+    questionId: 'superlative-banana',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostBanana', fallback: 'Largest banana production' },
@@ -142,7 +142,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'apple',
-    roundId: 'superlative-apple',
+    questionId: 'superlative-apple',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostApple', fallback: 'Largest apple production' },
@@ -152,7 +152,7 @@ export const SUPERLATIVE_METRICS = [
   // lowest highpoint (the Maldives' coral atolls) are both good questions.
   {
     key: 'elevation',
-    roundId: 'superlative-elevation',
+    questionId: 'superlative-elevation',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostElevation', fallback: 'Highest point' },
@@ -163,7 +163,7 @@ export const SUPERLATIVE_METRICS = [
   // only coastal countries, among which both extremes are clean questions.
   {
     key: 'coastline',
-    roundId: 'superlative-coastline',
+    questionId: 'superlative-coastline',
     direction: null,
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostCoastline', fallback: 'Longest coast' },
@@ -174,7 +174,7 @@ export const SUPERLATIVE_METRICS = [
   // fairness gate degenerates.
   {
     key: 'forest',
-    roundId: 'superlative-forest',
+    questionId: 'superlative-forest',
     direction: null,
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostForest', fallback: 'Most forested' },
@@ -182,7 +182,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'oil',
-    roundId: 'superlative-oil',
+    questionId: 'superlative-oil',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostOil', fallback: 'Largest oil production' },
@@ -190,7 +190,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'rice',
-    roundId: 'superlative-rice',
+    questionId: 'superlative-rice',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostRice', fallback: 'Largest rice production' },
@@ -198,7 +198,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'coal',
-    roundId: 'superlative-coal',
+    questionId: 'superlative-coal',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostCoal', fallback: 'Largest coal production' },
@@ -211,7 +211,7 @@ export const SUPERLATIVE_METRICS = [
   // geography quiz wearing a beer label.
   {
     key: 'sheepPerCapita',
-    roundId: 'superlative-sheep',
+    questionId: 'superlative-sheep',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostSheep', fallback: 'Most sheep per person' },
@@ -219,7 +219,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'cattlePerCapita',
-    roundId: 'superlative-cattle',
+    questionId: 'superlative-cattle',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostCattle', fallback: 'Most cattle per person' },
@@ -227,7 +227,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'beerPerCapita',
-    roundId: 'superlative-beer',
+    questionId: 'superlative-beer',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostBeer', fallback: 'Most beer consumption per person' },
@@ -235,7 +235,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'tea',
-    roundId: 'superlative-tea',
+    questionId: 'superlative-tea',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostTea', fallback: 'Largest tea production' },
@@ -243,7 +243,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'sugarcane',
-    roundId: 'superlative-sugarcane',
+    questionId: 'superlative-sugarcane',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostSugarcane', fallback: 'Largest sugarcane production' },
@@ -251,7 +251,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'gold',
-    roundId: 'superlative-gold',
+    questionId: 'superlative-gold',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostGold', fallback: 'Largest gold production' },
@@ -259,7 +259,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'alcoholPerCapita',
-    roundId: 'superlative-alcohol',
+    questionId: 'superlative-alcohol',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostAlcohol', fallback: 'Most alcohol consumption per person' },
@@ -267,7 +267,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'meatPerCapita',
-    roundId: 'superlative-meat',
+    questionId: 'superlative-meat',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostMeat', fallback: 'Most meat consumption per person' },
@@ -277,7 +277,7 @@ export const SUPERLATIVE_METRICS = [
   // 'most'-only because Russia & China at 14 is the fun question.
   {
     key: 'borders',
-    roundId: 'superlative-borders',
+    questionId: 'superlative-borders',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostBorders', fallback: 'Most bordering countries' },
@@ -285,7 +285,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'oliveOil',
-    roundId: 'superlative-olive-oil',
+    questionId: 'superlative-olive-oil',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostOliveOil', fallback: 'Largest olive oil production' },
@@ -293,32 +293,32 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'honey',
-    roundId: 'superlative-honey',
+    questionId: 'superlative-honey',
     direction: 'most',
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostHoney', fallback: 'Largest honey production' },
     hintLeast: null,
   },
   // INVERTED at the hint layer, and only here: the CPI runs higher = cleaner, so
-  // the round's 'most' extreme (highest CPI) is the LEAST corrupt country. The
-  // party round and the Facts deck ask the direct "corrupt" question because
+  // the question's 'most' extreme (highest CPI) is the LEAST corrupt country. The
+  // party question and the Facts deck ask the direct "corrupt" question because
   // that is the clearest trivia phrasing; the filter / TTT surfaces keep the
-  // clean-pole "integrity" framing. Nothing below the hint inverts — the round
+  // clean-pole "integrity" framing. Nothing below the hint inverts — the question
   // ranks raw CPI.
   {
     key: 'corruption',
-    roundId: 'superlative-corruption',
+    questionId: 'superlative-corruption',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostCorruption', fallback: 'Least corrupt' },
     hintLeast: { key: 'party.hintLeastCorruption', fallback: 'Most corrupt' },
   },
-  // Carries negatives, which the round handles fine: the sort is a plain
+  // Carries negatives, which the question handles fine: the sort is a plain
   // subtraction, and the only sign-sensitive spot (the GAP_RATIO gate) degrades
   // gracefully rather than wrongly.
   {
     key: 'temperature',
-    roundId: 'superlative-temperature',
+    questionId: 'superlative-temperature',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostTemperature', fallback: 'Hottest' },
@@ -332,7 +332,7 @@ export const SUPERLATIVE_METRICS = [
   // happier, so 'most' = happiest.
   {
     key: 'happiness',
-    roundId: 'superlative-happiness',
+    questionId: 'superlative-happiness',
     direction: null,
     zeroFiltered: false,
     hintMost: { key: 'party.hintMostHappiness', fallback: 'Happiest' },
@@ -340,7 +340,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'tourismPerCapita',
-    roundId: 'superlative-tourism',
+    questionId: 'superlative-tourism',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostTourism', fallback: 'Most tourist arrivals per resident' },
@@ -348,7 +348,7 @@ export const SUPERLATIVE_METRICS = [
   },
   {
     key: 'electricityPerCapita',
-    roundId: 'superlative-electricity',
+    questionId: 'superlative-electricity',
     direction: 'most',
     zeroFiltered: true,
     hintMost: { key: 'party.hintMostElectricity', fallback: 'Most electricity use per person' },
@@ -357,18 +357,18 @@ export const SUPERLATIVE_METRICS = [
 ];
 
 /** @type {Record<string, SuperlativeMetric>} */
-const BY_ROUND_ID = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => [m.roundId, m]));
+const BY_QUESTION_ID = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => [m.questionId, m]));
 
 /** @type {Record<string, SuperlativeMetric>} */
 const BY_KEY = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => [m.key, m]));
 
 /**
- * @param {string} roundId
- * @returns {SuperlativeMetric | null} null for a round id this build doesn't
+ * @param {string} questionId
+ * @returns {SuperlativeMetric | null} null for a question id this build doesn't
  *   know — a still-open tab can be dealt one by a newer server.
  */
-export function superlativeMetricByRoundId(roundId) {
-  return BY_ROUND_ID[roundId] ?? null;
+export function superlativeMetricByQuestionId(questionId) {
+  return BY_QUESTION_ID[questionId] ?? null;
 }
 
 /**
@@ -389,13 +389,13 @@ export function superlativeMetricByKey(key) {
  * precisely why `flagParty/staleGuard.js` exists. Flip a metric from `'most'`
  * to `null` (a one-word edit this table is designed to make easy) and the server
  * starts dealing 'least' while an open tab still has `hintLeast: null`. The
- * round id is unchanged, so the id-based staleness check waves it through.
+ * question id is unchanged, so the id-based staleness check waves it through.
  *
  * A client that can't label a direction must NOT guess: showing the 'most' label
  * over a 'least' question mis-scores every player silently, which is worse than
  * the crash it would replace. `flagParty/staleGuard.js` composes this into
  * `canRenderQuestion` so the tab reloads onto the new build instead — the same
- * path a brand-new round id takes.
+ * path a brand-new question id takes.
  *
  * @param {SuperlativeMetric} metric
  * @param {'most' | 'least'} direction
@@ -409,7 +409,7 @@ export function canLabelDirection(metric, direction) {
  * The criterion label to show for a question's direction.
  *
  * Callers must have cleared {@link canLabelDirection} first — `flagParty` does,
- * via `staleGuard.canRenderQuestion`, before a round ever renders. The
+ * via `staleGuard.canRenderQuestion`, before a question ever renders. The
  * `hintMost` fallback is belt-and-braces for a caller that doesn't (and beats
  * reading `.key` off `undefined`, which is what this replaced), but it is not a
  * behaviour anything should rely on: a wrong label is only better than a dead

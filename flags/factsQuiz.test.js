@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createFactsQuiz } from './factsQuiz.js';
-import { SUPERLATIVE_METRICS, superlativeMetricByKey } from './partyRounds/superlativeCatalog.js';
+import { SUPERLATIVE_METRICS, superlativeMetricByKey } from './partyQuestions/superlativeCatalog.js';
 
 /** Deterministic rng so a failure is reproducible. @param {number} seed */
 function seeded(seed) {
@@ -163,7 +163,7 @@ test('the prompt carries the metric identity the icon and hue key off', () => {
   const quiz = createFactsQuiz({ metrics: loaded(['forest']), pool: POOL, rng: seeded(23) });
   const q = /** @type {any} */ (quiz.next());
   assert.equal(q.prompt.metricKey, 'forest');
-  assert.equal(q.prompt.roundId, 'superlative-forest');
+  assert.equal(q.prompt.questionId, 'superlative-forest');
 });
 
 test('it refuses to build without metrics or with too small a pool', () => {

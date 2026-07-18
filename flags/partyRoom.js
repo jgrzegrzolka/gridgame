@@ -1,25 +1,25 @@
-import { scoreRound, FINAL_BLOCK_MULTIPLIER } from './partyScore.js';
-import { isBlockBoundary, isFinalBlock } from './partyPlan.js';
+import { scoreQuestion, FINAL_ROUND_MULTIPLIER } from './partyScore.js';
+import { isRoundBoundary, isFinalRound } from './partyPlan.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
  * `flags/onlineRoom.js` (TTT): every mutation is a reducer that takes a room
  * plus an event and returns `{ room, broadcasts }`, with no DOM and no I/O. The
  * PartyKit server (`party/partyGameServer.js`) is the shell that owns sockets,
- * persistence, and question generation; it resolves round-specific facts
+ * persistence, and question generation; it resolves question-specific facts
  * (which pool, whether a buzz was correct) and hands the room plain data.
  *
- * The room is deliberately round-agnostic: it never imports a round module.
+ * The room is deliberately question-agnostic: it never imports a question module.
  * A question is just `{ prompt, options, answer }`; correctness is resolved by
- * the server via the round's `isCorrect` and passed into {@link applyBuzz} as a
- * boolean. That keeps one room engine serving every round type.
+ * the server via the question's `isCorrect` and passed into {@link applyBuzz} as a
+ * boolean. That keeps one room engine serving every question type.
  *
  * Phase machine: `lobby` → `question` → `reveal` → (`question` | `final`),
  * and `final` → `lobby` on Play again.
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
- * @typedef {{ prompt: string, options: string[], answer: string, roundId?: string, clearFrac?: number, nameFrac?: number }} Question
+ * @typedef {{ prompt: string, options: string[], answer: string, questionId?: string, clearFrac?: number, nameFrac?: number }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
  *
  * @typedef {Object} Room
@@ -30,39 +30,39 @@ import { isBlockBoundary, isFinalBlock } from './partyPlan.js';
  *   stable display order.
  * @property {Set<string>} present  playerIds with a live socket right now; reset
  *   to empty on every load (a socket can't survive a DO eviction).
- * @property {number} totalRounds
- * @property {Array<{ poolId: string, roundId: string, rounds: number }> | null} plan
- *   the host's chosen game plan (which modes, how many rounds each). Set when
+ * @property {number} totalQuestions
+ * @property {Array<{ poolId: string, questionId: string, questions: number }> | null} plan
+ *   the host's chosen game plan (which modes, how many questions each). Set when
  *   the host starts; null before then and the server falls back to
  *   `DEFAULT_PLAN`. The room only stores it (so it survives a durable-object
- *   eviction mid-game and the server can generate the right round type); the
+ *   eviction mid-game and the server can generate the right question type); the
  *   room never reads it.
- * @property {number} roundIndex  0-based index of the current question.
+ * @property {number} questionIndex  0-based index of the current question.
  * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
  *   veil each tile (grey + blur + panel wipe) and clear it over the question
  *   clock. Purely a client render flag — the room stores it (so it survives an
  *   eviction and rides every question / welcome broadcast) but never acts on it;
- *   scoring, the answer, and the round contract are untouched.
+ *   scoring, the answer, and the question contract are untouched.
  * @property {{ flag: number, map: number, metric: number, name: number | null } | null} reveal  the
  *   host's per-category reveal timing (fraction of the window each category's veil
  *   clears at) plus `name`, the world-facts name-reveal fraction (null = off).
  *   Stored like `plan` so the server can stamp the right `clearFrac` / `nameFrac`
- *   on every question, including rounds generated after an eviction; null before
+ *   on every question, including questions generated after an eviction; null before
  *   start, when the server falls back to `DEFAULT_REVEAL`. The room never reads it.
  * @property {Question | null} question  the live question; `answer` never leaves
  *   the server until reveal.
  * @property {Buzz[]} buzzes  this question's buzzes in server arrival order.
- * @property {boolean} draft  draft mode (Iteration 9): the plan grows one block
+ * @property {boolean} draft  draft mode (Iteration 9): the plan grows one round
  *   at a time as players pick, instead of being fixed at start. When true the
- *   room enters a `picking` phase at each block boundary; when false it's the
+ *   room enters a `picking` phase at each round boundary; when false it's the
  *   ordinary setlist show. Stored so it survives an eviction and rides welcome.
- * @property {number} targetBlocks  the draft's total block count, fixed at start
- *   from the seat count (`blockCountFor`). The game ends after this many blocks;
- *   `totalRounds` is `targetBlocks * BLOCK_ROUNDS`. 0 in a non-draft game.
- * @property {string[]} pickedBy  playerIds that have already picked a block, in
+ * @property {number} targetRounds  the draft's total round count, fixed at start
+ *   from the seat count (`roundCountFor`). The game ends after this many rounds;
+ *   `totalQuestions` is `targetRounds * ROUND_QUESTIONS`. 0 in a non-draft game.
+ * @property {string[]} pickedBy  playerIds that have already picked a round, in
  *   pick order — the no-repeat set the draft's picker selection reads.
  * @property {string | null} picker  during `picking`, the seat whose turn it is to
- *   choose the next block; null otherwise.
+ *   choose the next round; null otherwise.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from (server-dealt); null otherwise. Stored so a reconnect mid-pick
  *   sees the same hand.
@@ -71,7 +71,7 @@ import { isBlockBoundary, isFinalBlock } from './partyPlan.js';
  * @typedef {{ room: Room, broadcasts: Broadcast[], rejectConnection?: boolean }} ApplyResult
  */
 
-export const DEFAULT_ROUNDS = 5;
+export const DEFAULT_QUESTIONS = 5;
 
 /**
  * Hard cap on seats in a room. Not a platform limit (the Durable Object would
@@ -86,26 +86,26 @@ export const DEFAULT_ROUNDS = 5;
 export const MAX_SEATS = 20;
 
 /**
- * @param {number} [totalRounds]
+ * @param {number} [totalQuestions]
  * @param {Room['plan']} [plan]  the default plan the room opens with; the host
- *   can replace it (with a matching `totalRounds`) at start.
+ *   can replace it (with a matching `totalQuestions`) at start.
  * @returns {Room}
  */
-export function createRoom(totalRounds = DEFAULT_ROUNDS, plan = null) {
+export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
   return {
     phase: 'lobby',
     hostId: null,
     seats: new Map(),
     present: new Set(),
-    totalRounds,
+    totalQuestions,
     plan,
-    roundIndex: 0,
+    questionIndex: 0,
     tricky: false,
     reveal: null,
     question: null,
     buzzes: [],
     draft: false,
-    targetBlocks: 0,
+    targetRounds: 0,
     pickedBy: [],
     picker: null,
     hand: null,
@@ -170,27 +170,27 @@ export function applyHello(room, playerId, nickname) {
  * Host starts the show from the lobby. Needs at least one seat. The question
  * is generated by the caller (server) and passed in, keeping this module free
  * of the pool and RNG. The host's chosen `plan` (already validated by the
- * server) and its `totalRounds` ride along and are stored on the room; omit
+ * server) and its `totalQuestions` ride along and are stored on the room; omit
  * them to keep whatever the room opened with.
  *
  * In **draft** mode the caller passes `draft: true` with the opening plan (a
- * single Flags block), `totalRoundsValue = targetBlocks * BLOCK_ROUNDS`, and
- * `targetBlocks`; the plan then grows one block per pick (see {@link applyPick}).
+ * single Flags round), `totalQuestionsValue = targetRounds * ROUND_QUESTIONS`, and
+ * `targetRounds`; the plan then grows one round per pick (see {@link applyPick}).
  *
  * @param {Room} room
  * @param {string} playerId
  * @param {Question} question
  * @param {Room['plan']} [plan]
- * @param {number} [totalRoundsValue]
+ * @param {number} [totalQuestionsValue]
  * @param {boolean} [tricky]  the host's tricky-mode choice; omit to keep the
  *   room's current value.
  * @param {Room['reveal']} [reveal]  the host's per-category reveal timing; omit to
  *   keep the room's current value.
- * @param {{ draft?: boolean, targetBlocks?: number }} [draftOpts]  draft-mode setup;
+ * @param {{ draft?: boolean, targetRounds?: number }} [draftOpts]  draft-mode setup;
  *   omit for an ordinary setlist game.
  * @returns {ApplyResult}
  */
-export function applyStart(room, playerId, question, plan, totalRoundsValue, tricky, reveal, draftOpts) {
+export function applyStart(room, playerId, question, plan, totalQuestionsValue, tricky, reveal, draftOpts) {
   if (room.phase !== 'lobby') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (room.seats.size === 0) return { room, broadcasts: [] };
@@ -198,15 +198,15 @@ export function applyStart(room, playerId, question, plan, totalRoundsValue, tri
   const nextRoom = {
     ...room,
     phase: /** @type {Phase} */ ('question'),
-    roundIndex: 0,
+    questionIndex: 0,
     question,
     buzzes: [],
     plan: plan ?? room.plan,
     tricky: typeof tricky === 'boolean' ? tricky : room.tricky,
     reveal: reveal ?? room.reveal,
-    totalRounds: typeof totalRoundsValue === 'number' ? totalRoundsValue : room.totalRounds,
+    totalQuestions: typeof totalQuestionsValue === 'number' ? totalQuestionsValue : room.totalQuestions,
     draft,
-    targetBlocks: draft && draftOpts && typeof draftOpts.targetBlocks === 'number' ? draftOpts.targetBlocks : 0,
+    targetRounds: draft && draftOpts && typeof draftOpts.targetRounds === 'number' ? draftOpts.targetRounds : 0,
     pickedBy: [],
     picker: null,
     hand: null,
@@ -216,11 +216,11 @@ export function applyStart(room, playerId, question, plan, totalRoundsValue, tri
 
 /**
  * A player buzzes with their chosen option. Correctness is resolved by the
- * caller (per the round's `isCorrect`) and passed in. Ignored unless we're in
+ * caller (per the question's `isCorrect`) and passed in. Ignored unless we're in
  * the question phase, the player holds a seat, and they haven't already buzzed
  * this question — one buzz per player per question, first answer locked in.
  *
- * When every present seat has buzzed, the round auto-reveals (scores tally and
+ * When every present seat has buzzed, the question auto-reveals (scores tally and
  * a `reveal` broadcast rides along).
  *
  * @param {Room} room
@@ -271,8 +271,8 @@ export function applyForceReveal(room, playerId) {
 
 /**
  * Host advances from a reveal to the next question, or to the final board if
- * the last round just finished. The next question is generated by the caller;
- * it's ignored on the final round.
+ * the last question just finished. The next question is generated by the caller;
+ * it's ignored on the final question.
  *
  * @param {Room} room
  * @param {string} playerId
@@ -283,7 +283,7 @@ export function applyNext(room, playerId, nextQuestion) {
   if (room.phase !== 'reveal') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
 
-  const isLast = room.roundIndex >= room.totalRounds - 1;
+  const isLast = room.questionIndex >= room.totalQuestions - 1;
   if (isLast) {
     const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [] };
     return {
@@ -294,7 +294,7 @@ export function applyNext(room, playerId, nextQuestion) {
   const nextRoom = {
     ...room,
     phase: /** @type {Phase} */ ('question'),
-    roundIndex: room.roundIndex + 1,
+    questionIndex: room.questionIndex + 1,
     question: nextQuestion,
     buzzes: [],
   };
@@ -304,20 +304,20 @@ export function applyNext(room, playerId, nextQuestion) {
 /**
  * Whether a `next` from the current reveal should open a **draft pick** rather
  * than deal the next question: true only in draft mode, at a reveal that sits on
- * a block boundary (another block follows). Pure, so the server can branch on it
+ * a round boundary (another round follows). Pure, so the server can branch on it
  * (`next` → {@link applyEnterPicking} vs {@link applyNext}) without duplicating
- * the boundary rule. In draft `totalRounds` is `targetBlocks * BLOCK_ROUNDS`, so
- * `isBlockBoundary` is true at exactly the block ends before the last block.
+ * the boundary rule. In draft `totalQuestions` is `targetRounds * ROUND_QUESTIONS`, so
+ * `isRoundBoundary` is true at exactly the round ends before the last round.
  *
  * @param {Room} room
  * @returns {boolean}
  */
 export function pendingPickAfterReveal(room) {
-  return room.draft && room.phase === 'reveal' && isBlockBoundary(room.roundIndex, room.totalRounds);
+  return room.draft && room.phase === 'reveal' && isRoundBoundary(room.questionIndex, room.totalQuestions);
 }
 
 /**
- * Host opens the draft pick for the next block: the room moves from `reveal` to
+ * Host opens the draft pick for the next round: the room moves from `reveal` to
  * `picking`, and the chosen `picker` (the lowest-ranked seat that hasn't picked,
  * resolved by the caller via `pickerFor`) chooses from `hand` (the mode ids the
  * caller dealt via `handFor`). Both are held on the room so a reconnect mid-pick
@@ -343,34 +343,34 @@ export function applyEnterPicking(room, playerId, picker, hand) {
   /** @type {Broadcast[]} */
   const broadcasts = [{
     to: picker,
-    message: { type: 'picking', youPick: true, picker, hand: hand.slice(), roundIndex: room.roundIndex, totalRounds: room.totalRounds },
+    message: { type: 'picking', youPick: true, picker, hand: hand.slice(), questionIndex: room.questionIndex, totalQuestions: room.totalQuestions },
   }];
   for (const pid of room.present) {
     if (pid === picker) continue;
     broadcasts.push({
       to: pid,
-      message: { type: 'picking', youPick: false, picker, roundIndex: room.roundIndex, totalRounds: room.totalRounds },
+      message: { type: 'picking', youPick: false, picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions },
     });
   }
   return { room: nextRoom, broadcasts };
 }
 
 /**
- * The designated picker chooses `modeId`, and its block starts. The caller has
- * already validated the pick (`isValidPick`) and built the block `segment` and
+ * The designated picker chooses `modeId`, and its round starts. The caller has
+ * already validated the pick (`isValidPick`) and built the round `segment` and
  * the first `question`; this appends the segment to the (growing) plan, advances
- * to that block's first round, records the picker in `pickedBy` (the no-repeat
+ * to that round's first question, records the picker in `pickedBy` (the no-repeat
  * set), and clears the picking state. Ignored unless we're in `picking` and the
  * sender is the seat whose turn it is.
  *
- * The first question of a drafted block carries `draftPick` (who picked, which
+ * The first question of a drafted round carries `draftPick` (who picked, which
  * mode) so every client can show the "Zosia's pick" attribution.
  *
  * @param {Room} room
  * @param {string} pickerId  the seat picking; must equal `room.picker`
  * @param {string} modeId  the picked mode (for attribution)
- * @param {{ poolId: string, roundId: string, rounds: number }} segment  the block to append
- * @param {Question} question  the block's first question
+ * @param {{ poolId: string, questionId: string, questions: number }} segment  the round to append
+ * @param {Question} question  the round's first question
  * @returns {ApplyResult}
  */
 export function applyPick(room, pickerId, modeId, segment, question) {
@@ -380,7 +380,7 @@ export function applyPick(room, pickerId, modeId, segment, question) {
   const nextRoom = {
     ...room,
     phase: /** @type {Phase} */ ('question'),
-    roundIndex: room.roundIndex + 1,
+    questionIndex: room.questionIndex + 1,
     plan,
     question,
     buzzes: [],
@@ -410,13 +410,13 @@ function resetToLobby(room) {
   const nextRoom = {
     ...room,
     phase: /** @type {Phase} */ ('lobby'),
-    roundIndex: 0,
+    questionIndex: 0,
     question: null,
     buzzes: [],
     seats,
     // Clear any draft-in-progress state so the next game starts its draft clean.
     draft: false,
-    targetBlocks: 0,
+    targetRounds: 0,
     pickedBy: [],
     picker: null,
     hand: null,
@@ -494,12 +494,12 @@ export function applyDisconnect(room, playerId) {
 function toReveal(room) {
   const q = room.question;
   if (!q) return { room, broadcasts: [] };
-  // The final block (the one that decides the game) scores double, so a trailing
+  // The final round (the one that decides the game) scores double, so a trailing
   // player can still swing it. `doubled` rides the reveal so clients can badge it.
-  const doubled = isFinalBlock(room.roundIndex, room.totalRounds);
-  const points = scoreRound(room.buzzes, {
+  const doubled = isFinalRound(room.questionIndex, room.totalQuestions);
+  const points = scoreQuestion(room.buzzes, {
     applySpeedBonus: room.seats.size > 1,
-    multiplier: doubled ? FINAL_BLOCK_MULTIPLIER : 1,
+    multiplier: doubled ? FINAL_ROUND_MULTIPLIER : 1,
   });
   const seats = new Map();
   for (const [pid, seat] of room.seats) {
@@ -520,9 +520,9 @@ function toReveal(room) {
         points,
         doubled,
         scoreboard: scoreboardOf(nextRoom),
-        roundIndex: room.roundIndex,
-        totalRounds: room.totalRounds,
-        isFinalRound: room.roundIndex >= room.totalRounds - 1,
+        questionIndex: room.questionIndex,
+        totalQuestions: room.totalQuestions,
+        isFinalRound: room.questionIndex >= room.totalQuestions - 1,
       },
     }],
   };
@@ -595,18 +595,18 @@ function rosterMessage(room) {
 
 /**
  * The public view of a question — the answer is stripped so it never reaches
- * a client before reveal. `roundId` rides along so the client knows how to
+ * a client before reveal. `questionId` rides along so the client knows how to
  * render it (flag tiles vs contour tiles).
  * @param {Question} q
  */
 function publicQuestion(q) {
-  /** @type {{ prompt: string, options: string[], roundId?: string, clearFrac?: number, nameFrac?: number }} */
+  /** @type {{ prompt: string, options: string[], questionId?: string, clearFrac?: number, nameFrac?: number }} */
   const pub = { prompt: q.prompt, options: q.options };
-  if (q.roundId != null) pub.roundId = q.roundId;
+  if (q.questionId != null) pub.questionId = q.questionId;
   // The veil timing for this question rides along so a tricky-mode client clears
   // the tile on schedule; it's stamped server-side from the host's reveal config.
   if (q.clearFrac != null) pub.clearFrac = q.clearFrac;
-  // The name-reveal timing (world-facts rounds only) rides along the same way so
+  // The name-reveal timing (world-facts questions only) rides along the same way so
   // every client fades the country names onto the tiles at the same instant.
   if (q.nameFrac != null) pub.nameFrac = q.nameFrac;
   return pub;
@@ -621,7 +621,7 @@ function questionBroadcast(room) {
   const pub = q ? publicQuestion(q) : { prompt: '', options: [] };
   return {
     to: 'all',
-    message: { type: 'question', ...pub, roundIndex: room.roundIndex, totalRounds: room.totalRounds, tricky: room.tricky },
+    message: { type: 'question', ...pub, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, tricky: room.tricky },
   };
 }
 
@@ -640,8 +640,8 @@ function welcomeBroadcast(room, playerId) {
       you: playerId,
       isHost: room.hostId === playerId,
       phase: room.phase,
-      roundIndex: room.roundIndex,
-      totalRounds: room.totalRounds,
+      questionIndex: room.questionIndex,
+      totalQuestions: room.totalQuestions,
       tricky: room.tricky,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
@@ -670,15 +670,15 @@ export function serializeRoom(room) {
     phase: room.phase,
     hostId: room.hostId,
     seats: [...room.seats.entries()],
-    totalRounds: room.totalRounds,
+    totalQuestions: room.totalQuestions,
     plan: room.plan,
-    roundIndex: room.roundIndex,
+    questionIndex: room.questionIndex,
     tricky: room.tricky,
     reveal: room.reveal,
     question: room.question,
     buzzes: room.buzzes,
     draft: room.draft,
-    targetBlocks: room.targetBlocks,
+    targetRounds: room.targetRounds,
     pickedBy: room.pickedBy,
     picker: room.picker,
     hand: room.hand,
@@ -695,15 +695,15 @@ export function deserializeRoom(snapshot) {
     hostId: snapshot.hostId ?? null,
     seats: new Map(snapshot.seats ?? []),
     present: new Set(),
-    totalRounds: snapshot.totalRounds ?? DEFAULT_ROUNDS,
+    totalQuestions: snapshot.totalQuestions ?? DEFAULT_QUESTIONS,
     plan: snapshot.plan ?? null,
-    roundIndex: snapshot.roundIndex ?? 0,
+    questionIndex: snapshot.questionIndex ?? 0,
     tricky: snapshot.tricky ?? false,
     reveal: snapshot.reveal ?? null,
     question: snapshot.question ?? null,
     buzzes: snapshot.buzzes ?? [],
     draft: snapshot.draft ?? false,
-    targetBlocks: snapshot.targetBlocks ?? 0,
+    targetRounds: snapshot.targetRounds ?? 0,
     pickedBy: snapshot.pickedBy ?? [],
     picker: snapshot.picker ?? null,
     hand: snapshot.hand ?? null,

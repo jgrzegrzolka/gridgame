@@ -1,7 +1,7 @@
 /**
- * Scoring for a Flag Party round. Pure — no state, no DOM.
+ * Scoring for a Flag Party question. Pure — no state, no DOM.
  *
- * A round awards a flat {@link CORRECT_POINTS} for any correct answer, plus a
+ * A question awards a flat {@link CORRECT_POINTS} for any correct answer, plus a
  * decaying speed bonus for the first few correct answers *by arrival order*
  * (the room records buzzes in the order the server received them — see
  * `flags/partyRoom.js` and the "buzz-order is authoritative" note in
@@ -34,25 +34,25 @@ export function speedBonusForRank(rank) {
  * @typedef {{ playerId: string, correct: boolean }} ScoredBuzz
  */
 
-/** Score multiplier for the game's final block — the block that decides it plays
+/** Score multiplier for the game's final round — the round that decides it plays
  *  for double, so a trailing player who chose its terrain (draft) or just gets
  *  hot at the end can still swing the result. */
-export const FINAL_BLOCK_MULTIPLIER = 2;
+export const FINAL_ROUND_MULTIPLIER = 2;
 
 /**
- * Points earned this round, keyed by playerId. `buzzesInOrder` must be in
+ * Points earned this question, keyed by playerId. `buzzesInOrder` must be in
  * server arrival order — that order is what the speed bonus ranks against.
  * Players who never buzzed simply aren't in the input and score nothing.
  *
  * `multiplier` scales every awarded point (base + speed bonus); it's
- * {@link FINAL_BLOCK_MULTIPLIER} for final-block rounds and 1 everywhere else.
+ * {@link FINAL_ROUND_MULTIPLIER} for final-round questions and 1 everywhere else.
  * A wrong answer scores 0 regardless of the multiplier.
  *
  * @param {ScoredBuzz[]} buzzesInOrder
  * @param {{ applySpeedBonus?: boolean, multiplier?: number }} [opts]
  * @returns {Record<string, number>}
  */
-export function scoreRound(buzzesInOrder, { applySpeedBonus = true, multiplier = 1 } = {}) {
+export function scoreQuestion(buzzesInOrder, { applySpeedBonus = true, multiplier = 1 } = {}) {
   /** @type {Record<string, number>} */
   const points = {};
   let correctRank = 0;

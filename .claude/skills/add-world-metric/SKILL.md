@@ -60,9 +60,9 @@ Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake
 
 ### 5. Flag Party round (moderate; the round factory is already generalized)
 
-A new metric is a **sibling round**, not a rewrite: `createSuperlativeRound(metric, roundId, opts)` (`flags/partyRounds/superlativeCore.js`) takes a `createMetric(...)` instance and every round goes through it.
+A new metric is a **sibling round**, not a rewrite: `createSuperlativeQuestion(metric, questionId, opts)` (`flags/partyQuestions/superlativeCore.js`) takes a `createMetric(...)` instance and every round goes through it.
 
-**Start with `flags/partyRounds/superlativeCatalog.js`** — since Feature V Phase 4b-i that's the table driving the whole surface, and it's where the three per-metric decisions live that the data can't tell you:
+**Start with `flags/partyQuestions/superlativeCatalog.js`** — since Feature V Phase 4b-i that's the table driving the whole surface, and it's where the three per-metric decisions live that the data can't tell you:
 
 - **`direction`** — `'most'` locks the round to one extreme; `null` deals both. Ask whether the LOW pole is a real question. "Biggest coffee producer" yes / "smallest grower" no → locked. "Lowest highpoint" (the Maldives) yes → both.
 - **`zeroFiltered`** — `true` drops real zeros from *selection*. Needed whenever a real `0` means "doesn't do the thing" (landlocked 0 km, treeless 0.0%, dry states, islands with 0 borders), because a quartet of zeros ties and has no answer. **Not** needed for a sparse metric whose non-participants are simply absent from `values` (the crops) — `metric.has` already drops those.
@@ -71,8 +71,8 @@ A new metric is a **sibling round**, not a rewrite: `createSuperlativeRound(metr
 Then the rest, six spots (grep `coalRound` / `superlative-coal` for a worked 'most'-only example, `forestRound` for a zero-filtered two-directional one):
 
 1. **`superlativeCatalog.js`** — the entry above.
-2. **`superlative.js`** — the JSON import, a `DATA` entry, and `export const <key>Round = ROUNDS.<key>;`. No `createSuperlativeRound` call: the catalog loop builds it.
-3. **`party/partyGameServer.js`** — add to the `ROUNDS` array. **This is a PartyKit deploy** (Cloudflare, its own workflow).
+2. **`superlative.js`** — the JSON import, a `DATA` entry, and `export const <key>Round = QUESTIONS.<key>;`. No `createSuperlativeQuestion` call: the catalog loop builds it.
+3. **`party/partyGameServer.js`** — add to the `QUESTIONS` array. **This is a PartyKit deploy** (Cloudflare, its own workflow).
 4. **`flags/partyPlan.js`** `PARTY_MODES` + `partyPlan.test.js`.
 5. **`flagParty/page.js`** `MODE_LABELS`.
 6. **i18n en+pl** — `party.mode.superlative<Key>` / `party.modeShort.*` / `party.hintMost<Key>` (+ `hintLeast<Key>` if two-directional).
@@ -81,7 +81,7 @@ Then the rest, six spots (grep `coalRound` / `superlative-coal` for a worked 'mo
 
 **Still write the per-metric `superlative.test.js` test.** The generic tests prove the catalog's flags are **honoured** — they never prove they are **right**. Each one skips entries that don't carry the flag (`if (!m.zeroFiltered) continue;`), so a metric whose values hold real zeros and which you marked `zeroFiltered: false` has *no* coverage: it just quietly starts dealing quartets tied at zero. Nothing can decide that for you automatically either — population/density/gdp/gdpPerCapita carry real zeros (uninhabited territories) and are correctly *not* zero-filtered, so "has zeros ⇒ must filter" would be a false rule. It's a judgement call, and the per-metric test is where you record it. The generic tests are a floor for metrics nobody wrote one for, not a replacement.
 
-The icon and hue are NOT party steps: the setup chip and the in-round criterion icon both resolve from `flags/metricVisuals.js` via the catalog's `key` (`metricKeyForRound` in `flagParty/page.js`), so surface 1's visuals entry covers them and a metric can no longer ship colourless (the old wine/cocoa/banana/coastline bug class).
+The icon and hue are NOT party steps: the setup chip and the in-round criterion icon both resolve from `flags/metricVisuals.js` via the catalog's `key` (`metricKeyForQuestion` in `flagParty/page.js`), so surface 1's visuals entry covers them and a metric can no longer ship colourless (the old wine/cocoa/banana/coastline bug class).
 
 ### 6. Daily puzzles: NOT part of "done"; tracked in `METRIC_DAILY_PUZZLES.md`
 

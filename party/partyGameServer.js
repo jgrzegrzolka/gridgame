@@ -1,9 +1,9 @@
 import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
-import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan, PARTY_MODES, BLOCK_ROUNDS } from '../flags/partyPlan.js';
-import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricRound } from '../flags/partyTiming.js';
-import { blockCountFor, validateBlockCount, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
+import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, validatePlan, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
+import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricQuestion } from '../flags/partyTiming.js';
+import { roundCountFor, validateRoundCount, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -20,9 +20,9 @@ import {
   serializeRoom,
   deserializeRoom,
 } from '../flags/partyRoom.js';
-import * as flagPick from '../flags/partyRounds/flagPick.js';
-import * as mapPick from '../flags/partyRounds/mapPick.js';
-import * as superlative from '../flags/partyRounds/superlative.js';
+import * as flagPick from '../flags/partyQuestions/flagPick.js';
+import * as mapPick from '../flags/partyQuestions/mapPick.js';
+import * as superlative from '../flags/partyQuestions/superlative.js';
 
 /** @typedef {import('../flags/partyRoom.js').Room} Room */
 /** @typedef {import('../flags/partyRoom.js').Broadcast} Broadcast */
@@ -38,36 +38,36 @@ const POOLS = {
 };
 
 /**
- * Round-type registry, keyed by each module's own `id` so the registry key can
- * never drift from the plan's `roundId`. Adding a mode = one import + one entry.
+ * Question-type registry, keyed by each module's own `id` so the registry key can
+ * never drift from the plan's `questionId`. Adding a mode = one import + one entry.
  * @type {Record<string, { generate: Function, isCorrect: Function }>}
  */
-const ROUNDS = Object.fromEntries([flagPick, mapPick, superlative, superlative.areaRound, superlative.densityRound, superlative.gdpRound, superlative.gdpPerCapitaRound, superlative.coffeeRound, superlative.wineRound, superlative.cocoaRound, superlative.bananaRound, superlative.appleRound, superlative.elevationRound, superlative.coastlineRound, superlative.forestRound, superlative.oilRound, superlative.riceRound, superlative.coalRound, superlative.sheepPerCapitaRound, superlative.cattlePerCapitaRound, superlative.beerPerCapitaRound, superlative.teaRound, superlative.sugarcaneRound, superlative.goldRound, superlative.alcoholPerCapitaRound, superlative.meatPerCapitaRound, superlative.bordersRound, superlative.oliveOilRound, superlative.honeyRound, superlative.temperatureRound, superlative.happinessRound, superlative.corruptionRound, superlative.tourismPerCapitaRound, superlative.electricityPerCapitaRound].map((m) => [m.id, m]));
+const QUESTIONS = Object.fromEntries([flagPick, mapPick, superlative, superlative.areaQuestion, superlative.densityQuestion, superlative.gdpQuestion, superlative.gdpPerCapitaQuestion, superlative.coffeeQuestion, superlative.wineQuestion, superlative.cocoaQuestion, superlative.bananaQuestion, superlative.appleQuestion, superlative.elevationQuestion, superlative.coastlineQuestion, superlative.forestQuestion, superlative.oilQuestion, superlative.riceQuestion, superlative.coalQuestion, superlative.sheepPerCapitaQuestion, superlative.cattlePerCapitaQuestion, superlative.beerPerCapitaQuestion, superlative.teaQuestion, superlative.sugarcaneQuestion, superlative.goldQuestion, superlative.alcoholPerCapitaQuestion, superlative.meatPerCapitaQuestion, superlative.bordersQuestion, superlative.oliveOilQuestion, superlative.honeyQuestion, superlative.temperatureQuestion, superlative.happinessQuestion, superlative.corruptionQuestion, superlative.tourismPerCapitaQuestion, superlative.electricityPerCapitaQuestion].map((m) => [m.id, m]));
 
-const TOTAL_ROUNDS = totalRounds(DEFAULT_PLAN);
+const TOTAL_QUESTIONS = totalQuestions(DEFAULT_PLAN);
 
-/** Mode id -> catalog mode ({ poolId, roundId }), so a draft pick (a mode id off
- *  the wire) resolves to the block segment + round type to generate. */
+/** Mode id -> catalog mode ({ poolId, questionId }), so a draft pick (a mode id off
+ *  the wire) resolves to the round segment + question type to generate. */
 const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 
-/** Reverse lookup: a segment's (roundId, poolId) -> its mode id. Every catalog
+/** Reverse lookup: a segment's (questionId, poolId) -> its mode id. Every catalog
  *  mode has a unique pair, so this recovers the mode a plan segment came from
  *  (used to rebuild `usedModes` after an eviction). */
-const MODE_ID_BY_SEG = Object.fromEntries(PARTY_MODES.map((m) => [`${m.roundId}|${m.poolId}`, m.id]));
-/** @param {{ roundId: string, poolId: string }} seg @returns {string | undefined} */
+const MODE_ID_BY_SEG = Object.fromEntries(PARTY_MODES.map((m) => [`${m.questionId}|${m.poolId}`, m.id]));
+/** @param {{ questionId: string, poolId: string }} seg @returns {string | undefined} */
 function modeIdForSegment(seg) {
-  return MODE_ID_BY_SEG[`${seg.roundId}|${seg.poolId}`];
+  return MODE_ID_BY_SEG[`${seg.questionId}|${seg.poolId}`];
 }
 
-/** The opening block every draft plays: one Flags block (see `partyDraft`). */
+/** The opening round every draft plays: one Flags round (see `partyDraft`). */
 const OPENING_MODE = MODE_BY_ID[OPENING_MODE_ID];
 
 /**
  * Flag Party durable object — the live show's room. Thin shell around the pure
  * reducer in `flags/partyRoom.js`: it owns sockets, persistence, and the two
- * round-specific facts the room stays agnostic about — which question to hand
- * out (via the round's `generate`) and whether a buzz was correct (via the
- * round's `isCorrect`). Everything else is a reducer call + dispatch, mirroring
+ * question-specific facts the room stays agnostic about — which question to hand
+ * out (via the question's `generate`) and whether a buzz was correct (via the
+ * question's `isCorrect`). Everything else is a reducer call + dispatch, mirroring
  * `party/ticTacToeServer.js`.
  *
  * Identity: clients pass a stable `?pid=` (persisted client-side) so refreshes
@@ -85,7 +85,7 @@ export default class PartyGameServer {
     this.playerByConn = new Map();
     /** @type {Map<string, any>} playerId -> conn */
     this.connByPlayer = new Map();
-    /** Answer codes used in the current game, so rounds don't repeat a country. */
+    /** Answer codes used in the current game, so questions don't repeat a country. */
     this.usedCodes = new Set();
     /** Mode ids already played this game (draft mode), so the pick hand and the
      *  no-repeat clause never offer a mode twice. */
@@ -93,10 +93,10 @@ export default class PartyGameServer {
   }
 
   /**
-   * Generate the question for a round: the plan picks the round type (flag-pick
-   * vs map) and the pool (sovereign vs non-sovereign); the round module builds
+   * Generate the question for a question: the plan picks the question type (flag-pick
+   * vs map) and the pool (sovereign vs non-sovereign); the question module builds
    * the question, avoiding countries already used this game. The question is
-   * stamped with its `roundId` so the room and clients know how to render and
+   * stamped with its `questionId` so the room and clients know how to render and
    * judge it. Records the answer as used.
    *
    * The plan and reveal config are the host's chosen ones (passed explicitly at
@@ -105,37 +105,37 @@ export default class PartyGameServer {
    * correct after a durable-object eviction mid-game. The question is stamped with
    * `clearFrac` — the veil timing for its category — so a tricky-mode client
    * clears the tile on schedule.
-   * @param {number} roundIndex
+   * @param {number} questionIndex
    * @param {import('../flags/partyPlan.js').Segment[]} [plan]
    * @param {import('../flags/partyRoom.js').Room['reveal']} [reveal]
    */
-  generateQuestion(roundIndex, plan, reveal) {
+  generateQuestion(questionIndex, plan, reveal) {
     const p = plan ?? (this.room && this.room.plan) ?? DEFAULT_PLAN;
-    return this.generateForRound(roundIdForRound(p, roundIndex), poolIdForRound(p, roundIndex), reveal);
+    return this.generateForQuestion(questionIdAt(p, questionIndex), poolIdAt(p, questionIndex), reveal);
   }
 
   /**
-   * Generate a question for an explicit round type + pool, independent of the
+   * Generate a question for an explicit question type + pool, independent of the
    * plan. Shared by {@link generateQuestion} (plan-driven) and the draft pick
-   * path (mode-driven, where the block isn't in the plan yet). Stamps `roundId`,
+   * path (mode-driven, where the round isn't in the plan yet). Stamps `questionId`,
    * the veil `clearFrac`, and the metric name-reveal `nameFrac`, and records the
    * answer as used.
-   * @param {string} roundId
+   * @param {string} questionId
    * @param {string} poolId
    * @param {import('../flags/partyRoom.js').Room['reveal']} [reveal]
    */
-  generateForRound(roundId, poolId, reveal) {
+  generateForQuestion(questionId, poolId, reveal) {
     const rev = reveal ?? (this.room && this.room.reveal) ?? DEFAULT_REVEAL;
-    const round = ROUNDS[roundId];
+    const question = QUESTIONS[questionId];
     const pool = POOLS[poolId];
-    const q = round.generate(pool, this.usedCodes);
+    const q = question.generate(pool, this.usedCodes);
     this.usedCodes.add(q.answer);
-    // World-facts (metric) rounds carry the name-reveal fraction so clients fade
-    // the country names on at the host's chosen point; other rounds never do (flag
+    // World-facts (metric) questions carry the name-reveal fraction so clients fade
+    // the country names on at the host's chosen point; other questions never do (flag
     // / outline recognition is the whole point there). `rev.name` may be null (the
     // host turned names off), in which case nameFrac stays undefined.
-    const nameFrac = isMetricRound(roundId) ? (rev.name ?? undefined) : undefined;
-    return { ...q, roundId, clearFrac: rev[revealCategoryFor(roundId)], nameFrac };
+    const nameFrac = isMetricQuestion(questionId) ? (rev.name ?? undefined) : undefined;
+    return { ...q, questionId, clearFrac: rev[revealCategoryFor(questionId)], nameFrac };
   }
 
   async onStart() {
@@ -148,7 +148,7 @@ export default class PartyGameServer {
     if (snapshot) {
       this.room = deserializeRoom(snapshot);
       // usedModes lives only in memory, so a durable-object eviction mid-draft
-      // loses it — rebuild from the persisted plan (each block is one mode) so a
+      // loses it — rebuild from the persisted plan (each round is one mode) so a
       // later hand can't offer a mode already played.
       if (this.room.draft && Array.isArray(this.room.plan)) {
         for (const seg of this.room.plan) {
@@ -196,7 +196,7 @@ export default class PartyGameServer {
           this.rejectConnection(conn, 'room-not-found');
           return;
         }
-        this.room = createRoom(TOTAL_ROUNDS, DEFAULT_PLAN);
+        this.room = createRoom(TOTAL_QUESTIONS, DEFAULT_PLAN);
       } else if (intent === 'create' && !this.room.seats.has(playerId)) {
         this.rejectConnection(conn, 'code-collision');
         return;
@@ -258,34 +258,34 @@ export default class PartyGameServer {
           const tricky = parsed.tricky === true;
           const reveal = validateReveal(parsed.reveal);
           if (parsed.draft === true) {
-            // Draft: the plan grows one block per pick. Open with a single Flags
-            // block; the game runs `targetBlocks` blocks — the host's choice,
+            // Draft: the plan grows one round per pick. Open with a single Flags
+            // round; the game runs `targetRounds` rounds — the host's choice,
             // falling back to the seat-count suggestion when the client sends
-            // nothing usable. Round 0 comes from the opening block, not a plan.
-            const targetBlocks = validateBlockCount(parsed.blocks, blockCountFor(this.room.present.size));
-            const openingPlan = [{ poolId: OPENING_MODE.poolId, roundId: OPENING_MODE.roundId, rounds: BLOCK_ROUNDS }];
+            // nothing usable. Question 0 comes from the opening round, not a plan.
+            const targetRounds = validateRoundCount(parsed.rounds, roundCountFor(this.room.present.size));
+            const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
             this.usedModes.add(OPENING_MODE_ID);
-            const question = this.generateForRound(OPENING_MODE.roundId, OPENING_MODE.poolId, reveal);
+            const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, reveal);
             // Draft has no tricky mode: it is a Custom-setup option, and the draft
             // door never showed the toggle. Forcing it false here (rather than
             // trusting the client) closes the leak where a device that once
             // enabled tricky in Custom silently veiled every later draft game.
-            result = applyStart(this.room, playerId, question, openingPlan, targetBlocks * BLOCK_ROUNDS, false, reveal, { draft: true, targetBlocks });
+            result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, false, reveal, { draft: true, targetRounds });
             break;
           }
           // Setlist: the host's plan rides in on the start message; never trust it
           // raw. validatePlan strips anything malformed and returns null if nothing
           // valid survives, so a missing / bad plan cleanly falls back to the
-          // default. Generate round 0 from the same validated plan.
+          // default. Generate question 0 from the same validated plan.
           const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
-          result = applyStart(this.room, playerId, this.generateQuestion(0, plan, reveal), plan, totalRounds(plan), tricky, reveal);
+          result = applyStart(this.room, playerId, this.generateQuestion(0, plan, reveal), plan, totalQuestions(plan), tricky, reveal);
           break;
         }
         case 'buzz': {
           const choice = String(parsed.choice ?? '');
           const q = this.room.question;
-          const round = q ? ROUNDS[q.roundId] : null;
-          const correct = q && round ? round.isCorrect(q, choice) : false;
+          const question = q ? QUESTIONS[q.questionId] : null;
+          const correct = q && question ? question.isCorrect(q, choice) : false;
           result = applyBuzz(this.room, playerId, choice, correct);
           break;
         }
@@ -293,32 +293,32 @@ export default class PartyGameServer {
           result = applyForceReveal(this.room, playerId);
           break;
         case 'next': {
-          // In a draft, a `next` that lands on a block boundary opens a pick
+          // In a draft, a `next` that lands on a round boundary opens a pick
           // instead of dealing the next question: the lowest-ranked seat that
-          // hasn't picked chooses the next block from a dealt hand. Otherwise
-          // (and always in setlist) it advances the round or ends the game.
+          // hasn't picked chooses the next round from a dealt hand. Otherwise
+          // (and always in setlist) it advances the question or ends the game.
           const picker = pendingPickAfterReveal(this.room)
             ? pickerFor(this.scoreboard(), this.room.pickedBy) : null;
           if (picker) {
             result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes));
           } else {
             // Not a pick boundary, or (defensively) no eligible picker — the
-            // block-count formula guarantees one, but never freeze the room on a
+            // round-count formula guarantees one, but never freeze the room on a
             // null picker: fall through to the ordinary advance / final board.
-            result = applyNext(this.room, playerId, this.generateQuestion(this.room.roundIndex + 1));
+            result = applyNext(this.room, playerId, this.generateQuestion(this.room.questionIndex + 1));
           }
           break;
         }
         case 'pick': {
-          // The designated picker chooses their block. Guard the phase + picker
+          // The designated picker chooses their round. Guard the phase + picker
           // here so a stale / spoofed pick never generates a question, then
-          // validate the mode against the no-repeat set before building its block.
+          // validate the mode against the no-repeat set before building its round.
           if (this.room.phase !== 'picking' || this.room.picker !== playerId) return;
           const modeId = String(parsed.modeId ?? '');
           if (!isValidPick(modeId, this.usedModes)) return;
           const mode = MODE_BY_ID[modeId];
-          const segment = { poolId: mode.poolId, roundId: mode.roundId, rounds: BLOCK_ROUNDS };
-          const question = this.generateForRound(mode.roundId, mode.poolId);
+          const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
+          const question = this.generateForQuestion(mode.questionId, mode.poolId);
           result = applyPick(this.room, playerId, modeId, segment, question);
           if (result.broadcasts.length > 0) this.usedModes.add(modeId);
           break;
@@ -333,8 +333,8 @@ export default class PartyGameServer {
           if (!picker || hand.length === 0) return;
           const modeId = hand[Math.floor(Math.random() * hand.length)];
           const mode = MODE_BY_ID[modeId];
-          const segment = { poolId: mode.poolId, roundId: mode.roundId, rounds: BLOCK_ROUNDS };
-          const question = this.generateForRound(mode.roundId, mode.poolId);
+          const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
+          const question = this.generateForQuestion(mode.questionId, mode.poolId);
           result = applyPick(this.room, picker, modeId, segment, question);
           if (result.broadcasts.length > 0) this.usedModes.add(modeId);
           break;

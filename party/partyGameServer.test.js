@@ -1,15 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import PartyGameServer from './partyGameServer.js';
-import { blockCountFor, HAND_SIZE } from '../flags/partyDraft.js';
-import { BLOCK_ROUNDS } from '../flags/partyPlan.js';
+import { roundCountFor, HAND_SIZE } from '../flags/partyDraft.js';
+import { ROUND_QUESTIONS } from '../flags/partyPlan.js';
 
 /**
  * The party game server is otherwise the thin shell over the tested reducers
  * (`flags/partyRoom.js`) and draft helpers (`flags/partyDraft.js`); these tests
  * pin the one piece that lives only here — the **draft routing**: dealing the
- * opening block, opening a pick at a block boundary, and turning a pick (or a
- * forced pick) into the next block. Mirrors `ticTacToeServer.test.js`'s mocks.
+ * opening round, opening a pick at a round boundary, and turning a pick (or a
+ * forced pick) into the next round. Mirrors `ticTacToeServer.test.js`'s mocks.
  */
 
 /** @param {string} id */
@@ -61,43 +61,43 @@ async function startSoloDraft() {
   return { srv, conn };
 }
 
-/** Play one block's worth of rounds: buzz (solo auto-reveals) then next, five times.
+/** Play one round's worth of questions: buzz (solo auto-reveals) then next, five times.
  *  The fifth `next` lands on the pick (or the final board). */
 async function playBlock(srv, conn) {
-  for (let i = 0; i < BLOCK_ROUNDS; i++) {
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
     await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
   }
 }
 
-test('draft start: opens a Flags block, sizes the game from the seat count', async () => {
+test('draft start: opens a Flags round, sizes the game from the seat count', async () => {
   const { srv, conn } = await startSoloDraft();
   assert.equal(srv.room.draft, true);
-  assert.equal(srv.room.targetBlocks, blockCountFor(1)); // solo -> 3
-  assert.equal(srv.room.totalRounds, blockCountFor(1) * BLOCK_ROUNDS);
+  assert.equal(srv.room.targetRounds, roundCountFor(1)); // solo -> 3
+  assert.equal(srv.room.totalQuestions, roundCountFor(1) * ROUND_QUESTIONS);
   const q = conn.last('question');
-  assert.equal(q.roundId, 'flagPick', 'block 1 is Flags');
+  assert.equal(q.questionId, 'flagPick', 'round 1 is Flags');
   assert.equal(q.answer, undefined, 'the answer never rides the broadcast');
 });
 
-test('draft start: the host\'s block count overrides the seat-count suggestion', async () => {
+test('draft start: the host\'s round count overrides the seat-count suggestion', async () => {
   const conn = mockConn('a');
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, blocks: 7 }), conn);
-  assert.equal(srv.room.targetBlocks, 7);
-  assert.equal(srv.room.totalRounds, 7 * BLOCK_ROUNDS);
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, rounds: 7 }), conn);
+  assert.equal(srv.room.targetRounds, 7);
+  assert.equal(srv.room.totalQuestions, 7 * ROUND_QUESTIONS);
 });
 
-test('draft start: an out-of-range block count falls back to the suggestion', async () => {
-  for (const blocks of [0, 99, -3, 2.5, 'lots', null]) {
+test('draft start: an out-of-range round count falls back to the suggestion', async () => {
+  for (const rounds of [0, 99, -3, 2.5, 'lots', null]) {
     const conn = mockConn('a');
     const srv = new PartyGameServer(mockParty([conn]));
     await srv.onStart();
     await srv.onConnect(conn, ctxFor('alice'));
-    await srv.onMessage(JSON.stringify({ type: 'start', draft: true, blocks }), conn);
-    assert.equal(srv.room.targetBlocks, blockCountFor(1), `blocks=${blocks}`);
+    await srv.onMessage(JSON.stringify({ type: 'start', draft: true, rounds }), conn);
+    assert.equal(srv.room.targetRounds, roundCountFor(1), `rounds=${rounds}`);
   }
 });
 
@@ -123,9 +123,9 @@ test('setlist start: tricky mode still rides the host plan', async () => {
   assert.equal(srv.room.tricky, true);
 });
 
-test('draft: a block boundary opens a pick with a hand that excludes the played mode', async () => {
+test('draft: a round boundary opens a pick with a hand that excludes the played mode', async () => {
   const { srv, conn } = await startSoloDraft();
-  await playBlock(srv, conn); // 5 rounds of Flags, then next -> picking
+  await playBlock(srv, conn); // 5 questions of Flags, then next -> picking
   assert.equal(srv.room.phase, 'picking');
   const picking = conn.last('picking');
   assert.ok(picking, 'a picking broadcast was sent');
@@ -134,18 +134,18 @@ test('draft: a block boundary opens a pick with a hand that excludes the played 
   assert.ok(!picking.hand.includes('flags-all'), 'the opening Flags mode is not offered again');
 });
 
-test('draft: a valid pick deals that block with attribution and records the mode', async () => {
+test('draft: a valid pick deals that round with attribution and records the mode', async () => {
   const { srv, conn } = await startSoloDraft();
   await playBlock(srv, conn);
   const hand = conn.last('picking').hand;
   const chosen = hand.find((id) => id === 'map-outlines') ?? hand[0];
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: chosen }), conn);
   assert.equal(srv.room.phase, 'question');
-  assert.equal(srv.room.roundIndex, BLOCK_ROUNDS, 'advanced to the first round of block 2');
+  assert.equal(srv.room.questionIndex, ROUND_QUESTIONS, 'advanced to the first question of round 2');
   const q = conn.last('question');
   assert.deepEqual(q.draftPick, { picker: 'alice', modeId: chosen });
   assert.ok(srv.usedModes.has(chosen), 'the picked mode is now used');
-  assert.equal(srv.room.plan.length, 2, 'the block was appended to the plan');
+  assert.equal(srv.room.plan.length, 2, 'the round was appended to the plan');
 });
 
 test('draft: an invalid pick (unknown / already-played mode) is ignored', async () => {
@@ -173,22 +173,22 @@ test('draft: forcePick from the host resolves the pick with a random hand card',
   const { srv, conn } = await startSoloDraft();
   await playBlock(srv, conn);
   await srv.onMessage(JSON.stringify({ type: 'forcePick' }), conn);
-  assert.equal(srv.room.phase, 'question', 'the block was dealt on timeout');
-  assert.equal(srv.room.roundIndex, BLOCK_ROUNDS);
+  assert.equal(srv.room.phase, 'question', 'the round was dealt on timeout');
+  assert.equal(srv.room.questionIndex, ROUND_QUESTIONS);
   const q = conn.last('question');
   assert.equal(q.draftPick.picker, 'alice', 'attributed to the picker who timed out');
 });
 
 test('draft: a boundary where everyone has picked wraps the rotation, never freezes', async () => {
-  // The host can set more blocks than seats, so "every seat has already picked"
+  // The host can set more rounds than seats, so "every seat has already picked"
   // is a normal mid-game state. The boundary must still open a pick (the
   // rotation wraps) rather than freezing in `reveal` or skipping the pick.
   const { srv, conn } = await startSoloDraft();
-  for (let i = 0; i < BLOCK_ROUNDS - 1; i++) {
+  for (let i = 0; i < ROUND_QUESTIONS - 1; i++) {
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
     await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
   }
-  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn); // round 4 -> reveal (boundary)
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn); // question 4 -> reveal (boundary)
   srv.room = { ...srv.room, pickedBy: ['alice'] }; // the only seat already picked once
   await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
   assert.notEqual(srv.room.phase, 'reveal', 'the room did not freeze at the boundary');
@@ -196,15 +196,15 @@ test('draft: a boundary where everyone has picked wraps the rotation, never free
   assert.equal(srv.room.picker, 'alice');
 });
 
-test('draft: the last block ends in the final board, no pick', async () => {
-  // Play every block the game was sized for; the boundary after the last one is
+test('draft: the last round ends in the final board, no pick', async () => {
+  // Play every round the game was sized for; the boundary after the last one is
   // the final board, not another pick.
   const conn = mockConn('a');
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, blocks: 3 }), conn);
-  await playBlock(srv, conn);                 // block 1 -> picking
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, rounds: 3 }), conn);
+  await playBlock(srv, conn);                 // round 1 -> picking
   for (let b = 2; b <= 3; b++) {
     const hand = conn.last('picking').hand;
     await srv.onMessage(JSON.stringify({ type: 'pick', modeId: hand[0] }), conn);
@@ -228,8 +228,8 @@ test('draft (3 players): the picking broadcast names the same picker for everyon
   assert.equal(c.last('welcome').you, 'carol');
 
   await srv.onMessage(JSON.stringify({ type: 'start', draft: true }), a);
-  // Play block 1: every present seat buzzes, then the host advances.
-  for (let i = 0; i < BLOCK_ROUNDS; i++) {
+  // Play round 1: every present seat buzzes, then the host advances.
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), b);
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), c);

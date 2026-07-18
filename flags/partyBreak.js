@@ -1,11 +1,11 @@
 /**
- * The between-blocks **break** view for Flag Party: given the scoreboard at the
+ * The between-rounds **break** view for Flag Party: given the scoreboard at the
  * previous break (or null, for the first break of the game) and the scoreboard
- * now, produce the standings the break screen renders — each row's block gain,
- * rank movement, and gap to the leader, plus the block's MVP.
+ * now, produce the standings the break screen renders — each row's round gain,
+ * rank movement, and gap to the leader, plus the round's MVP.
  *
  * Pure, so `flagParty/page.js` stays thin DOM glue and the arithmetic is
- * unit-tested. The client never holds per-block point history; it only snapshots
+ * unit-tested. The client never holds per-round point history; it only snapshots
  * the cumulative scoreboard at each break and diffs two snapshots here.
  *
  * @typedef {{ playerId: string, nickname: string, score: number }} BoardRow
@@ -13,7 +13,7 @@
  * @property {string} playerId
  * @property {string} nickname
  * @property {number} score       cumulative total now
- * @property {number} blockGain   points earned in the block that just ended
+ * @property {number} blockGain   points earned in the round that just ended
  * @property {number | null} rankDelta  places climbed since the previous break
  *   (positive = moved up, negative = dropped, 0 = held); null on the first break,
  *   where there is no previous standing to move from
@@ -31,7 +31,7 @@
  * @param {BoardRow[]} currBoard
  * @returns {{ rows: BreakRow[], mvp: string | null }}
  */
-export function blockBreak(prevBoard, currBoard) {
+export function roundBreak(prevBoard, currBoard) {
   const curr = Array.isArray(currBoard) ? currBoard : [];
   /** @type {Map<string, number>} playerId -> score at the previous break */
   const prevScore = new Map();
@@ -60,8 +60,8 @@ export function blockBreak(prevBoard, currBoard) {
     };
   });
 
-  // MVP = the biggest gainer in the block. Ties break toward the higher total
-  // (curr is sorted by score, so the earlier row wins), and a block where nobody
+  // MVP = the biggest gainer in the round. Ties break toward the higher total
+  // (curr is sorted by score, so the earlier row wins), and a round where nobody
   // scored has no MVP.
   /** @type {string | null} */
   let mvp = null;

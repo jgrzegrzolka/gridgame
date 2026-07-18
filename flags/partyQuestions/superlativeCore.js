@@ -1,5 +1,5 @@
 /**
- * The superlative round's pure core: pick four countries with a clear extreme.
+ * The superlative question's pure core: pick four countries with a clear extreme.
  *
  * Split out of `superlative.js` (Feature V Phase 4a) for one reason: that file
  * statically imports 32 metric JSONs, and **a browser cannot load it**.
@@ -73,13 +73,13 @@ function shuffle(arr, rng) {
 
 /**
  * Draw four entries such that no two are visual flag lookalikes (Indonesia /
- * Monaco, Romania / Chad, Ireland / Côte d'Ivoire, …). This round renders its
+ * Monaco, Romania / Chad, Ireland / Côte d'Ivoire, …). This question renders its
  * options as *flags with no numbers*, so two indistinguishable flags among the
  * four would be an unfair coin-flip: you could know Monaco is the densest yet be
  * unable to tell which of two red-white tiles is Monaco. Greedy over a shuffled
  * copy, marking each pick's whole lookalike group taken — the same guard
- * `buildChoices` in `flags/quiz.js` applies to the flag-pick round, sharing its
- * `lookalikesOf` list so the two rounds can't drift apart. Falls back to filling
+ * `buildChoices` in `flags/quiz.js` applies to the flag-pick question, sharing its
+ * `lookalikesOf` list so the two questions can't drift apart. Falls back to filling
  * from the skipped remainder if the constraint can't reach four (a pool that's
  * mostly one lookalike group), so it always returns four when `src` has four.
  *
@@ -108,7 +108,7 @@ function drawFourDistinct(src, rng) {
  * @param {Metric} metric the metric to rank by.
  * @param {PoolEntry[]} pool  any pool of country entries; narrowed to the ones
  *   that carry a value for this metric before use.
- * @param {Set<string>} [exclude] answer codes already used this game, so a round
+ * @param {Set<string>} [exclude] answer codes already used this game, so a question
  *   doesn't repeat a country. Falls back to the full valued set if excluding
  *   would leave too few to build a question.
  * @param {() => number} [rng] injectable for tests; defaults to `Math.random`.
@@ -151,22 +151,22 @@ function generateFor(metric, pool, exclude, rng = Math.random, forcedDirection) 
 }
 
 /**
- * Build a superlative round bound to a metric. The metric is passed in (rather
- * than hard-imported) so every world metric gets a Flag Party round from one
+ * Build a superlative question bound to a metric. The metric is passed in (rather
+ * than hard-imported) so every world metric gets a Flag Party question from one
  * factory: population is `superlative`, area is `superlative-area`, etc.
  *
  * @param {Metric} metric a `createMetric(...)` instance — anything with  /
  *   . Typed structurally rather than importing createMetric, because
  *   this module must stay free of imports that could drag JSON in.
- * @param {string} roundId stable round id (matches the PARTY_MODES roundId)
+ * @param {string} questionId stable question id (matches the PARTY_MODES questionId)
  * @param {{ direction?: 'most' | 'least' }} [opts] `direction` locks the prompt
- *   to one extreme (coffee is `'most'`-only); omitted = both, chosen per round.
+ *   to one extreme (coffee is `'most'`-only); omitted = both, chosen per question.
  * @returns {{ id: string, generate: (pool: PoolEntry[], exclude?: Set<string>, rng?: () => number) => Question, isCorrect: (q: { answer: string }, choice: string) => boolean }}
  */
-export function createSuperlativeRound(metric, roundId, opts = {}) {
+export function createSuperlativeQuestion(metric, questionId, opts = {}) {
   const forcedDirection = opts.direction;
   return {
-    id: roundId,
+    id: questionId,
     generate: (pool, exclude, rng = Math.random) => generateFor(metric, pool, exclude, rng, forcedDirection),
     isCorrect: (question, choice) => choice === question.answer,
   };
@@ -192,7 +192,7 @@ function positiveOnly(raw) {
 }
 
 /**
- * Turn a catalog entry plus its raw values file into a playable round: apply the
+ * Turn a catalog entry plus its raw values file into a playable question: apply the
  * zero-filter, build the metric, lock the direction.
  *
  * **This is the single definition of "apply the catalog's rules", and it lives
@@ -209,12 +209,12 @@ function positiveOnly(raw) {
  *
  * @param {import('./superlativeCatalog.js').SuperlativeMetric} entry
  * @param {import('../metrics.js').MetricData} raw the metric's values file
- * @returns {ReturnType<typeof createSuperlativeRound>}
+ * @returns {ReturnType<typeof createSuperlativeQuestion>}
  */
-export function buildSuperlativeRound(entry, raw) {
-  return createSuperlativeRound(
+export function buildSuperlativeQuestion(entry, raw) {
+  return createSuperlativeQuestion(
     createMetric(entry.zeroFiltered ? positiveOnly(raw) : raw, []),
-    entry.roundId,
+    entry.questionId,
     entry.direction ? { direction: entry.direction } : {},
   );
 }
