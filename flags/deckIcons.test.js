@@ -41,8 +41,8 @@ test('base prefixes the asset URLs, defaulting to one level up', () => {
 // boxes for the same artwork.
 test('className lands on the root element of every icon kind', () => {
   for (const id of DECK_ICON_IDS) {
-    const html = deckIconHtml(id, { className: 'gs-thumb' });
-    assert.match(html, /^<(img|svg) class="gs-thumb"/, `${id}: class not on the root`);
+    const html = deckIconHtml(id, { className: 'probe-class' });
+    assert.match(html, /^<(img|svg) class="probe-class"/, `${id}: class not on the root`);
   }
 });
 

@@ -172,7 +172,7 @@ export function questionIdAt(plan, index) {
  * the open-ended **metric** family (population / area / density / …future GDP,
  * coffee). The lobby renders the two groups differently — picture modes as rows,
  * the metric family as colour chips — but each enabled mode of either group is
- * one round (see {@link buildPartyPlan}); a statistic is its own per-metric
+ * one round; a statistic is its own per-metric
  * round. Adding a metric = one more `group: 'metric'` entry here + its question
  * module + i18n; the setup UI grows by one chip, not one row.
  *
@@ -222,93 +222,5 @@ export const PICTURE_MODES = PARTY_MODES.filter((m) => m.group === 'picture');
 /** The open-ended world-metric family (population / area / density / …). */
 export const METRIC_MODES = PARTY_MODES.filter((m) => m.group === 'metric');
 
-/** Bounds a host's choices stay inside — a defence against a malformed plan
- *  over the wire as much as a sane ceiling for the lobby steppers. */
-export const MAX_QUESTIONS_PER_MODE = 30;
-export const MAX_TOTAL_QUESTIONS = 100;
-
-/**
- * The catalog mode a segment belongs to (matched on questionId + poolId), or null
- * if the segment references no known mode.
- * @param {Segment} seg
- * @returns {string | null}
- */
-function modeIdForSegment(seg) {
-  const m = PARTY_MODES.find((x) => x.questionId === seg.questionId && x.poolId === seg.poolId);
-  return m ? m.id : null;
-}
 
 
-
-/**
- * Sanitize an untrusted plan arriving from a host over the wire: keep only
- * segments that reference a real catalog mode with an integer count >= 1, clamp
- * each to `MAX_QUESTIONS_PER_MODE`, and cap the running total at
- * `MAX_TOTAL_QUESTIONS`. Returns the cleaned plan, or null when nothing valid
- * survives (the server then falls back to `DEFAULT_PLAN`). The server must never
- * trust a client-supplied plan directly.
- * @param {unknown} plan
- * @returns {Segment[] | null}
- */
-export function validatePlan(plan) {
-  if (!Array.isArray(plan)) return null;
-  /** @type {Segment[]} */
-  const out = [];
-  let total = 0;
-  for (const seg of plan) {
-    if (!seg || typeof seg !== 'object') continue;
-    const id = modeIdForSegment(/** @type {Segment} */ (seg));
-    if (!id) continue;
-    const questions = /** @type {any} */ (seg).questions;
-    if (!Number.isInteger(questions) || questions < 1) continue;
-    let n = Math.min(questions, MAX_QUESTIONS_PER_MODE);
-    if (total + n > MAX_TOTAL_QUESTIONS) n = MAX_TOTAL_QUESTIONS - total;
-    if (n < 1) break;
-    /** @type {Segment} */
-    const clean = { poolId: /** @type {Segment} */ (seg).poolId, questionId: /** @type {Segment} */ (seg).questionId, questions: n };
-    // A draft round's veil rides on the segment, so it has to be carried across
-    // explicitly — this rebuilds segments field-by-field, so an unlisted key is
-    // dropped. Only the literal `true` survives, and the key stays absent
-    // otherwise so an unveiled segment keeps its original shape.
-    if (/** @type {Segment} */ (seg).veil === true) clean.veil = true;
-    out.push(clean);
-    total += n;
-  }
-  return out.length ? out : null;
-}
-
-/**
- * Build a plan from the lobby setup shape. Under the **round model** (Iteration
- * 8) every enabled mode is one {@link ROUND_QUESTIONS}-question round, and that now
- * includes each statistic on its own: an on picture mode becomes one 5-question
- * segment, and **each enabled metric becomes its own 5-question round** of that one
- * metric (not a mixed world-facts round). So the round count is exactly the
- * number of enabled modes: picture modes on + statistics on. The result is a
- * normal `Segment[]` the server validates like any other plan — no server or room
- * change is needed, the round model lives entirely in how the client turns its
- * setup into segments here.
- *
- * Order: the picture rounds (catalog order), then the statistic rounds (catalog
- * order). A per-metric round reads as a coherent little quiz ("five coffee
- * questions") and gives Iteration 9's draft its "I pick Coffee" moment for free.
- *
- * @param {{ picture: Record<string, { on: boolean }>, facts: { metrics: Record<string, boolean> } }} setup
- * @returns {Segment[]}
- */
-export function buildPartyPlan(setup) {
-  /** @type {Segment[]} */
-  const plan = [];
-  const picture = (setup && setup.picture) || {};
-  for (const m of PICTURE_MODES) {
-    if (picture[m.id] && picture[m.id].on) {
-      plan.push({ poolId: m.poolId, questionId: m.questionId, questions: ROUND_QUESTIONS });
-    }
-  }
-  const metrics = (setup && setup.facts && setup.facts.metrics) || {};
-  for (const m of METRIC_MODES) {
-    if (metrics[m.id]) {
-      plan.push({ poolId: m.poolId, questionId: m.questionId, questions: ROUND_QUESTIONS });
-    }
-  }
-  return plan;
-}

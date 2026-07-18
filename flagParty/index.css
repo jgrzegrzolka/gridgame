@@ -95,138 +95,6 @@
 .chip-host { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: 600; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
-/* Lobby game setup — host-only, collapsed by default. The summary row shows the
-   default plan at a glance (question total + the mode mix); tapping expands the
-   dials. Surface card + muted-soft border matches the player chips above it, and
-   the on/off switch is the site's shared `.scope-toggle` (common.css) so it
-   reads the same as every other toggle on the site. Weights follow the same
-   restraint as `.scoreline` (500 label, 600 number) — nothing heavier. */
-.game-setup {
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 12px;
-  background: var(--surface-color);
-  overflow: hidden;
-}
-.game-setup-head {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 11px 12px;
-  cursor: pointer;
-  list-style: none;
-}
-.game-setup-head::-webkit-details-marker { display: none; }
-.gs-head-row { display: flex; align-items: center; gap: 8px; }
-.gs-title { font-size: 14px; font-weight: 600; color: var(--primary-color); }
-.gs-meta { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted-color); }
-.gs-questions { color: var(--primary-color); font-weight: 600; font-variant-numeric: tabular-nums; }
-/* CSS chevron (no glyph dependency): a down-caret that flips up when open. */
-.gs-caret {
-  width: 7px;
-  height: 7px;
-  margin-left: 2px;
-  border-right: 2px solid var(--muted-color);
-  border-bottom: 2px solid var(--muted-color);
-  transform: rotate(45deg) translate(-1px, -1px);
-}
-.game-setup[open] .gs-caret { transform: rotate(-135deg) translate(-2px, -2px); }
-/* Collapsed only: the mode mix (short label + count per enabled mode). Hidden
-   once open, since the dials below say the same thing in full. */
-.gs-mix { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted-color); }
-.gs-mix .n { color: var(--primary-color); font-weight: 600; font-variant-numeric: tabular-nums; }
-.game-setup[open] .gs-mix { display: none; }
-
-.gs-modes { display: none; flex-direction: column; padding: 0 12px 10px; }
-.game-setup[open] .gs-modes { display: flex; }
-.gs-mode { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--muted-soft-color); }
-.gs-mode.off { opacity: 0.5; }
-.gs-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--primary-color); }
-/* One-line hint under the World facts section header: each chip is its own round. */
-.gs-facts-hint { margin: 2px 0 4px; font-size: 12px; color: var(--muted-color); }
-
-/* Section eyebrow splitting the list into the picture trio and the world-facts
-   family. Carries the between-group hairline; the row right after it drops its
-   own top rule so there's no double line under the label. */
-.gs-sec {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--muted-color);
-  padding: 12px 0 4px;
-  margin-top: 2px;
-  border-top: 1px solid var(--muted-soft-color);
-}
-.gs-sec:first-child { border-top: none; margin-top: 0; padding-top: 2px; }
-.gs-sec + .gs-mode { border-top: none; }
-
-/* Picture leading each row: a flag thumbnail (country flag / Jolly Roger), the
-   Italy contour silhouette, or a monochrome chart. The container is a fixed
-   slot; each kind sizes itself by class. Line charts inherit the row's primary;
-   flag artwork and the contour asset carry their own colour. */
-.gs-ic { flex: none; width: 24px; height: 24px; color: var(--primary-color); display: grid; place-items: center; }
-.gs-ic svg { width: 20px; height: 20px; display: block; }
-/* Flag thumbnails (4:3), framed with the same 1px inset as the game tiles. */
-.gs-ic .gs-thumb { width: 24px; height: 18px; object-fit: cover; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
-/* The contour silhouette sits on nothing (no frame), like the real map tiles. */
-.gs-ic .gs-contour { width: 22px; height: 22px; object-fit: contain; box-shadow: none; }
-
-/* Game-wide option row (tricky toggle): same frame as a mode row, but the name
-   column stacks a title over a muted one-line hint. */
-.gs-option .gs-name { display: flex; flex-direction: column; gap: 2px; }
-.gs-opt-title { font-size: 14px; font-weight: 500; color: var(--primary-color); }
-.gs-opt-hint { font-size: 12px; font-weight: 400; color: var(--muted-color); }
-
-/* World-facts metric chips — each is a round toggle (which statistics play).
-   Colour comes from the metric's own `--mc` hue (defined below). */
-.gs-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 4px 0; }
-.gs-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 5px 11px 5px 8px;
-  border-radius: 999px;
-  border: 1.5px solid var(--muted-soft-color);
-  background: var(--surface-color);
-  color: var(--muted-color);
-  cursor: pointer;
-}
-.gs-chip .gs-ic { width: 15px; height: 15px; color: inherit; }
-.gs-chip .gs-ic svg { width: 15px; height: 15px; }
-/* Chosen: the metric's own hue on the ring, label, and icon (icon inherits
-   `color` via currentColor). `--mc` is the per-metric hue set INLINE by
-   page.js from the shared flags/metricVisuals.js, the single source for the
-   metric-hue palette exception (see the note there). No hue values live in
-   this stylesheet anymore. */
-.gs-chip.on { border-color: var(--mc); color: var(--mc); background: var(--selected-color); }
-.gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
-
-/* Per-category reveal timing, shown under the tricky toggle when it's on. A
-   quiet indented round (it belongs to the toggle above it) with one row per
-   category: a name and a compact percentage picker. */
-.gs-reveal { display: flex; flex-direction: column; gap: 8px; padding: 10px 0 4px 2px; }
-.gs-reveal[hidden] { display: none; }
-.gs-reveal-hint { margin: 0 0 2px; font-size: 12px; color: var(--muted-color); }
-.gs-reveal-row { display: flex; align-items: center; gap: 10px; }
-.gs-reveal-name { flex: 1; min-width: 0; font-size: 13px; color: var(--primary-color); }
-.gs-reveal-pick {
-  flex: none;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary-color);
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 8px;
-  padding: 5px 8px;
-  cursor: pointer;
-  font-variant-numeric: tabular-nums;
-}
-.gs-reveal-pick:hover { border-color: var(--secondary-color); }
-
 /* Question: prompt + flags */
 .question-pill {
   align-self: center;
@@ -527,39 +395,16 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .break-mvp-gain { margin-left: auto; font-weight: 600; color: var(--secondary-color); font-variant-numeric: tabular-nums; }
 .break-board { display: flex; flex-direction: column; gap: 8px; }
 
-/* ---- draft: the two doors (how to play) ---- */
-.party-mode { display: flex; flex-direction: column; gap: 8px; }
-/* Host + lobby only (`partyModeEl.hidden = !hostSetup`). `display:flex` outweighs
-   the UA `[hidden]`, so without this a guest in the lobby would see the host-only
-   Draft / Custom doors. Same trap as `.party section[hidden]`. */
-.party-mode[hidden] { display: none; }
-.mode-door {
-  appearance: none;
-  text-align: left;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 12px;
-  background: var(--surface-color);
-  padding: 12px 14px;
-  cursor: pointer;
-  font: inherit;
-  color: var(--primary-color);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.mode-door:hover { background: var(--hover-color); }
-.mode-door.on { border-color: var(--secondary-color); background: var(--selected-color); }
-.mode-door-title { font-size: 15px; font-weight: 650; }
-.mode-door-desc { font-size: 12.5px; color: var(--muted-color); line-height: 1.4; }
-
-/* Game length, under the Draft door. Sits inside `.party-mode`, so the same
-   `display:flex`-outweighs-`[hidden]` trap applies — pin the hidden state. */
+/* ---- draft: game length ---- */
+/* Host + lobby only, and the whole of the host's setup now that the Custom-setup
+   door is retired. `display:flex` outweighs the UA `[hidden]`, so the hidden
+   state has to be pinned explicitly or a guest in the lobby would see the
+   host-only length row. Same trap as `.party section[hidden]`. */
 .draft-length {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  margin: -2px 0 2px;
   border: 1px solid var(--muted-soft-color);
   border-radius: 12px;
   background: var(--surface-color);

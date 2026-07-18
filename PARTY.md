@@ -178,12 +178,12 @@ final-round polish (#952) and the pick-screen polish (#953). The **round title c
 (both the drafted and the custom paths), pending a PR + Jan's merge — see its entry below.
 
 Shipped and on `main`: the show engine, three question types (flag-pick, map, superlative), the clock,
-tricky mode + its configurable reveal timing, the host game-setup panel, the grouped setup, the
-rounds + standings break (#950), the draft (#951), the double-points final round (#952),
+the veil, the rounds + standings break (#950), the draft (#951), the double-points final round (#952),
 and the pick-screen polish (#953). Since then (2026-07-18): draft length is set as rounds-per-player
-(#961, #964), tricky is Custom-only and the final round no longer veils itself (#961, #962), the
-block/round/question vocabulary was renamed (#963), and the world-facts name reveal became a fixed
-3 s instead of a host-configured fraction (#965).
+(#961, #964), the final round no longer veils itself (#961, #962), the block/round/question vocabulary
+was renamed (#963), the world-facts name reveal became a fixed 3 s instead of a host-configured
+fraction (#965), the picker can veil their own round (#971), and **Custom setup was retired — the
+draft is the only way a game starts** (Iteration 10 below).
 
 Still open:
 
@@ -681,6 +681,50 @@ agent can build it without re-deciding.
 - **Open sub-question for build time:** whether packs and Custom are two tabs, or
   packs are the default with Custom as a disclosure below them (Question 3 drew the
   latter). Decide when building; both fit the same `setupState` plumbing.
+
+## Iteration 10 — Retire Custom setup: the draft is the game — SHIPPED (2026-07-18)
+
+Iteration 9 put two doors in the lobby: **Draft** (default) and **Custom setup** (Iteration 8's
+host-built panel). Draft won. Custom setup was the thing nobody was going to pick — it asked a host
+to build a whole show before anyone could play, and its panel was most of the lobby's UI and roughly
+a third of `flagParty/page.js`. Keeping a mode alive "just in case" is what made the lobby awkward:
+two doors to explain, a panel to hide and show, and a second start path on the server.
+
+So the door picker, the panel, and the setlist start path are gone. The lobby is now the room code,
+the players, one **"Rounds each player picks"** row, and Start.
+
+**What went**
+
+- **The lobby**: both `.mode-door`s and the `.party-mode` wrapper, the `<details class="game-setup">`
+  panel and every `.gs-*` control (mode toggles, metric chips, reveal rows) — ~125 lines of CSS,
+  ~340 lines of JS (`buildSetup` / `updateSetup` / `sanitizeSetup` / `migrateModeState` / the
+  setup persistence), and 12 i18n keys x 2 languages. The draft door's own copy went too: with one
+  mode left there is no door to label.
+- **The wire**: `start` no longer carries `plan`, `tricky`, or `reveal` — only `picks`. The server's
+  setlist branch, `validatePlan`, `buildPartyPlan`, `validateReveal` / `clampReveal` /
+  `REVEAL_OPTIONS`, and the `MAX_*_QUESTIONS` caps are all deleted. Nothing untrusted arrives as a
+  plan any more: every segment is server-built (the opening round, then one per pick).
+- **Five localStorage keys** (`gridgame.party.{setup,plan,tricky,reveal,mode}`), left unread rather
+  than migrated — the draft flow has no use for what they held.
+
+**What stayed, and why**
+
+- **The veil.** It was never really a Custom-mode feature by the end: #971 made it a **per-round
+  choice the picker arms** (`segment.veil` -> `room.tricky` for that round only). That is the live,
+  in-game version of the idea, and it is untouched.
+- **`DEFAULT_REVEAL` `{flag: 0.8, map: 0.4, metric: 0.2}`**, now **fixed rather than host-editable** —
+  the same call already made for `NAME_REVEAL_SECONDS` (Iteration 6b's picker, retired in #965). It
+  cost three lobby rows, a persisted config, a wire field and a validator to tune a beat no host had
+  a reason to touch. *Whether* a round is veiled is still a real choice; only the clear timing is
+  settled. This reverses **Iteration 6b** (#801) — that entry stays below as history.
+- **`modeShortLabel` / `modeFullLabel` / the mode icons**, which the draft's hand cards and round
+  cards use. The icon classes (`mode-thumb` / `mode-contour`) were renamed off the dead `gs-` prefix;
+  their sizing comes from `.pick-card-ic img`.
+
+**Verified** end-to-end in-browser: lobby renders with just the length row, a game starts with no plan
+on the wire (4 rounds / 20 questions for 1 seat x 3 picks + the opening round), and a picker-veiled
+Flags round clears on the fixed schedule (`--veil-p` reaching 1 at ~16 s = 0.8 x the 20 s window).
+Net -976 / +81 lines across 11 files; full suite green (2908 tests).
 
 ## Iteration 8 — Rounds of five + the break — PLANNED (2026-07-17)
 
