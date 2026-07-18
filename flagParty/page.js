@@ -1375,15 +1375,16 @@ export function bootFlagParty() {
     // plan (the server builds the opening Flags round and sizes the game from the
     // seat count) and no reveal config (the veil clear timing is a fixed constant
     // now — see DEFAULT_REVEAL). The only host input is how many rounds each
-    // player picks.
+    // player picks, so `picks` is the whole message.
     //
-    // `draft: true` is redundant against the CURRENT server, which no longer
-    // branches on it — but do NOT drop it. PartyKit deploys on its own workflow
-    // (`deploy-partykit.yml`, Cloudflare) separately from the SWA site, so a new
-    // client routinely talks to the old server for a window, and the old server
-    // takes its setlist path unless this flag is exactly true. Removing it would
-    // turn every Start in that window into a 16-question default-plan game.
-    send({ type: 'start', draft: true, picks: picksPerPlayer });
+    // A `draft: true` flag rode along until the server that needed it was gone.
+    // It selected the draft branch on the pre-#974 server, which is no longer
+    // deployed (`deploy-partykit.yml` shipped the draft-only server from `main`),
+    // so nothing reads it any more. Note the ordering constraint if a start field
+    // is ever added the same way: PartyKit and the SWA site deploy on separate
+    // workflows, so the server has to understand a field before the client sends
+    // it, and has to stop needing one before the client drops it.
+    send({ type: 'start', picks: picksPerPlayer });
   });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
   questionToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));

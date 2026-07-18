@@ -57,7 +57,7 @@ async function startSoloDraft() {
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
   return { srv, conn };
 }
 
@@ -86,7 +86,7 @@ test('draft start: the host picks-per-player choice sets the length', async () =
   await srv.onStart();
   await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
   await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, picks: 3 }), a);
+  await srv.onMessage(JSON.stringify({ type: 'start', picks: 3 }), a);
   // 2 seats x 3 picks + the opening Flags round.
   assert.equal(srv.room.targetRounds, 7);
   assert.equal(srv.room.totalQuestions, 7 * ROUND_QUESTIONS);
@@ -98,7 +98,7 @@ test('draft start: a picks value outside the offered set falls back to one each'
     const srv = new PartyGameServer(mockParty([conn]));
     await srv.onStart();
     await srv.onConnect(conn, ctxFor('alice'));
-    await srv.onMessage(JSON.stringify({ type: 'start', draft: true, picks }), conn);
+    await srv.onMessage(JSON.stringify({ type: 'start', picks }), conn);
     assert.equal(srv.room.targetRounds, roundCountFor(1), `picks=${picks}`);
   }
 });
@@ -110,7 +110,7 @@ test('draft start: tricky mode is forced off even if a stale client sends it', a
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, tricky: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start', tricky: true }), conn);
   assert.equal(srv.room.tricky, false);
   assert.equal(conn.last('question').tricky, false, 'and clients are told not to veil');
 });
@@ -147,7 +147,7 @@ test('draft: an invalid pick (unknown / already-played one-shot mode) is ignored
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, picks: 3 }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start', picks: 3 }), conn);
   await playBlock(srv, conn);
   // Take outlines, play it out, and it is spent for the rest of the game.
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), conn);
@@ -214,7 +214,7 @@ test('draft: the last round ends in the final board, no pick', async () => {
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, rounds: 3 }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start', rounds: 3 }), conn);
   await playBlock(srv, conn);                 // round 1 -> picking
   for (let b = 2; b <= 3; b++) {
     const hand = conn.last('picking').hand;
@@ -238,7 +238,7 @@ test('draft (3 players): the picking broadcast names the same picker for everyon
   assert.equal(b.last('welcome').you, 'bob');
   assert.equal(c.last('welcome').you, 'carol');
 
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true }), a);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), a);
   // Play round 1: every present seat buzzes, then the host advances.
   for (let i = 0; i < ROUND_QUESTIONS; i++) {
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
