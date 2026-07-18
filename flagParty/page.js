@@ -1060,11 +1060,16 @@ export function bootFlagParty() {
         // nothing on most of the hand teaches the wrong rule.
         if (canVeilMode(modeId)) {
           card.classList.add('veilable');
-          const chip = el('button', 'pick-card-veil');
+          // Square icon button, no text: `.hover-tip` carries the explanation on
+          // desktop and `aria-label` carries it everywhere else. The tooltip is
+          // hover-only (see common.css), so it is an enhancement, never the only
+          // place the meaning lives — hence the label rather than a title.
+          const chip = el('button', 'pick-card-veil hover-tip');
           /** @type {HTMLButtonElement} */ (chip).type = 'button';
           chip.innerHTML = `<span class="veil-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>`;
-          chip.appendChild(document.createTextNode(t('party.veilChip', 'Veil')));
-          chip.title = t('party.veilChipHint', 'Veil this round: the flags start hidden and clear as the clock runs');
+          const label = t('party.veilChipHint', 'Veil this round: the flags start hidden and clear as the clock runs');
+          chip.dataset.tip = t('party.veilChip', 'Veil');
+          chip.setAttribute('aria-label', label);
           chip.setAttribute('aria-pressed', String(pickVeil.has(modeId)));
           chip.addEventListener('click', () => {
             if (pickSent) return;

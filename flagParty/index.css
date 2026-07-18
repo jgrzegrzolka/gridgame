@@ -470,33 +470,34 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    inside a button is invalid markup), so the row is the positioning context and
    a veilable card reserves room so its label can never run under the chip. */
 .pick-card-row { position: relative; }
-.pick-card.veilable { padding-right: 104px; }
+.pick-card.veilable { padding-right: 56px; }
 .pick-card-veil {
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
   appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 8px;
   border: 1px solid var(--muted-soft-color);
   background: var(--surface-color);
   color: var(--muted-color);
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
   cursor: pointer;
 }
 .pick-card-veil:hover { background: var(--hover-color); border-color: var(--secondary-color); }
-/* Armed reads as the accent, not as a quiet hover: the picker is placing a bet
-   on the whole table and needs to see at a glance that it is on. */
+/* Armed uses the site's standard selected treatment — grey fill + accent border,
+   the same rule as `.pick-card.chosen` right above, `.gs-chip.on` and `.opt.sel`.
+   A solid accent FILL would be louder than any other selected control on the
+   site, so it would read as "on" partly by breaking the pattern. */
 .pick-card-veil[aria-pressed='true'] {
-  background: var(--secondary-color);
+  background: var(--selected-color);
   border-color: var(--secondary-color);
-  color: var(--surface-color);
+  color: var(--secondary-color);
 }
 /* A 6-panel miniature of the veil cover itself, two panels already cleared —
    the same "partly revealed" idea the tile shows, at chip size. Inherits
