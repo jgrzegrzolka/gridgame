@@ -969,15 +969,18 @@ export function bootFlagParty() {
   function nameActive() {
     return !!(state.question && isMetricRound(state.question.roundId) && state.question.nameFrac != null);
   }
-  /** True when this question's tiles are veiled: the host's tricky mode, or the
-   *  always-tricky final block (regardless of the host's setting). **Never on a
-   *  statistics round** — the veil is a flag / outline recognition challenge, but
-   *  on a "which grows the most coffee?" round the flag is incidental, so hiding it
-   *  tests the wrong thing. Stat rounds have the name-reveal for their own
-   *  flag-identity problem (see `nameActive`). */
+  /** True when this question's tiles are veiled: the host's tricky mode, and
+   *  nothing else. The final block used to veil regardless of the setting, which
+   *  made the veil something a host could neither predict nor turn off — and in
+   *  draft, where the toggle isn't offered at all, it appeared out of nowhere for
+   *  the closing block. The final block already reads as the finale through
+   *  double points. **Never on a statistics round** — the veil is a flag / outline
+   *  recognition challenge, but on a "which grows the most coffee?" round the flag
+   *  is incidental, so hiding it tests the wrong thing. Stat rounds have the
+   *  name-reveal for their own flag-identity problem (see `nameActive`). */
   function veilActive() {
     if (state.question && isMetricRound(state.question.roundId)) return false;
-    return state.tricky || isFinalBlock(state.roundIndex, state.totalRounds);
+    return state.tricky;
   }
   function startVeil() {
     if (veilRaf) return;
@@ -1223,10 +1226,8 @@ export function bootFlagParty() {
       showSection('round'); renderRound(); syncClock();
       // The veil + name reveal animate during the question only; the reveal phase
       // always shows crisp tiles (stopVeil pins `--veil-p` to 1 and clears
-      // `names-shown`). Run the loop when tricky is on, when a world-facts round
-      // has name-reveal enabled, or on the always-tricky final block (the block
-      // that decides the game plays veiled regardless of the host's setting — it
-      // finally gives the veil a home, since draft never shows the toggle).
+      // `names-shown`). Run the loop when tricky is on, or when a world-facts
+      // round has name-reveal enabled.
       if (state.phase === 'question' && (veilActive() || nameActive())) startVeil(); else stopVeil();
     }
     else if (state.phase === 'picking') { stopVeil(); showSection('pick'); renderPick(); syncClock(); }
