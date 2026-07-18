@@ -16,6 +16,7 @@ import {
   validateReveal,
   veilProgress,
   namesRevealed,
+  veilActive,
 } from './partyTiming.js';
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
@@ -113,6 +114,41 @@ test('validateReveal: fills a full config, snapping and defaulting each field', 
   assert.deepEqual(validateReveal({ name: 0.5 }), DEFAULT_REVEAL, 'a stale name field is ignored, not carried through');
   assert.deepEqual(validateReveal(null), DEFAULT_REVEAL, 'a missing config is the full default');
   assert.deepEqual(validateReveal('nope'), DEFAULT_REVEAL, 'a garbage config is the full default');
+});
+
+// ---- veilActive ----
+
+test('veilActive: follows the host tricky setting on picture questions', () => {
+  assert.equal(veilActive(true, 'flagPick'), true);
+  assert.equal(veilActive(true, 'mapPick'), true);
+  assert.equal(veilActive(false, 'flagPick'), false);
+  assert.equal(veilActive(false, 'mapPick'), false);
+});
+
+test('veilActive: never veils a statistics question, even with tricky on', () => {
+  // The veil is a flag / outline recognition challenge. On "which grows the most
+  // coffee?" the flag is incidental, so hiding it tests the wrong skill.
+  for (const id of ['superlative', 'superlative-area', 'superlative-coffee', 'superlative-happiness']) {
+    assert.equal(veilActive(true, id), false, id);
+    assert.equal(veilActive(false, id), false, id);
+  }
+});
+
+test('veilActive: nothing else can turn the veil on', () => {
+  // Regression pin: the final round used to veil regardless of the setting, so a
+  // host who never enabled tricky still got a veiled finale, and draft (which
+  // never shows the toggle) got one out of nowhere. veilActive takes no round
+  // index at all now — there is no argument through which that could come back.
+  assert.equal(veilActive(false, 'flagPick'), false);
+  assert.equal(veilActive(false, undefined), false, 'an unknown question is not a veil trigger');
+  assert.equal(veilActive.length, 2, 'takes only (tricky, questionId)');
+});
+
+test('veilActive: a non-boolean tricky is not truthy-veiled', () => {
+  // The room defaults tricky to false, but a stale/garbage value must not veil.
+  for (const junk of [undefined, null, 1, 'yes', {}]) {
+    assert.equal(veilActive(/** @type {any} */ (junk), 'flagPick'), false, String(junk));
+  }
 });
 
 test('namesRevealed: flips true at a fixed NAME_REVEAL_SECONDS and holds', () => {

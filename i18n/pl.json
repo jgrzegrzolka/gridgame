@@ -629,7 +629,6 @@
       "superlativeTourism": "Turystyka",
       "superlativeElectricity": "Prąd"
     },
-    "round": "Pytanie {n} z {total}",
     "roundQuestion": "Runda {b}/{rounds} · Pytanie {n}/{total}",
     "afterRound": "Po rundzie {n} z {total}",
     "roundMvp": "Najlepszy w rundzie",
@@ -695,14 +694,12 @@
     "hintMostTourism": "Najwięcej przyjazdów turystów na mieszkańca",
     "hintMostElectricity": "Największe zużycie prądu na osobę",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
-    "locked": "Wybór zatwierdzony",
     "fastest": "Najszybszy",
     "tie": "Remis!",
     "playAgain": "Zagraj ponownie",
     "backToSettings": "Wróć do ustawień",
     "connecting": "Łączenie",
     "disconnected": "Rozłączono. Ponowne łączenie",
-    "you": "Ty",
     "reject": {
       "roomNotFound": "Pokój nie znaleziony, poproś o kod lub utwórz nowy pokój",
       "codeCollision": "Ten kod jest już zajęty, spróbuj utworzyć nowy",

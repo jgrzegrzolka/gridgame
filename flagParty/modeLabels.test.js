@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
-import { modeShortLabel, modeFullLabel, blockModeId } from './page.js';
+import { modeShortLabel, modeFullLabel, roundModeId } from './page.js';
 
 // Every mode the lobby can render — the two fixed picture modes plus every
 // metric superlative mode. `buildSetup` labels each of these, so each MUST
@@ -53,28 +53,28 @@ test('population mode (id superlative-pop / questionId superlative) resolves the
 // the client knows: a draft pick names the mode precisely, a custom round falls
 // back to the question id, and the two flag pools (which share one question id) can
 // only be announced generically without a pick.
-test('blockModeId: a draft pick names the exact mode, over the question id', () => {
+test('roundModeId: a draft pick names the exact mode, over the question id', () => {
   // A picked stat round: the specific metric, not the generic superlative.
-  assert.equal(blockModeId({ picker: 'p1', modeId: 'superlative-coffee' }, 'superlative-coffee'), 'superlative-coffee');
+  assert.equal(roundModeId({ picker: 'p1', modeId: 'superlative-coffee' }, 'superlative-coffee'), 'superlative-coffee');
   // A picked flag round: the pool the pick chose, which the question id can't reveal.
-  assert.equal(blockModeId({ picker: 'p1', modeId: 'flags-territories' }, 'flagPick'), 'flags-territories');
-  assert.equal(blockModeId({ picker: 'p1', modeId: 'flags-all' }, 'flagPick'), 'flags-all');
+  assert.equal(roundModeId({ picker: 'p1', modeId: 'flags-territories' }, 'flagPick'), 'flags-territories');
+  assert.equal(roundModeId({ picker: 'p1', modeId: 'flags-all' }, 'flagPick'), 'flags-all');
 });
 
-test('blockModeId: a custom round derives the mode from the question id', () => {
-  assert.equal(blockModeId(null, 'mapPick'), 'map-outlines');
-  assert.equal(blockModeId(null, 'superlative-coffee'), 'superlative-coffee');
+test('roundModeId: a custom round derives the mode from the question id', () => {
+  assert.equal(roundModeId(null, 'mapPick'), 'map-outlines');
+  assert.equal(roundModeId(null, 'superlative-coffee'), 'superlative-coffee');
   // population's legacy question id (`superlative`) maps back to its mode id.
-  assert.equal(blockModeId(null, 'superlative'), 'superlative-pop');
+  assert.equal(roundModeId(null, 'superlative'), 'superlative-pop');
 });
 
-test('blockModeId: an unpicked flag round is generic (the two pools share one question id)', () => {
-  assert.equal(blockModeId(null, 'flagPick'), null);
+test('roundModeId: an unpicked flag round is generic (the two pools share one question id)', () => {
+  assert.equal(roundModeId(null, 'flagPick'), null);
 });
 
-test('blockModeId: an unknown / missing question id is generic', () => {
-  assert.equal(blockModeId(null, 'someFutureQuestion'), null);
-  assert.equal(blockModeId(null, undefined), null);
+test('roundModeId: an unknown / missing question id is generic', () => {
+  assert.equal(roundModeId(null, 'someFutureQuestion'), null);
+  assert.equal(roundModeId(null, undefined), null);
   // a stale pick whose mode id isn't in the catalog falls through to the question id
-  assert.equal(blockModeId({ picker: 'p1', modeId: 'gone' }, 'mapPick'), 'map-outlines');
+  assert.equal(roundModeId({ picker: 'p1', modeId: 'gone' }, 'mapPick'), 'map-outlines');
 });

@@ -740,3 +740,68 @@ test('i18n: every flag colour in ALL_FLAG_COLORS has a translation in every lang
   }
   assert.deepEqual(missing, []);
 });
+
+// ---- placeholder consistency ----
+
+/**
+ * The `{token}` placeholders in a string, as a sorted unique list.
+ * @param {string} s
+ * @returns {string[]}
+ */
+function placeholdersIn(s) {
+  return [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();
+}
+
+test('i18n placeholders match between en, pl, and each call site fallback', async () => {
+  // Why this test exists: a rename moved page.js to `{rounds}` while en.json
+  // still said `{blocks}`, so the progress pill rendered the literal text
+  // "Round 1/{blocks}" in production. Every unit test stayed green — nothing
+  // compared a string's placeholders against the fallback the caller passes,
+  // and the two live in different files. A mismatch here is always a bug: the
+  // caller substitutes one set of names and the translation expects another,
+  // so an unsubstituted `{token}` reaches the screen.
+  const root = resolve(dirname(fileURLToPath(import.meta.url)));
+  const en = JSON.parse(await readFile(join(root, 'i18n', 'en.json'), 'utf8'));
+  const pl = JSON.parse(await readFile(join(root, 'i18n', 'pl.json'), 'utf8'));
+
+  /** @param {any} obj @param {string} key */
+  const lookup = (obj, key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
+
+  /** @type {string[]} */
+  const files = [];
+  await collectSourceFiles(root, files);
+
+  /** @type {string[]} */
+  const problems = [];
+  let checked = 0;
+  for (const file of files) {
+    if (file.endsWith('.test.js')) continue;
+    const src = await readFile(file, 'utf8');
+    const rel = relative(root, file).split(sep).join('/');
+    // t('some.key', 'fallback with {tokens}'). The fallback may be double-quoted
+    // when it contains an apostrophe ("{name}'s pick"), so match either quote
+    // style — missing those would leave real call sites unchecked.
+    for (const m of src.matchAll(/\bt\(\s*'([\w.]+)'\s*,\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g)) {
+      const [, key, single, double] = m;
+      const fallback = single ?? double ?? '';
+      const want = placeholdersIn(fallback);
+      for (const [lang, dict] of [['en', en], ['pl', pl]]) {
+        const value = lookup(dict, key);
+        if (typeof value !== 'string') continue; // missing keys are a separate test's job
+        const got = placeholdersIn(value);
+        if (want.length > 0) checked++;
+        if (got.join(',') !== want.join(',')) {
+          problems.push(
+            `${rel}: t('${key}') fallback has {${want.join('} {')}} but ${lang}.json has {${got.join('} {')}}`,
+          );
+        }
+      }
+    }
+  }
+  assert.deepEqual(problems, [], problems.join('\n'));
+  // A scanning test that silently matches nothing is worse than no test: it
+  // reads as coverage while asserting on an empty set. If a call-site style
+  // changes (template literals, a helper wrapping t()), this trips instead of
+  // quietly going green.
+  assert.ok(checked >= 20, `expected to check 20+ placeholder-carrying t() call sites, saw ${checked}`);
+});

@@ -13,7 +13,7 @@
  * @property {string} playerId
  * @property {string} nickname
  * @property {number} score       cumulative total now
- * @property {number} blockGain   points earned in the round that just ended
+ * @property {number} roundGain   points earned in the round that just ended
  * @property {number | null} rankDelta  places climbed since the previous break
  *   (positive = moved up, negative = dropped, 0 = held); null on the first break,
  *   where there is no previous standing to move from
@@ -54,7 +54,7 @@ export function roundBreak(prevBoard, currBoard) {
       playerId: r.playerId,
       nickname: r.nickname,
       score: r.score,
-      blockGain: Math.max(0, r.score - wasScore),
+      roundGain: Math.max(0, r.score - wasScore),
       rankDelta,
       gapToLeader: Math.max(0, leaderScore - r.score),
     };
@@ -67,7 +67,7 @@ export function roundBreak(prevBoard, currBoard) {
   let mvp = null;
   let best = 0;
   for (const row of rows) {
-    if (row.blockGain > best) { best = row.blockGain; mvp = row.playerId; }
+    if (row.roundGain > best) { best = row.roundGain; mvp = row.playerId; }
   }
   return { rows, mvp };
 }

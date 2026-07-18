@@ -629,7 +629,6 @@
       "superlativeTourism": "Tourism",
       "superlativeElectricity": "Electricity"
     },
-    "round": "Question {n} of {total}",
     "roundQuestion": "Round {b}/{rounds} · Question {n}/{total}",
     "afterRound": "After round {n} of {total}",
     "roundMvp": "Best of the round",
@@ -695,14 +694,12 @@
     "hintMostTourism": "Most tourist arrivals per resident",
     "hintMostElectricity": "Most electricity use per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
-    "locked": "Locked in",
     "fastest": "Fastest",
     "tie": "It's a tie!",
     "playAgain": "Play again",
     "backToSettings": "Back to settings",
     "connecting": "Connecting",
     "disconnected": "Disconnected. Reconnecting",
-    "you": "You",
     "reject": {
       "roomNotFound": "Room not found, ask for the code or create a new room",
       "codeCollision": "That code is already taken, try creating a new one",
