@@ -37,6 +37,33 @@ find a shortcut, not to wait.
 showing *"Disconnected. Reconnecting"* — which looks like a bug in your change
 and isn't. This has been mistaken for a real defect; don't repeat it.
 
+### Move off Jan's ports where you can
+
+The default ports are the ones **Jan's own `npm run dev` needs**. Squatting on
+them is how you lock him out of his own repo — it has happened, and the message
+you get back is `Port 4280 is already taken!` in *his* terminal, not yours.
+
+| Port | Movable? | How |
+|---|---|---|
+| `4280` SWA | **yes** | `swa start ./ --api-location ./api --port 4285` |
+| `10000-10002` Azurite | **yes** | `--blobPort 10010 --queuePort 10011 --tablePort 10012 --location ./.azurite-verify` |
+| `7071` Functions | yes, via SWA | follows the SWA emulator; leave it alone unless testing the API directly |
+| **`1999` PartyKit** | **NO** | hardcoded in `flags/roomNet.js` (`ws://${hostname}:1999/`) and pinned by `flags/roomNet.test.js` |
+
+So the rule splits by page:
+
+- **Static pages** (`daily/`, `flagQuiz/`, `findFlag/`, `flagsdata/`): always run on
+  the alternate ports. Nothing stops you, and you never touch his stack. Use a
+  separate `--location ./.azurite-verify` so you don't share his Azurite state
+  either (delete it when done; it is not in `.gitignore` under that name).
+- **flagParty / online TTT**: you are stuck with `1999`. If something is already
+  listening there, that is very likely **Jan's own session** — do not kill it,
+  ask. There is no alternate-port escape for these pages.
+
+Azurite on non-default ports means `AzureWebJobsStorage=UseDevelopmentStorage=true`
+no longer finds it, so the Functions runtime resumes its "unhealthy" log spam.
+That is noise, not failure — see §1 of `CLAUDE.md` on the health reporter.
+
 Wait for readiness by polling the log, never a fixed sleep:
 
 ```bash
@@ -61,6 +88,25 @@ has dropped a game he was in the middle of. So:
    before killing. A running stack may be his.
 3. Only then kill, and prefer stopping your own background task (`TaskStop`) over
    `Stop-Process` — `kill %1` from Bash does *not* take the stack down.
+
+**`TaskStop` alone does not free the ports.** It kills the `concurrently` parent;
+`azurite`, the SWA emulator, `func`, and `workerd` survive as orphans and keep
+listening. This is the single most common way an agent breaks Jan's next
+`npm run dev`, and it looks exactly like a mystery port conflict from his side.
+
+After `TaskStop`, **always list the ports again and kill survivors by PID**:
+
+```powershell
+foreach ($p in 4280,4285,10000,10001,10002,10010,10011,10012,1999,7071) {
+  Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue |
+    ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
+      "{0} -> PID {1} {2} started {3}" -f $p, $_.OwningProcess, $proc.ProcessName, $proc.StartTime } }
+```
+
+`StartTime` is what tells you whose process it is: if it started when you booted
+your stack, it is yours to kill. If it predates your session, it is Jan's — ask.
+Re-run the listing after killing and confirm it comes back empty. Do not report
+the verify as finished until it does.
 
 ## 3. Beat the SWA CLI cache — or you're testing old code
 
@@ -132,6 +178,23 @@ for (let i = 0; i < 400; i++) {           // a cap, not a plan
 Do **not** fake the server by injecting synthetic WebSocket messages — Jan asked
 for a real game. Speed comes from not idling, not from bypassing the server.
 
+**Gate every poll on the visible section, not on the element existing.** Flag
+Party hides panels without clearing them (`.pick-hand[hidden]` in
+`flagParty/index.css` documents this deliberately), so a finished pick screen
+leaves its cards sitting in the DOM. Polling for `#pick-hand .pick-card` finds
+those stale cards instantly, "clicks" one, and reports success while nothing
+happened — it cost a wrong conclusion in the PR #971 verify. Check the section:
+
+```js
+const sec = document.querySelector('#pt-pick');
+if (sec && !sec.hidden && sec.offsetParent !== null) { /* now it is real */ }
+```
+
+The same applies to reading a grid: `#flags-grid` still holds the *previous*
+round's tiles until the next question paints. Poll for something that identifies
+the round you expect (`.opt .contour` for outlines, `.opt .flag` for flags), or
+you will assert against the round you just left.
+
 ## 5. Reading the result
 
 - Prefer a **DOM read** (`browser_evaluate` returning the specific text/class you
@@ -157,10 +220,19 @@ for a real game. Speed comes from not idling, not from bypassing the server.
 
 ## 7. Clean up
 
-- `TaskStop` the dev-stack task (a Bash `kill %1` does not stop it).
-- Delete screenshots and `.playwright-mcp/`.
+- `TaskStop` the dev-stack task (a Bash `kill %1` does not stop it), **then
+  re-list the ports and kill the orphans by PID** — see §2. Not optional: the
+  parent dying does not take Azurite / SWA / `func` / `workerd` with it.
+- Confirm the port listing comes back **empty** before you say you're done.
+- Delete screenshots and `.playwright-mcp/`, plus `./.azurite-verify` if you used
+  an alternate Azurite location.
 - `git status --short` before committing — verification debris must not ride
   along in the PR.
+
+**Never boot a second stack to test a claim about the dev stack itself.** If you
+want to confirm a port flag works, read the script and the CLI docs, or say the
+command is unverified. Booting "just to check" re-occupies the ports you were
+asked to keep free — that is how this section got written.
 
 ## When the browser genuinely isn't the tool
 
