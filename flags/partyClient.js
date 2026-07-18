@@ -26,7 +26,7 @@
  * @property {number} buzzedCount
  * @property {number} seatCount
  * @property {string | null} myChoice
- * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number> } | null} reveal
+ * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>, doubled?: boolean } | null} reveal
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
  *   seat whose turn it is to choose the next round; null otherwise.

@@ -386,12 +386,26 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    moving, and the row's other content is left-anchored. */
 .scoreline .gain {
   margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
   font-size: 12px;
   font-weight: 650;
-  color: var(--secondary-color);
   font-variant-numeric: tabular-nums;
   opacity: 0;
 }
+/* The gain is broken into what earned it: a quiet chip for the flat correctness
+   points, a pink one for the speed bonus so "I was first" is the thing that
+   catches the eye. Both sit on --selected-color rather than inventing a tint, so
+   the row keeps to the eight palette vars. */
+.scoreline .chip {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--selected-color);
+  white-space: nowrap;
+}
+.scoreline .chip-base { color: var(--muted-color); }
+.scoreline .chip-speed { color: var(--secondary-color); }
 .scoreline .gain.on { opacity: 1; }
 .scoreline .gain + .sc { margin-left: 9px; }
 @media (prefers-reduced-motion: no-preference) {
