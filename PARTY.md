@@ -1146,6 +1146,10 @@ threw away. Client-only again: no server, room, or wire-protocol touch.
   "keep one row lit" impossible. **Open judgment call for Jan:** your own row dims too, so the
   spotlight is unambiguous but your own score gets quiet. Exempting `.you` is a one-line change.
 - **The pick board hides below two players.** A solo game has no standings worth showing.
+- **The picker doesn't get the board (Jan, 2026-07-19).** It was briefly shown to everyone. The screen
+  exists to give the *waiting* players something to read; the picker already has a decision in front
+  of them, and standings under it are one more thing to look past. The empty-screen problem this
+  solves was never theirs.
 - **`prevScore` is now on `BreakRow`** rather than the client re-deriving `score - roundGain` — those
   differ wherever the gain clamp bites, and the count-up needs the real prior total.
 - **A break is identified by being *entered*, not by `state.questionIndex`.** The index changes

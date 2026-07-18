@@ -1124,11 +1124,16 @@ export function bootFlagParty() {
    * The picker's own row is left at full strength rather than the board being
    * dimmed as a whole — a child can't be more opaque than its parent, so a
    * container fade makes "keep one row lit" impossible.
+   *
+   * **Not shown to the picker.** This screen exists to give the waiting players
+   * something to read; the picker already has a decision in front of them, and a
+   * scoreboard under it is one more thing to look past. The empty-screen problem
+   * this solves was never theirs.
    */
   function renderPickBoard() {
     const board = state.scoreboard || [];
     // A solo game has no standings worth showing and no one to watch.
-    pickBoard.hidden = board.length < 2;
+    pickBoard.hidden = state.youPick || board.length < 2;
     pickBoard.innerHTML = '';
     if (pickBoard.hidden) return;
     board.forEach((r, i) => {
