@@ -97,13 +97,14 @@
           </button>
           <div class="draft-length" id="draft-length" hidden>
             <span class="dl-text">
-              <span class="dl-title" data-i18n="party.draftLength">Game length</span>
+              <span class="dl-title" data-i18n="party.draftLength">Rounds each player picks</span>
               <span class="dl-hint" id="draft-length-hint"></span>
             </span>
-            <span class="dl-step">
-              <button type="button" class="dl-btn" id="draft-less" aria-label="Fewer rounds">&minus;</button>
-              <span class="dl-value" id="draft-rounds" aria-live="polite">3</span>
-              <button type="button" class="dl-btn" id="draft-more" aria-label="More rounds">+</button>
+            <span class="dl-step" role="group" aria-label="Rounds each player picks">
+              <button type="button" class="dl-pick" data-picks="1" aria-pressed="true">1</button>
+              <button type="button" class="dl-pick" data-picks="2" aria-pressed="false">2</button>
+              <button type="button" class="dl-pick" data-picks="3" aria-pressed="false">3</button>
+              <button type="button" class="dl-pick" data-picks="4" aria-pressed="false">4</button>
             </span>
           </div>
           <button type="button" class="mode-door" id="mode-custom" data-mode="setlist">

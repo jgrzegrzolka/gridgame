@@ -16,55 +16,60 @@ import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
  *  picker). */
 export const OPENING_MODE_ID = 'flags-all';
 
-/** Hard ceiling on rounds in a draft. At a ~2-minute-per-round pace 10 rounds is
- *  about 20 minutes — the top of Jackbox's range, and long enough that the host
- *  has to have chosen it deliberately. The auto default lands well below this for
- *  small rooms; the ceiling exists so a typo can't deal a 3-hour game. */
-export const MAX_DRAFT_ROUNDS = 10;
+/** Hard ceiling on rounds in a draft — a backstop against an absurd room, not a
+ *  knob. The host never hits it at 4 picks x 4 seats (17); it only bites in a
+ *  very large room, and the lobby shows the real total either way so a long game
+ *  is a visible choice rather than a silent truncation. */
+export const MAX_DRAFT_ROUNDS = 25;
 
-/** Floor on rounds. One round is a legitimate (if odd) choice: a single Flags
- *  opener with no picking at all — a 5-question warm-up. */
-export const MIN_DRAFT_ROUNDS = 1;
+/** The fixed set of picks-per-player the host chooses from. Each player picks
+ *  this many rounds, so the game is `players x picks + 1` rounds — the `+1` being
+ *  the opening Flags round. Expressing length as "how many rounds each of you
+ *  picks" is what makes it legible: the old dial said "3" and left the player to
+ *  work out what that bought them. */
+export const PICKS_PER_PLAYER_OPTIONS = [1, 2, 3, 4];
+
+/** What a fresh host gets: one pick each. Reproduces the original `players + 1`
+ *  sizing, which is the right length for a first game. */
+export const DEFAULT_PICKS_PER_PLAYER = 1;
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
  *  the picture modes and a good spread of statistics, still a glance not a form. */
 export const HAND_SIZE = 10;
 
 /**
- * The **suggested** round count for a draft of `playerCount` seats: `2 × players
- * + 1`, capped at {@link MAX_DRAFT_ROUNDS}. The `+1` is the fixed opening Flags
- * round; the `2 ×` gives every seat two picks, so a player who drew a bad round
- * first gets a second shot at steering the game. The host can override this — see
- * {@link validateRoundCount} — so it is a default, not a rule. At least 1 round
- * always.
+ * How many rounds a draft runs: `players x picksPerPlayer + 1`. The `+1` is the
+ * fixed opening Flags round, which closes the cold-start hole (no scores yet
+ * means no last place means no picker) and gives everyone a warm-up before the
+ * first choice. Every seat then picks exactly `picksPerPlayer` times.
+ *
+ * Capped at {@link MAX_DRAFT_ROUNDS} as a backstop only; at the offered pick
+ * counts a normal room never reaches it.
  *
  * @param {number} playerCount
+ * @param {number} picksPerPlayer
  * @returns {number}
  */
-export function roundCountFor(playerCount) {
-  const n = Number.isFinite(playerCount) ? Math.floor(playerCount) : 0;
-  return Math.max(MIN_DRAFT_ROUNDS, Math.min(n * 2 + 1, MAX_DRAFT_ROUNDS));
+export function roundCountFor(playerCount, picksPerPlayer = DEFAULT_PICKS_PER_PLAYER) {
+  const seats = Number.isFinite(playerCount) ? Math.max(0, Math.floor(playerCount)) : 0;
+  const picks = validatePicksPerPlayer(picksPerPlayer);
+  return Math.max(1, Math.min(seats * picks + 1, MAX_DRAFT_ROUNDS));
 }
 
 /**
- * Coerce a host-supplied round count to a legal one, or fall back. The host's
- * number arrives over the wire, so it is untrusted: anything non-finite,
- * fractional, or outside [{@link MIN_DRAFT_ROUNDS}, {@link MAX_DRAFT_ROUNDS}] is
- * rejected in favour of `fallback` (itself clamped) rather than clamped silently
- * — a client sending `999` has a bug, and dealing it 10 rounds would hide that.
+ * Coerce a host-supplied picks-per-player to one of {@link PICKS_PER_PLAYER_OPTIONS}.
+ * The value arrives over the wire, so it is untrusted: anything outside the fixed
+ * set falls back to {@link DEFAULT_PICKS_PER_PLAYER} rather than being clamped to
+ * the nearest option — a client sending `99` has a bug, and quietly dealing it 4
+ * picks each would hide that.
  *
- * @param {unknown} value  the host's requested round count
- * @param {number} fallback  the auto suggestion to use when `value` is unusable
+ * @param {unknown} value
  * @returns {number}
  */
-export function validateRoundCount(value, fallback) {
-  const safeFallback = Math.max(MIN_DRAFT_ROUNDS, Math.min(
-    Number.isFinite(fallback) ? Math.floor(/** @type {number} */ (fallback)) : MIN_DRAFT_ROUNDS,
-    MAX_DRAFT_ROUNDS,
-  ));
-  if (typeof value !== 'number' || !Number.isInteger(value)) return safeFallback;
-  if (value < MIN_DRAFT_ROUNDS || value > MAX_DRAFT_ROUNDS) return safeFallback;
-  return value;
+export function validatePicksPerPlayer(value) {
+  return PICKS_PER_PLAYER_OPTIONS.includes(/** @type {number} */ (value))
+    ? /** @type {number} */ (value)
+    : DEFAULT_PICKS_PER_PLAYER;
 }
 
 /**
@@ -74,13 +79,12 @@ export function validateRoundCount(value, fallback) {
  * `alreadyPicked`. Not merely "last place": the no-repeat clause means a player
  * who lost two rounds running doesn't pick twice while someone else never picks.
  *
- * **The rotation wraps.** Once every seated player has picked, the question resets
- * and the lowest-ranked seat picks again — the host can set more rounds than
- * there are players (see {@link validateRoundCount}), and honouring that number
- * matters more than "everyone picks exactly once", which is a nicety of the
- * default sizing rather than a rule anyone is told. Only `alreadyPicked` entries
- * that are still on the board count, so a player who left mid-game doesn't hold
- * the rotation open forever.
+ * **The rotation wraps.** Once every seated player has picked, a fresh rotation
+ * starts and the lowest-ranked seat picks again — the host chooses how many
+ * rounds each player picks (see {@link validatePicksPerPlayer}), so more than one
+ * rotation is the normal case, not an edge. Only `alreadyPicked` entries that are
+ * still on the board count, so a player who left mid-game doesn't hold the
+ * rotation open forever.
  *
  * Returns null only when there is nobody to pick (an empty board).
  *

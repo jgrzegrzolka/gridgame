@@ -14,8 +14,8 @@ before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
   coffee?". The smallest unit of play.
 - **Round** — five questions of a single mode. The unit a drafter picks, the unit the
   standings break follows, the unit that doubles at the end.
-- **Game** — a sequence of rounds. Draft sizes it from the seat count unless the host says
-  otherwise.
+- **Game** — a sequence of rounds. Draft length is `players x picksPerPlayer + 1`, where the host
+  chooses `picksPerPlayer` from a fixed 1 / 2 / 3 / 4 and the `+1` is the opening Flags round.
 
 **Renamed 2026-07-18.** These two used to be called *round* (one prompt) and *block* (five
 of them), which put two different things under the word "round" and made the progress pill
@@ -794,17 +794,21 @@ partial plan, so a pick is an append.
 - **Round 1 is always Flags: countries.** This closes Draft's cold-start hole (no scores means no
   last place means no picker) and is the right on-ramp anyway: establish the loop before asking
   anyone to choose.
-- **Rounds = `min(players + 1, 5)`**, host can override. The `+1` is the fixed opener. This makes
-  **"everyone picks exactly once" true for 2 to 4 players** (the stated design center: "2-player is
-  the main case") without anyone being told a rule, and caps a 20-seat room (`MAX_SEATS`) at 5
-  rounds instead of 20. At ~2 min a round cycle that is about 10 minutes, against Jackbox's 15 to 20.
-  Tying round count to player count *directly* is the trap: the two are independent quantities that
-  only coincide for 2 to 4 players.
-- **Picker = the lowest-ranked player who hasn't picked yet.** Not merely "last place": with two
-  players, pure loser's-pick can hand *both* picks to the same person, and then one of the two never
-  chose anything. Note the formula makes the clause free: picks = rounds − 1 = `min(players, 4)`,
-  never more than the player count, so the eligible set cannot empty (unless the host overrides above
-  `players + 1`, where everyone simply becomes eligible again).
+- **Length = `players x picksPerPlayer + 1` rounds**, where the host picks `picksPerPlayer` from a
+  fixed 1 / 2 / 3 / 4. The `+1` is the fixed opener. **Superseded `min(players + 1, 5)` with a host
+  override (2026-07-18)** — that dial asked the host for a total, which is the wrong question: "5"
+  tells you nothing about what you are in for, and the answer depends on a seat count that is still
+  changing while people join. Asking "how many rounds does each of you pick?" is a question the host
+  can actually answer, it keeps **"everyone picks exactly the same number of times"** true by
+  construction at any seat count (not just 2 to 4), and the lobby shows the resulting total live
+  ("4 rounds, 20 questions") so length stays visible without being the thing you dial.
+  `MAX_DRAFT_ROUNDS` survives only as a backstop against an absurd room, not as a design cap.
+- **Picker = the lowest-ranked player who hasn't picked yet in this rotation.** Not merely "last
+  place": with two players, pure loser's-pick can hand *both* picks to the same person, and then one
+  of the two never chose anything. The rotation wraps — once everyone has picked, a fresh rotation
+  starts — which is now the normal case rather than an edge, since `picksPerPlayer > 1` means several
+  rotations. Implemented as "fewest picks so far, lowest rank breaks the tie", **not** as a
+  picked/not-picked set: a set wraps once and then feeds every remaining round to the same seat.
 - **Why loser's pick over a vote or a seat rotation.** A vote is mushy (the fun of choosing is
   diluted, and ties need a rule); leader-picks snowballs. Loser's pick does three jobs with one rule:
   it is a comeback mechanic, it hands the spotlight to exactly the player who is disengaging, and it
