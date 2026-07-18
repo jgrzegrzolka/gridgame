@@ -14,6 +14,7 @@ import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, hintFor } from '../flags/partyRounds/superlativeCatalog.js';
+import { blockCountFor, validateBlockCount, MIN_DRAFT_BLOCKS, MAX_DRAFT_BLOCKS } from '../flags/partyDraft.js';
 import { renderableRoundIds, roundRenderAction, canRenderQuestion } from './staleGuard.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
@@ -28,6 +29,9 @@ const PLAN_KEY = 'gridgame.party.plan';
 const TRICKY_KEY = 'gridgame.party.tricky';
 const REVEAL_KEY = 'gridgame.party.reveal';
 const MODE_KEY = 'gridgame.party.mode';
+// The host's draft length, in blocks. Absent means "follow the seat-count
+// suggestion" — see `draftBlocks` below; an explicit number sticks per device.
+const DRAFT_BLOCKS_KEY = 'gridgame.party.draftBlocks';
 
 /** The reveal-timing categories the host configures under tricky mode, in the
  *  order they appear in the setup. `label` reuses the mode-short i18n so "Flags /
@@ -291,6 +295,11 @@ export function bootFlagParty() {
   const partyModeEl = $('party-mode');
   const modeDraftBtn = $('mode-draft');
   const modeCustomBtn = $('mode-custom');
+  const draftLengthEl = $('draft-length');
+  const draftLengthHint = $('draft-length-hint');
+  const draftBlocksEl = $('draft-blocks');
+  const draftLessBtn = /** @type {HTMLButtonElement} */ ($('draft-less'));
+  const draftMoreBtn = /** @type {HTMLButtonElement} */ ($('draft-more'));
   const pickPill = $('pick-pill');
   const pickLead = $('pick-lead');
   const pickHand = $('pick-hand');
@@ -398,6 +407,65 @@ export function bootFlagParty() {
   }
   function savePartyMode() {
     try { window.localStorage.setItem(MODE_KEY, partyMode); } catch { /* private mode */ }
+  }
+
+  // ---- draft length (host-only, blocks) ----
+  // Null means "auto": the number tracks the seat-count suggestion and keeps
+  // moving as players join, which is right for the common case of starting a
+  // room and waiting for friends. The first tap on -/+ pins an explicit number
+  // that then sticks per device (a host who wants short games always wants short
+  // games). The server re-validates whatever we send.
+  /** @type {number | null} */
+  let draftBlocks = loadDraftBlocks();
+
+  function loadDraftBlocks() {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_BLOCKS_KEY);
+      if (raw === null) return null;
+      const n = Number(raw);
+      // A stored value that no longer validates (a changed range, a corrupted
+      // store) falls back to auto rather than to some clamped nearby number.
+      return validateBlockCount(n, 0) === n ? n : null;
+    } catch { return null; }
+  }
+  function saveDraftBlocks() {
+    try {
+      if (draftBlocks === null) window.localStorage.removeItem(DRAFT_BLOCKS_KEY);
+      else window.localStorage.setItem(DRAFT_BLOCKS_KEY, String(draftBlocks));
+    } catch { /* private mode */ }
+  }
+
+  /** Seats currently in the room — the input to the auto suggestion. */
+  function seatCount() {
+    return state.roster.filter((r) => r.present).length;
+  }
+
+  /** The block count a start would actually use: the host's pin, or the
+   *  seat-count suggestion while still on auto. */
+  function effectiveBlocks() {
+    return draftBlocks ?? blockCountFor(seatCount());
+  }
+
+  /** Paint the length row: the number, the rounds/auto hint, and the -/+ limits. */
+  function syncDraftLength() {
+    const blocks = effectiveBlocks();
+    draftBlocksEl.textContent = String(blocks);
+    const rounds = blocks * BLOCK_ROUNDS;
+    draftLengthHint.textContent = draftBlocks === null
+      ? t('party.draftLengthAuto', '{n} rounds, set from the players here').replace('{n}', String(rounds))
+      : t('party.draftLengthRounds', '{n} rounds').replace('{n}', String(rounds));
+    draftLessBtn.disabled = blocks <= MIN_DRAFT_BLOCKS;
+    draftMoreBtn.disabled = blocks >= MAX_DRAFT_BLOCKS;
+  }
+
+  /** Step the length by `delta`, pinning it off auto at the current value first
+   *  so the first tap moves from what the host can see, not from a stale pin. */
+  function stepDraftLength(delta) {
+    const next = effectiveBlocks() + delta;
+    if (next < MIN_DRAFT_BLOCKS || next > MAX_DRAFT_BLOCKS) return;
+    draftBlocks = next;
+    saveDraftBlocks();
+    syncDraftLength();
   }
 
   // ---- game setup (host-only lobby plan) ----
@@ -1207,6 +1275,10 @@ export function bootFlagParty() {
     modeCustomBtn.classList.toggle('on', partyMode === 'setlist');
     modeDraftBtn.setAttribute('aria-pressed', String(partyMode === 'draft'));
     modeCustomBtn.setAttribute('aria-pressed', String(partyMode === 'setlist'));
+    // The length row belongs to the Draft door; Custom sizes its game from the
+    // plan instead. `partyModeEl.hidden` already gates host-and-lobby.
+    draftLengthEl.hidden = partyMode !== 'draft';
+    syncDraftLength();
   }
 
   function renderRound() {
@@ -1713,13 +1785,17 @@ export function bootFlagParty() {
       gameSetupEl.hidden = !(state.isHost && state.phase === 'lobby' && partyMode === 'setlist');
     });
   }
+  draftLessBtn.addEventListener('click', () => stepDraftLength(-1));
+  draftMoreBtn.addEventListener('click', () => stepDraftLength(1));
   startBtn.addEventListener('click', () => {
     // Draft is zero-setup: the players pick each block, so the start carries no
     // plan (the server builds the opening Flags block and sizes the game from the
     // seat count). Custom sends the built plan as before. Tricky / reveal ride
     // along either way.
     if (partyMode === 'draft') {
-      send({ type: 'start', draft: true, tricky: trickyOn, reveal: revealState });
+      // No `tricky`: it is a Custom-only option and the draft door never showed
+      // the toggle (the server forces it false for drafts regardless).
+      send({ type: 'start', draft: true, blocks: effectiveBlocks(), reveal: revealState });
     } else {
       send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState });
     }

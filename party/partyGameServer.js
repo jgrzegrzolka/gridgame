@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalRounds, poolIdForRound, roundIdForRound, validatePlan, PARTY_MODES, BLOCK_ROUNDS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricRound } from '../flags/partyTiming.js';
-import { blockCountFor, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
+import { blockCountFor, validateBlockCount, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -259,14 +259,18 @@ export default class PartyGameServer {
           const reveal = validateReveal(parsed.reveal);
           if (parsed.draft === true) {
             // Draft: the plan grows one block per pick. Open with a single Flags
-            // block; the game runs `targetBlocks` blocks, sized from the present
-            // seat count (`players + 1`, capped). Round 0 comes from the opening
-            // block, not a host plan.
-            const targetBlocks = blockCountFor(this.room.present.size);
+            // block; the game runs `targetBlocks` blocks — the host's choice,
+            // falling back to the seat-count suggestion when the client sends
+            // nothing usable. Round 0 comes from the opening block, not a plan.
+            const targetBlocks = validateBlockCount(parsed.blocks, blockCountFor(this.room.present.size));
             const openingPlan = [{ poolId: OPENING_MODE.poolId, roundId: OPENING_MODE.roundId, rounds: BLOCK_ROUNDS }];
             this.usedModes.add(OPENING_MODE_ID);
             const question = this.generateForRound(OPENING_MODE.roundId, OPENING_MODE.poolId, reveal);
-            result = applyStart(this.room, playerId, question, openingPlan, targetBlocks * BLOCK_ROUNDS, tricky, reveal, { draft: true, targetBlocks });
+            // Draft has no tricky mode: it is a Custom-setup option, and the draft
+            // door never showed the toggle. Forcing it false here (rather than
+            // trusting the client) closes the leak where a device that once
+            // enabled tricky in Custom silently veiled every later draft game.
+            result = applyStart(this.room, playerId, question, openingPlan, targetBlocks * BLOCK_ROUNDS, false, reveal, { draft: true, targetBlocks });
             break;
           }
           // Setlist: the host's plan rides in on the start message; never trust it

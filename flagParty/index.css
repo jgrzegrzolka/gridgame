@@ -552,6 +552,48 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .mode-door-title { font-size: 15px; font-weight: 650; }
 .mode-door-desc { font-size: 12.5px; color: var(--muted-color); line-height: 1.4; }
 
+/* Game length, under the Draft door. Sits inside `.party-mode`, so the same
+   `display:flex`-outweighs-`[hidden]` trap applies — pin the hidden state. */
+.draft-length {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: -2px 0 2px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+  background: var(--surface-color);
+}
+.draft-length[hidden] { display: none; }
+.dl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.dl-title { font-size: 14px; font-weight: 600; color: var(--primary-color); }
+.dl-hint { font-size: 12.5px; color: var(--muted-color); line-height: 1.4; }
+.dl-step { display: flex; align-items: center; gap: 4px; flex: none; }
+.dl-btn {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 8px;
+  background: var(--surface-color);
+  color: var(--primary-color);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.dl-btn:hover:not(:disabled) { background: var(--hover-color); }
+.dl-btn:disabled { color: var(--muted-color); cursor: default; }
+.dl-value {
+  min-width: 22px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- draft: the pick screen (no countdown — picking isn't a race) ---- */
 .pick-hand { display: flex; flex-direction: column; gap: 9px; }
 .pick-hand.sent { opacity: 0.6; pointer-events: none; }

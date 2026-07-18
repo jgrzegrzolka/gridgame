@@ -73,11 +73,54 @@ async function playBlock(srv, conn) {
 test('draft start: opens a Flags block, sizes the game from the seat count', async () => {
   const { srv, conn } = await startSoloDraft();
   assert.equal(srv.room.draft, true);
-  assert.equal(srv.room.targetBlocks, blockCountFor(1)); // solo -> 2
+  assert.equal(srv.room.targetBlocks, blockCountFor(1)); // solo -> 3
   assert.equal(srv.room.totalRounds, blockCountFor(1) * BLOCK_ROUNDS);
   const q = conn.last('question');
   assert.equal(q.roundId, 'flagPick', 'block 1 is Flags');
   assert.equal(q.answer, undefined, 'the answer never rides the broadcast');
+});
+
+test('draft start: the host\'s block count overrides the seat-count suggestion', async () => {
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, blocks: 7 }), conn);
+  assert.equal(srv.room.targetBlocks, 7);
+  assert.equal(srv.room.totalRounds, 7 * BLOCK_ROUNDS);
+});
+
+test('draft start: an out-of-range block count falls back to the suggestion', async () => {
+  for (const blocks of [0, 99, -3, 2.5, 'lots', null]) {
+    const conn = mockConn('a');
+    const srv = new PartyGameServer(mockParty([conn]));
+    await srv.onStart();
+    await srv.onConnect(conn, ctxFor('alice'));
+    await srv.onMessage(JSON.stringify({ type: 'start', draft: true, blocks }), conn);
+    assert.equal(srv.room.targetBlocks, blockCountFor(1), `blocks=${blocks}`);
+  }
+});
+
+test('draft start: tricky mode is forced off even if a stale client sends it', async () => {
+  // Tricky is a Custom-setup option; the draft door never showed the toggle, so a
+  // device that once enabled it in Custom used to veil every later draft game.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, tricky: true }), conn);
+  assert.equal(srv.room.tricky, false);
+  assert.equal(conn.last('question').tricky, false, 'and clients are told not to veil');
+});
+
+test('setlist start: tricky mode still rides the host plan', async () => {
+  // The draft override must not disarm tricky for Custom setup.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', tricky: true }), conn);
+  assert.equal(srv.room.tricky, true);
 });
 
 test('draft: a block boundary opens a pick with a hand that excludes the played mode', async () => {
@@ -136,29 +179,37 @@ test('draft: forcePick from the host resolves the pick with a random hand card',
   assert.equal(q.draftPick.picker, 'alice', 'attributed to the picker who timed out');
 });
 
-test('draft: a null picker at a boundary never freezes — it advances instead', async () => {
-  // Defensive: force the (normally-unreachable) state where every seat has
-  // already picked, then hit a block boundary. `next` must fall through to an
-  // ordinary advance, not sit forever in `reveal`.
+test('draft: a boundary where everyone has picked wraps the rotation, never freezes', async () => {
+  // The host can set more blocks than seats, so "every seat has already picked"
+  // is a normal mid-game state. The boundary must still open a pick (the
+  // rotation wraps) rather than freezing in `reveal` or skipping the pick.
   const { srv, conn } = await startSoloDraft();
   for (let i = 0; i < BLOCK_ROUNDS - 1; i++) {
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
     await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
   }
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn); // round 4 -> reveal (boundary)
-  srv.room = { ...srv.room, pickedBy: ['alice'] }; // pretend the only seat already picked
+  srv.room = { ...srv.room, pickedBy: ['alice'] }; // the only seat already picked once
   await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
   assert.notEqual(srv.room.phase, 'reveal', 'the room did not freeze at the boundary');
-  assert.equal(srv.room.phase, 'question', 'it advanced to the next round');
-  assert.equal(srv.room.roundIndex, BLOCK_ROUNDS);
+  assert.equal(srv.room.phase, 'picking', 'the rotation wrapped to a fresh pick');
+  assert.equal(srv.room.picker, 'alice');
 });
 
 test('draft: the last block ends in the final board, no pick', async () => {
-  const { srv, conn } = await startSoloDraft();
+  // Play every block the game was sized for; the boundary after the last one is
+  // the final board, not another pick.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, blocks: 3 }), conn);
   await playBlock(srv, conn);                 // block 1 -> picking
-  const hand = conn.last('picking').hand;
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: hand[0] }), conn); // deal block 2
-  await playBlock(srv, conn);                 // block 2 (the last) -> final
+  for (let b = 2; b <= 3; b++) {
+    const hand = conn.last('picking').hand;
+    await srv.onMessage(JSON.stringify({ type: 'pick', modeId: hand[0] }), conn);
+    await playBlock(srv, conn);
+  }
   assert.equal(srv.room.phase, 'final');
   assert.ok(conn.last('final'), 'the final board was broadcast');
 });

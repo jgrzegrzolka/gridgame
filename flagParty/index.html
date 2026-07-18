@@ -95,6 +95,17 @@
             <span class="mode-door-title" data-i18n="party.doorDraftTitle">Draft</span>
             <span class="mode-door-desc" data-i18n="party.doorDraftDesc">Start now. After each block, whoever is last picks what everyone plays next.</span>
           </button>
+          <div class="draft-length" id="draft-length" hidden>
+            <span class="dl-text">
+              <span class="dl-title" data-i18n="party.draftLength">Game length</span>
+              <span class="dl-hint" id="draft-length-hint"></span>
+            </span>
+            <span class="dl-step">
+              <button type="button" class="dl-btn" id="draft-less" aria-label="Fewer blocks">&minus;</button>
+              <span class="dl-value" id="draft-blocks" aria-live="polite">3</span>
+              <button type="button" class="dl-btn" id="draft-more" aria-label="More blocks">+</button>
+            </span>
+          </div>
           <button type="button" class="mode-door" id="mode-custom" data-mode="setlist">
             <span class="mode-door-title" data-i18n="party.doorCustomTitle">Custom setup</span>
             <span class="mode-door-desc" data-i18n="party.doorCustomDesc">Build the whole show up front. You choose every block.</span>

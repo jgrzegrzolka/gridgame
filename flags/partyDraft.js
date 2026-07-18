@@ -16,28 +16,55 @@ import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
  *  picker). */
 export const OPENING_MODE_ID = 'flags-all';
 
-/** Hard ceiling on blocks in a draft, matched to the phone-only surface and a
- *  ~2-minute-per-block pace: 5 blocks is about 10 minutes, inside Jackbox's 15-20.
- *  Also the point past which "everyone picks once" stops holding anyway. */
-export const MAX_DRAFT_BLOCKS = 5;
+/** Hard ceiling on blocks in a draft. At a ~2-minute-per-block pace 10 blocks is
+ *  about 20 minutes — the top of Jackbox's range, and long enough that the host
+ *  has to have chosen it deliberately. The auto default lands well below this for
+ *  small rooms; the ceiling exists so a typo can't deal a 3-hour game. */
+export const MAX_DRAFT_BLOCKS = 10;
+
+/** Floor on blocks. One block is a legitimate (if odd) choice: a single Flags
+ *  opener with no picking at all — a 5-round warm-up. */
+export const MIN_DRAFT_BLOCKS = 1;
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
  *  the picture modes and a good spread of statistics, still a glance not a form. */
 export const HAND_SIZE = 10;
 
 /**
- * How many blocks a draft of `playerCount` seats plays: `players + 1`, capped at
- * {@link MAX_DRAFT_BLOCKS}. The `+1` is the fixed opening Flags block, which makes
- * **"everyone picks exactly once" true for 2-to-4-player games** (picks = blocks
- * − 1 = players) without anyone being told a rule, while a big room still caps at
- * 5 blocks rather than one-per-seat. At least 1 block always.
+ * The **suggested** block count for a draft of `playerCount` seats: `2 × players
+ * + 1`, capped at {@link MAX_DRAFT_BLOCKS}. The `+1` is the fixed opening Flags
+ * block; the `2 ×` gives every seat two picks, so a player who drew a bad block
+ * first gets a second shot at steering the game. The host can override this — see
+ * {@link validateBlockCount} — so it is a default, not a rule. At least 1 block
+ * always.
  *
  * @param {number} playerCount
  * @returns {number}
  */
 export function blockCountFor(playerCount) {
   const n = Number.isFinite(playerCount) ? Math.floor(playerCount) : 0;
-  return Math.max(1, Math.min(n + 1, MAX_DRAFT_BLOCKS));
+  return Math.max(MIN_DRAFT_BLOCKS, Math.min(n * 2 + 1, MAX_DRAFT_BLOCKS));
+}
+
+/**
+ * Coerce a host-supplied block count to a legal one, or fall back. The host's
+ * number arrives over the wire, so it is untrusted: anything non-finite,
+ * fractional, or outside [{@link MIN_DRAFT_BLOCKS}, {@link MAX_DRAFT_BLOCKS}] is
+ * rejected in favour of `fallback` (itself clamped) rather than clamped silently
+ * — a client sending `999` has a bug, and dealing it 10 blocks would hide that.
+ *
+ * @param {unknown} value  the host's requested block count
+ * @param {number} fallback  the auto suggestion to use when `value` is unusable
+ * @returns {number}
+ */
+export function validateBlockCount(value, fallback) {
+  const safeFallback = Math.max(MIN_DRAFT_BLOCKS, Math.min(
+    Number.isFinite(fallback) ? Math.floor(/** @type {number} */ (fallback)) : MIN_DRAFT_BLOCKS,
+    MAX_DRAFT_BLOCKS,
+  ));
+  if (typeof value !== 'number' || !Number.isInteger(value)) return safeFallback;
+  if (value < MIN_DRAFT_BLOCKS || value > MAX_DRAFT_BLOCKS) return safeFallback;
+  return value;
 }
 
 /**
@@ -46,8 +73,16 @@ export function blockCountFor(playerCount) {
  * is the last entry; we scan from the bottom for the first seat not already in
  * `alreadyPicked`. Not merely "last place": the no-repeat clause means a player
  * who lost two blocks running doesn't pick twice while someone else never picks.
- * Returns null when everyone eligible has already picked (the caller then has no
- * pick to run — it shouldn't, since picks never exceed the seat count).
+ *
+ * **The rotation wraps.** Once every seated player has picked, the round resets
+ * and the lowest-ranked seat picks again — the host can set more blocks than
+ * there are players (see {@link validateBlockCount}), and honouring that number
+ * matters more than "everyone picks exactly once", which is a nicety of the
+ * default sizing rather than a rule anyone is told. Only `alreadyPicked` entries
+ * that are still on the board count, so a player who left mid-game doesn't hold
+ * the rotation open forever.
+ *
+ * Returns null only when there is nobody to pick (an empty board).
  *
  * @param {Array<{ playerId: string }>} scoreboard  descending by score
  * @param {Iterable<string>} alreadyPicked  playerIds that have already picked
@@ -55,9 +90,21 @@ export function blockCountFor(playerCount) {
  */
 export function pickerFor(scoreboard, alreadyPicked) {
   const board = Array.isArray(scoreboard) ? scoreboard : [];
-  const picked = new Set(alreadyPicked);
+  if (board.length === 0) return null;
+  // How many blocks each seated player has already picked. `alreadyPicked` is the
+  // whole game's pick history and keeps growing, so the rotation is expressed as
+  // "fewest picks so far" rather than "not in the picked set" — the latter would
+  // wrap once and then hand every remaining block to the same seat.
+  /** @type {Map<string, number>} */
+  const counts = new Map(board.map((e) => [e.playerId, 0]));
+  for (const id of alreadyPicked) {
+    // Entries for seats that have since left are ignored: a departed player must
+    // not pin the minimum at 0 and stall the rotation.
+    if (counts.has(id)) counts.set(id, /** @type {number} */ (counts.get(id)) + 1);
+  }
+  const fewest = Math.min(...counts.values());
   for (let i = board.length - 1; i >= 0; i--) {
-    if (!picked.has(board[i].playerId)) return board[i].playerId;
+    if (counts.get(board[i].playerId) === fewest) return board[i].playerId;
   }
   return null;
 }
