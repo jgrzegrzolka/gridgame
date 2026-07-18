@@ -830,7 +830,12 @@ partial plan, so a pick is an append.
 - **Draft deals per-metric rounds** (one 5-question segment), where Setlist deals mixed. "I pick Coffee"
   is a moment; "I pick World facts" is a menu. Both shapes are valid `Segment[]`, so this needs no
   model, no fork, and no server knowledge.
-- **No mode twice in a game.** Keeps coverage honest and makes the last pick nearly forced.
+- **No mode twice in a game — except Flags and Weird flags** (`REPEATABLE_MODE_IDS`). The rule keeps
+  coverage honest, but applied to Flags it was actively wrong: Flags is the game everyone came to
+  play *and* the fixed opener, so the rule retired it before anyone could choose it even once. Weird
+  flags is the same game on a different pool. Everything else still plays once. A side effect worth
+  keeping: the hand can no longer empty late in a long game, so the picker always has a real choice
+  instead of one forced card. (2026-07-18)
 - **10 s to pick, random on timeout.**
 - **The watcher screen matters as much as the picker's.** With 4 players, 3 of them are watching.
   "Zosia is choosing", with her avatar. It is a spotlight, which is why it is short.

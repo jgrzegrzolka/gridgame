@@ -16,6 +16,17 @@ import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
  *  picker). */
 export const OPENING_MODE_ID = 'flags-all';
 
+/** Modes exempt from the no-repeat rule: they stay in the hand and stay pickable
+ *  however many times they have already been played.
+ *
+ *  Flags is the game — the thing everyone came to play and the one round nobody
+ *  is bored of — and it is also the fixed opener, so the no-repeat rule retired
+ *  it before anyone got to choose it even once. Weird flags is the same game with
+ *  a different pool. Everything else (outlines, the 30-odd statistics) still
+ *  plays once per game, which is what keeps a draft varied; these two are the
+ *  staple you are allowed to order twice. */
+export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird'];
+
 /** Hard ceiling on rounds in a draft — a backstop against an absurd room, not a
  *  knob. The host never hits it at 4 picks x 4 seats (17); it only bites in a
  *  very large room, and the lobby shows the real total either way so a long game
@@ -132,7 +143,8 @@ function shuffle(arr, rng) {
 
 /**
  * The hand a picker chooses from: up to {@link HAND_SIZE} mode ids drawn from the
- * modes **not yet played this game** (`usedModeIds`) — no mode twice.
+ * modes **not yet played this game** (`usedModeIds`) — no mode twice, except the
+ * {@link REPEATABLE_MODE_IDS}, which are always on offer.
  *
  * **The picture modes always lead, in catalog order** (Flags, Weird flags,
  * Outlines), with a random draw of unused statistics filling the rest. They are
@@ -150,7 +162,9 @@ function shuffle(arr, rng) {
  */
 export function handFor(usedModeIds, rng = Math.random) {
   const used = new Set(usedModeIds);
-  const pics = PICTURE_MODES.filter((m) => !used.has(m.id)).map((m) => m.id);
+  const pics = PICTURE_MODES
+    .filter((m) => REPEATABLE_MODE_IDS.includes(m.id) || !used.has(m.id))
+    .map((m) => m.id);
   const mets = shuffle(METRIC_MODES.filter((m) => !used.has(m.id)).map((m) => m.id), rng);
   return [...pics, ...mets].slice(0, HAND_SIZE);
 }
@@ -169,5 +183,7 @@ const MODE_IDS = new Set(PARTY_MODES.map((m) => m.id));
  * @returns {boolean}
  */
 export function isValidPick(modeId, usedModeIds) {
-  return typeof modeId === 'string' && MODE_IDS.has(modeId) && !new Set(usedModeIds).has(modeId);
+  if (typeof modeId !== 'string' || !MODE_IDS.has(modeId)) return false;
+  if (REPEATABLE_MODE_IDS.includes(modeId)) return true;
+  return !new Set(usedModeIds).has(modeId);
 }

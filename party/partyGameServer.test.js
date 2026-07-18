@@ -133,7 +133,8 @@ test('draft: a round boundary opens a pick with a hand that excludes the played 
   assert.ok(picking, 'a picking broadcast was sent');
   assert.equal(picking.picker, 'alice', 'the lone seat is the picker');
   assert.equal(picking.hand.length, HAND_SIZE);
-  assert.ok(!picking.hand.includes('flags-all'), 'the opening Flags mode is not offered again');
+  assert.ok(picking.hand.includes('flags-all'), 'Flags is offered again — it is exempt from no-repeat');
+  assert.ok(picking.hand.includes('flags-weird'), 'so is Weird flags');
 });
 
 test('draft: a valid pick deals that round with attribution and records the mode', async () => {
@@ -150,14 +151,32 @@ test('draft: a valid pick deals that round with attribution and records the mode
   assert.equal(srv.room.plan.length, 2, 'the round was appended to the plan');
 });
 
-test('draft: an invalid pick (unknown / already-played mode) is ignored', async () => {
-  const { srv, conn } = await startSoloDraft();
+test('draft: an invalid pick (unknown / already-played one-shot mode) is ignored', async () => {
+  // 3 picks each, so there is still a pick pending after outlines is spent.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, picks: 3 }), conn);
+  await playBlock(srv, conn);
+  // Take outlines, play it out, and it is spent for the rest of the game.
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), conn);
   await playBlock(srv, conn);
   const before = conn.sent.length;
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-all' }), conn); // already played
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), conn); // already played
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'not-a-mode' }), conn);
   assert.equal(srv.room.phase, 'picking', 'still waiting for a valid pick');
   assert.equal(conn.sent.length, before, 'nothing broadcast for an invalid pick');
+});
+
+test('draft: Flags can actually be picked again and deals a real round', async () => {
+  // The exemption has to survive the server's own validation, not just the hand.
+  const { srv, conn } = await startSoloDraft();
+  await playBlock(srv, conn);
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-all' }), conn);
+  assert.equal(srv.room.phase, 'question', 'the repeat pick was accepted');
+  assert.equal(conn.last('question').questionId, 'flagPick');
+  assert.equal(conn.last('question').draftPick.modeId, 'flags-all');
 });
 
 test('draft: only the designated picker can pick', async () => {
