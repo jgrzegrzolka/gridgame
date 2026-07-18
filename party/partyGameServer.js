@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, validatePlan, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricQuestion } from '../flags/partyTiming.js';
-import { roundCountFor, validateRoundCount, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -259,10 +259,10 @@ export default class PartyGameServer {
           const reveal = validateReveal(parsed.reveal);
           if (parsed.draft === true) {
             // Draft: the plan grows one round per pick. Open with a single Flags
-            // round; the game runs `targetRounds` rounds — the host's choice,
-            // falling back to the seat-count suggestion when the client sends
-            // nothing usable. Question 0 comes from the opening round, not a plan.
-            const targetRounds = validateRoundCount(parsed.rounds, roundCountFor(this.room.present.size));
+            // round, then run one round per pick — every seated player picks
+            // `picks` times, so the length is `seats x picks + 1`. Question 0
+            // comes from the opening round, not a host plan.
+            const targetRounds = roundCountFor(this.room.present.size, validatePicksPerPlayer(parsed.picks));
             const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
             this.usedModes.add(OPENING_MODE_ID);
             const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, reveal);

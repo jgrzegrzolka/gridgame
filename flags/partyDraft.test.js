@@ -2,13 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   roundCountFor,
-  validateRoundCount,
+  validatePicksPerPlayer,
   pickerFor,
   handFor,
   isValidPick,
   OPENING_MODE_ID,
   MAX_DRAFT_ROUNDS,
-  MIN_DRAFT_ROUNDS,
+  PICKS_PER_PLAYER_OPTIONS,
+  DEFAULT_PICKS_PER_PLAYER,
   HAND_SIZE,
 } from './partyDraft.js';
 import { PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
@@ -28,51 +29,57 @@ const board = (...ids) => ids.map((playerId) => ({ playerId }));
 
 // ---- roundCountFor ----
 
-test('roundCountFor: 2 x players + 1, capped at MAX_DRAFT_ROUNDS', () => {
-  assert.equal(roundCountFor(1), 3);
-  assert.equal(roundCountFor(2), 5);
-  assert.equal(roundCountFor(3), 7);
-  assert.equal(roundCountFor(4), 9);
-  assert.equal(roundCountFor(10), MAX_DRAFT_ROUNDS); // capped
+test('roundCountFor: players x picks + 1', () => {
+  assert.equal(roundCountFor(3, 2), 7);   // 3 seats x 2 picks + the opener
+  assert.equal(roundCountFor(2, 1), 3);
+  assert.equal(roundCountFor(4, 4), 17);
+  assert.equal(roundCountFor(1, 3), 4);
 });
 
-test('roundCountFor: "everyone picks twice" holds while under the cap', () => {
-  // picks = rounds - 1 (round 1 is the fixed opener); it should be twice the seats.
+test('roundCountFor: every seat picks exactly picksPerPlayer times', () => {
+  // rounds - 1 (the fixed opener) is the number of picks, split evenly.
   for (const players of [1, 2, 3, 4]) {
-    assert.equal(roundCountFor(players) - 1, players * 2, `${players} players`);
+    for (const picks of PICKS_PER_PLAYER_OPTIONS) {
+      assert.equal(roundCountFor(players, picks) - 1, players * picks, `${players}p x ${picks}`);
+    }
   }
 });
 
-test('roundCountFor: at least one round, junk coerces to 1', () => {
-  assert.equal(roundCountFor(0), 1);
-  assert.equal(roundCountFor(-5), 1);
-  assert.equal(roundCountFor(NaN), 1);
+test('roundCountFor: defaults to one pick each', () => {
+  assert.equal(roundCountFor(3), roundCountFor(3, DEFAULT_PICKS_PER_PLAYER));
+  assert.equal(roundCountFor(3), 4);
 });
 
-// ---- validateRoundCount ----
+test('roundCountFor: a bad picks value falls back rather than throwing', () => {
+  assert.equal(roundCountFor(3, 99), 4);
+  assert.equal(roundCountFor(3, 0), 4);
+  assert.equal(roundCountFor(3, NaN), 4);
+});
 
-test('validateRoundCount: accepts any integer in range', () => {
-  for (let n = MIN_DRAFT_ROUNDS; n <= MAX_DRAFT_ROUNDS; n++) {
-    assert.equal(validateRoundCount(n, 3), n);
+test('roundCountFor: at least one round, junk seat count coerces to the opener alone', () => {
+  assert.equal(roundCountFor(0, 2), 1);
+  assert.equal(roundCountFor(-5, 2), 1);
+  assert.equal(roundCountFor(NaN, 2), 1);
+});
+
+test('roundCountFor: the ceiling is a backstop a normal room never reaches', () => {
+  // The worst offered combination in a 4-player room is well under the cap...
+  assert.ok(roundCountFor(4, 4) < MAX_DRAFT_ROUNDS);
+  // ...but an absurd room is still bounded.
+  assert.equal(roundCountFor(500, 4), MAX_DRAFT_ROUNDS);
+});
+
+// ---- validatePicksPerPlayer ----
+
+test('validatePicksPerPlayer: accepts exactly the offered set', () => {
+  for (const n of PICKS_PER_PLAYER_OPTIONS) assert.equal(validatePicksPerPlayer(n), n);
+});
+
+test('validatePicksPerPlayer: anything else falls back to the default, never clamps', () => {
+  // 5 is out of the set; falling back (not clamping to 4) keeps a buggy client visible.
+  for (const bad of [0, 5, 99, -1, 2.5, NaN, '2', null, undefined, {}]) {
+    assert.equal(validatePicksPerPlayer(bad), DEFAULT_PICKS_PER_PLAYER, String(bad));
   }
-});
-
-test('validateRoundCount: falls back on out-of-range, fractional, or non-numeric', () => {
-  assert.equal(validateRoundCount(0, 3), 3);
-  assert.equal(validateRoundCount(MAX_DRAFT_ROUNDS + 1, 3), 3);
-  assert.equal(validateRoundCount(999, 3), 3);
-  assert.equal(validateRoundCount(-4, 3), 3);
-  assert.equal(validateRoundCount(2.5, 3), 3);
-  assert.equal(validateRoundCount(NaN, 3), 3);
-  assert.equal(validateRoundCount('4', 3), 3, 'a numeric string is not a number');
-  assert.equal(validateRoundCount(undefined, 3), 3);
-  assert.equal(validateRoundCount(null, 3), 3);
-});
-
-test('validateRoundCount: clamps a junk fallback into range too', () => {
-  assert.equal(validateRoundCount(undefined, 999), MAX_DRAFT_ROUNDS);
-  assert.equal(validateRoundCount(undefined, 0), MIN_DRAFT_ROUNDS);
-  assert.equal(validateRoundCount(undefined, NaN), MIN_DRAFT_ROUNDS);
 });
 
 // ---- pickerFor ----

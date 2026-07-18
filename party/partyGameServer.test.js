@@ -80,24 +80,26 @@ test('draft start: opens a Flags round, sizes the game from the seat count', asy
   assert.equal(q.answer, undefined, 'the answer never rides the broadcast');
 });
 
-test('draft start: the host\'s round count overrides the seat-count suggestion', async () => {
-  const conn = mockConn('a');
-  const srv = new PartyGameServer(mockParty([conn]));
+test('draft start: the host picks-per-player choice sets the length', async () => {
+  const a = mockConn('a'), b = mockConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
   await srv.onStart();
-  await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, rounds: 7 }), conn);
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+  await srv.onMessage(JSON.stringify({ type: 'start', draft: true, picks: 3 }), a);
+  // 2 seats x 3 picks + the opening Flags round.
   assert.equal(srv.room.targetRounds, 7);
   assert.equal(srv.room.totalQuestions, 7 * ROUND_QUESTIONS);
 });
 
-test('draft start: an out-of-range round count falls back to the suggestion', async () => {
-  for (const rounds of [0, 99, -3, 2.5, 'lots', null]) {
+test('draft start: a picks value outside the offered set falls back to one each', async () => {
+  for (const picks of [0, 5, 99, -3, 2.5, 'lots', null]) {
     const conn = mockConn('a');
     const srv = new PartyGameServer(mockParty([conn]));
     await srv.onStart();
     await srv.onConnect(conn, ctxFor('alice'));
-    await srv.onMessage(JSON.stringify({ type: 'start', draft: true, rounds }), conn);
-    assert.equal(srv.room.targetRounds, roundCountFor(1), `rounds=${rounds}`);
+    await srv.onMessage(JSON.stringify({ type: 'start', draft: true, picks }), conn);
+    assert.equal(srv.room.targetRounds, roundCountFor(1), `picks=${picks}`);
   }
 });
 

@@ -14,7 +14,7 @@ import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validateRoundCount, MIN_DRAFT_ROUNDS, MAX_DRAFT_ROUNDS } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion } from './staleGuard.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
@@ -29,9 +29,9 @@ const PLAN_KEY = 'gridgame.party.plan';
 const TRICKY_KEY = 'gridgame.party.tricky';
 const REVEAL_KEY = 'gridgame.party.reveal';
 const MODE_KEY = 'gridgame.party.mode';
-// The host's draft length, in rounds. Absent means "follow the seat-count
-// suggestion" — see `draftRounds` below; an explicit number sticks per device.
-const DRAFT_ROUNDS_KEY = 'gridgame.party.draftRounds';
+// How many rounds each player picks (1-4). The game's length follows from it
+// and the seat count, so this is the only thing the host stores.
+const PICKS_KEY = 'gridgame.party.picksPerPlayer';
 
 /** The reveal-timing categories the host configures under tricky mode, in the
  *  order they appear in the setup. `label` reuses the mode-short i18n so "Flags /
@@ -297,9 +297,8 @@ export function bootFlagParty() {
   const modeCustomBtn = $('mode-custom');
   const draftLengthEl = $('draft-length');
   const draftLengthHint = $('draft-length-hint');
-  const draftRoundsEl = $('draft-rounds');
-  const draftLessBtn = /** @type {HTMLButtonElement} */ ($('draft-less'));
-  const draftMoreBtn = /** @type {HTMLButtonElement} */ ($('draft-more'));
+  const draftPickBtns = /** @type {HTMLButtonElement[]} */ (
+    [...draftLengthEl.querySelectorAll('.dl-pick')]);
   const pickPill = $('pick-pill');
   const pickLead = $('pick-lead');
   const pickHand = $('pick-hand');
@@ -409,63 +408,44 @@ export function bootFlagParty() {
     try { window.localStorage.setItem(MODE_KEY, partyMode); } catch { /* private mode */ }
   }
 
-  // ---- draft length (host-only, rounds) ----
-  // Null means "auto": the number tracks the seat-count suggestion and keeps
-  // moving as players join, which is right for the common case of starting a
-  // room and waiting for friends. The first tap on -/+ pins an explicit number
-  // that then sticks per device (a host who wants short games always wants short
-  // games). The server re-validates whatever we send.
-  /** @type {number | null} */
-  let draftRounds = loadDraftRounds();
+  // ---- draft length (host-only): how many rounds each player picks ----
+  // Length is expressed as picks-per-player, not a total: "each of you picks 2
+  // rounds" is something a host can reason about, where a bare "5" left them to
+  // work out what it bought. The total (`seats x picks + 1`, the +1 being the
+  // opening Flags round) is shown underneath and moves as players join. Persisted
+  // per device; the server re-validates whatever we send.
+  let picksPerPlayer = loadPicks();
 
-  function loadDraftRounds() {
+  function loadPicks() {
     try {
-      const raw = window.localStorage.getItem(DRAFT_ROUNDS_KEY);
-      if (raw === null) return null;
-      const n = Number(raw);
-      // A stored value that no longer validates (a changed range, a corrupted
-      // store) falls back to auto rather than to some clamped nearby number.
-      return validateRoundCount(n, 0) === n ? n : null;
-    } catch { return null; }
+      return validatePicksPerPlayer(Number(window.localStorage.getItem(PICKS_KEY)));
+    } catch { return DEFAULT_PICKS_PER_PLAYER; }
   }
-  function saveDraftRounds() {
-    try {
-      if (draftRounds === null) window.localStorage.removeItem(DRAFT_ROUNDS_KEY);
-      else window.localStorage.setItem(DRAFT_ROUNDS_KEY, String(draftRounds));
-    } catch { /* private mode */ }
+  function savePicks() {
+    try { window.localStorage.setItem(PICKS_KEY, String(picksPerPlayer)); } catch { /* private mode */ }
   }
 
-  /** Seats currently in the room — the input to the auto suggestion. */
+  /** Seats currently in the room — the other half of the length arithmetic. */
   function seatCount() {
     return state.roster.filter((r) => r.present).length;
   }
 
-  /** The round count a start would actually use: the host's pin, or the
-   *  seat-count suggestion while still on auto. */
+  /** Rounds a start would actually deal, given the seats present right now. */
   function effectiveRounds() {
-    return draftRounds ?? roundCountFor(seatCount());
+    return roundCountFor(seatCount(), picksPerPlayer);
   }
 
-  /** Paint the length row: the number, the questions/auto hint, and the -/+ limits. */
+  /** Paint the picks row: which option is on, and what it currently buys. */
   function syncDraftLength() {
+    for (const btn of draftPickBtns) {
+      const on = Number(btn.dataset.picks) === picksPerPlayer;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', String(on));
+    }
     const rounds = effectiveRounds();
-    draftRoundsEl.textContent = String(rounds);
-    const questions = rounds * ROUND_QUESTIONS;
-    draftLengthHint.textContent = draftRounds === null
-      ? t('party.draftLengthAuto', '{n} questions, set from the players here').replace('{n}', String(questions))
-      : t('party.draftLengthQuestions', '{n} questions').replace('{n}', String(questions));
-    draftLessBtn.disabled = rounds <= MIN_DRAFT_ROUNDS;
-    draftMoreBtn.disabled = rounds >= MAX_DRAFT_ROUNDS;
-  }
-
-  /** Step the length by `delta`, pinning it off auto at the current value first
-   *  so the first tap moves from what the host can see, not from a stale pin. */
-  function stepDraftLength(delta) {
-    const next = effectiveRounds() + delta;
-    if (next < MIN_DRAFT_ROUNDS || next > MAX_DRAFT_ROUNDS) return;
-    draftRounds = next;
-    saveDraftRounds();
-    syncDraftLength();
+    draftLengthHint.textContent = fmt(t('party.draftLengthTotal', '{r} rounds, {q} questions'), {
+      r: rounds, q: rounds * ROUND_QUESTIONS,
+    });
   }
 
   // ---- game setup (host-only lobby plan) ----
@@ -1786,8 +1766,13 @@ export function bootFlagParty() {
       gameSetupEl.hidden = !(state.isHost && state.phase === 'lobby' && partyMode === 'setlist');
     });
   }
-  draftLessBtn.addEventListener('click', () => stepDraftLength(-1));
-  draftMoreBtn.addEventListener('click', () => stepDraftLength(1));
+  for (const btn of draftPickBtns) {
+    btn.addEventListener('click', () => {
+      picksPerPlayer = validatePicksPerPlayer(Number(btn.dataset.picks));
+      savePicks();
+      syncDraftLength();
+    });
+  }
   startBtn.addEventListener('click', () => {
     // Draft is zero-setup: the players pick each round, so the start carries no
     // plan (the server builds the opening Flags round and sizes the game from the
@@ -1796,7 +1781,7 @@ export function bootFlagParty() {
     if (partyMode === 'draft') {
       // No `tricky`: it is a Custom-only option and the draft door never showed
       // the toggle (the server forces it false for drafts regardless).
-      send({ type: 'start', draft: true, rounds: effectiveRounds(), reveal: revealState });
+      send({ type: 'start', draft: true, picks: picksPerPlayer, reveal: revealState });
     } else {
       send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState });
     }
