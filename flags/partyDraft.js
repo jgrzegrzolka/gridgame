@@ -10,6 +10,7 @@
  */
 
 import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
+import { veilActive } from './partyTiming.js';
 
 /** The round every draft opens with — establishes the loop before anyone picks,
  *  and closes the cold-start hole (no scores yet means no last place means no
@@ -186,4 +187,21 @@ export function isValidPick(modeId, usedModeIds) {
   if (typeof modeId !== 'string' || !MODE_IDS.has(modeId)) return false;
   if (REPEATABLE_MODE_IDS.includes(modeId)) return true;
   return !new Set(usedModeIds).has(modeId);
+}
+
+/**
+ * Whether the picker may veil this mode's round. Only the picture trio can:
+ * on a statistics question the flag is incidental, so hiding it tests the wrong
+ * skill — the same rule {@link veilActive} enforces at question time, asked one
+ * step earlier so the pick card can offer the chip on exactly the cards where
+ * arming it will do something. The two are pinned to each other by test; this
+ * derives from the mode's own questionId rather than a second hand-kept list so
+ * a new picture mode picks the chip up for free.
+ *
+ * @param {string} modeId
+ * @returns {boolean}
+ */
+export function canVeilMode(modeId) {
+  const mode = PARTY_MODES.find((m) => m.id === modeId);
+  return mode ? veilActive(true, mode.questionId) : false;
 }

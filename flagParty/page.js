@@ -14,7 +14,7 @@ import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validatePicksPerPlayer, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, canVeilMode, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion } from './staleGuard.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
@@ -1042,6 +1042,11 @@ export function bootFlagParty() {
   /** True once this device has sent its pick for the current draft turn, so a
    *  double-tap can't fire two picks; reset when we leave the picking phase. */
   let pickSent = false;
+  /** Mode ids this picker has armed the veil on for the current turn. Held here
+   *  rather than on the card element because renderPick rebuilds the hand on any
+   *  state change (a roster update mid-pick would otherwise silently disarm the
+   *  chip the picker already tapped). Cleared with `pickSent`. */
+  let pickVeil = new Set();
 
   // ---- round title card ----
   // A short beat (ROUND_INTRO_SECONDS) announcing a new round before its first
@@ -1114,7 +1119,7 @@ export function bootFlagParty() {
     if (state.phase !== 'final') finalCelebrated = false;
     // Re-arm the pick guard whenever we're not mid-pick, so the next draft turn
     // accepts a fresh choice.
-    if (state.phase !== 'picking') pickSent = false;
+    if (state.phase !== 'picking') { pickSent = false; pickVeil = new Set(); }
     if (state.phase === 'question' || state.phase === 'reveal') {
       // A question this build can't render means the server is a build ahead of
       // us (its deploy landed while this tab stayed open). Reload onto the new
@@ -1410,6 +1415,10 @@ export function bootFlagParty() {
       // rendered fine and ignored every tap until a refresh.
       pickHand.classList.toggle('sent', pickSent);
       for (const modeId of state.hand || []) {
+        // The chip is a SIBLING of the card, absolutely positioned over its right
+        // edge, not a child: a button inside a button is invalid markup and the
+        // inner one stops being reachable by keyboard. Both stay real buttons.
+        const row = el('div', 'pick-card-row');
         const card = el('button', 'pick-card');
         /** @type {HTMLButtonElement} */ (card).type = 'button';
         const hue = modeHue(modeId);
@@ -1424,9 +1433,29 @@ export function bootFlagParty() {
           pickSent = true;
           pickHand.classList.add('sent');
           card.classList.add('chosen');
-          send({ type: 'pick', modeId });
+          send({ type: 'pick', modeId, veil: pickVeil.has(modeId) });
         });
-        pickHand.appendChild(card);
+        row.appendChild(card);
+        // Only the picture trio gets the chip: on a statistics question the veil
+        // is refused server-side anyway (`canVeilMode`), and a control that does
+        // nothing on most of the hand teaches the wrong rule.
+        if (canVeilMode(modeId)) {
+          card.classList.add('veilable');
+          const chip = el('button', 'pick-card-veil');
+          /** @type {HTMLButtonElement} */ (chip).type = 'button';
+          chip.innerHTML = `<span class="veil-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>`;
+          chip.appendChild(document.createTextNode(t('party.veilChip', 'Veil')));
+          chip.title = t('party.veilChipHint', 'Veil this round: the flags start hidden and clear as the clock runs');
+          chip.setAttribute('aria-pressed', String(pickVeil.has(modeId)));
+          chip.addEventListener('click', () => {
+            if (pickSent) return;
+            if (pickVeil.has(modeId)) pickVeil.delete(modeId);
+            else pickVeil.add(modeId);
+            chip.setAttribute('aria-pressed', String(pickVeil.has(modeId)));
+          });
+          row.appendChild(chip);
+        }
+        pickHand.appendChild(row);
       }
     } else {
       pickLead.hidden = true;

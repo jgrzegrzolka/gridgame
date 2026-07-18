@@ -275,3 +275,19 @@ test('isFinalRound: a single-round game has no final round (nothing to contrast)
   assert.equal(isFinalRound(4, 10), false);
   assert.equal(isFinalRound(5, 10), true);
 });
+
+// A draft round's veil rides on its segment, so it has to survive the same
+// validation any other plan field does -- validatePlan rebuilds segments
+// field-by-field, so an unlisted key is dropped silently.
+test('validatePlan: keeps a segment veil flag, and only when it is exactly true', () => {
+  const dirty = [
+    { poolId: 'sovereign', questionId: 'flagPick', questions: 5, veil: true },
+    { poolId: 'sovereign', questionId: 'mapPick', questions: 5, veil: 'yes' },
+    { poolId: 'nonSovereign', questionId: 'flagPick', questions: 5 },
+  ];
+  assert.deepEqual(validatePlan(dirty), [
+    { poolId: 'sovereign', questionId: 'flagPick', questions: 5, veil: true },
+    { poolId: 'sovereign', questionId: 'mapPick', questions: 5 },
+    { poolId: 'nonSovereign', questionId: 'flagPick', questions: 5 },
+  ]);
+});

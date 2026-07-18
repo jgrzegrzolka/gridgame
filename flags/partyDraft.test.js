@@ -12,8 +12,10 @@ import {
   PICKS_PER_PLAYER_OPTIONS,
   DEFAULT_PICKS_PER_PLAYER,
   HAND_SIZE,
+  canVeilMode,
 } from './partyDraft.js';
-import { PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
+import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
+import { veilActive } from './partyTiming.js';
 
 /** Small seeded LCG so the shuffle-based helpers are deterministic in tests.
  *  @param {number} seed */
@@ -238,4 +240,21 @@ test('isValidPick: rejects a repeat, an unknown mode, and non-strings', () => {
   assert.equal(isValidPick('not-a-mode', []), false);
   assert.equal(isValidPick(/** @type {any} */ (null), []), false);
   assert.equal(isValidPick(/** @type {any} */ (42), []), false);
+});
+
+test('canVeilMode: only the picture trio can be veiled', () => {
+  for (const m of PICTURE_MODES) assert.equal(canVeilMode(m.id), true, `${m.id} should be veilable`);
+  for (const m of METRIC_MODES) assert.equal(canVeilMode(m.id), false, `${m.id} should not be veilable`);
+  assert.equal(canVeilMode('no-such-mode'), false, 'an unknown mode is never veilable');
+});
+
+// The pick card offers the veil chip off canVeilMode, but what actually paints
+// the veil at question time is veilActive. If the two ever disagree, a picker
+// could arm a veil that never appears (or the chip would hide on a mode that
+// veils fine). Pin them to each other across the whole catalog rather than
+// trusting two hand-maintained lists to stay in step.
+test('canVeilMode agrees with veilActive for every catalog mode', () => {
+  for (const m of PARTY_MODES) {
+    assert.equal(canVeilMode(m.id), veilActive(true, m.questionId), `${m.id} disagrees`);
+  }
 });

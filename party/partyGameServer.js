@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, validatePlan, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor, validateReveal } from '../flags/partyTiming.js';
-import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -317,7 +317,13 @@ export default class PartyGameServer {
           const modeId = String(parsed.modeId ?? '');
           if (!isValidPick(modeId, this.usedModes)) return;
           const mode = MODE_BY_ID[modeId];
-          const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
+          // The picker may veil their own round, but only on a mode where the
+          // veil does anything — `canVeilMode` is the same rule the pick card
+          // shows the chip by, re-checked here because the client's is advisory.
+          // Note this is a per-round choice made in the moment; it is NOT the
+          // Custom-setup tricky toggle, which draft still forces off at start.
+          const veil = parsed.veil === true && canVeilMode(modeId);
+          const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS, ...(veil ? { veil: true } : {}) };
           const question = this.generateForQuestion(mode.questionId, mode.poolId);
           result = applyPick(this.room, playerId, modeId, segment, question);
           if (result.broadcasts.length > 0) this.usedModes.add(modeId);
@@ -333,6 +339,8 @@ export default class PartyGameServer {
           if (!picker || hand.length === 0) return;
           const modeId = hand[Math.floor(Math.random() * hand.length)];
           const mode = MODE_BY_ID[modeId];
+          // No veil on a forced pick: the veil is a deliberate bet by the picker,
+          // and an idle picker never placed it.
           const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
           const question = this.generateForQuestion(mode.questionId, mode.poolId);
           result = applyPick(this.room, picker, modeId, segment, question);

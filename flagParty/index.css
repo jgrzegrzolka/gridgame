@@ -621,6 +621,51 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    confined-to-setup colour exception the draft chips use, never a gameplay tile. */
 .pick-card:hover { background: var(--hover-color); border-color: var(--mc, var(--secondary-color)); }
 .pick-card.chosen { border-color: var(--mc, var(--secondary-color)); background: var(--selected-color); }
+/* The veil chip sits OVER the card's right edge rather than inside it (a button
+   inside a button is invalid markup), so the row is the positioning context and
+   a veilable card reserves room so its label can never run under the chip. */
+.pick-card-row { position: relative; }
+.pick-card.veilable { padding-right: 104px; }
+.pick-card-veil {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--muted-soft-color);
+  background: var(--surface-color);
+  color: var(--muted-color);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pick-card-veil:hover { background: var(--hover-color); border-color: var(--secondary-color); }
+/* Armed reads as the accent, not as a quiet hover: the picker is placing a bet
+   on the whole table and needs to see at a glance that it is on. */
+.pick-card-veil[aria-pressed='true'] {
+  background: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: var(--surface-color);
+}
+/* A 6-panel miniature of the veil cover itself, two panels already cleared —
+   the same "partly revealed" idea the tile shows, at chip size. Inherits
+   currentColor so it flips with the armed state for free. */
+.veil-glyph {
+  width: 14px;
+  height: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1px;
+}
+.veil-glyph i { background: currentColor; border-radius: 1px; }
+.veil-glyph i:nth-child(2), .veil-glyph i:nth-child(6) { opacity: 0.25; }
 .pick-card-ic { flex: none; width: 30px; height: 30px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); }
 .pick-card-ic svg { width: 24px; height: 24px; display: block; }
 .pick-card-ic img { width: 28px; height: 22px; object-fit: contain; }

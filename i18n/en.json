@@ -642,6 +642,8 @@
     "doorCustomDesc": "Build the whole show up front. You choose every round.",
     "choosingRound": "Choosing round {n} of {total}",
     "yourPick": "Your pick, choose the next round",
+    "veilChip": "Veil",
+    "veilChipHint": "Veil this round: the flags start hidden and clear as the clock runs",
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "roundPick": "{name}'s pick",
