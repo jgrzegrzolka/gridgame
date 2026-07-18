@@ -193,6 +193,10 @@ Iteration 11 below.
 
 Still open:
 
+- **Iteration 12 — the playability + UX pass (PLANNED, 6 phases).** The next substantial piece of
+  work, written to be picked up by a fresh agent one phase at a time. Starts with a measured fairness
+  bug: the double-points round that decides the game is chosen by whoever is *leading* 85% of the
+  time, because loser's-pick pushes the leader to the back of the rotation. See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -818,11 +822,12 @@ Iteration 7 had, and the reason to build this one first.
   adding the plan to the wire is the server touch this iteration set out to avoid. Iteration 9's
   draft gives the client that info naturally (the pick names the next round), so the card lands there.
   Iteration 8 conveys round identity with the during-play pill indicator instead.
-- **The boundary reveal shows the standings break in place of the question's answer tiles** (every 5th
-  question's answer isn't shown). Accepted for now as the smallest correct cut and because the standings
-  moment is the point of the beat; the alternative (a short answer beat, then the break, as two
-  sub-phases of one reveal window) is the obvious refinement if it reads wrong in real play. **Flag
-  for Jan's reaction.**
+- ~~**The boundary reveal shows the standings break in place of the question's answer tiles**~~
+  **RESOLVED** (the refinement described here was built). A round-boundary reveal now plays the two
+  sub-phases this entry proposed: the answer tiles for `revealSecondsFor(clean)`, then the standings
+  break — `armRoundBreakAnswer` in `flagParty/page.js` owns the flip. The round's fifth question shows
+  its answer like any other. Struck rather than deleted because the entry above is the reasoning that
+  produced the fix.
 
 ## Iteration 9 — The draft: players pick the rounds — PLANNED (2026-07-17)
 
@@ -875,8 +880,10 @@ partial plan, so a pick is an append.
   the points, so it never feels unfair the way a handout does. **The live objection, accepted with
   eyes open:** being bad early buys you a pick. The mock's worked example (Zosia last by 16, picks
   Coffee, goes 5/5, takes the lead) exists to make that judgeable rather than arguable.
-- **A hand of 5 cards, not a menu of 30.** Drawn from the unused modes: the picture modes plus a
+- **A hand of cards, not a menu of 30.** Drawn from the unused modes: the picture modes plus a
   random draw of the enabled metrics. A list of 30-odd registry metrics is a form, not a party beat.
+  (Written as "a hand of 5"; the shipped `HAND_SIZE` is **10** — `flags/partyDraft.js` is the source
+  of truth. The principle is "a hand you can read", not the specific number.)
 - **Draft deals per-metric rounds** (one 5-question segment), where Setlist deals mixed. "I pick Coffee"
   is a moment; "I pick World facts" is a menu. Both shapes are valid `Segment[]`, so this needs no
   model, no fork, and no server knowledge.
@@ -1200,6 +1207,121 @@ information, not decoration.
   with — it may already have fixed the emptiness.
 - **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
   liked it, so it wasn't built. The hard swap stays.
+
+## Iteration 12 — playability + UX pass — PLANNED (2026-07-19)
+
+Goal: the engine, the draft and the rounds all work; what's thin is everything *around* the
+questions. A point means the same thing whoever earned it, the round that decides the game is handed
+to whoever is already winning, and every screen change is a hard cut. This iteration is the next
+layer: **drama, legibility, and fairness where it counts.**
+
+**This is a multi-phase feature written to be picked up by a fresh agent.** Each phase below ships
+alone, on its own branch and PR, in the listed order — nothing blocks on a later phase. Read
+`CLAUDE.md`, then this entry, then start the first unchecked phase. **Do not bundle phases**; they
+were separated because each is independently judgeable by Jan in a real game.
+
+**Mock (all six sections, interactive):**
+https://claude.ai/code/artifact/99107bcb-466d-46a5-b056-58723670f8cc
+
+### The finding that drove this: the finale is rigged for the leader
+
+`pickerFor` breaks ties toward the **lowest-ranked** player, which is right for a comeback mechanic
+round by round. But it means the leader *loses that tie-break every round* and is pushed to the back
+of the rotation — landing them on the last round, which is the double-points round that decides the
+game. Simulated over 2000 four-player games, the player who chooses the decider is:
+
+| standing when they pick | share |
+|---|---|
+| **1st** | **84.6%** |
+| 2nd | 13.6% |
+| 3rd | 1.8% |
+| 4th | 0.1% |
+
+So loser's-pick inverts itself at exactly the moment the stakes double. Jan spotted this from play
+("our double round in general would be pick by first player") before it was measured. It is the only
+item in this iteration a player could reasonably call *unfair*, which is why it outranks everything
+else here even though it costs the most.
+
+### Phase 1 — score breakdown chips (client only)
+
+Make the rules that already exist visible, before adding more of them.
+
+- The break board's round gain splits into what earned it — `10×3` base, `⚡9` speed, `🔥5` streak —
+  then collapses back to the plain total, reusing the gain-chip fade from Iteration 11.
+- Needs `scoreQuestion` to return a **breakdown** (`{ base, speed, bonus }`) alongside the total, and
+  the reveal to carry it, so the client isn't re-deriving scoring rules it doesn't own. Keep
+  `scoreQuestion`'s current return shape working — the room and tests depend on it.
+- Why first: it costs nothing server-side, and every later scoring idea is invisible without it.
+
+### Phase 2 — The Decider (server + client)
+
+The double-points round stops being "the last slot in the rotation" and becomes a **separate closing
+act, outside the rotation, picked by whoever is in last place when it starts.**
+
+- Length becomes `players × picksPerPlayer + 2` — the fixed Flags opener and the Decider bookending
+  the draft. The lobby's live "N rounds, M questions" must reflect the extra round.
+- **Why not just flip the tie-break on the final round** (the one-line fix): it silently breaks the
+  promise that *everyone picks the same number of times*, which is the rule that makes the rotation
+  legible. Keeping the Decider outside the rotation preserves that promise by construction.
+- **Why not let the house deal it** (a mixed "greatest hits" round): defensible, and it removes the
+  advantage completely — but it also removes the best moment the rubber band can buy, which is the
+  player who is losing choosing the ground the game ends on. Park it as the fallback if last-place's
+  pick tests too strong.
+- The Decider gets its own title card (`🏁 The Decider`, the picker's name, "double points") rather
+  than reusing the round card's numbering, since it is explicitly not round N of N.
+- `isFinalRound` / `FINAL_ROUND_MULTIPLIER` already exist; this changes *who picks it* and *where it
+  sits in the plan*, not how it scores.
+
+### Phase 3 — one shared screen transition (client only)
+
+`showSection` flips a `hidden` attribute, so question → reveal → break → pick → round card → question
+is six hard cuts a round. Replace with a single `swapSection()` primitive every screen change goes
+through: ~120 ms out, ~180 ms in, 6 px lift.
+
+**Do this as one helper, not per-screen tweaks.** The duplicate-`countUp` bug in Iteration 11 is the
+cautionary tale: two implementations of one mechanism, and the wrong one silently won.
+
+### Phase 4 — round-start countdown (client only)
+
+After a break and a pick the table has scattered; the first question currently arrives with its clock
+already running. The round card grows a **draining ring** over its existing `ROUND_INTRO_SECONDS`,
+reusing the question clock's visual language ("ring empty = go") rather than adding a 3-2-1 screen.
+
+A literal 3-2-1 countdown was mocked and rejected as the default: it is loud, and it costs 3 s of
+every round. Revisit only if the ring tests too subtle in a noisy room.
+
+### Phase 5 — deeper scoring (server + client)
+
+Only once Phase 1 makes scoring legible, or these are invisible rules again.
+
+- **Streak** — 3 correct in a row `+5`, 5 in a row `+10`. Gives a trailing player something to chase
+  that isn't the leader's total.
+- **Sole survivor** — the only player correct gets `+5`. Today, knowing the obscure flag alone is
+  worth exactly as much as everyone guessing right together.
+- **Nobody knew** — all wrong scores nothing, but gets a named beat on the reveal. Purely
+  presentational, costs nothing, and a shared groan is a party moment.
+- **Explicitly NOT time-decay speed scoring.** It is already parked under Open decisions and should
+  stay parked: it punishes reading the question, makes a slow phone a scoring disadvantage, and
+  can't be shown as a clean chip. Rank-based speed is legible; continuous decay isn't.
+
+### Phase 6 — the finale as an ending (client + per-game stats)
+
+- **Reveal from the bottom up, winner last**, with a beat between each row. The rows and the count-up
+  already exist; this is sequencing, the same shape as Iteration 11's ledger.
+- **Awards** after the board — fastest finger, best round, biggest climb — so everyone leaves with
+  something, including whoever finished last.
+- The awards need per-game stats nobody currently keeps (buzz ranks, per-round gains, rank history).
+  Most are derivable from what the client already sees round by round, so it's a tracking job rather
+  than a protocol change — but it is the one item here with real groundwork, hence last.
+
+### Open questions for Jan (decide when the phase comes up, not now)
+
+- Does last place picking the Decider feel like a comeback or like a handout? The mock's worked
+  example exists to make that judgeable in play rather than arguable in advance.
+- Should the Decider's pick be **hidden until the card flips**, so the table doesn't know the terrain
+  until it starts? More theatre, but it removes the "oh no, not coffee" groan that is half the fun.
+- Do streaks want to survive a round boundary, or reset with the round? Surviving is more dramatic;
+  resetting keeps a round self-contained.
 
 ## Out of scope (don't sweep in)
 
