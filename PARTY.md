@@ -805,9 +805,13 @@ partial plan, so a pick is an append.
 - **10 s to pick, random on timeout.**
 - **The watcher screen matters as much as the picker's.** With 4 players, 3 of them are watching.
   "Zosia is choosing", with her avatar. It is a spotlight, which is why it is short.
-- **The final block is double points and always tricky.** Loser's pick chooses the terrain for the
-  block that decides the game. Tricky as an *act* also finally gives the veil a home: it is a global
-  switch today, so most hosts never flip it, so two iterations of work mostly never run.
+- **The final block is double points.** Loser's pick chooses the terrain for the block that decides
+  the game. It *was* also always tricky, on the reasoning that the veil is a global switch most hosts
+  never flip, so giving it a guaranteed home made two iterations of work actually run. **Reversed
+  (2026-07-18).** Justifying a rule by "it makes our unused feature run" is backwards: the veil
+  appeared for the closing block whether or not the host wanted it, and in draft — where the toggle
+  is never shown — it arrived out of nowhere. Double points already marks the finale. `veilActive()`
+  is now the host's tricky setting and nothing else.
 - **Scoring is untouched** (Jan: "your scoring is fine"). See the speed-bonus note under Open
   decisions for why time-decay was considered and parked.
 
