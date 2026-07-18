@@ -284,7 +284,7 @@ export default class PartyGameServer {
           // In a draft, a `next` that lands on a round boundary opens a pick
           // instead of dealing the next question: the lowest-ranked seat that
           // hasn't picked chooses the next round from a dealt hand. Otherwise
-          // otherwise it advances the question or ends the game.
+          // it advances the question or ends the game.
           const picker = pendingPickAfterReveal(this.room)
             ? pickerFor(this.scoreboard(), this.room.pickedBy) : null;
           if (picker) {
