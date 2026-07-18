@@ -8,12 +8,11 @@ import {
   secondsLeft,
   remainingFraction,
   REVEAL_OPTIONS,
-  NAME_REVEAL_OPTIONS,
+  NAME_REVEAL_SECONDS,
   DEFAULT_REVEAL,
   revealCategoryFor,
   isMetricQuestion,
   clampReveal,
-  clampNameReveal,
   validateReveal,
   veilProgress,
   namesRevealed,
@@ -74,9 +73,8 @@ test('DEFAULT_REVEAL: flags obscured longest, metrics shortest, all an allowed o
     assert.ok(REVEAL_OPTIONS.includes(v), `${v} is a pickable option`);
     assert.ok(v < 1, 'the tile is fully clear before the buzzer');
   }
-  assert.ok(NAME_REVEAL_OPTIONS.includes(DEFAULT_REVEAL.name), 'the name default is a pickable name option');
-  assert.ok(DEFAULT_REVEAL.name < 1, 'names land before the buzzer');
-  assert.deepEqual(DEFAULT_REVEAL, { flag: 0.8, map: 0.4, metric: 0.2, name: 0.5 }, 'the agreed defaults');
+  assert.deepEqual(DEFAULT_REVEAL, { flag: 0.8, map: 0.4, metric: 0.2 }, 'the agreed defaults');
+  assert.ok(NAME_REVEAL_SECONDS * 1000 < QUESTION_SECONDS * 1000, 'names land well before the buzzer');
 });
 
 test('revealCategoryFor: maps, metrics, and everything-else-is-flags', () => {
@@ -109,37 +107,36 @@ test('clampReveal: snaps to the nearest option, falls back on non-numbers', () =
   assert.equal(clampReveal(NaN, 0.6), 0.6, 'NaN falls back to the default');
 });
 
-test('clampNameReveal: null stays off, numbers snap, junk falls back', () => {
-  assert.equal(clampNameReveal(null, 0.5), null, 'explicit null is off and stays off');
-  assert.equal(clampNameReveal(0.5, 0.4), 0.5, 'an exact option is kept');
-  assert.equal(clampNameReveal(0.55, 0.4), 0.6, 'snaps to the nearest option');
-  assert.equal(clampNameReveal(0.01, 0.4), 0.4, 'clamps a too-low value up to the lowest option');
-  assert.equal(clampNameReveal(9, 0.4), 0.8, 'clamps a too-high value down to the highest option');
-  assert.equal(clampNameReveal(undefined, 0.5), 0.5, 'a missing value defaults on (not off)');
-  assert.equal(clampNameReveal('50', 0.5), 0.5, 'a non-number falls back to the default');
-  assert.equal(clampNameReveal(NaN, 0.6), 0.6, 'NaN falls back to the default');
-});
-
 test('validateReveal: fills a full config, snapping and defaulting each field', () => {
-  assert.deepEqual(validateReveal({ flag: 0.6, map: 0.2, metric: 0.4, name: 0.6 }), { flag: 0.6, map: 0.2, metric: 0.4, name: 0.6 });
-  assert.deepEqual(validateReveal({ flag: 0.55 }), { flag: 0.6, map: DEFAULT_REVEAL.map, metric: DEFAULT_REVEAL.metric, name: DEFAULT_REVEAL.name }, 'missing fields default, present ones snap');
-  assert.deepEqual(validateReveal({ name: null }), { flag: DEFAULT_REVEAL.flag, map: DEFAULT_REVEAL.map, metric: DEFAULT_REVEAL.metric, name: null }, 'an explicit name:null (host turned names off) survives validation');
+  assert.deepEqual(validateReveal({ flag: 0.6, map: 0.2, metric: 0.4 }), { flag: 0.6, map: 0.2, metric: 0.4 });
+  assert.deepEqual(validateReveal({ flag: 0.55 }), { flag: 0.6, map: DEFAULT_REVEAL.map, metric: DEFAULT_REVEAL.metric }, 'missing fields default, present ones snap');
+  assert.deepEqual(validateReveal({ name: 0.5 }), DEFAULT_REVEAL, 'a stale name field is ignored, not carried through');
   assert.deepEqual(validateReveal(null), DEFAULT_REVEAL, 'a missing config is the full default');
   assert.deepEqual(validateReveal('nope'), DEFAULT_REVEAL, 'a garbage config is the full default');
 });
 
-test('namesRevealed: off never shows, otherwise flips true at the fraction and holds', () => {
+test('namesRevealed: flips true at a fixed NAME_REVEAL_SECONDS and holds', () => {
   const now = 1_000_000;
-  const total = 20_000;
-  const at = (/** @type {number} */ frac, /** @type {number} */ mult) => namesRevealed(now + total * (1 - mult), now, total, frac);
-  assert.equal(namesRevealed(now + total, now, total, null), false, 'off never reveals');
-  assert.equal(at(0.5, 0), false, 'hidden at the start');
-  assert.equal(at(0.5, 0.49), false, 'still hidden just before the half-way point');
-  assert.equal(at(0.5, 0.5), true, 'revealed exactly at the fraction');
-  assert.equal(at(0.5, 0.9), true, 'stays revealed after');
-  assert.equal(namesRevealed(now, now, total, 0.5), true, 'at the deadline names are shown');
-  assert.equal(namesRevealed(now + total, now, total, 0), true, 'a zero fraction reveals immediately');
-  assert.equal(namesRevealed(now, now, 0, 0.5), true, 'a non-positive total is a safe reveal');
+  const total = QUESTION_SECONDS * 1000;
+  // `elapsed` seconds into a question whose window is `total` long.
+  const at = (/** @type {number} */ elapsed) => namesRevealed(now + total - elapsed * 1000, now, total);
+  assert.equal(at(0), false, 'hidden at the start');
+  assert.equal(at(NAME_REVEAL_SECONDS - 0.1), false, 'still hidden just before the beat');
+  assert.equal(at(NAME_REVEAL_SECONDS), true, 'revealed exactly at the beat');
+  assert.equal(at(NAME_REVEAL_SECONDS + 5), true, 'stays revealed after');
+  assert.equal(namesRevealed(now, now, total), true, 'at the deadline names are shown');
+  assert.equal(namesRevealed(now, now, 0), true, 'a non-positive total is a safe reveal');
+});
+
+test('namesRevealed: the beat is absolute, not a fraction of the window', () => {
+  // The whole point of the change: a 3 s beat means 3 s whatever the window is.
+  const now = 1_000_000;
+  for (const total of [10_000, 20_000, 60_000]) {
+    const at3 = namesRevealed(now + total - NAME_REVEAL_SECONDS * 1000, now, total);
+    assert.equal(at3, true, `revealed at ${NAME_REVEAL_SECONDS}s in a ${total}ms window`);
+    const justBefore = namesRevealed(now + total - (NAME_REVEAL_SECONDS * 1000 - 100), now, total);
+    assert.equal(justBefore, false, `still hidden just before it in a ${total}ms window`);
+  }
 });
 
 test('veilProgress: 0 at the start, hits 1 at the clear point, holds clear after', () => {

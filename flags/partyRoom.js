@@ -19,7 +19,7 @@ import { isRoundBoundary, isFinalRound } from './partyPlan.js';
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
- * @typedef {{ prompt: string, options: string[], answer: string, questionId?: string, clearFrac?: number, nameFrac?: number }} Question
+ * @typedef {{ prompt: string, options: string[], answer: string, questionId?: string, clearFrac?: number }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
  *
  * @typedef {Object} Room
@@ -46,7 +46,7 @@ import { isRoundBoundary, isFinalRound } from './partyPlan.js';
  * @property {{ flag: number, map: number, metric: number, name: number | null } | null} reveal  the
  *   host's per-category reveal timing (fraction of the window each category's veil
  *   clears at) plus `name`, the world-facts name-reveal fraction (null = off).
- *   Stored like `plan` so the server can stamp the right `clearFrac` / `nameFrac`
+ *   Stored like `plan` so the server can stamp the right `clearFrac`
  *   on every question, including questions generated after an eviction; null before
  *   start, when the server falls back to `DEFAULT_REVEAL`. The room never reads it.
  * @property {Question | null} question  the live question; `answer` never leaves
@@ -600,7 +600,7 @@ function rosterMessage(room) {
  * @param {Question} q
  */
 function publicQuestion(q) {
-  /** @type {{ prompt: string, options: string[], questionId?: string, clearFrac?: number, nameFrac?: number }} */
+  /** @type {{ prompt: string, options: string[], questionId?: string, clearFrac?: number }} */
   const pub = { prompt: q.prompt, options: q.options };
   if (q.questionId != null) pub.questionId = q.questionId;
   // The veil timing for this question rides along so a tricky-mode client clears
@@ -608,7 +608,6 @@ function publicQuestion(q) {
   if (q.clearFrac != null) pub.clearFrac = q.clearFrac;
   // The name-reveal timing (world-facts questions only) rides along the same way so
   // every client fades the country names onto the tiles at the same instant.
-  if (q.nameFrac != null) pub.nameFrac = q.nameFrac;
   return pub;
 }
 

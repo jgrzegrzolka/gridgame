@@ -2,7 +2,7 @@ import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, validatePlan, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
-import { DEFAULT_REVEAL, revealCategoryFor, validateReveal, isMetricQuestion } from '../flags/partyTiming.js';
+import { DEFAULT_REVEAL, revealCategoryFor, validateReveal } from '../flags/partyTiming.js';
 import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
@@ -118,7 +118,7 @@ export default class PartyGameServer {
    * Generate a question for an explicit question type + pool, independent of the
    * plan. Shared by {@link generateQuestion} (plan-driven) and the draft pick
    * path (mode-driven, where the round isn't in the plan yet). Stamps `questionId`,
-   * the veil `clearFrac`, and the metric name-reveal `nameFrac`, and records the
+   * the veil `clearFrac`, and records the
    * answer as used.
    * @param {string} questionId
    * @param {string} poolId
@@ -132,10 +132,10 @@ export default class PartyGameServer {
     this.usedCodes.add(q.answer);
     // World-facts (metric) questions carry the name-reveal fraction so clients fade
     // the country names on at the host's chosen point; other questions never do (flag
-    // / outline recognition is the whole point there). `rev.name` may be null (the
-    // host turned names off), in which case nameFrac stays undefined.
-    const nameFrac = isMetricQuestion(questionId) ? (rev.name ?? undefined) : undefined;
-    return { ...q, questionId, clearFrac: rev[revealCategoryFor(questionId)], nameFrac };
+    // / outline recognition is the whole point there). The metric name-reveal
+    // needs no stamp: it fires at a fixed NAME_REVEAL_SECONDS, and whether a
+    // question gets names at all is derivable client-side from its questionId.
+    return { ...q, questionId, clearFrac: rev[revealCategoryFor(questionId)] };
   }
 
   async onStart() {
