@@ -161,20 +161,22 @@ export function questionIdAt(plan, index) {
 }
 
 /**
- * The catalog of game modes a host can pick from in the lobby setup. Each mode
- * is a (questionId, poolId) pair with a stable `id` the UI and localStorage key
- * off; the human label lives in i18n (`party.mode.*`), not here, so this stays
- * pure. Order is the order modes appear in the setup list and the order their
- * segments land in a built plan (flags, then territories, then the map finale).
- * Adding a mode here makes it selectable; nothing else changes.
+ * The catalog of game modes a game can deal. Each mode is a (questionId, poolId)
+ * pair with a stable `id`; the human label lives in i18n (`party.mode.*`), not
+ * here, so this stays pure. Adding a mode here puts it in circulation; nothing
+ * else changes.
+ *
+ * **Where these are consumed:** the host no longer picks modes — the retired
+ * custom-setup panel was the only UI that listed them. The live consumer is the
+ * draft's hand dealer (`handFor` in `flags/partyDraft.js`), which offers the
+ * picture trio plus a shuffled sample of the metric family, so catalog ORDER now
+ * only fixes the picture cards' order in a hand.
  *
  * `group` splits the catalog into the fixed **picture** trio (flags / map) and
- * the open-ended **metric** family (population / area / density / …future GDP,
- * coffee). The lobby renders the two groups differently — picture modes as rows,
- * the metric family as colour chips — but each enabled mode of either group is
- * one round; a statistic is its own per-metric
+ * the open-ended **metric** family (population / area / density / GDP, coffee, …).
+ * Every mode of either group is one round; a statistic is its own per-metric
  * round. Adding a metric = one more `group: 'metric'` entry here + its question
- * module + i18n; the setup UI grows by one chip, not one row.
+ * module + i18n, and it joins the draft pool automatically.
  *
  * @typedef {{ id: string, questionId: string, poolId: string, group: 'picture' | 'metric' }} PartyMode
  * @type {PartyMode[]}

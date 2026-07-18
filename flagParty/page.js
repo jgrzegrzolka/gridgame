@@ -161,9 +161,12 @@ function roundCardIconHtml(/** @type {string} */ modeId) {
 
 /**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
- * mapping can be pinned by a test; `modeShortLabel` has no DOM caller of its own
- * now that the custom-setup panel is gone, but the round-card path resolves
- * through it. Metric modes take their short name from METRIC_SHORT keyed off the
+ * mapping can be pinned by a test. **`modeShortLabel` currently has no production
+ * caller** — its `t()` wrapper died with the custom-setup panel, and the round
+ * card reaches the short i18n keys directly (`t('party.modeShort.flagsAll', …)`)
+ * rather than through this resolver. It is kept because `modeLabels.test.js` pins
+ * that every catalog mode resolves to a defined short key, which is the check that
+ * caught the undefined-key lobby crash; delete it only together with that suite. Metric modes take their short name from METRIC_SHORT keyed off the
  * QUESTION id, which differs from the mode id for population ('superlative-pop' vs
  * questionId 'superlative'); picture modes fall back to their own MODE_LABELS
  * `shortKey`. A mode that resolves to neither returns `{ key: undefined }`,
@@ -1373,6 +1376,13 @@ export function bootFlagParty() {
     // seat count) and no reveal config (the veil clear timing is a fixed constant
     // now — see DEFAULT_REVEAL). The only host input is how many rounds each
     // player picks.
+    //
+    // `draft: true` is redundant against the CURRENT server, which no longer
+    // branches on it — but do NOT drop it. PartyKit deploys on its own workflow
+    // (`deploy-partykit.yml`, Cloudflare) separately from the SWA site, so a new
+    // client routinely talks to the old server for a window, and the old server
+    // takes its setlist path unless this flag is exactly true. Removing it would
+    // turn every Start in that window into a 16-question default-plan game.
     send({ type: 'start', draft: true, picks: picksPerPlayer });
   });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
