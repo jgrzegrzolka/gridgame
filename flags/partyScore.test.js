@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {
   CORRECT_POINTS,
   SPEED_BONUS,
-  FINAL_BLOCK_MULTIPLIER,
+  FINAL_ROUND_MULTIPLIER,
   speedBonusForRank,
-  scoreRound,
+  scoreQuestion,
 } from './partyScore.js';
 
 test('speedBonusForRank: follows the curve, then 0 past the end', () => {
@@ -16,8 +16,8 @@ test('speedBonusForRank: follows the curve, then 0 past the end', () => {
   assert.equal(speedBonusForRank(99), 0);
 });
 
-test('scoreRound: correct answers get base + decaying speed bonus in arrival order', () => {
-  const points = scoreRound([
+test('scoreQuestion: correct answers get base + decaying speed bonus in arrival order', () => {
+  const points = scoreQuestion([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: true },
     { playerId: 'c', correct: true },
@@ -29,8 +29,8 @@ test('scoreRound: correct answers get base + decaying speed bonus in arrival ord
   assert.equal(points.d, CORRECT_POINTS + 0);
 });
 
-test('scoreRound: wrong answers score 0 and do not consume a speed rank', () => {
-  const points = scoreRound([
+test('scoreQuestion: wrong answers score 0 and do not consume a speed rank', () => {
+  const points = scoreQuestion([
     { playerId: 'a', correct: false },
     { playerId: 'b', correct: true },
     { playerId: 'c', correct: true },
@@ -42,34 +42,34 @@ test('scoreRound: wrong answers score 0 and do not consume a speed rank', () => 
   assert.equal(points.c, CORRECT_POINTS + 3);
 });
 
-test('scoreRound: solo (applySpeedBonus false) awards base only', () => {
-  const points = scoreRound([{ playerId: 'solo', correct: true }], {
+test('scoreQuestion: solo (applySpeedBonus false) awards base only', () => {
+  const points = scoreQuestion([{ playerId: 'solo', correct: true }], {
     applySpeedBonus: false,
   });
   assert.equal(points.solo, CORRECT_POINTS);
 });
 
-test('scoreRound: empty round scores nobody', () => {
-  assert.deepEqual(scoreRound([]), {});
+test('scoreQuestion: empty question scores nobody', () => {
+  assert.deepEqual(scoreQuestion([]), {});
 });
 
-test('scoreRound: the multiplier scales base + speed bonus, wrong stays 0', () => {
+test('scoreQuestion: the multiplier scales base + speed bonus, wrong stays 0', () => {
   const buzzes = [
     { playerId: 'a', correct: true },   // base + speed[0]
     { playerId: 'b', correct: false },  // 0
     { playerId: 'c', correct: true },   // base + speed[1]
   ];
-  const doubled = scoreRound(buzzes, { multiplier: FINAL_BLOCK_MULTIPLIER });
-  assert.equal(doubled.a, (CORRECT_POINTS + SPEED_BONUS[0]) * FINAL_BLOCK_MULTIPLIER);
+  const doubled = scoreQuestion(buzzes, { multiplier: FINAL_ROUND_MULTIPLIER });
+  assert.equal(doubled.a, (CORRECT_POINTS + SPEED_BONUS[0]) * FINAL_ROUND_MULTIPLIER);
   assert.equal(doubled.b, 0, 'a wrong answer is 0 regardless of the multiplier');
-  assert.equal(doubled.c, (CORRECT_POINTS + SPEED_BONUS[1]) * FINAL_BLOCK_MULTIPLIER);
+  assert.equal(doubled.c, (CORRECT_POINTS + SPEED_BONUS[1]) * FINAL_ROUND_MULTIPLIER);
 });
 
-test('scoreRound: multiplier defaults to 1 (unchanged scoring)', () => {
+test('scoreQuestion: multiplier defaults to 1 (unchanged scoring)', () => {
   const buzzes = [{ playerId: 'a', correct: true }];
-  assert.deepEqual(scoreRound(buzzes), scoreRound(buzzes, { multiplier: 1 }));
+  assert.deepEqual(scoreQuestion(buzzes), scoreQuestion(buzzes, { multiplier: 1 }));
 });
 
-test('FINAL_BLOCK_MULTIPLIER is 2', () => {
-  assert.equal(FINAL_BLOCK_MULTIPLIER, 2);
+test('FINAL_ROUND_MULTIPLIER is 2', () => {
+  assert.equal(FINAL_ROUND_MULTIPLIER, 2);
 });

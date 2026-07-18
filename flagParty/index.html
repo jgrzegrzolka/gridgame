@@ -89,11 +89,11 @@
       <section class="pt-lobby" id="pt-lobby" hidden>
         <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
-        <!-- Host-only: how to play — Draft (players pick each block) or Custom setup. -->
+        <!-- Host-only: how to play — Draft (players pick each round) or Custom setup. -->
         <div class="party-mode" id="party-mode" hidden>
           <button type="button" class="mode-door" id="mode-draft" data-mode="draft">
             <span class="mode-door-title" data-i18n="party.doorDraftTitle">Draft</span>
-            <span class="mode-door-desc" data-i18n="party.doorDraftDesc">Start now. After each block, whoever is last picks what everyone plays next.</span>
+            <span class="mode-door-desc" data-i18n="party.doorDraftDesc">Start now. After each round, whoever is last picks what everyone plays next.</span>
           </button>
           <div class="draft-length" id="draft-length" hidden>
             <span class="dl-text">
@@ -101,14 +101,14 @@
               <span class="dl-hint" id="draft-length-hint"></span>
             </span>
             <span class="dl-step">
-              <button type="button" class="dl-btn" id="draft-less" aria-label="Fewer blocks">&minus;</button>
-              <span class="dl-value" id="draft-blocks" aria-live="polite">3</span>
-              <button type="button" class="dl-btn" id="draft-more" aria-label="More blocks">+</button>
+              <button type="button" class="dl-btn" id="draft-less" aria-label="Fewer rounds">&minus;</button>
+              <span class="dl-value" id="draft-rounds" aria-live="polite">3</span>
+              <button type="button" class="dl-btn" id="draft-more" aria-label="More rounds">+</button>
             </span>
           </div>
           <button type="button" class="mode-door" id="mode-custom" data-mode="setlist">
             <span class="mode-door-title" data-i18n="party.doorCustomTitle">Custom setup</span>
-            <span class="mode-door-desc" data-i18n="party.doorCustomDesc">Build the whole show up front. You choose every block.</span>
+            <span class="mode-door-desc" data-i18n="party.doorCustomDesc">Build the whole show up front. You choose every round.</span>
           </button>
         </div>
         <details class="game-setup" id="game-setup" hidden>
@@ -116,8 +116,8 @@
             <span class="gs-head-row">
               <span class="gs-title" data-i18n="party.gameSetup">Game setup</span>
               <span class="gs-meta">
-                <span class="gs-rounds" id="gs-rounds">3</span>
-                <span data-i18n="party.blocksLabel">blocks</span>
+                <span class="gs-questions" id="gs-questions">3</span>
+                <span data-i18n="party.roundsLabel">rounds</span>
                 <span class="gs-caret" aria-hidden="true"></span>
               </span>
             </span>
@@ -133,50 +133,50 @@
         </div>
       </section>
 
-      <!-- Round (question + reveal share this) -->
-      <section class="pt-round" id="pt-round" hidden>
-        <div class="round-pill" id="round-pill"></div>
-        <div class="round-timer" id="round-timer" data-mode="question" hidden>
-          <div class="round-timer-track"><div class="round-timer-fill" id="round-timer-fill"></div></div>
-          <div class="round-timer-label" id="round-timer-label"></div>
+      <!-- Question (question + reveal share this) -->
+      <section class="pt-question" id="pt-question" hidden>
+        <div class="question-pill" id="question-pill"></div>
+        <div class="question-timer" id="question-timer" data-mode="question" hidden>
+          <div class="question-timer-track"><div class="question-timer-fill" id="question-timer-fill"></div></div>
+          <div class="question-timer-label" id="question-timer-label"></div>
         </div>
         <div class="prompt" id="prompt">
           <span class="prompt-lead" id="prompt-lead"></span>
           <span class="prompt-target" id="prompt-target"></span>
         </div>
         <div class="flags-grid" id="flags-grid"></div>
-        <div class="round-foot" id="round-foot"></div>
+        <div class="question-foot" id="question-foot"></div>
         <div class="actions-row">
-          <button type="button" id="round-to-settings" data-i18n="party.backToSettings" hidden>Back to settings</button>
+          <button type="button" id="question-to-settings" data-i18n="party.backToSettings" hidden>Back to settings</button>
           <span class="actions-sep" aria-hidden="true">·</span>
           <a href="../" data-i18n="menu.home">Home</a>
         </div>
       </section>
 
-      <!-- Block title card: a short beat announcing the next block (2..N) before
-           its first round begins -->
-      <section class="pt-blockcard" id="pt-blockcard" hidden>
-        <div class="blockcard">
-          <span class="blockcard-count" id="blockcard-count"></span>
-          <span class="blockcard-ic" id="blockcard-ic" aria-hidden="true"></span>
-          <span class="blockcard-name" id="blockcard-name"></span>
-          <span class="blockcard-rounds" id="blockcard-rounds"></span>
-          <span class="blockcard-pick" id="blockcard-pick" hidden></span>
-          <span class="blockcard-double" id="blockcard-double" hidden></span>
+      <!-- Round title card: a short beat announcing the next round (2..N) before
+           its first question begins -->
+      <section class="pt-roundcard" id="pt-roundcard" hidden>
+        <div class="roundcard">
+          <span class="roundcard-count" id="roundcard-count"></span>
+          <span class="roundcard-ic" id="roundcard-ic" aria-hidden="true"></span>
+          <span class="roundcard-name" id="roundcard-name"></span>
+          <span class="roundcard-questions" id="roundcard-questions"></span>
+          <span class="roundcard-pick" id="roundcard-pick" hidden></span>
+          <span class="roundcard-double" id="roundcard-double" hidden></span>
         </div>
       </section>
 
-      <!-- Draft pick: one player chooses the next block from a hand of cards -->
+      <!-- Draft pick: one player chooses the next round from a hand of cards -->
       <section class="pt-pick" id="pt-pick" hidden>
-        <div class="round-pill" id="pick-pill"></div>
+        <div class="question-pill" id="pick-pill"></div>
         <p class="plabel" id="pick-lead"></p>
         <div class="pick-hand" id="pick-hand"></div>
         <div class="pick-watch" id="pick-watch" hidden></div>
       </section>
 
-      <!-- Between-blocks break: the standings beat after each block (not the final one) -->
+      <!-- Between-rounds break: the standings beat after each round (not the final one) -->
       <section class="pt-break" id="pt-break" hidden>
-        <div class="round-pill" id="break-pill"></div>
+        <div class="question-pill" id="break-pill"></div>
         <div class="break-mvp" id="break-mvp" hidden></div>
         <p class="plabel" id="break-standings-label"></p>
         <div class="break-board" id="break-board"></div>

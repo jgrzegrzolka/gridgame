@@ -8,22 +8,38 @@ this file, then continue the first uncompleted step under `## Now`.
 **Branching:** each phase = one branch off `main` + one PR. `git checkout main && git pull`
 before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
 
+## Vocabulary
+
+- **Question** — one prompt: a flag to pick, an outline to name, a "which grows the most
+  coffee?". The smallest unit of play.
+- **Round** — five questions of a single mode. The unit a drafter picks, the unit the
+  standings break follows, the unit that doubles at the end.
+- **Game** — a sequence of rounds. Draft sizes it from the seat count unless the host says
+  otherwise.
+
+**Renamed 2026-07-18.** These two used to be called *round* (one prompt) and *block* (five
+of them), which put two different things under the word "round" and made the progress pill
+("Block 1/2 · Round 3/10") unreadable. Everything moved down one: block → round, round →
+question. **Entries below this line written before that date use the old words** — read
+"block" as today's round and "round" as today's question. Stable string ids on the wire
+(`flagPick`, `superlative-coffee`) were deliberately left alone.
+
 ---
 
 ## The idea
 
-It's **not three games — it's one party show with swappable rounds.** Jackbox/Kahoot,
-but for flags. The mini-games (flag-pick, map, superlative, find-the-match) are *rounds*;
+It's **not three games — it's one party show with swappable questions.** Jackbox/Kahoot,
+but for flags. The mini-games (flag-pick, map, superlative, find-the-match) are *questions*;
 the real product is the **shared scoreboard** that runs across them.
 
 This reframing is load-bearing:
 
-- **"One game or three?"** → one show, rounds are plug-ins. Ship one round first; add
-  rounds over time without touching the show engine.
-- **"Solo or multiplayer?"** → don't fork the code. **Solo is a 1-seat game.** Every round
+- **"One game or three?"** → one show, questions are plug-ins. Ship one question first; add
+  questions over time without touching the show engine.
+- **"Solo or multiplayer?"** → don't fork the code. **Solo is a 1-seat game.** Every question
   scores on its own (correctness + your own speed + closeness). Multiplayer is the same
-  rounds with N seats plus a *first-place speed bonus*. Solo = the show with one seat and
-  the race bonus off. This is why the superlative round works alone *and* against friends
+  questions with N seats plus a *first-place speed bonus*. Solo = the show with one seat and
+  the race bonus off. This is why the superlative question works alone *and* against friends
   from one codebase.
 
 ## Player model — own-screen players, TV optional later (decided 2026-07-09)
@@ -52,10 +68,10 @@ model:
    the nickname is read from the existing profile (`gridgame.nickname` via
    `flags/nickname.js`, with the deterministic default when unset).
 3. Either player starts (solo: start with one seat, first-place bonus off).
-4. Each round: **both phones show** the prompt + 4 flags. Both tap. The server orders the
+4. Each question: **both phones show** the prompt + 4 flags. Both tap. The server orders the
    buzzes and reveals the answer + points on both. On reveal each player sees **everyone's
    pick** (the "oh, we both said France" moment) plus the updated scoreboard.
-5. After 5 rounds: final board on both. Play again.
+5. After 5 questions: final board on both. Play again.
 
 Why own-screen first, not Jackbox: no TV dependency, solo falls out for free, 2-player is
 the main case, and it's **one player page** instead of a host page *plus* a controller page.
@@ -77,16 +93,16 @@ grid, and "Make a puzzle" moved to a burger menu entry. The `?test` reveal guard
 | Piece | Source | Used for |
 |---|---|---|
 | Room scaffolding: codes, seats, presence, reconnect, broadcast, serialize-to-storage | `flags/onlineRoom.js` + PartyKit (pattern) | The show's room, generalised from 2 roles → N seats |
-| Flag-pick question generator (lookalike-aware distractors) | `flags/quiz.js` `pickQuestion(pool, 4)` | The flag-pick round, server-side |
-| Find-a-flag-matching-a-rule engine | `flags/findFlag.js` | The find-the-match round |
-| Country contour rendering | `flagQuiz/flagMap.js` + `worldMap.svg` | The map round |
-| Country data (colors, motifs, continent, statehood) | `flags/countries.json` (269 entries) | Round generation |
+| Flag-pick question generator (lookalike-aware distractors) | `flags/quiz.js` `pickQuestion(pool, 4)` | The flag-pick question, server-side |
+| Find-a-flag-matching-a-rule engine | `flags/findFlag.js` | The find-the-match question |
+| Country contour rendering | `flagQuiz/flagMap.js` + `worldMap.svg` | The map question |
+| Country data (colors, motifs, continent, statehood) | `flags/countries.json` (269 entries) | Question generation |
 | Nickname (default + stored) | `flags/nickname.js`, `gridgame.nickname` | Player name — **no name-entry step** |
 
 **What we genuinely don't have:** quantitative country data (population, area, world-cup
-wins, coffee output, border lengths). The **superlative round** ("pick the biggest of these
+wins, coffee output, border lengths). The **superlative question** ("pick the biggest of these
 16") is gated on populating this — the single biggest new-work item in the vision. Tracked
-as a data effort when that round comes up (see roadmap); it's independently useful for daily
+as a data effort when that question comes up (see roadmap); it's independently useful for daily
 / TTT, so it pays off beyond the show.
 
 ## Architecture
@@ -95,9 +111,9 @@ as a data effort when that round comes up (see roadmap); it's independently usef
   (`parties: { ..., party: "party/partyGameServer.js" }`) so show rooms live in their own
   namespace, fully separate from TTT. Server file is thin (mirrors `party/server.js`).
 - **Pure room logic in `flags/`, tested.** `flags/partyRoom.js` owns create / join (N seats,
-  host seat) / start-round / record-buzz / reveal / tally / next-round / final — same
+  host seat) / start-question / record-buzz / reveal / tally / next-question / final — same
   "pure module + `*.test.js`" split as `onlineRoom.js`. The server file is a shell.
-- **Round contract (the plug-in point):**
+- **Question contract (the plug-in point):**
   ```
   {
     id: 'flagPick',
@@ -106,8 +122,8 @@ as a data effort when that round comes up (see roadmap); it's independently usef
   }
   ```
   `generate` produces what the players need; the **answer is never sent to clients** — the
-  server holds it and only reveals after the round. `options` render in a fixed order so
-  every player's flag N is the same flag. Adding a round = adding one module that satisfies
+  server holds it and only reveals after the question. `options` render in a fixed order so
+  every player's flag N is the same flag. Adding a question = adding one module that satisfies
   this contract. Rendering lives in the page layer.
 - **Buzz-order is authoritative, for free.** PartyKit processes a room's messages serially
   in the Durable Object, so the order the server *receives* correct buzzes IS "who was
@@ -121,12 +137,12 @@ as a data effort when that round comes up (see roadmap); it's independently usef
 
 ## Roadmap
 
-Two independent axes: **rounds** (content) and **surfaces** (how people connect). Ship
+Two independent axes: **questions** (content) and **surfaces** (how people connect). Ship
 along both incrementally.
 
-### Rounds (each reuses an engine except superlative, which needs data first)
+### Questions (each reuses an engine except superlative, which needs data first)
 
-| # | Round | Reuses | New data? | Solo-scorable |
+| # | Question | Reuses | New data? | Solo-scorable |
 |---|---|---|---|---|
 | **1** | **Flag pick** (which flag is X? — 1 of 4, race) | `quiz.js` | no | ✅ |
 | 2 | **Find-the-match** (buzz a flag matching a rule; obscure-pick bonus) | `findFlag.js` | no | ✅ |
@@ -134,9 +150,9 @@ along both incrementally.
 | 4 | **Superlative** (biggest / most-coffee of 16; closeness score) | new UI | **yes — blocker** | ✅ |
 | — | **Neighbours** (who borders X?) | — | borders list | ✅ |
 
-Order rationale: rounds 1–3 need **no new data** and each reuses an engine. The superlative
-round is the soul of the idea but gated on data population, so it lands after the show engine
-is proven and the free rounds are in.
+Order rationale: questions 1–3 need **no new data** and each reuses an engine. The superlative
+question is the soul of the idea but gated on data population, so it lands after the show engine
+is proven and the free questions are in.
 
 ### Surfaces
 
@@ -150,14 +166,14 @@ is proven and the free rounds are in.
 
 ## Now
 
-**Iterations 8 (blocks, #950) and 9 (the draft, #951) are SHIPPED on `main`**, along with the
-final-block polish (#952) and the pick-screen polish (#953). The **block title card** (the deferred
-"full next-block card") is **BUILT on `feat/party-block-title-card`**, verified end-to-end in-browser
+**Iterations 8 (rounds, #950) and 9 (the draft, #951) are SHIPPED on `main`**, along with the
+final-round polish (#952) and the pick-screen polish (#953). The **round title card** (the deferred
+"full next-round card") is **BUILT on `feat/party-round-title-card`**, verified end-to-end in-browser
 (both the drafted and the custom paths), pending a PR + Jan's merge — see its entry below.
 
-Shipped and on `main`: the show engine, three round types (flag-pick, map, superlative), the clock,
+Shipped and on `main`: the show engine, three question types (flag-pick, map, superlative), the clock,
 tricky mode + its configurable reveal timing, the host game-setup panel, the grouped setup, the
-blocks + standings break (#950), the draft (#951), the double-points/always-tricky final block (#952),
+rounds + standings break (#950), the draft (#951), the double-points/always-tricky final round (#952),
 and the pick-screen polish (#953).
 
 Still open:
@@ -169,10 +185,10 @@ Reading the history below: it's a time-ordered journal, so the current design of
 the **newest** entry that mentions it. Earlier numbers (e.g. Iteration 2's `DEFAULT_PLAN`
 shape) are superseded by later ones.
 
-## Iteration 1 — the show skeleton with one round (flag-pick), own-screen — SHIPPED (branch `feat/flag-party-iter1`)
+## Iteration 1 — the show skeleton with one question (flag-pick), own-screen — SHIPPED (branch `feat/flag-party-iter1`)
 
-Goal: a genuinely playable flag round on two phones (and solo), exercising the **entire**
-engine so rounds 2–4 and the TV surface are pure additions afterward.
+Goal: a genuinely playable flag question on two phones (and solo), exercising the **entire**
+engine so questions 2–4 and the TV surface are pure additions afterward.
 
 - [x] **Home tile, ship-dark.** 5th `.game-tile` in `index.html` → `flagParty/`, `hidden`
       by default; `bootHome()` reveals it when `?test` is present. `tile.party` i18n key.
@@ -180,17 +196,17 @@ engine so rounds 2–4 and the TV surface are pure additions afterward.
 - [x] **PartyKit party + pure room module.** Registered `party` in `partykit.json`;
       `party/partyGameServer.js` (thin) + `flags/partyRoom.js` (pure: seats, host, start,
       buzz-order, reveal-with-all-picks, tally, next, final, play-again→lobby) + tests.
-- [x] **Round contract + flag-pick round.** `flags/partyRounds/flagPick.js` (`generate` via
+- [x] **Question contract + flag-pick question.** `flags/partyQuestions/flagPick.js` (`generate` via
       `pickQuestion` + `isCorrect`), tested. `flags/partyScore.js` (decaying speed bonus,
       off in solo), tested. `flags/partyClient.js` (client reducer), tested.
 - [x] **Shared lobby helpers promoted** to `flags/roomNet.js` (code + WS URL), re-exported
       from `ticTacToe/onlineClient.js`; tests moved to `flags/roomNet.test.js`.
 - [x] **Player page** (`flagParty/index.html` + `page.js` + `index.css`) — one page for
       create + join: Create → lobby (code + invite link + roster) or Join via `?room=CODE`
-      → Start → per-round (prompt + 4 flags, tap, locked-in) → reveal (correct flag +
+      → Start → per-question (prompt + 4 flags, tap, locked-in) → reveal (correct flag +
       everyone's pick + points + scoreboard) → final board → Play again. Nickname from
       `gridgame.nickname`. en + pl i18n (`party.*`).
-- [x] `npm run validate` green + end-to-end verified in-browser (solo run through 5 rounds).
+- [x] `npm run validate` green + end-to-end verified in-browser (solo run through 5 questions).
 
 **Bugs the end-to-end verify caught** (unit tests alone missed both): (1) *Play again* left the
 client stuck on the final board — the server only broadcast `roster`, which carries no phase;
@@ -201,9 +217,9 @@ own comment).
 
 **Deferred from iteration 1** (deviations from the mockup, deliberately): the **QR code** in
 the lobby — v1 ships the room code + an invite-link/share button (a 5-letter code is fine to
-read aloud in the same room); QR is a fast follow. Also: rounds 2–4, the TV/Display surface,
+read aloud in the same room); QR is a fast follow. Also: questions 2–4, the TV/Display surface,
 quantitative data, persisted scores / leaderboards (the show is ephemeral), more than one
-round *type*, spectators.
+question *type*, spectators.
 
 **Confirmed UI decisions (2026-07-09, from the mockup):** A — flags on the phone in a 2×2
 grid; B — correct = secondary (pink) ring + check, wrong = dimmed, no green/red (on the seven
@@ -213,12 +229,12 @@ correct tagged "⚡ Fastest", full scoreboard only on reveal/final. Name: **Flag
 
 ## Iteration 2 — sovereign + non-sovereign segments — SHIPPED (branch `feat/party-nonsovereign-mode`)
 
-One game is now **10 rounds: 5 sovereign flag-pick, then 5 non-sovereign flag-pick**, same
-mechanic, pool swaps at round 6. Settings page (host picks modes + rounds-per-mode) is still
+One game is now **10 questions: 5 sovereign flag-pick, then 5 non-sovereign flag-pick**, same
+mechanic, pool swaps at question 6. Settings page (host picks modes + questions-per-mode) is still
 future; this hardcodes the default plan.
 
 - `flags/partyPlan.js` — the game plan as **data**: `DEFAULT_PLAN = [{sovereign,5},{nonSovereign,5}]`
-  + `totalRounds` + `poolIdForRound`. This is the seed of the settings page — it will just
+  + `totalQuestions` + `poolIdAt`. This is the seed of the settings page — it will just
   edit this array. Tested.
 - `flags/flagPools.js` — `sovereignPool` (195) and `nonSovereignPool` (54). The non-sovereign
   pool is territories + quasi-states + subnational regions (Jan's "everything non-sovereign",
@@ -230,12 +246,12 @@ future; this hardcodes the default plan.
   French tricolor" question can't slip in.
 - `flagPick.generate(pool, exclude)` — takes a used-answer set so a game doesn't repeat a
   country; the server tracks `usedCodes`, reset on start / play-again.
-- Server maps `poolId → pool` and generates each round from the right one.
+- Server maps `poolId → pool` and generates each question from the right one.
 
-Verified end-to-end: round 1 = a sovereign flag, round 6 = "which flag is Norfolk Island?"
+Verified end-to-end: question 1 = a sovereign flag, question 6 = "which flag is Norfolk Island?"
 with all-non-sovereign distinct options. `npm run validate` green.
 
-## Iteration 3 — the clock: countdown + hands-free transitions — SHIPPED (branch `feat/party-round-clock`)
+## Iteration 3 — the clock: countdown + hands-free transitions — SHIPPED (branch `feat/party-question-clock`)
 
 The core loop now *feels* like a race, and it advances on its own — **no host button to press.**
 
@@ -249,58 +265,58 @@ The core loop now *feels* like a race, and it advances on its own — **no host 
   has lingered the host sends `next`. Both messages are ignored by the reducer if the phase
   already moved on, so the existing all-present-buzzed auto-reveal races safely against the
   timer.
-- **The "Next round" button is gone.** After a reveal lingers `REVEAL_SECONDS` the next
-  round starts by itself; the bar shows "next round in N" (`party.nextIn`, replaced the now
-  dead `party.nextRound`). The last round's reveal auto-advances to the final board the same
+- **The "Next question" button is gone.** After a reveal lingers `REVEAL_SECONDS` the next
+  question starts by itself; the bar shows "next question in N" (`party.nextIn`, replaced the now
+  dead `party.nextRound`). The last question's reveal auto-advances to the final board the same
   way.
 - **The room reducer did not change** — timing lives on the page by design; the room stays
   time-free and only knows "reveal now" / "next now" (`applyForceReveal` / `applyNext`,
   already present). No wire-protocol change either: clients import the durations directly.
 
 **Known limitation (documented, not yet fixed):** the pace depends on the **host's tab
-staying awake**. If the host disconnects mid-round the room can stall at a reveal (a
+staying awake**. If the host disconnects mid-question the room can stall at a reveal (a
 non-host has no authority to send `next`). Two future fixes, both out of scope here:
 server-side PartyKit **alarms** driving the transitions (robust, survives any tab), or
 **host migration** on disconnect. Also cosmetic: a player who *reconnects* mid-question
 starts a fresh full-length bar rather than the real remaining time — the host's
 authoritative reveal still corrects them on schedule.
 
-## Iteration 4 — Round 2: the Map round (own-screen) — SHIPPED (branch `feat/party-map-round`)
+## Iteration 4 — Question 2: the Map question (own-screen) — SHIPPED (branch `feat/party-map-question`)
 
-Goal: the **second round type** ("which outline is X?"), which is what turns this from "a
-flag quiz with a scoreboard" into the swappable-round *show* the vision describes. The server
-stops hardwiring flag-pick and starts **picking round modules from the plan**. It's the
+Goal: the **second question type** ("which outline is X?"), which is what turns this from "a
+flag quiz with a scoreboard" into the swappable-question *show* the vision describes. The server
+stops hardwiring flag-pick and starts **picking question modules from the plan**. It's the
 **mirror of flag-pick**: identical data shape, same 2×2 grid, same buzz-order + scoring — only
 the tiles render country **contours** instead of flags.
 
-**The plan (the default game becomes 11 rounds):** 3 sovereign flag-pick → 3 non-sovereign
+**The plan (the default game becomes 11 questions):** 3 sovereign flag-pick → 3 non-sovereign
 flag-pick → 5 map (sovereign pool). Nice arc: familiar flags, harder flags, then a mode switch
 to shapes for the finale. A future host-picks-modes settings page will edit this; for now it's
 the hardcoded default in `flags/partyPlan.js`.
 
 **Decisions (2026-07-10):**
 
-- **One module per round type.** Round modules live in `flags/partyRounds/<id>.js` (the existing
+- **One module per question type.** Question modules live in `flags/partyQuestions/<id>.js` (the existing
   `flagPick.js` pattern), each satisfying the `{ generate, isCorrect }` contract, wired through a
-  small `ROUNDS` registry in the server. Adding a mode = one new file + one registry line, nothing
+  small `QUESTIONS` registry in the server. Adding a mode = one new file + one registry line, nothing
   else touched. Chosen deliberately because the mode set will keep growing (superlative, neighbours,
   find-the-match, …).
 - **Contours are pre-generated assets, not runtime-rendered.** Each country gets a normalized,
-  tile-ready silhouette at `flags/contours/<code>.svg`, so the map round renders
+  tile-ready silhouette at `flags/contours/<code>.svg`, so the map question renders
   `<img src="flags/contours/xx.svg">` — the literal mirror of flag-pick's
-  `<img src="flags/svg/xx.svg">`. The client difference between the two rounds collapses to
+  `<img src="flags/svg/xx.svg">`. The client difference between the two questions collapses to
   **"swap the folder"**: same grid, same lazy-load, same CDN cache/warm story, and zero runtime
   path-extraction or per-tile bbox math (the cheapest render, scales to N players × 4 tiles for
   free). Pre-generation is also the **curation gate** — we only generate recognizable geometry, so
   the map pool becomes exactly "the set we generated"; microstates (unreadable dots at tile size)
   get no file and never appear.
 - **The asset source is decoupled from the client.** Because the client only ever sees
-  `contours/xx.svg`, the generator's *input* can change without touching a line of round code.
+  `contours/xx.svg`, the generator's *input* can change without touching a line of question code.
   Start from `flagQuiz/worldMap.svg` — its detail is already proven, since flagQuiz's map game
   recognizes countries by that same geometry — and if tile-size detail disappoints, regenerate from
   Natural Earth 1:50m with the client unchanged. **Gate: sample ~6 contours (easy / medium /
   small) at tile size and eyeball them before mass-generating.**
-- **Per-round hint.** A small label above the grid — "Which flag is X?" vs "Which outline is X?"
+- **Per-question hint.** A small label above the grid — "Which flag is X?" vs "Which outline is X?"
   — so players know which they're tapping. New `party.*` i18n (en + pl).
 
 **Build steps:**
@@ -311,19 +327,19 @@ the hardcoded default in `flags/partyPlan.js`.
       (mainland-clustered, square padded viewBox) for every sovereign code with usable geometry.
       **157 contours** define the map pool (`flags/contourPool.js`); ru / fj / sb hand-excluded,
       microstates size-gated. Assets + generator + `contourPool.test.js` checked in.
-- [x] **Round registry + plan generalization.** `flags/partyPlan.js`: segments gained `roundId` +
-      `roundIdForRound`; `DEFAULT_PLAN` → the 3 / 3 / 5 split. `party/partyGameServer.js`: a
-      `ROUNDS` registry keyed by each module's `id`, picked via `roundIdForRound`; the broadcast
-      question carries `roundId` (stamped server-side). `flags/partyClient.js` threads it through. Tested.
-- [x] **`flags/partyRounds/mapPick.js`** (+ test) — `generate(pool, exclude, rng)` / `isCorrect`,
+- [x] **Question registry + plan generalization.** `flags/partyPlan.js`: segments gained `questionId` +
+      `questionIdAt`; `DEFAULT_PLAN` → the 3 / 3 / 5 split. `party/partyGameServer.js`: a
+      `QUESTIONS` registry keyed by each module's `id`, picked via `questionIdAt`; the broadcast
+      question carries `questionId` (stamped server-side). `flags/partyClient.js` threads it through. Tested.
+- [x] **`flags/partyQuestions/mapPick.js`** (+ test) — `generate(pool, exclude, rng)` / `isCorrect`,
       same shape as flag-pick; narrows any pool to `CONTOUR_CODE_SET`, MVP distractors = 4 random
       distinct codes, injectable RNG for deterministic tests.
-- [x] **Page rendering.** `flagParty/page.js` branches on `question.roundId`: map renders `.contour`
+- [x] **Page rendering.** `flagParty/page.js` branches on `question.questionId`: map renders `.contour`
       `<img>` tiles from `flags/contours/` (the literal "swap the folder" mirror). Locked-in ring,
-      reveal pulse, pick-avatars, scoring unchanged. Per-round hint label added (`party.hintFlag` /
+      reveal pulse, pick-avatars, scoring unchanged. Per-question hint label added (`party.hintFlag` /
       `party.hintMap`, en + pl).
 - [x] `npm run validate` green (2180 tests) + **end-to-end verified in-browser** — solo run reached
-      round 7 ("Which outline? Panama"), tapped a contour, saw the mirror-of-flag-pick reveal
+      question 7 ("Which outline? Panama"), tapped a contour, saw the mirror-of-flag-pick reveal
       (Panama green-pulse, wrong pick pink + avatar, others dimmed).
 
 **Deferred (not this iteration):** shape-similar ("hard") distractors; non-sovereign contours; the
@@ -334,23 +350,23 @@ source (only if the worldMap sampling forces it).
 precision (2+ decimals of a viewBox unit) that's sub-pixel at the ~150 px the tiles render —
 coastline-heavy outlines were the worst (Canada 147 KB, US 68 KB). The generator now runs every
 contour through SVGO's `convertPathData` at 1-decimal precision (a *proper* relative-path
-simplification — a naive regex round would drift over a 20k-point path). Set went **874 KB → 382 KB
+simplification — a naive regex question would drift over a 20k-point path). Set went **874 KB → 382 KB
 (avg 5.5 KB → 2.4 KB)**, Canada 147 → 57 KB, US 68 → 26 KB, with no visible change at tile size
 (heavy tiles re-eyeballed). Build-time only — `svgo` + `playwright-core` are devDeps of the
 generator; the runtime/client never changed, and the code set (`contourPool.js`) is byte-identical.
 
-## Iteration 5 — Round 3: Superlative (population) — SHIPPED (#774)
+## Iteration 5 — Question 3: Superlative (population) — SHIPPED (#774)
 
-Goal: the **third round type**, and the first that turns a world *metric* into a question.
+Goal: the **third question type**, and the first that turns a world *metric* into a question.
 "Which of these four flags is the **most** (or **least**) **populous**?" It cashes in what
 Feature DD's `flags/metrics/` namespace was built for: the same 2x2 grid, buzz-order, and scoring
 as flag-pick, but the answer is decided by population rather than flag identity. Ship it for
-population, and every future metric (area, GDP, coffee) reuses the exact same round for free.
+population, and every future metric (area, GDP, coffee) reuses the exact same question for free.
 
 **The shape: a third mirror of flag-pick.** Same `{ prompt, options, answer }` contract, same
 tap-one-of-four grid, same `isCorrect(q, choice) => choice === q.answer`. Tiles render **flags**
 (`flags/svg/<code>.svg`), exactly like flag-pick. That was Jan's call: recognizing the flag is
-part of the round, and the reveal names the country so nobody is left guessing. The only genuinely
+part of the question, and the reveal names the country so nobody is left guessing. The only genuinely
 new code is *how `generate` picks the four* plus a most/least hint.
 
 **Decisions (2026-07-10):**
@@ -359,12 +375,12 @@ new code is *how `generate` picks the four* plus a most/least hint.
   flag-pick's tile path verbatim. Draw from the **sovereign pool** only: territories and
   microstates are too obscure to keep this a fair *population* question rather than a
   *do-you-know-this-flag* question.
-- **`prompt` carries the direction, not a country.** For flag and map rounds `prompt` is the
+- **`prompt` carries the direction, not a country.** For flag and map questions `prompt` is the
   target country's code; superlative has no single target, so `prompt` is `'most'` or `'least'`,
-  and the client (already branching on `roundId`) reads it to choose the hint. This keeps the
+  and the client (already branching on `questionId`) reads it to choose the hint. This keeps the
   three-field contract intact with no wire-protocol change. Alternative considered: a fourth
   `direction` field, rejected as contract growth for no gain since the client switches on
-  `roundId` anyway.
+  `questionId` anyway.
 - **Correctness is guaranteed; spread is the quality knob.** Population values are distinct, so
   there is always a strict max and min, and `answer` is never ambiguous. The real work is avoiding
   *coin-flip* quartets (China 1.41B next to India 1.43B) and *giveaway* quartets (one giant, three
@@ -372,23 +388,23 @@ new code is *how `generate` picks the four* plus a most/least hint.
   margin, resampling a bounded number of times, then accepting. Pure, with an injectable RNG,
   pinned by a test that every generated question has a strictly correct answer and a runner-up gap
   above threshold.
-- **The metric lives inside the round module, server-side.** `superlative.js` builds its own
+- **The metric lives inside the question module, server-side.** `superlative.js` builds its own
   `createMetric(population, countries)` at load from JSON imports, the self-contained pattern
   `mapPick.js` uses for `CONTOUR_CODE_SET`. This runs **only on the server** (PartyKit), so the
   browser "fetch JSON, never import" rule does not apply here (that is a client constraint); the
-  server already imports `countries.json` with an import attribute. The `ROUNDS` registry in
+  server already imports `countries.json` with an import attribute. The `QUESTIONS` registry in
   `partyGameServer.js` just gains `superlative` in the `[flagPick, mapPick]` array.
-- **Most vs least per round.** A coin-flip on the injectable RNG. Hint label `party.hintMost` /
+- **Most vs least per question.** A coin-flip on the injectable RNG. Hint label `party.hintMost` /
   `party.hintLeast` (en + pl), matching the existing `party.hintFlag` / `party.hintMap` pattern.
-- **Plan slot.** New `PARTY_MODES` entry `{ id: 'superlative-pop', roundId: 'superlative', poolId:
+- **Plan slot.** New `PARTY_MODES` entry `{ id: 'superlative-pop', questionId: 'superlative', poolId:
   'sovereign' }`, which makes it selectable in the host setup for free. `DEFAULT_PLAN` gains a
   short superlative finale. Proposed: **3 sovereign flag, 3 non-sovereign flag, 3 map, 2
-  superlative, 11 rounds total** (arc: familiar flags, harder flags, shapes, then "now, who is
+  superlative, 11 questions total** (arc: familiar flags, harder flags, shapes, then "now, who is
   bigger?"). Exact counts are a one-line tweak Jan can adjust.
 
 **Build steps:**
 
-- [x] **`flags/partyRounds/superlative.js`** (+ test). `generate(pool, exclude, rng = Math.random)`
+- [x] **`flags/partyQuestions/superlative.js`** (+ test). `generate(pool, exclude, rng = Math.random)`
       returns `{ prompt: 'most' | 'least', options: code[], answer: code }`: narrows the pool to
       codes that have a population value, picks four with the runner-up-gap guard (`GAP_RATIO = 1.25`),
       flips most/least on the rng. `isCorrect(q, choice) => choice === q.answer`. Builds its own metric
@@ -396,11 +412,11 @@ new code is *how `generate` picks the four* plus a most/least hint.
       lookups need no country list). Tests pin: the answer is always the strict, unambiguous extreme
       in the chosen direction, both directions occur, only valued codes appear, output is
       deterministic under a seeded rng, and `exclude` is respected.
-- [x] **Registry + plan.** Added `superlative` to `ROUNDS` in `party/partyGameServer.js`; added the
-      `superlative-pop` `PARTY_MODES` entry and a 2-round `DEFAULT_PLAN` finale (now 3 flag / 3
+- [x] **Registry + plan.** Added `superlative` to `QUESTIONS` in `party/partyGameServer.js`; added the
+      `superlative-pop` `PARTY_MODES` entry and a 2-question `DEFAULT_PLAN` finale (now 3 flag / 3
       territory / 3 map / 2 superlative = 11) in `flags/partyPlan.js`. `flags/partyPlan.test.js`
       updated.
-- [x] **Page rendering.** `flagParty/page.js` branches on `roundId === 'superlative'`: the hint line
+- [x] **Page rendering.** `flagParty/page.js` branches on `questionId === 'superlative'`: the hint line
       carries the whole question (`party.hintMost` / `party.hintLeast`), the country name stays blank
       during the question and fills with the winner on reveal (so it can't leak the answer), tiles
       render as flags. Locked-in ring, reveal pulse, wrong-pick name strip + avatars, and scoring are
@@ -408,29 +424,29 @@ new code is *how `generate` picks the four* plus a most/least hint.
 - [x] **i18n.** `party.mode.superlativePop`, `party.modeShort.superlativePop`, `party.hintMost`,
       `party.hintLeast` in `en.json` + `pl.json`. No em dashes in the copy.
 - [x] `npm run validate` green (2232 tests) + **end-to-end verified in-browser** (all-population game
-      via the host setup): saw both a "least" and a "most" round; on a "least" round picked a wrong
+      via the host setup): saw both a "least" and a "most" question; on a "least" question picked a wrong
       flag (Cameroon) and the reveal was the exact mirror of flag-pick — the correct flag (Montenegro,
       genuinely the least populous of the four) pulsed, the wrong pick showed its pink ring + name
       strip + avatar, the header filled in "Montenegro", and the toast scored +0. Play-again works.
 
 **Follow-up shipped on the same branch: population numbers on reveal.** On a superlative reveal
 every tile now shows a bottom band with its country + population (e.g. "South Sudan 11.5M"), so the
-four values read as a ranking — the round's learning payoff. The page fetches
+four values read as a ranking — the question's learning payoff. The page fetches
 `flags/metrics/population.json` alongside `countries.json` (best-effort: a failed fetch just omits
 the band) and formats with the shared `formatValue` from `flags/metricLens.js` (compact: 1.4B /
 337M / 552K), so the numbers match flagsdata's metric lens. The band reuses the
 `rgba(0,0,0,.7)`-over-SVG idiom of the wrong-pick name strip, but on all four tiles and carrying a
 name + value (superlative-only), so the wrong-pick `::after` is suppressed when it's present to
 avoid a double band. **Scoring stays binary and untouched** — the numbers give players the
-"how close was I" feedback without diverging `partyScore.js` from the other rounds. Graded /
-closeness scoring remains parked for the future 16-tile closeness round, where it fits cleanly.
+"how close was I" feedback without diverging `partyScore.js` from the other questions. Graded /
+closeness scoring remains parked for the future 16-tile closeness question, where it fits cleanly.
 Verified in-browser: a "least populous" reveal showed South Sudan 11.5M / Australia 26.7M / UK
 68.5M / Germany 83.3M with the correct tile pulsing and +10 scored on a correct pick.
 
 **Deferred (not this iteration):**
 - Non-sovereign and continent-scoped superlatives ("most populous in Africa").
 - The 16-tile closeness-score version from the long-term vision: a different mechanic that breaks
-  the single-pick grid, so it earns its place as its own future round type rather than folding
+  the single-pick grid, so it earns its place as its own future question type rather than folding
   into this one.
 - Other metrics (area, GDP, coffee): they drop into this same module the day their JSON lands
   under `flags/metrics/`.
@@ -444,7 +460,7 @@ partial detail for the speed points, while waiting for the flag to resolve is sa
 slower. Jan settled the exact look by iterating on an interactive mockup: **grey + blur +
 a soft panel wipe**, stacked, with no visible grid between panels.
 
-**The shape: a pure client render treatment.** No scoring, answer, or round-contract
+**The shape: a pure client render treatment.** No scoring, answer, or question-contract
 change. The whole feature is one boolean (`tricky`) that rides the `start` message,
 is stored on the room, broadcast back on every `question` / `welcome`, and drives a
 per-tile veil the page animates off the question clock. Decisions:
@@ -452,8 +468,8 @@ per-tile veil the page animates off the question clock. Decisions:
 - **One global toggle, not per-mode.** A single "Tricky mode" switch in the host lobby
   setup (reusing the shared `.scope-toggle-switch`, persisted to `gridgame.party.tricky`).
   Grey is a no-op on the monochrome map contour anyway, so a per-mode matrix wasn't worth
-  the UI. Applies to every round; the clear timing differs by tile type (below).
-- **Clear timing is per round type, in `flags/partyTiming.js` as data.** `veilProgress`
+  the UI. Applies to every question; the clear timing differs by tile type (below).
+- **Clear timing is per question type, in `flags/partyTiming.js` as data.** `veilProgress`
   (0 hidden → 1 clear, clamped, unit-tested) reaches full clarity at `veilClearFraction`
   of the question window, then holds clear so a late decider still gets a clean look.
   **Flags clear by 70%** (`FLAG_CLEAR_FRACTION`) — they carry give-away detail, so they
@@ -493,10 +509,10 @@ Still deferred: a preset *dial* (Normal / Tricky / Brutal) and per-effect choice
 
 ## Iteration 6b — Configurable reveal timing — SHIPPED (#801)
 
-Goal: let the host tune how hard tricky mode is, per round category, instead of the fixed
+Goal: let the host tune how hard tricky mode is, per question category, instead of the fixed
 70 / 40 that shipped in Iteration 6. Jan's call: **each of Flags / Map / Metrics picks its
 own reveal point from {20, 40, 60, 80}%**, defaulting to **80 / 40 / 20** (flags carry the
-most give-away detail so they stay veiled longest; metric rounds barely need hiding since
+most give-away detail so they stay veiled longest; metric questions barely need hiding since
 the question is the number, not the flag).
 
 **The shape: config as data, resolved server-side per question.** The three fractions ride
@@ -505,7 +521,7 @@ server stamps the right `clearFrac` on each question from its category. The clie
 `question.clearFrac` — it never needs to know the category mapping. Decisions:
 
 - **Three categories, not four modes.** The veil only cares flags-vs-outlines-vs-numbers, so
-  the two flag modes (all / territories) share one `flag` fraction. `revealCategoryFor(roundId)`
+  the two flag modes (all / territories) share one `flag` fraction. `revealCategoryFor(questionId)`
   (`flags/partyTiming.js`) maps `mapPick → map`, `superlative → metric`, else `flag`.
 - **A discrete option set, snapped defensively.** `REVEAL_OPTIONS = [0.2, 0.4, 0.6, 0.8]`,
   `DEFAULT_REVEAL = { flag: 0.8, map: 0.4, metric: 0.2 }`. `validateReveal` snaps every wire
@@ -513,7 +529,7 @@ server stamps the right `clearFrac` on each question from its category. The clie
   reach the room (mirrors `validatePlan`).
 - **Server stamps `clearFrac` per question.** `generateQuestion` resolves the category and
   attaches `clearFrac`; `publicQuestion` passes it through; the veil loop uses it in place of
-  the old `veilClearFraction(isOutline)`. Stored `reveal` on the room means rounds generated
+  the old `veilClearFraction(isOutline)`. Stored `reveal` on the room means questions generated
   after an eviction still stamp the right timing.
 - **UI: a compact per-category picker under the toggle.** When Tricky is on, three `<select>`
   rows (Flags / Maps / Population, reusing the `modeShort` labels) appear in the lobby setup,
@@ -541,17 +557,17 @@ different things in one flat list: a **fixed picture trio** (flags / territories
 map) and an **open-ended metric family** (population / area / density, with GDP,
 coffee, coastline… coming). Iteration 7 splits them: the picture trio keeps its
 per-mode stepper + toggle (now with a little picture icon each), and the metric
-family collapses to **one "Guess the extreme" control** with a shared round count
+family collapses to **one "Guess the extreme" control** with a shared question count
 spread across the facts the host enables via **colour chips**. Adding a metric is
-now one chip, not one row. Jan's direction across three mockup rounds (see the
+now one chip, not one row. Jan's direction across three mockup questions (see the
 artifacts linked below): presets later, **Option E custom now**, one shared count,
 neutral picture icons, colour on the fact chips.
 
 **The shape: a client-only change — no server or room touch.** This is the
-load-bearing decision. The server already generates each round from the plan via
-`roundIdForRound` and `validatePlan` already accepts any mix of metric segments,
+load-bearing decision. The server already generates each question from the plan via
+`questionIdAt` and `validatePlan` already accepts any mix of metric segments,
 so grouping lives entirely in **how the client turns its setup into a plan**. At
-Start the shared world-facts count is dealt into one-round metric segments
+Start the shared world-facts count is dealt into one-question metric segments
 (`buildPartyPlan` → `distributeWorldFacts`), producing an ordinary `Segment[]`
 the server validates like any other. Nothing in `party/` or `flags/partyRoom.js`
 changed.
@@ -561,11 +577,11 @@ changed.
 - **`group` on `PARTY_MODES`.** Each mode is tagged `'picture'` or `'metric'`;
   `PICTURE_MODES` / `METRIC_MODES` derive from it. The metric modes stay in the
   catalog (so `validatePlan` still accepts their segments) but the UI renders
-  them as one group. Adding a metric = one `group: 'metric'` entry + its round
+  them as one group. Adding a metric = one `group: 'metric'` entry + its question
   module + i18n; the setup grows by one chip.
 - **One shared count, dealt at Start (Jan's call over per-metric counts).**
-  `distributeWorldFacts(n, enabledIds, rng)` balances the deal (round-robin so
-  each fact gets a near-equal share) then shuffles, so 6 rounds / 3 facts is
+  `distributeWorldFacts(n, enabledIds, rng)` balances the deal (question-robin so
+  each fact gets a near-equal share) then shuffles, so 6 questions / 3 facts is
   always 2/2/2 in a random order, 7 is 3/2/2 with a random fact taking the extra.
   Pure + seeded-rng tested. Trade-off accepted: you pick *which* facts play, not
   *how many of each* (that was the price of the group staying one line forever).
@@ -580,7 +596,7 @@ changed.
   keys off which country, swap the code to re-pick); "Flags: others" shows the
   **Jolly Roger** (a flag with no country, on-theme for the non-sovereign pool);
   "Map: outlines" shows the **actual Italy contour asset** (`flags/contours/it.svg`,
-  the same silhouette the round renders); the world-facts lead shows a **stat-bar
+  the same silhouette the question renders); the world-facts lead shows a **stat-bar
   chart**. Flag artwork carries its own colours by nature (like every
   `flags/svg/*.svg`); the chart is monochrome. `SETUP_ICONS` holds either an
   `<img>` or inline `<svg>`, sized by class in `index.css`.
@@ -588,14 +604,14 @@ changed.
   the world-facts lead is "Guess the stat" (a metric / statistics framing over
   the earlier "Guess the extreme"). Short labels: Flags / Others / Maps.
 - **Default: everything on, ~2 per mode.** A fresh game is 2 flags + 2 others +
-  2 map + a 6-round world-facts group (all metrics on, ~2 per metric) = 12 rounds.
+  2 map + a 6-question world-facts group (all metrics on, ~2 per metric) = 12 questions.
   `defaultSetup()` sets the facts count to `2 × METRIC_MODES.length` (clamped) so
   "2 of each" holds as metrics are added. This replaces deriving the default from
   `DEFAULT_PLAN` (still the server's malformed-plan fallback, now decoupled).
 - **Migration, not a reset.** A returning host's old per-mode plan (`PLAN_KEY`)
   folds once into the new `gridgame.party.setup` shape: picture modes carry over
   1:1, the metric modes' counts sum into the shared count.
-- **Guard generalised.** "A game needs rounds" now spans both groups: any
+- **Guard generalised.** "A game needs questions" now spans both groups: any
   toggle-off that would zero the total (or leave the facts group on with no
   chip) snaps back.
 
@@ -609,7 +625,7 @@ changed.
       sanitize / migrate / save, `currentPlan()` → `buildPartyPlan`, repaint on
       language switch. `SETUP_ICONS` / `METRIC_ICONS` inline SVGs.
 - [x] `flagParty/index.css` — `.gs-sec`, `.gs-ic`, `.gs-chips` / `.gs-chip` with
-      the per-metric `--mc` hues (the documented exception block).
+      the per-metric `--mc` hues (the documented exception round).
 - [x] `i18n/en.json` + `pl.json` — new `party.groupPictures`, `party.groupFacts`,
       `party.factsLead` ("Guess the stat"), `party.factsHint`; renamed
       `party.mode.flagsAll` → "Flags: countries", `flagsTerritories` → "Flags:
@@ -618,14 +634,14 @@ changed.
 - [x] **End-to-end verified in-browser** (fresh-port static serve to beat the SWA
       CLI cache): sections + picture icons render, chips colour-code and toggle,
       the shared count holds while metrics are added, the group toggle drops the
-      total, the "needs rounds" guard snaps the last mode back on, `buildPartyPlan`
+      total, the "needs questions" guard snaps the last mode back on, `buildPartyPlan`
       deals a 2/1/1 split across three facts, the tricky reveal category reads
       "World facts", and the setup persists + re-translates to PL.
 
 **Mockup history (artifacts, for reference):**
-- Round 1 (four monochrome layouts): https://claude.ai/code/artifact/577817c4-642f-4132-a4e8-ec1ba15bd949
-- Round 2 (five more, colour + illustration): https://claude.ai/code/artifact/3591873b-25e8-4d6b-b320-ad0d41d1b2bf
-- Round 3 (the chosen direction: presets + Option E custom): https://claude.ai/code/artifact/ad2cae63-e333-4527-90b9-45d3cf9bce1f
+- Question 1 (four monochrome layouts): https://claude.ai/code/artifact/577817c4-642f-4132-a4e8-ec1ba15bd949
+- Question 2 (five more, colour + illustration): https://claude.ai/code/artifact/3591873b-25e8-4d6b-b320-ad0d41d1b2bf
+- Question 3 (the chosen direction: presets + Option E custom): https://claude.ai/code/artifact/ad2cae63-e333-4527-90b9-45d3cf9bce1f
 
 ### Future: preset packs (Easy / Default / Advanced) — designed, not built, PROBABLY SUPERSEDED
 
@@ -643,7 +659,7 @@ agent can build it without re-deciding.
 - **The entry screen is a short list of named packs**, each a radio-style card:
   **Easy** (flags only, gentle), **Default** (flags, the map, a few facts),
   **Advanced** (every mode, every world fact). A **"Custom setup…"** link drops
-  into the Iteration 7 dial view for the hosts who do want control. See Round 3's
+  into the Iteration 7 dial view for the hosts who do want control. See Question 3's
   artifact (link above) for the exact card layout.
 - **A pack is just a named plan.** Selecting one writes into the same
   `setupState` the custom view edits (so Custom always shows what a pack picked,
@@ -654,19 +670,19 @@ agent can build it without re-deciding.
 - **Colour is safe here.** It lives on the pack badge (an emoji / tinted tile),
   not on any gameplay surface, so it composes with the confined-to-setup rule.
 - **Open sub-question for build time:** whether packs and Custom are two tabs, or
-  packs are the default with Custom as a disclosure below them (Round 3 drew the
+  packs are the default with Custom as a disclosure below them (Question 3 drew the
   latter). Decide when building; both fit the same `setupState` plumbing.
 
-## Iteration 8 — Blocks of five + the break — PLANNED (2026-07-17)
+## Iteration 8 — Rounds of five + the break — PLANNED (2026-07-17)
 
 Goal: give the show an **act structure**. A mode stops being a dial from 1 to N and becomes a
-**block of 5 rounds**; after every block the game stops on a standings screen. Jan's idea:
-"maybe adding a mode is adding 5 flags always, and after 5 played rounds you would have a score
+**round of 5 questions**; after every round the game stops on a standings screen. Jan's idea:
+"maybe adding a mode is adding 5 flags always, and after 5 played questions you would have a score
 revealed."
 
-**Why it earns its place.** A mode's identity is currently invisible *during play*. Rounds 1 to 3
+**Why it earns its place.** A mode's identity is currently invisible *during play*. Questions 1 to 3
 are flags, 4 to 6 are territories, 7 to 9 are outlines, and nobody perceives a mode switch: they
-perceive twelve questions. A titled block plus a standings break turns the switch into an
+perceive twelve questions. A titled round plus a standings break turns the switch into an
 **announced event** and gives the show a rhythm instead of a flat run at a final board. It also
 kills the stepper: Iteration 7 was fighting "the panel grows a row per metric", and a mode that is
 simply on or off ends that fight for good.
@@ -674,97 +690,97 @@ simply on or off ends that fight for good.
 **The shape: client-only. No server, room, or wire-protocol touch.** Same load-bearing property
 Iteration 7 had, and the reason to build this one first.
 
-- `buildPartyPlan` already turns setup state into `Segment[]`; blocks only change the arithmetic
-  (every enabled mode contributes `rounds: 5`). The server generates from the plan exactly as now.
-- **The break needs no model at all.** A block boundary is `roundIndex % BLOCK_ROUNDS === BLOCK_ROUNDS - 1`,
+- `buildPartyPlan` already turns setup state into `Segment[]`; rounds only change the arithmetic
+  (every enabled mode contributes `questions: 5`). The server generates from the plan exactly as now.
+- **The break needs no model at all.** A round boundary is `questionIndex % ROUND_QUESTIONS === ROUND_QUESTIONS - 1`,
   derivable on the client from data every client already has.
 - **The break is a longer reveal, not a new phase.** Timing lives on the page by design
-  (Iteration 3): the host's timer is what sends `next`. At a block end the host simply waits
-  `BLOCK_BREAK_SECONDS` instead of the reveal duration, and every client renders the break instead
-  of the reveal. The room stays in `reveal` throughout and never learns blocks exist.
+  (Iteration 3): the host's timer is what sends `next`. At a round end the host simply waits
+  `ROUND_BREAK_SECONDS` instead of the reveal duration, and every client renders the break instead
+  of the reveal. The room stays in `reveal` throughout and never learns rounds exist.
 
 **Decisions:**
 
-- **`BLOCK_ROUNDS = 5`** (Jan's number, and the arithmetic backs it). `QUESTION_SECONDS` is 20, but
-  a round auto-reveals once every present seat has buzzed, so a block runs **~50 s** (everyone
-  answering fast) to **~115 s** (clock expiring every round). Roughly a minute and a half typical,
+- **`ROUND_QUESTIONS = 5`** (Jan's number, and the arithmetic backs it). `QUESTION_SECONDS` is 20, but
+  a question auto-reveals once every present seat has buzzed, so a round runs **~50 s** (everyone
+  answering fast) to **~115 s** (clock expiring every question). Roughly a minute and a half typical,
   which is the right act length.
-- **Steppers are gone.** A mode is on or off; on means 5 rounds. No per-row "1 block" label either
-  (redundant when a mode is always one block — Jan's call). Length granularity goes from 1 to 5,
+- **Steppers are gone.** A mode is on or off; on means 5 questions. No per-row "1 round" label either
+  (redundant when a mode is always one round — Jan's call). Length granularity goes from 1 to 5,
   which is the accepted price.
-- **Each statistic is its own block (revised 2026-07-17, Jan's call).** The world-facts family is no
-  longer one mixed block: every chosen statistic is a 5-round block of that one metric ("five coffee
-  questions"). So the mixed deal (`distributeWorldFacts`) is gone, and block count = enabled picture
+- **Each statistic is its own round (revised 2026-07-17, Jan's call).** The world-facts family is no
+  longer one mixed round: every chosen statistic is a 5-question round of that one metric ("five coffee
+  questions"). So the mixed deal (`distributeWorldFacts`) is gone, and round count = enabled picture
   modes + enabled statistics. This also lines Setlist up with Iteration 9's draft (both deal
-  per-metric blocks) and gives "I pick Coffee" its coherent little quiz. The chips became block
+  per-metric rounds) and gives "I pick Coffee" its coherent little quiz. The chips became round
   toggles (no master switch).
-- **Default is 3 blocks on, not everything on.** Flags: countries + Map: outlines + one statistic
-  (Population). Since each statistic is now its own block, everything-on would be dozens of blocks,
+- **Default is 3 rounds on, not everything on.** Flags: countries + Map: outlines + one statistic
+  (Population). Since each statistic is now its own round, everything-on would be dozens of rounds,
   so the default deliberately picks a single stat to keep the length sane.
-- **The break shows:** block MVP ("Best of the block", a second thing to win so a player losing
+- **The break shows:** round MVP ("Best of the round", a second thing to win so a player losing
   overall still has something to hold), standings with **rank deltas versus the previous break** and
   the row movement animated, and the **gap to the leader** on your own row. No timer: the break is a
   beat, not a countdown (same reasoning that removed the reveal's bar under Done).
-- **Block 1 has no deltas** (there is no previous break). Accepted, not a bug.
-- **Title card between blocks:** block number, the mode's icon, the name, "5 rounds". Icons come
+- **Round 1 has no deltas** (there is no previous break). Accepted, not a bug.
+- **Title card between rounds:** round number, the mode's icon, the name, "5 questions". Icons come
   from `flags/deckIcons.js` (`deckIconHtml`) and `flags/metricVisuals.js` (`METRIC_ICONS`,
   `METRIC_HUES`, `METRIC_SHORT`), both already shared modules since #942, so this costs nothing.
 - **Known cosmetic gap, accepted:** a player reconnecting *during* a break gets `welcome` with
   `phase: 'reveal'` and paints the reveal, not the break. Same class as Iteration 3's documented
   "reconnect mid-question starts a fresh bar", and it self-corrects on the host's next transition.
 
-**Build steps (BUILT on `feat/party-blocks`, pending PR + Jan's merge):**
+**Build steps (BUILT on `feat/party-rounds`, pending PR + Jan's merge):**
 
-- [x] `flags/partyPlan.js` — `BLOCK_ROUNDS`; `buildPartyPlan` emits a 5-round block per enabled
+- [x] `flags/partyPlan.js` — `ROUND_QUESTIONS`; `buildPartyPlan` emits a 5-question round per enabled
       picture mode **and per enabled statistic** (the mixed `distributeWorldFacts` deal removed);
-      `blockCount` / `blockIndexForRound` / `isBlockEnd` + the client-callable core
-      `isBlockBoundary(index, total)` (pure + tested).
-- [x] `flags/partyTiming.js` — `BLOCK_BREAK_SECONDS = 6` (+ test).
-- [x] `flags/partyBreak.js` (new, pure + tested) — `blockBreak(prevBoard, currBoard)` computes the
-      break view (block gain, rank delta, gap-to-leader, MVP) from two scoreboard snapshots. Chosen
+      `roundCount` / `roundIndexAt` / `isRoundEnd` + the client-callable core
+      `isRoundBoundary(index, total)` (pure + tested).
+- [x] `flags/partyTiming.js` — `ROUND_BREAK_SECONDS = 6` (+ test).
+- [x] `flags/partyBreak.js` (new, pure + tested) — `roundBreak(prevBoard, currBoard)` computes the
+      break view (round gain, rank delta, gap-to-leader, MVP) from two scoreboard snapshots. Chosen
       over threading it through the `partyClient` reducer: it's a view calc, not a state transition.
 - [x] `flagParty/page.js` — the break (`#pt-break`: MVP banner + standings + rank deltas + gap),
-      the during-play **block indicator** in the round pill, the setup panel losing its steppers
-      (on/off), the host holding `BLOCK_BREAK_SECONDS` before `next`. `prevBreakBoard` staged and
-      committed on the next block's first question so a re-render can't zero the deltas.
+      the during-play **round indicator** in the question pill, the setup panel losing its steppers
+      (on/off), the host holding `ROUND_BREAK_SECONDS` before `next`. `prevBreakBoard` staged and
+      committed on the next round's first question so a re-render can't zero the deltas.
 - [x] `flagParty/index.css` — break + MVP + `.scoreline.you` / `.delta` / `.gap`, on the palette vars.
-- [x] `i18n/en.json` + `pl.json` — `roundBlock` / `afterBlock` / `blockMvp` / `standings` / `behind`
-      / `blocksLabel` / `oneBlock`, en + pl, no em dashes. Retired `roundsLabel` / `fewer` / `more`.
+- [x] `i18n/en.json` + `pl.json` — `roundQuestion` / `afterRound` / `roundMvp` / `standings` / `behind`
+      / `roundsLabel` / `oneBlock`, en + pl, no em dashes. Retired `roundsLabel` / `fewer` / `more`.
 - [x] **Migration**, not a reset: `sanitizeSetup` / `migrateModeState` fold the stored per-mode
       counts (`gridgame.party.setup`) to on/off (a positive count = on).
 - [x] `npm run validate` green (2850 tests) + **end-to-end verified in-browser** (solo, dev stack):
-      setup shows 3 blocks with on/off toggles and "1 block" tags, a stale saved setup migrated to
-      1 block, the pill reads "Block 1/3 · Round 1/15", the break fired after round 5 with the MVP
-      banner + "you"-ring standings, and it auto-advanced into the block-2 map round. 0 console errors.
+      setup shows 3 rounds with on/off toggles and "1 round" tags, a stale saved setup migrated to
+      1 round, the pill reads "Round 1/3 · Question 1/15", the break fired after question 5 with the MVP
+      banner + "you"-ring standings, and it auto-advanced into the round-2 map question. 0 console errors.
 
 **Deferred to Iteration 9 (deliberately, decided at build time):**
-- **The full title card** ("Next: Coffee" with the mode icon). It needs the *upcoming* block's mode,
+- **The full title card** ("Next: Coffee" with the mode icon). It needs the *upcoming* round's mode,
   which the client can't know without the plan (the next segment isn't dealt at break time), and
   adding the plan to the wire is the server touch this iteration set out to avoid. Iteration 9's
-  draft gives the client that info naturally (the pick names the next block), so the card lands there.
-  Iteration 8 conveys block identity with the during-play pill indicator instead.
-- **The boundary reveal shows the standings break in place of the round's answer tiles** (every 5th
-  round's answer isn't shown). Accepted for now as the smallest correct cut and because the standings
+  draft gives the client that info naturally (the pick names the next round), so the card lands there.
+  Iteration 8 conveys round identity with the during-play pill indicator instead.
+- **The boundary reveal shows the standings break in place of the question's answer tiles** (every 5th
+  question's answer isn't shown). Accepted for now as the smallest correct cut and because the standings
   moment is the point of the beat; the alternative (a short answer beat, then the break, as two
   sub-phases of one reveal window) is the obvious refinement if it reads wrong in real play. **Flag
   for Jan's reaction.**
 
-## Iteration 9 — The draft: players pick the blocks — PLANNED (2026-07-17)
+## Iteration 9 — The draft: players pick the rounds — PLANNED (2026-07-17)
 
 Goal: **the host stops configuring the show and the players choose it as they go.** Jan's idea:
 "maybe each player is deciding what mode we are playing next?" Today the host picks everything up
 front and every other seat is a passenger, which is the actual complaint behind "the host is picking
 a game mode and you just see who wins at the end".
 
-**Iterations 8 and 9 are one idea in two halves.** The block structure creates a break; the break
+**Iterations 8 and 9 are one idea in two halves.** The round structure creates a break; the break
 needs a purpose; the pick is the purpose. Without the pick, the break is a pause. With it, the
 standings stop being a readout you skim and become **the thing that decides who chooses next**.
 
 **The shape: the first room-reducer change since Iteration 5.** This is the honest cost, and the
 line between the two iterations. A break is a *render*, so Iteration 8 keeps it client-side. A pick
 is an *input*, so it needs a room phase: the plan can no longer be fixed at `start`, it grows one
-segment per pick, and the room has to learn what a block is in order to know when to enter
-`picking` instead of dealing the next question. `roundIdForRound(plan, i)` already works fine on a
+segment per pick, and the room has to learn what a round is in order to know when to enter
+`picking` instead of dealing the next question. `questionIdAt(plan, i)` already works fine on a
 partial plan, so a pick is an append.
 
 **Decisions:**
@@ -775,18 +791,18 @@ partial plan, so a pick is an append.
   are in. This very likely **supersedes the preset-packs design** parked under Iteration 7: packs
   exist to answer "give me a good geography game in one tap", and Draft answers it better. Don't
   build both without re-deciding.
-- **Block 1 is always Flags: countries.** This closes Draft's cold-start hole (no scores means no
+- **Round 1 is always Flags: countries.** This closes Draft's cold-start hole (no scores means no
   last place means no picker) and is the right on-ramp anyway: establish the loop before asking
   anyone to choose.
-- **Blocks = `min(players + 1, 5)`**, host can override. The `+1` is the fixed opener. This makes
+- **Rounds = `min(players + 1, 5)`**, host can override. The `+1` is the fixed opener. This makes
   **"everyone picks exactly once" true for 2 to 4 players** (the stated design center: "2-player is
   the main case") without anyone being told a rule, and caps a 20-seat room (`MAX_SEATS`) at 5
-  blocks instead of 20. At ~2 min a block cycle that is about 10 minutes, against Jackbox's 15 to 20.
-  Tying block count to player count *directly* is the trap: the two are independent quantities that
+  rounds instead of 20. At ~2 min a round cycle that is about 10 minutes, against Jackbox's 15 to 20.
+  Tying round count to player count *directly* is the trap: the two are independent quantities that
   only coincide for 2 to 4 players.
 - **Picker = the lowest-ranked player who hasn't picked yet.** Not merely "last place": with two
   players, pure loser's-pick can hand *both* picks to the same person, and then one of the two never
-  chose anything. Note the formula makes the clause free: picks = blocks − 1 = `min(players, 4)`,
+  chose anything. Note the formula makes the clause free: picks = rounds − 1 = `min(players, 4)`,
   never more than the player count, so the eligible set cannot empty (unless the host overrides above
   `players + 1`, where everyone simply becomes eligible again).
 - **Why loser's pick over a vote or a seat rotation.** A vote is mushy (the fun of choosing is
@@ -798,18 +814,18 @@ partial plan, so a pick is an append.
   Coffee, goes 5/5, takes the lead) exists to make that judgeable rather than arguable.
 - **A hand of 5 cards, not a menu of 30.** Drawn from the unused modes: the picture modes plus a
   random draw of the enabled metrics. A list of 30-odd registry metrics is a form, not a party beat.
-- **Draft deals per-metric blocks** (one 5-round segment), where Setlist deals mixed. "I pick Coffee"
+- **Draft deals per-metric rounds** (one 5-question segment), where Setlist deals mixed. "I pick Coffee"
   is a moment; "I pick World facts" is a menu. Both shapes are valid `Segment[]`, so this needs no
   model, no fork, and no server knowledge.
 - **No mode twice in a game.** Keeps coverage honest and makes the last pick nearly forced.
 - **10 s to pick, random on timeout.**
 - **The watcher screen matters as much as the picker's.** With 4 players, 3 of them are watching.
   "Zosia is choosing", with her avatar. It is a spotlight, which is why it is short.
-- **The final block is double points.** Loser's pick chooses the terrain for the block that decides
+- **The final round is double points.** Loser's pick chooses the terrain for the round that decides
   the game. It *was* also always tricky, on the reasoning that the veil is a global switch most hosts
   never flip, so giving it a guaranteed home made two iterations of work actually run. **Reversed
   (2026-07-18).** Justifying a rule by "it makes our unused feature run" is backwards: the veil
-  appeared for the closing block whether or not the host wanted it, and in draft — where the toggle
+  appeared for the closing round whether or not the host wanted it, and in draft — where the toggle
   is never shown — it arrived out of nowhere. Double points already marks the finale. `veilActive()`
   is now the host's tricky setting and nothing else.
 - **Scoring is untouched** (Jan: "your scoring is fine"). See the speed-bonus note under Open
@@ -817,24 +833,24 @@ partial plan, so a pick is an append.
 
 **Build steps (BUILT on `feat/party-draft`, pending PR + Jan's merge):**
 
-- [x] `flags/partyDraft.js` (new, pure + tested) — `blockCountFor(playerCount)`,
+- [x] `flags/partyDraft.js` (new, pure + tested) — `roundCountFor(playerCount)`,
       `pickerFor(scoreboard, alreadyPicked)`, `handFor(usedModeIds, rng)`, `isValidPick`, seeded rng.
 - [x] `flags/partyRoom.js` — `picking` phase; `pendingPickAfterReveal`, `applyEnterPicking`,
-      `applyPick` (appends a block to the growing plan, only the designated picker, stamps
+      `applyPick` (appends a round to the growing plan, only the designated picker, stamps
       `draftPick` attribution); draft state serialized; `resetToLobby` clears it (+ 8 tests).
-- [x] `party/partyGameServer.js` — draft `start` (opening Flags block, `targetBlocks` from the seat
-      count); `next` routes to a pick at block boundaries; the `pick` + `forcePick` messages;
+- [x] `party/partyGameServer.js` — draft `start` (opening Flags round, `targetRounds` from the seat
+      count); `next` routes to a pick at round boundaries; the `pick` + `forcePick` messages;
       `usedModes` tracked + rebuilt after an eviction; validates the picked mode.
 - [x] `flags/partyClient.js` — the `picking` phase, picker vs watcher, `lastPick` attribution (+ 6 tests).
 - [x] `flagParty/page.js` — the two doors (draft default, persisted), the pick screen (both points of
-      view), the host's 10 s pick clock firing `forcePick`, attribution on the block's first round.
+      view), the host's 10 s pick clock firing `forcePick`, attribution on the round's first question.
 - [x] `flagParty/index.css` — doors + pick cards + pick timer, palette vars; metric hues confined to
       the draft cards, same sanctioned exception as the setup chips.
 - [x] `i18n/en.json` + `pl.json` — doors / pick / attribution strings, en + pl, no em dashes.
 - [x] `npm run validate` green (2872 tests) + **end-to-end in-browser verified** (solo, fresh-port
       serve to beat the SWA-CLI module cache): doors render with Draft default, draft start deals a
-      Flags block, the pick screen shows a 5-card hand (unused picture modes + random stats, metric
-      hues on the icons), a manual pick deals the right block (picked Map → contour tiles) with the
+      Flags round, the pick screen shows a 5-card hand (unused picture modes + random stats, metric
+      hues on the icons), a manual pick deals the right round (picked Map → contour tiles) with the
       "X's pick" attribution, and the 10 s `forcePick` timeout auto-picks a random card. 0 party-code
       console errors.
 
@@ -844,30 +860,30 @@ https://claude.ai/code/artifact/f2a1acb4-12cb-40c0-831b-075f921afdad
 **Reviewed (adversarial correctness pass, 2026-07-17).** No reachable bug: the pick-vs-final
 boundary is exact, state resets cleanly between games, and draft fields serialize for reconnect
 mid-pick. Fixed one latent gap it found: a null picker at a boundary now falls through to the
-ordinary advance instead of freezing the room (defensive — the block-count formula already
+ordinary advance instead of freezing the room (defensive — the round-count formula already
 guarantees a picker). Two findings accepted, not fixed:
 - **A disconnected seat can be handed the pick** (`pickerFor` is lowest-*ranked*, not lowest-*present*,
   per spec). Not a stall: the host's `forcePick` clock resolves it with a random card after 10 s.
 - **`usedCodes` isn't rebuilt after a durable-object eviction** (only `usedModes` is) — a general,
   pre-existing server gap (affects setlist too, and the plan doesn't record which countries were
   used), so left alone here. Cosmetic sibling: the "X's pick" attribution card doesn't survive a
-  reconnect mid-drafted-block (the block / scores / question all do).
+  reconnect mid-drafted-round (the round / scores / question all do).
 
-### Final-block polish — double points + always tricky — BUILT on `feat/party-final-block` (pending PR)
+### Final-round polish — double points + always tricky — BUILT on `feat/party-final-round` (pending PR)
 
-The block that decides the game now **scores double and is always played tricky**, so a trailing
+The round that decides the game now **scores double and is always played tricky**, so a trailing
 player who chose its terrain (draft) or just gets hot at the end can still swing it, and the veil
-finally runs by default (draft never shows the tricky toggle). Applies to any **2+-block** game
-(draft or setlist); a single-block game has no "final block" (nothing to contrast), so it's exempt.
+finally runs by default (draft never shows the tricky toggle). Applies to any **2+-round** game
+(draft or setlist); a single-round game has no "final round" (nothing to contrast), so it's exempt.
 
-- `flags/partyPlan.js` — `isFinalBlock(index, total)` (false for a single-block game) (+ tested).
-- `flags/partyScore.js` — `scoreRound`'s `multiplier` (`FINAL_BLOCK_MULTIPLIER = 2`) scales base +
+- `flags/partyPlan.js` — `isFinalRound(index, total)` (false for a single-round game) (+ tested).
+- `flags/partyScore.js` — `scoreQuestion`'s `multiplier` (`FINAL_ROUND_MULTIPLIER = 2`) scales base +
   speed bonus; wrong stays 0; defaults to 1 (+ tested).
-- `flags/partyRoom.js` — `toReveal` doubles on the final block and rides `doubled` on the reveal (+ tested).
-- `flagParty/page.js` — the veil runs on the final block regardless of the host's tricky setting
+- `flags/partyRoom.js` — `toReveal` doubles on the final round and rides `doubled` on the reveal (+ tested).
+- `flagParty/page.js` — the veil runs on the final round regardless of the host's tricky setting
   (`veilActive()`), and the pill shows a pink "Double points" badge.
 - `flagParty/index.css` + i18n — `.pill-double` badge, `party.doublePoints` (en + pl).
-- Verified in-browser (solo draft, fresh-port serve): block 2/2 shows the "Double points" badge and
+- Verified in-browser (solo draft, fresh-port serve): round 2/2 shows the "Double points" badge and
   its tiles veil with tricky off; the doubled scoring is unit-pinned. 2886 tests green.
 
 ### Refinements (2026-07-17, Jan) — BUILT on `feat/party-pick-polish` (pending PR)
@@ -884,11 +900,11 @@ Three follow-ups on the shipped draft + finale, from Jan playing it:
   origins: the captured picking messages show `youPick:true`+hand to the picker only, `false`+no-hand
   to the watcher. (The clean 3-player + mid-game-reconnect flows were already correct in testing; this
   hardens the one fragile path that produced the symptom.)
-- **Statistics rounds are never veiled.** The veil is a flag / outline recognition challenge; on a
-  "which grows the most coffee?" round the flag is incidental, so hiding it tested the wrong skill
+- **Statistics questions are never veiled.** The veil is a flag / outline recognition challenge; on a
+  "which grows the most coffee?" question the flag is incidental, so hiding it tested the wrong skill
   (and a latent bug meant non-population stats got the *heavy* flag veil timing). `veilActive()` now
-  returns false for metric rounds, so tricky mode and the always-tricky final block both skip stat
-  blocks. Double points still applies to a stat finale — that was never the problem. Stat rounds keep
+  returns false for metric questions, so tricky mode and the always-tricky final round both skip stat
+  rounds. Double points still applies to a stat finale — that was never the problem. Stat questions keep
   their own name-reveal for the flag-identity issue.
 - **No pick countdown.** Choosing a category isn't a race, so the visible pick timer is gone.
   `PICK_SECONDS` (10 s, visible) became `PICK_TIMEOUT_SECONDS` (45 s, invisible) — a long safety net
@@ -898,48 +914,48 @@ Three follow-ups on the shipped draft + finale, from Jan playing it:
 Still deferred (unchanged): the TV / Display surface; preset packs (probably dead — Draft supersedes,
 see Iteration 7's note); per-player hint tokens and double-down, parked with scoring.
 
-### The block title card — SHIPPED (#954), block-1 follow-up on `feat/party-block1-card2`
+### The round title card — SHIPPED (#954), round-1 follow-up on `feat/party-block1-card2`
 
-The deferred "full next-block title card" (a big card, not just the round pill's "X's pick"). A short
-**intro beat** (2 s) that plays before the first round of **every block** (Draft and Custom both),
-announcing the block: "Block 2 of 3", the mode's icon, its full name, "5 rounds", who picked it (Draft
-only), and a "Double points" badge on the final block.
+The deferred "full next-round title card" (a big card, not just the question pill's "X's pick"). A short
+**intro beat** (2 s) that plays before the first question of **every round** (Draft and Custom both),
+announcing the round: "Round 2 of 3", the mode's icon, its full name, "5 questions", who picked it (Draft
+only), and a "Double points" badge on the final round.
 
-**Follow-up (block 1 too, `feat/party-block1-card2`):** #954 shipped the card on blocks 2..N only; the
-opener went straight into round 1. Jan flagged a fairness gap — the host clicks Start and is already
-looking at the game while the other seats are mid-transition from the lobby, so the host meets round 1's
-first flag a beat sooner. The card on **block 1** doubles as the synchronized "get ready" beat: every
-seat (host included) holds the same 2 s card, and the round clock starts only after it, so the first
-question reveals to everyone at once. `isBlockStart` now returns true at round 0 (`index >= 0`), firing
-once per block instead of `blockCount - 1`; the render + `renderBlockCard` already handled the opener
-(no pick attribution, generic "Flags" label, not the final block). Verified in-browser: a fresh game
-opens on a "Block 1 of 2 · Flags · 5 rounds" card before round 1.
+**Follow-up (round 1 too, `feat/party-block1-card2`):** #954 shipped the card on rounds 2..N only; the
+opener went straight into question 1. Jan flagged a fairness gap — the host clicks Start and is already
+looking at the game while the other seats are mid-transition from the lobby, so the host meets question 1's
+first flag a beat sooner. The card on **round 1** doubles as the synchronized "get ready" beat: every
+seat (host included) holds the same 2 s card, and the question clock starts only after it, so the first
+question reveals to everyone at once. `isRoundStart` now returns true at question 0 (`index >= 0`), firing
+once per round instead of `roundCount - 1`; the render + `renderRoundCard` already handled the opener
+(no pick attribution, generic "Flags" label, not the final round). Verified in-browser: a fresh game
+opens on a "Round 1 of 2 · Flags · 5 questions" card before question 1.
 
-**The shape: pure presentation, no server / room / wire touch.** The client already learns the block's
-mode from what it holds — `lastPick.modeId` on a drafted block (precise: the exact stat, the exact flag
-pool) or the question's `roundId` on a custom block. The one gap is the two flag pools sharing
-`roundId: 'flagPick'`, so an *un-picked* flag block is announced generically ("Flags"); every other case
+**The shape: pure presentation, no server / room / wire touch.** The client already learns the round's
+mode from what it holds — `lastPick.modeId` on a drafted round (precise: the exact stat, the exact flag
+pool) or the question's `questionId` on a custom round. The one gap is the two flag pools sharing
+`questionId: 'flagPick'`, so an *un-picked* flag round is announced generically ("Flags"); every other case
 is precise. The beat is a **client-side hold**: the question is already dealt, but the card shows first
-and the round + clock + veil start only when the beat ends, so it costs no answer time. Because every
+and the question + clock + veil start only when the beat ends, so it costs no answer time. Because every
 client (host included) holds the same beat, it introduces no clock drift (the host's authoritative
 reveal clock simply starts after the card, like everyone else's).
 
-- `flags/partyPlan.js` — `isBlockStart(index, total)` (first round of every block, opener included;
-  sibling of `isBlockBoundary`) (+ tested).
-- `flags/partyTiming.js` — `BLOCK_INTRO_SECONDS = 2` (the beat).
-- `flagParty/page.js` — exported `blockModeId(lastPick, roundId)` (which mode to announce; pinned in
-  `modeLabels.test.js`); the `#pt-blockcard` render + the `armBlockIntro` hold that gates the round
-  behind the beat, re-armed once per block-start.
+- `flags/partyPlan.js` — `isRoundStart(index, total)` (first question of every round, opener included;
+  sibling of `isRoundBoundary`) (+ tested).
+- `flags/partyTiming.js` — `ROUND_INTRO_SECONDS = 2` (the beat).
+- `flagParty/page.js` — exported `blockModeId(lastPick, questionId)` (which mode to announce; pinned in
+  `modeLabels.test.js`); the `#pt-blockcard` render + the `armRoundIntro` hold that gates the question
+  behind the beat, re-armed once per round-start.
 - `flagParty/index.html` + `index.css` — the `#pt-blockcard` section + card styles (palette vars;
   metric hue on the icon is the same confined-to-setup exception the draft cards use), a fade+rise
   entrance gated on `prefers-reduced-motion`.
-- `i18n/en.json` + `pl.json` — `party.blockCardCount`, `party.blockCardRounds` (en + pl, no em dashes;
-  reuses `party.blockPick` / `party.doublePoints`).
+- `i18n/en.json` + `pl.json` — `party.roundCardCount`, `party.roundCardQuestions` (en + pl, no em dashes;
+  reuses `party.roundPick` / `party.doublePoints`).
 - `npm run validate` green (2895 tests) + **end-to-end verified in-browser** (fresh-port serve): a solo
-  draft game showed the card at block 2 with the picked mode (metric label + its hue on the icon; then
-  the contour icon on a Map pick), the picker attribution, and the "Double points" badge (block 2/2 is
-  final); a 3-block Custom game showed the card at block 2 with the roundId-derived mode, **no** picker
-  attribution, and **no** double badge (block 2/3 isn't final). 0 party-code console errors.
+  draft game showed the card at round 2 with the picked mode (metric label + its hue on the icon; then
+  the contour icon on a Map pick), the picker attribution, and the "Double points" badge (round 2/2 is
+  final); a 3-round Custom game showed the card at round 2 with the questionId-derived mode, **no** picker
+  attribution, and **no** double badge (round 2/3 isn't final). 0 party-code console errors.
 
 ### Standings movement — the rows rise and fall — BUILT on `feat/party-standings-movement` (pending PR)
 
@@ -961,15 +977,15 @@ it carries no gameplay advantage). Once per break (its own token guards render()
 - `flagParty/index.css` — `.scoreline { position: relative }` so the climber's `z-index` lift applies;
   the dead `.scoreline .delta` rules removed with the arrows.
 - `npm run validate` green (2895 tests) + **verified in-browser** (two real clients on separate origins,
-  an engineered overtake: player B swept block 2 to pass A). Captured the live mid-slide computed
+  an engineered overtake: player B swept round 2 to pass A). Captured the live mid-slide computed
   transforms — climber at `translateY(+58px)` rising, dropper at `translateY(-58px)` falling — and the
   settled break showing B risen to #1 (75) and A dropped to #2 (45, "30 behind"), no arrows. 0
   party-code console errors.
 
 ### Fix: a watcher saw their old hand — BUILT on `fix/party-stale-pick-hand` (pending PR)
 
-Jan (draft, 3+ blocks): a player who picked an earlier block kept **seeing that block's card hand**
-while watching someone else pick the next block. Root cause was the exact `.party section[hidden]`
+Jan (draft, 3+ rounds): a player who picked an earlier round kept **seeing that round's card hand**
+while watching someone else pick the next round. Root cause was the exact `.party section[hidden]`
 trap: `.pick-hand { display: flex }` outweighs the UA `[hidden] { display: none }`, so `renderPick`
 setting `pickHand.hidden = true` on the watcher didn't actually hide it — and its cards aren't
 cleared between picks, so the picker's own old hand stayed on screen under the "X is choosing" panel.
@@ -981,7 +997,7 @@ stale cards but now computes `display:none`, and only the watch panel shows.
 `flagParty/hiddenGuards.test.js` derives the invariant from source: every flagParty element with a
 bare-class flex display (index.css) that is toggled via `.hidden` (page.js) MUST have the guard. It
 found **six** — `.pick-hand`, `.pick-watch`, `.break-mvp`, `.blockcard-pick` (the pick screen), plus
-two genuine latent bugs it turned up: `.round-timer` (the countdown bar leaked into the reveal, which
+two genuine latent bugs it turned up: `.question-timer` (the countdown bar leaked into the reveal, which
 is meant to show no timer) and `.party-mode` (a guest in the lobby would see the host-only Draft /
 Custom doors). All six now guarded; the test fails if any future flex-and-hidden element misses its
 guard, so this can't bite a third time (after `.game-tile` in prod and this). Client CSS + test only.
@@ -989,14 +1005,14 @@ guard, so this can't bite a third time (after `.game-tile` in prod and this). Cl
 ## Open decisions (settle as they come up, not now)
 
 - **Settings page — SHIPPED (#765).** The host game-setup panel in the lobby picks which modes
-  play and how many rounds each (see the Done entry); `flags/partyPlan.js` is the plan-as-data
+  play and how many questions each (see the Done entry); `flags/partyPlan.js` is the plan-as-data
   surface it edits. Kept here only as a pointer — no longer an open question.
 - **QR in the lobby.** Deferred from iteration 1 (see above) — add a self-contained QR
   generator, or accept code + link.
-- **Question count — superseded by Iteration 8.** The per-mode round counts are replaced by
-  **blocks of 5**, and the game length becomes `min(players + 1, 5)` blocks (Iteration 9). Kept here
+- **Question count — superseded by Iteration 8.** The per-mode question counts are replaced by
+  **rounds of 5**, and the game length becomes `min(players + 1, 5)` rounds (Iteration 9). Kept here
   only as a pointer.
-- **Timing per round.** Per-question countdown landed in iteration 3 (`flags/partyTiming.js`,
+- **Timing per question.** Per-question countdown landed in iteration 3 (`flags/partyTiming.js`,
   host-driven, hands-free advance); question time is `QUESTION_SECONDS = 20`. **Reveal pace is
   decided and deliberately *not* configurable** (see the reveal-pace note under Done): it's keyed on
   correctness, not a dial. If pace ever becomes a setting it should be one overall fast/normal
@@ -1025,32 +1041,32 @@ guard, so this can't bite a third time (after `.game-tile` in prod and this). Cl
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).
 - Accounts / auth beyond the existing deviceId + nickname.
-- Non-flag domains (movies/books) — the round contract is domain-shaped, but that's the
+- Non-flag domains (movies/books) — the question contract is domain-shaped, but that's the
   long-term-vision hub, not this feature.
 
 ## Done
 
 - **Reveal pace — correctness-keyed, no reveal timer.** The reveal used to freeze the bar full
-  and count "Next round in Ns" (weird for a sub-2s beat; in solo the digit never even
-  decremented). Now the reveal length is keyed on the round, not the room: `isCleanReveal`
+  and count "Next question in Ns" (weird for a sub-2s beat; in solo the digit never even
+  decremented). Now the reveal length is keyed on the question, not the room: `isCleanReveal`
   (`flags/partyClient.js`) is true when every *present* player picked the answer, and
   `revealSecondsFor(clean)` returns `CLEAN_REVEAL_SECONDS = 0.9` vs `MISS_REVEAL_SECONDS = 2.5`
   (`flags/partyTiming.js`) — flagQuiz's correct-fast / wrong-slow feel. The reveal shows **no
   timer at all** (a first pass tried a draining bar; a sub-second drain read as a flicker, so it
   was cut — only the question phase has a bar). On a wrong pick, the flag/outline you chose gets
   a country-name strip so you learn what you clicked — the shared `.opt.wrong[data-name]::after`
-  rule promoted to `common.css` from flagQuiz. Single-player mode was also removed this round of
+  rule promoted to `common.css` from flagQuiz. Single-player mode was also removed this question of
   work — Flag Party is one online path, start with 1+ (see PR #768).
 - **Host game setup (#765).** The lobby has a host-only, collapsed-by-default panel to choose
-  which modes play and how many rounds each (`flagParty` `.game-setup`), reusing the site's
+  which modes play and how many questions each (`flagParty` `.game-setup`), reusing the site's
   shared toggle switch + stepper rather than any new styling. `flags/partyPlan.js` is the
-  plan-as-data surface (`PARTY_MODES`, `DEFAULT_PLAN` = 3 flag / 3 territory / 5 map = 11 rounds,
+  plan-as-data surface (`PARTY_MODES`, `DEFAULT_PLAN` = 3 flag / 3 territory / 5 map = 11 questions,
   `planFromModeCounts`, `validatePlan`); the plan rides along on the `start` message and the
   server validates it, falling back to `DEFAULT_PLAN` on anything malformed. This closed the
   long-standing "settings page" open decision.
-- **Iteration 4 — the Map round.** Second round type ("Which outline is X?"), the mirror of
+- **Iteration 4 — the Map question.** Second question type ("Which outline is X?"), the mirror of
   flag-pick: same grid / buzz-order / scoring, tiles render pre-generated country contours
-  (`flags/contours/`) instead of flags. Server now picks round modules from the plan via a
-  `ROUNDS` registry (`flagPick` + `mapPick`), not hardwired flag-pick. Default game is 11 rounds
+  (`flags/contours/`) instead of flags. Server now picks question modules from the plan via a
+  `QUESTIONS` registry (`flagPick` + `mapPick`), not hardwired flag-pick. Default game is 11 questions
   (3 sovereign flag / 3 non-sovereign flag / 5 sovereign map). `flags/partyPlan.js` is the config
   surface the settings page edits (shipped shortly after — see the host-game-setup entry above).

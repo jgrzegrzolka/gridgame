@@ -30,20 +30,20 @@ import happiness from '../metrics/happiness.json' with { type: 'json' };
 import corruption from '../metrics/corruption.json' with { type: 'json' };
 import tourismPerCapita from '../metrics/tourismPerCapita.json' with { type: 'json' };
 import electricityPerCapita from '../metrics/electricityPerCapita.json' with { type: 'json' };
-import { buildSuperlativeRound } from './superlativeCore.js';
+import { buildSuperlativeQuestion } from './superlativeCore.js';
 import { SUPERLATIVE_METRICS } from './superlativeCatalog.js';
 
 /**
- * The "superlative" round: "Which of these four flags is the *most* (or *least*)
+ * The "superlative" question: "Which of these four flags is the *most* (or *least*)
  * populous?" — the third mirror of flag-pick. The prompt is a direction token
  * (`'most'` / `'least'`) rather than a target country, the options are four
  * flag codes, and the answer is whichever of the four the metric ranks at the
  * extreme. Same `{ prompt, options, answer }` shape as flag-pick and map-pick,
- * so the room and scoring stay round-agnostic; the page renders the options as
+ * so the room and scoring stay question-agnostic; the page renders the options as
  * flags (`flags/svg/<code>.svg`), exactly like flag-pick.
  *
- * This is the first round whose answer is *not* derivable from what the client
- * is shown (four flags with no numbers) — that's why the round contract keeps
+ * This is the first question whose answer is *not* derivable from what the client
+ * is shown (four flags with no numbers) — that's why the question contract keeps
  * the answer server-side.
  *
  * **This file is now only the data half.** It brings the 32 metric JSONs; the
@@ -78,66 +78,66 @@ const DATA = {
 };
 
 /**
- * Every superlative round, keyed by metric key — one per catalog entry, built by
- * one factory. This replaced 32 hand-written `createSuperlativeRound(...)` calls
+ * Every superlative question, keyed by metric key — one per catalog entry, built by
+ * one factory. This replaced 32 hand-written `createSuperlativeQuestion(...)` calls
  * whose only differences were the three fields the catalog now states.
  *
- * @type {Record<string, ReturnType<typeof buildSuperlativeRound>>}
+ * @type {Record<string, ReturnType<typeof buildSuperlativeQuestion>>}
  */
-const ROUNDS = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => {
+const QUESTIONS = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => {
   const raw = DATA[m.key];
   if (!raw) throw new Error(`No metric data for catalog entry "${m.key}"`);
   return [
     m.key,
-    buildSuperlativeRound(m, raw),
+    buildSuperlativeQuestion(m, raw),
   ];
 }));
 
-// The population round is exported FLAT (id / generate / isCorrect) rather than
+// The population question is exported FLAT (id / generate / isCorrect) rather than
 // as an object: it shipped before there was a second metric, and both
-// `party/partyGameServer.js` (which spreads `* as superlative` into its round
+// `party/partyGameServer.js` (which spreads `* as superlative` into its question
 // registry) and `superlative.test.js` import it that way.
-export const id = ROUNDS.population.id;
-export const generate = ROUNDS.population.generate;
-export const isCorrect = ROUNDS.population.isCorrect;
+export const id = QUESTIONS.population.id;
+export const generate = QUESTIONS.population.generate;
+export const isCorrect = QUESTIONS.population.isCorrect;
 
 // The rest, one named export each — the shape `party/partyGameServer.js` lists
-// explicitly, reading `.id` off each to build its round registry. Keeping these
+// explicitly, reading `.id` off each to build its question registry. Keeping these
 // names is what lets the catalog land without editing that server at all.
 //
 // It does NOT avoid a PartyKit deploy: `deploy-partykit.yml` triggers on
-// `flags/partyRounds/**` because it tracks the server's whole import closure,
+// `flags/partyQuestions/**` because it tracks the server's whole import closure,
 // deliberately over-triggering ("a redundant deploy beats a silently stale
 // server"). So touching this file redeploys and restarts every Durable Object.
-// The rounds it deals are unchanged; the in-progress rooms it drops are not.
-export const areaRound = ROUNDS.area;
-export const densityRound = ROUNDS.density;
-export const gdpRound = ROUNDS.gdp;
-export const gdpPerCapitaRound = ROUNDS.gdpPerCapita;
-export const coffeeRound = ROUNDS.coffee;
-export const wineRound = ROUNDS.wine;
-export const cocoaRound = ROUNDS.cocoa;
-export const bananaRound = ROUNDS.banana;
-export const appleRound = ROUNDS.apple;
-export const elevationRound = ROUNDS.elevation;
-export const coastlineRound = ROUNDS.coastline;
-export const forestRound = ROUNDS.forest;
-export const oilRound = ROUNDS.oil;
-export const riceRound = ROUNDS.rice;
-export const coalRound = ROUNDS.coal;
-export const sheepPerCapitaRound = ROUNDS.sheepPerCapita;
-export const cattlePerCapitaRound = ROUNDS.cattlePerCapita;
-export const beerPerCapitaRound = ROUNDS.beerPerCapita;
-export const teaRound = ROUNDS.tea;
-export const sugarcaneRound = ROUNDS.sugarcane;
-export const goldRound = ROUNDS.gold;
-export const alcoholPerCapitaRound = ROUNDS.alcoholPerCapita;
-export const meatPerCapitaRound = ROUNDS.meatPerCapita;
-export const bordersRound = ROUNDS.borders;
-export const oliveOilRound = ROUNDS.oliveOil;
-export const honeyRound = ROUNDS.honey;
-export const temperatureRound = ROUNDS.temperature;
-export const happinessRound = ROUNDS.happiness;
-export const corruptionRound = ROUNDS.corruption;
-export const tourismPerCapitaRound = ROUNDS.tourismPerCapita;
-export const electricityPerCapitaRound = ROUNDS.electricityPerCapita;
+// The questions it deals are unchanged; the in-progress rooms it drops are not.
+export const areaQuestion = QUESTIONS.area;
+export const densityQuestion = QUESTIONS.density;
+export const gdpQuestion = QUESTIONS.gdp;
+export const gdpPerCapitaQuestion = QUESTIONS.gdpPerCapita;
+export const coffeeQuestion = QUESTIONS.coffee;
+export const wineQuestion = QUESTIONS.wine;
+export const cocoaQuestion = QUESTIONS.cocoa;
+export const bananaQuestion = QUESTIONS.banana;
+export const appleQuestion = QUESTIONS.apple;
+export const elevationQuestion = QUESTIONS.elevation;
+export const coastlineQuestion = QUESTIONS.coastline;
+export const forestQuestion = QUESTIONS.forest;
+export const oilQuestion = QUESTIONS.oil;
+export const riceQuestion = QUESTIONS.rice;
+export const coalQuestion = QUESTIONS.coal;
+export const sheepPerCapitaQuestion = QUESTIONS.sheepPerCapita;
+export const cattlePerCapitaQuestion = QUESTIONS.cattlePerCapita;
+export const beerPerCapitaQuestion = QUESTIONS.beerPerCapita;
+export const teaQuestion = QUESTIONS.tea;
+export const sugarcaneQuestion = QUESTIONS.sugarcane;
+export const goldQuestion = QUESTIONS.gold;
+export const alcoholPerCapitaQuestion = QUESTIONS.alcoholPerCapita;
+export const meatPerCapitaQuestion = QUESTIONS.meatPerCapita;
+export const bordersQuestion = QUESTIONS.borders;
+export const oliveOilQuestion = QUESTIONS.oliveOil;
+export const honeyQuestion = QUESTIONS.honey;
+export const temperatureQuestion = QUESTIONS.temperature;
+export const happinessQuestion = QUESTIONS.happiness;
+export const corruptionQuestion = QUESTIONS.corruption;
+export const tourismPerCapitaQuestion = QUESTIONS.tourismPerCapita;
+export const electricityPerCapitaQuestion = QUESTIONS.electricityPerCapita;

@@ -10,7 +10,7 @@
  *
  * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
  * @typedef {{ playerId: string, nickname: string, score: number, present: boolean }} RosterEntry
- * @typedef {{ prompt: string, options: string[], roundId?: string, clearFrac?: number, nameFrac?: number }} PublicQuestion
+ * @typedef {{ prompt: string, options: string[], questionId?: string, clearFrac?: number, nameFrac?: number }} PublicQuestion
  * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
  *
  * @typedef {Object} PartyClientState
@@ -18,8 +18,8 @@
  * @property {string | null} you
  * @property {boolean} isHost
  * @property {RosterEntry[]} roster
- * @property {number} totalRounds
- * @property {number} roundIndex
+ * @property {number} totalQuestions
+ * @property {number} questionIndex
  * @property {boolean} tricky  host's tricky-mode choice, learned from the server;
  *   when true the page veils each question tile and clears it over the clock.
  * @property {PublicQuestion | null} question
@@ -29,15 +29,15 @@
  * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number> } | null} reveal
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
- *   seat whose turn it is to choose the next block; null otherwise.
+ *   seat whose turn it is to choose the next round; null otherwise.
  * @property {boolean} youPick  whether THIS client is the picker — set
  *   server-authoritatively (not re-derived from `you === picker`), so a stale
  *   identity can't make the picker miss their own hand. False off the pick phase.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from; null otherwise (and never sent to a watcher).
  * @property {{ picker: string, modeId: string } | null} lastPick  who picked the
- *   current block and which mode, for the "Zosia's pick" attribution; null in a
- *   non-drafted block.
+ *   current round and which mode, for the "Zosia's pick" attribution; null in a
+ *   non-drafted round.
  * @property {StatusOverride | null} statusOverride
  *
  * @typedef {{ type: 'close' }} Effect
@@ -50,8 +50,8 @@ export function initialPartyClientState() {
     you: null,
     isHost: false,
     roster: [],
-    totalRounds: 0,
-    roundIndex: 0,
+    totalQuestions: 0,
+    questionIndex: 0,
     tricky: false,
     question: null,
     buzzedCount: 0,
@@ -105,8 +105,8 @@ export function reducePartyMessage(state, message) {
           isHost: !!message.isHost,
           phase: message.phase,
           roster: message.roster ?? [],
-          totalRounds: message.totalRounds ?? state.totalRounds,
-          roundIndex: message.roundIndex ?? 0,
+          totalQuestions: message.totalQuestions ?? state.totalQuestions,
+          questionIndex: message.questionIndex ?? 0,
           tricky: message.tricky ?? state.tricky,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
@@ -157,7 +157,7 @@ export function reducePartyMessage(state, message) {
       };
     }
     case 'picking': {
-      // Draft: the room paused to let one seat choose the next block. `youPick`
+      // Draft: the room paused to let one seat choose the next round. `youPick`
       // is server-authoritative — the client shows the hand because the server
       // told it it's the picker, not because it matched its own id.
       return {
@@ -172,8 +172,8 @@ export function reducePartyMessage(state, message) {
             ? message.youPick === true
             : (state.you != null && state.you === message.picker),
           hand: Array.isArray(message.hand) ? message.hand : null,
-          roundIndex: message.roundIndex ?? state.roundIndex,
-          totalRounds: message.totalRounds ?? state.totalRounds,
+          questionIndex: message.questionIndex ?? state.questionIndex,
+          totalQuestions: message.totalQuestions ?? state.totalQuestions,
           reveal: null,
         },
         effects: [],
@@ -184,15 +184,15 @@ export function reducePartyMessage(state, message) {
         state: {
           ...state,
           phase: 'question',
-          question: { prompt: message.prompt, options: message.options ?? [], roundId: message.roundId, clearFrac: message.clearFrac, nameFrac: message.nameFrac },
-          roundIndex: message.roundIndex ?? state.roundIndex,
-          totalRounds: message.totalRounds ?? state.totalRounds,
+          question: { prompt: message.prompt, options: message.options ?? [], questionId: message.questionId, clearFrac: message.clearFrac, nameFrac: message.nameFrac },
+          questionIndex: message.questionIndex ?? state.questionIndex,
+          totalQuestions: message.totalQuestions ?? state.totalQuestions,
           tricky: message.tricky ?? state.tricky,
           myChoice: null,
           reveal: null,
           buzzedCount: 0,
           seatCount: presentCount(state.roster),
-          // The picking turn is over; a drafted block's first question carries who
+          // The picking turn is over; a drafted round's first question carries who
           // picked it (for the attribution card), else this clears.
           picker: null,
           youPick: false,
@@ -223,8 +223,8 @@ export function reducePartyMessage(state, message) {
             points: message.points ?? {},
           },
           scoreboard: message.scoreboard ?? state.scoreboard,
-          roundIndex: message.roundIndex ?? state.roundIndex,
-          totalRounds: message.totalRounds ?? state.totalRounds,
+          questionIndex: message.questionIndex ?? state.questionIndex,
+          totalQuestions: message.totalQuestions ?? state.totalQuestions,
         },
         effects: [],
       };
@@ -265,13 +265,13 @@ export function withLocalBuzz(state, choice) {
 
 /**
  * Was the reveal a clean sweep — did every present player pick the correct
- * answer? Drives the reveal pace (see `flags/partyTiming.js`): a clean round has
+ * answer? Drives the reveal pace (see `flags/partyTiming.js`): a clean question has
  * nothing to study, so it snaps on; any wrong pick or a timeout (a present seat
  * with no matching pick) counts as a miss and holds longer, so players see the
  * flag they didn't land. Mirrors flagQuiz's correct-fast / wrong-slow feel.
  *
  * A no-answer is a miss: a seat that never buzzed has no entry in `picks`, so
- * the `=== answer` test fails for it and the round isn't clean. An empty room
+ * the `=== answer` test fails for it and the question isn't clean. An empty room
  * (never happens mid-reveal — the host is present) is treated as not-clean.
  *
  * @param {RosterEntry[]} roster

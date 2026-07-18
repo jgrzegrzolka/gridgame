@@ -96,7 +96,7 @@
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
 /* Lobby game setup — host-only, collapsed by default. The summary row shows the
-   default plan at a glance (round total + the mode mix); tapping expands the
+   default plan at a glance (question total + the mode mix); tapping expands the
    dials. Surface card + muted-soft border matches the player chips above it, and
    the on/off switch is the site's shared `.scope-toggle` (common.css) so it
    reads the same as every other toggle on the site. Weights follow the same
@@ -119,7 +119,7 @@
 .gs-head-row { display: flex; align-items: center; gap: 8px; }
 .gs-title { font-size: 14px; font-weight: 600; color: var(--primary-color); }
 .gs-meta { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted-color); }
-.gs-rounds { color: var(--primary-color); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gs-questions { color: var(--primary-color); font-weight: 600; font-variant-numeric: tabular-nums; }
 /* CSS chevron (no glyph dependency): a down-caret that flips up when open. */
 .gs-caret {
   width: 7px;
@@ -141,7 +141,7 @@
 .gs-mode { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--muted-soft-color); }
 .gs-mode.off { opacity: 0.5; }
 .gs-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--primary-color); }
-/* One-line hint under the World facts section header: each chip is its own block. */
+/* One-line hint under the World facts section header: each chip is its own round. */
 .gs-facts-hint { margin: 2px 0 4px; font-size: 12px; color: var(--muted-color); }
 
 /* Section eyebrow splitting the list into the picture trio and the world-facts
@@ -177,7 +177,7 @@
 .gs-opt-title { font-size: 14px; font-weight: 500; color: var(--primary-color); }
 .gs-opt-hint { font-size: 12px; font-weight: 400; color: var(--muted-color); }
 
-/* World-facts metric chips — each is a block toggle (which statistics play).
+/* World-facts metric chips — each is a round toggle (which statistics play).
    Colour comes from the metric's own `--mc` hue (defined below). */
 .gs-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 4px 0; }
 .gs-chip {
@@ -205,7 +205,7 @@
 .gs-chip:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
 
 /* Per-category reveal timing, shown under the tricky toggle when it's on. A
-   quiet indented block (it belongs to the toggle above it) with one row per
+   quiet indented round (it belongs to the toggle above it) with one row per
    category: a name and a compact percentage picker. */
 .gs-reveal { display: flex; flex-direction: column; gap: 8px; padding: 10px 0 4px 2px; }
 .gs-reveal[hidden] { display: none; }
@@ -227,8 +227,8 @@
 }
 .gs-reveal-pick:hover { border-color: var(--secondary-color); }
 
-/* Round: prompt + flags */
-.round-pill {
+/* Question: prompt + flags */
+.question-pill {
   align-self: center;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -240,29 +240,29 @@
   padding: 4px 12px;
   border-radius: 999px;
 }
-/* Round countdown: a shrinking bar everyone sees. The host's copy is what
+/* Question countdown: a shrinking bar everyone sees. The host's copy is what
    actually drives question -> reveal and reveal -> next (flags/partyTiming.js);
    the rest are cosmetic so the whole room feels the clock. */
-.round-timer { display: flex; align-items: center; gap: 10px; }
+.question-timer { display: flex; align-items: center; gap: 10px; }
 /* `display:flex` outweighs the UA `[hidden]`, so spell out the hide — otherwise
    `timerEl.hidden = true` (set for every non-question phase) wouldn't take, and
    the stale countdown bar would leak into the reveal, which is meant to show no
    timer at all. Same trap as `.party section[hidden]`. */
-.round-timer[hidden] { display: none; }
-.round-timer-track {
+.question-timer[hidden] { display: none; }
+.question-timer-track {
   flex: 1;
   height: 6px;
   border-radius: 999px;
   background: var(--muted-soft-color);
   overflow: hidden;
 }
-.round-timer-fill {
+.question-timer-fill {
   height: 100%;
   width: 100%;
   border-radius: 999px;
   background: var(--secondary-color);
 }
-.round-timer-label {
+.question-timer-label {
   min-width: 2ch;
   text-align: right;
   white-space: nowrap;
@@ -272,15 +272,15 @@
   font-variant-numeric: tabular-nums;
 }
 /* Only the question phase shows a timer; the reveal is bar-less (the JS hides
-   `.round-timer` then, since a sub-second bar just flickered). */
+   `.question-timer` then, since a sub-second bar just flickered). */
 @media (prefers-reduced-motion: no-preference) {
-  .round-timer-fill { transition: width 0.2s linear; }
-  .round-timer.low .round-timer-label { animation: timer-pulse 1s ease-in-out infinite; }
+  .question-timer-fill { transition: width 0.2s linear; }
+  .question-timer.low .question-timer-label { animation: timer-pulse 1s ease-in-out infinite; }
 }
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 .prompt { text-align: center; display: flex; flex-direction: column; gap: 2px; }
-/* The lead cue is no longer used — every round now shows one prominent line
+/* The lead cue is no longer used — every question now shows one prominent line
    only (the country name, or the superlative label), since the tiles already
    say whether you're matching a flag / outline / stat. Kept hidden via JS so
    the element is easy to bring back; the rule stays for that case. */
@@ -288,11 +288,11 @@
 /* Same weight/size as flagQuiz's `.country-name` prompt (28px / 500) so the
    country name reads identically across the two flag-picking games — it used
    to be 800 + tight tracking, which read a size larger than flagQuiz's. Every
-   round fills this line now (the superlative label included), so `min-height`
+   question fills this line now (the superlative label included), so `min-height`
    is just a defensive reserve keeping the grid at the same Y in every mode. */
 .prompt-target { font-size: 28px; font-weight: 500; color: var(--primary-color); min-height: 1lh; }
-/* Superlative rounds: the metric icon leads the criterion label on one row,
-   tinted with the metric's setting hue (--mc, set per round via [data-metric]
+/* Superlative questions: the metric icon leads the criterion label on one row,
+   tinted with the metric's setting hue (--mc, set per question via [data-metric]
    with the setup-chip hues below). The label drops from the 28px country-name
    size to 18px — it's a phrase ("Largest coffee production"), not a single name,
    so it reads better a notch smaller and keeps long labels on one line. */
@@ -344,8 +344,8 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   box-shadow: 0 0 0 1px var(--primary-color);
   transition: box-shadow 100ms;
 }
-/* Map round: the contour silhouette. Same tile footprint as `.flag` (4:3 /
-   contain) so grid rows stay level across round types, but no inset frame — a
+/* Map question: the contour silhouette. Same tile footprint as `.flag` (4:3 /
+   contain) so grid rows stay level across question types, but no inset frame — a
    silhouette sits on transparent ground, and the SVG already carries its own
    8% padding, so a rectangular border would just box empty space. */
 .contour {
@@ -393,7 +393,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   opacity: clamp(0, calc(1 - (1 + var(--veil-p, 1) * 5 - var(--i))), 1);
 }
 
-/* World-facts name reveal: on a metric round the country-name strip (the shared
+/* World-facts name reveal: on a metric question the country-name strip (the shared
    `.opt.named[data-name]::after` band from common.css) is pre-rendered but held
    hidden, then fades in once the grid gets `names-shown` — the veil loop toggles
    that class at the host's `nameFrac` point. This decouples knowing the fact from
@@ -439,7 +439,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .opt-pop .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .opt-pop .val { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-.round-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.question-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 
 .toast-list { display: flex; flex-direction: column; gap: 7px; }
 .toast {
@@ -472,7 +472,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 /* Drop the shared full-bleed background band too (common.css
    `.result-links::before`). It's part of the sticky rail this screen opts out
    of: that band is `position: absolute; top: 0; bottom: 0` and relies on the
-   row being a positioned containing block to size itself to the row. With the
+   row being a positioned containing round to size itself to the row. With the
    row set `static` above it has no positioned ancestor, so it stretches to the
    viewport (100vw × 100vh) and — painting above the board — covers the whole
    final scoreboard with page-bg. The inline links here need no background fill,
@@ -489,14 +489,14 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   padding: 12px;
   border-radius: 12px;
   font-size: 15px;
-  /* Positioned so the between-blocks standings-movement animation can lift a
+  /* Positioned so the between-rounds standings-movement animation can lift a
      climbing row above the one it overtakes (z-index in page.js). No offsets, so
      layout is unchanged. */
   position: relative;
 }
 .scoreline.win { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
-/* On the between-blocks break, the local player's own row carries the pink ring
+/* On the between-rounds break, the local player's own row carries the pink ring
    (same "this is you" highlight as a winning row) so you find yourself at a
    glance. Reuses .win's fill/border, no new colour. */
 .scoreline.you { background: var(--selected-color); border: 1px solid var(--secondary-color); }
@@ -600,12 +600,12 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 /* Same trap as `.party section[hidden]` up top: a `display:flex` base rule
    outweighs the UA `[hidden] { display: none }`, so `pickHand.hidden = true` in
    renderPick would NOT hide it — and its cards aren't cleared, so a player who
-   picked an earlier block would keep seeing that old hand while WATCHING someone
-   else pick the next block. Spell out the hide. Same for the watch panel (a
-   picker who was a watcher last round would otherwise still show the stale
-   "X is choosing"), and for `.break-mvp` / `.blockcard-pick`, which use flex too
+   picked an earlier round would keep seeing that old hand while WATCHING someone
+   else pick the next round. Spell out the hide. Same for the watch panel (a
+   picker who was a watcher last question would otherwise still show the stale
+   "X is choosing"), and for `.break-mvp` / `.roundcard-pick`, which use flex too
    and are only saved today by having their content cleared when empty. */
-.pick-hand[hidden], .pick-watch[hidden], .break-mvp[hidden], .blockcard-pick[hidden] { display: none; }
+.pick-hand[hidden], .pick-watch[hidden], .break-mvp[hidden], .roundcard-pick[hidden] { display: none; }
 .pick-card {
   appearance: none;
   display: flex;
@@ -632,9 +632,9 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .pick-watch { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
 .pick-watch .avatar { width: 44px; height: 44px; border-radius: 8px; }
 .pick-watch-name { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary-color); text-align: center; }
-/* The "'s pick" attribution suffix on the round pill: quieter than the pill text. */
+/* The "'s pick" attribution suffix on the question pill: quieter than the pill text. */
 .pill-pick { color: var(--muted-color); font-weight: 600; }
-/* The final-block "Double points" badge on the pill: a pink pill-within-the-pill
+/* The final-round "Double points" badge on the pill: a pink pill-within-the-pill
    so the stakes read at a glance. */
 .pill-double {
   margin-left: 8px;
@@ -648,12 +648,12 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   text-transform: uppercase;
 }
 
-/* ---- block title card: the beat that announces block 2..N before its first
-   round (a big-card counterpart to the round pill's "X's pick" attribution). The
+/* ---- round title card: the beat that announces round 2..N before its first
+   question (a big-card counterpart to the question pill's "X's pick" attribution). The
    metric hue on the icon is the same confined-to-setup colour exception the draft
    cards and setup chips use — it never reaches a gameplay tile. */
-.pt-blockcard { align-items: center; justify-content: center; min-height: 320px; }
-.blockcard {
+.pt-roundcard { align-items: center; justify-content: center; min-height: 320px; }
+.roundcard {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -666,16 +666,16 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   width: 100%;
   max-width: 320px;
 }
-.blockcard-count { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
-.blockcard-ic { width: 72px; height: 72px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); margin: 2px 0; }
-.blockcard-ic svg { width: 60px; height: 60px; display: block; }
-.blockcard-thumb { width: 68px; height: 46px; object-fit: contain; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
-.blockcard-contour { width: 64px; height: 64px; object-fit: contain; }
-.blockcard-name { font-size: 22px; font-weight: 700; color: var(--primary-color); line-height: 1.2; }
-.blockcard-rounds { font-size: 14px; color: var(--muted-color); }
-.blockcard-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--primary-color); }
-.blockcard-pick .avatar { width: 26px; height: 26px; border-radius: 6px; }
-.blockcard-double {
+.roundcard-count { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
+.roundcard-ic { width: 72px; height: 72px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); margin: 2px 0; }
+.roundcard-ic svg { width: 60px; height: 60px; display: block; }
+.roundcard-thumb { width: 68px; height: 46px; object-fit: contain; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.roundcard-contour { width: 64px; height: 64px; object-fit: contain; }
+.roundcard-name { font-size: 22px; font-weight: 700; color: var(--primary-color); line-height: 1.2; }
+.roundcard-questions { font-size: 14px; color: var(--muted-color); }
+.roundcard-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--primary-color); }
+.roundcard-pick .avatar { width: 26px; height: 26px; border-radius: 6px; }
+.roundcard-double {
   margin-top: 2px;
   padding: 2px 10px;
   border-radius: 999px;
@@ -686,11 +686,11 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-/* The card fades + rises in when its block starts; static for reduced-motion. */
+/* The card fades + rises in when its round starts; static for reduced-motion. */
 @media (prefers-reduced-motion: no-preference) {
-  .blockcard { animation: blockcard-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .roundcard { animation: roundcard-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 }
-@keyframes blockcard-in {
+@keyframes roundcard-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
   to { opacity: 1; transform: none; }
 }
@@ -701,7 +701,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    alive without a caption. The tie caption (the only surviving `.party-sub`)
    pops. The page only adds `.enter` / `.pop` when the player hasn't asked to
    reduce motion, and the sustained breathe lives entirely inside this @media
-   block, so motion-sensitive players get the static pink highlight only. Pairs
+   round, so motion-sensitive players get the static pink highlight only. Pairs
    with the confetti / fireworks burst (winner → fireworks, else confetti). */
 @media (prefers-reduced-motion: no-preference) {
   .opt { transition: border-color 0.12s ease, opacity 0.12s ease; }

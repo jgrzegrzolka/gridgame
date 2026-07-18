@@ -26,7 +26,7 @@ const pageJs = readFileSync(join(HERE, 'page.js'), 'utf-8');
  */
 
 /** Parse CSS into `{ sel, body }` rules (good enough for this hand-written file).
- *  Comments are stripped first, else a `/* … *\/` block before a rule leaks into
+ *  Comments are stripped first, else a `/* … *\/` round before a rule leaks into
  *  the captured selector and a bare `.foo {` stops looking bare. */
 function cssRules(text) {
   const clean = text.replace(/\/\*[\s\S]*?\*\//g, '');

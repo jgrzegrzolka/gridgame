@@ -29,12 +29,12 @@ test('welcome: adopts identity, host flag, phase, roster and totals', () => {
   const s = reduce(initialPartyClientState(), {
     type: 'welcome', you, isHost: true, phase: 'lobby',
     roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }],
-    roundIndex: 0, totalRounds: 5, question: null, scoreboard: [],
+    questionIndex: 0, totalQuestions: 5, question: null, scoreboard: [],
   });
   assert.equal(s.you, you);
   assert.equal(s.isHost, true);
   assert.equal(s.phase, 'lobby');
-  assert.equal(s.totalRounds, 5);
+  assert.equal(s.totalQuestions, 5);
   assert.equal(s.roster.length, 1);
 });
 
@@ -42,19 +42,19 @@ test('welcome + question: the tricky flag is learned from the server and default
   assert.equal(initialPartyClientState().tricky, false, 'off until the server says otherwise');
   // A mid-game reconnect learns tricky from the welcome snapshot.
   let s = reduce(initialPartyClientState(), {
-    type: 'welcome', you, isHost: false, phase: 'question', roster: [], totalRounds: 5, tricky: true,
+    type: 'welcome', you, isHost: false, phase: 'question', roster: [], totalQuestions: 5, tricky: true,
   });
   assert.equal(s.tricky, true, 'welcome adopts tricky so the resumed tiles veil');
-  // Each question broadcast also carries it (the source of truth per round), plus
+  // Each question broadcast also carries it (the source of truth per question), plus
   // the per-question veil timing the server stamped from the host's reveal config.
   s = reduce({ ...initialPartyClientState(), roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] },
-    { type: 'question', prompt: 'fr', options: ['fr', 'de'], roundId: 'mapPick', roundIndex: 0, totalRounds: 5, tricky: true, clearFrac: 0.4 });
+    { type: 'question', prompt: 'fr', options: ['fr', 'de'], questionId: 'mapPick', questionIndex: 0, totalQuestions: 5, tricky: true, clearFrac: 0.4 });
   assert.equal(s.tricky, true, 'question adopts tricky');
   assert.equal(s.question?.clearFrac, 0.4, 'the veil timing threads onto the question');
 });
 
 test('roster: recomputes isHost against my own id', () => {
-  let s = reduce(initialPartyClientState(), { type: 'welcome', you, isHost: false, phase: 'lobby', roster: [], totalRounds: 5 });
+  let s = reduce(initialPartyClientState(), { type: 'welcome', you, isHost: false, phase: 'lobby', roster: [], totalQuestions: 5 });
   s = reduce(s, { type: 'roster', hostId: you, roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] });
   assert.equal(s.isHost, true);
   s = reduce(s, { type: 'roster', hostId: 'someone-else', roster: [] });
@@ -64,10 +64,10 @@ test('roster: recomputes isHost against my own id', () => {
 test('question: enters the question phase and clears the previous pick/reveal', () => {
   /** @type {import('./partyClient.js').PartyClientState} */
   let s = { ...initialPartyClientState(), you, phase: 'reveal', myChoice: 'jp', reveal: { answer: 'jp', picks: {}, points: {} }, roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] };
-  s = reduce(s, { type: 'question', prompt: 'fr', options: ['fr', 'de', 'it', 'es'], roundId: 'mapPick', roundIndex: 1, totalRounds: 5 });
+  s = reduce(s, { type: 'question', prompt: 'fr', options: ['fr', 'de', 'it', 'es'], questionId: 'mapPick', questionIndex: 1, totalQuestions: 5 });
   assert.equal(s.phase, 'question');
   assert.equal(s.question?.prompt, 'fr');
-  assert.equal(s.question?.roundId, 'mapPick', 'roundId is threaded through so the page can pick flag vs contour tiles');
+  assert.equal(s.question?.questionId, 'mapPick', 'questionId is threaded through so the page can pick flag vs contour tiles');
   assert.equal(s.myChoice, null, 'previous pick cleared');
   assert.equal(s.reveal, null, 'previous reveal cleared');
   assert.equal(s.buzzedCount, 0);
@@ -87,7 +87,7 @@ test('reveal: exposes the answer, everyone\'s picks, and points', () => {
   let s = { ...initialPartyClientState(), phase: 'question' };
   s = reduce(s, {
     type: 'reveal', answer: 'jp', picks: { me: 'jp', bob: 'kr' }, points: { me: 15, bob: 0 },
-    scoreboard: [{ playerId: 'me', nickname: 'Me', score: 15 }], roundIndex: 0, totalRounds: 5,
+    scoreboard: [{ playerId: 'me', nickname: 'Me', score: 15 }], questionIndex: 0, totalQuestions: 5,
   });
   assert.equal(s.phase, 'reveal');
   assert.equal(s.reveal?.answer, 'jp');
@@ -96,7 +96,7 @@ test('reveal: exposes the answer, everyone\'s picks, and points', () => {
   assert.equal(s.scoreboard?.[0].score, 15);
 });
 
-test('lobby: Play again returns to the lobby and clears round state', () => {
+test('lobby: Play again returns to the lobby and clears question state', () => {
   /** @type {import('./partyClient.js').PartyClientState} */
   let s = { ...initialPartyClientState(), you, phase: 'final', myChoice: 'jp', reveal: { answer: 'jp', picks: {}, points: {} }, scoreboard: [{ playerId: you, nickname: 'Me', score: 40 }] };
   s = reduce(s, { type: 'lobby', hostId: you, roster: [{ playerId: you, nickname: 'Me', score: 0, present: true }] });
@@ -249,7 +249,7 @@ test('picking (the picker): youPick true + the hand, server-authoritative', () =
   // `you` deliberately does NOT match `picker` — youPick must still come from the
   // server, not from a client-side you === picker comparison.
   const s = reduce({ ...initialPartyClientState(), you, phase: 'reveal' }, {
-    type: 'picking', youPick: true, picker: 'someone-else', hand: ['map-outlines', 'superlative-coffee'], roundIndex: 4, totalRounds: 15,
+    type: 'picking', youPick: true, picker: 'someone-else', hand: ['map-outlines', 'superlative-coffee'], questionIndex: 4, totalQuestions: 15,
   });
   assert.equal(s.phase, 'picking');
   assert.equal(s.youPick, true, 'the server told us we pick, regardless of our id');
@@ -259,7 +259,7 @@ test('picking (the picker): youPick true + the hand, server-authoritative', () =
 
 test('picking (a watcher): youPick false, no hand', () => {
   const s = reduce({ ...initialPartyClientState(), you, phase: 'reveal' }, {
-    type: 'picking', youPick: false, picker: 'bob', roundIndex: 4, totalRounds: 15,
+    type: 'picking', youPick: false, picker: 'bob', questionIndex: 4, totalQuestions: 15,
   });
   assert.equal(s.youPick, false);
   assert.equal(s.picker, 'bob');
@@ -269,7 +269,7 @@ test('picking (a watcher): youPick false, no hand', () => {
 test('question after a pick: clears the picking turn and records who picked', () => {
   /** @type {import('./partyClient.js').PartyClientState} */
   let s = { ...initialPartyClientState(), you, phase: 'picking', picker: 'bob', youPick: true, hand: ['map-outlines'] };
-  s = reduce(s, { type: 'question', prompt: 'pa', options: ['pa', 'us'], roundIndex: 5, totalRounds: 15, draftPick: { picker: 'bob', modeId: 'map-outlines' } });
+  s = reduce(s, { type: 'question', prompt: 'pa', options: ['pa', 'us'], questionIndex: 5, totalQuestions: 15, draftPick: { picker: 'bob', modeId: 'map-outlines' } });
   assert.equal(s.phase, 'question');
   assert.equal(s.picker, null);
   assert.equal(s.youPick, false);
@@ -280,13 +280,13 @@ test('question after a pick: clears the picking turn and records who picked', ()
 test('an ordinary (non-drafted) question clears lastPick', () => {
   /** @type {import('./partyClient.js').PartyClientState} */
   let s = { ...initialPartyClientState(), lastPick: { picker: 'bob', modeId: 'map-outlines' } };
-  s = reduce(s, { type: 'question', prompt: 'jp', options: ['jp'], roundIndex: 6, totalRounds: 15 });
+  s = reduce(s, { type: 'question', prompt: 'jp', options: ['jp'], questionIndex: 6, totalQuestions: 15 });
   assert.equal(s.lastPick, null);
 });
 
 test('welcome mid-pick resumes the picker turn (youPick + hand) server-authoritatively', () => {
   const s = reduce(initialPartyClientState(), {
-    type: 'welcome', you, isHost: false, phase: 'picking', roster: [], totalRounds: 15,
+    type: 'welcome', you, isHost: false, phase: 'picking', roster: [], totalQuestions: 15,
     picker: 'bob', youPick: true, hand: ['map-outlines', 'superlative-beer'],
   });
   assert.equal(s.phase, 'picking');
@@ -296,7 +296,7 @@ test('welcome mid-pick resumes the picker turn (youPick + hand) server-authorita
 
 test('welcome mid-pick as a watcher: youPick false, no hand', () => {
   const s = reduce(initialPartyClientState(), {
-    type: 'welcome', you, isHost: false, phase: 'picking', roster: [], totalRounds: 15,
+    type: 'welcome', you, isHost: false, phase: 'picking', roster: [], totalQuestions: 15,
     picker: 'bob', youPick: false, hand: null,
   });
   assert.equal(s.youPick, false);

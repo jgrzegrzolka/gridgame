@@ -1,14 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  blockCountFor,
-  validateBlockCount,
+  roundCountFor,
+  validateRoundCount,
   pickerFor,
   handFor,
   isValidPick,
   OPENING_MODE_ID,
-  MAX_DRAFT_BLOCKS,
-  MIN_DRAFT_BLOCKS,
+  MAX_DRAFT_ROUNDS,
+  MIN_DRAFT_ROUNDS,
   HAND_SIZE,
 } from './partyDraft.js';
 import { PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
@@ -26,53 +26,53 @@ function seeded(seed) {
 /** @param {...string} ids */
 const board = (...ids) => ids.map((playerId) => ({ playerId }));
 
-// ---- blockCountFor ----
+// ---- roundCountFor ----
 
-test('blockCountFor: 2 x players + 1, capped at MAX_DRAFT_BLOCKS', () => {
-  assert.equal(blockCountFor(1), 3);
-  assert.equal(blockCountFor(2), 5);
-  assert.equal(blockCountFor(3), 7);
-  assert.equal(blockCountFor(4), 9);
-  assert.equal(blockCountFor(10), MAX_DRAFT_BLOCKS); // capped
+test('roundCountFor: 2 x players + 1, capped at MAX_DRAFT_ROUNDS', () => {
+  assert.equal(roundCountFor(1), 3);
+  assert.equal(roundCountFor(2), 5);
+  assert.equal(roundCountFor(3), 7);
+  assert.equal(roundCountFor(4), 9);
+  assert.equal(roundCountFor(10), MAX_DRAFT_ROUNDS); // capped
 });
 
-test('blockCountFor: "everyone picks twice" holds while under the cap', () => {
-  // picks = blocks - 1 (block 1 is the fixed opener); it should be twice the seats.
+test('roundCountFor: "everyone picks twice" holds while under the cap', () => {
+  // picks = rounds - 1 (round 1 is the fixed opener); it should be twice the seats.
   for (const players of [1, 2, 3, 4]) {
-    assert.equal(blockCountFor(players) - 1, players * 2, `${players} players`);
+    assert.equal(roundCountFor(players) - 1, players * 2, `${players} players`);
   }
 });
 
-test('blockCountFor: at least one block, junk coerces to 1', () => {
-  assert.equal(blockCountFor(0), 1);
-  assert.equal(blockCountFor(-5), 1);
-  assert.equal(blockCountFor(NaN), 1);
+test('roundCountFor: at least one round, junk coerces to 1', () => {
+  assert.equal(roundCountFor(0), 1);
+  assert.equal(roundCountFor(-5), 1);
+  assert.equal(roundCountFor(NaN), 1);
 });
 
-// ---- validateBlockCount ----
+// ---- validateRoundCount ----
 
-test('validateBlockCount: accepts any integer in range', () => {
-  for (let n = MIN_DRAFT_BLOCKS; n <= MAX_DRAFT_BLOCKS; n++) {
-    assert.equal(validateBlockCount(n, 3), n);
+test('validateRoundCount: accepts any integer in range', () => {
+  for (let n = MIN_DRAFT_ROUNDS; n <= MAX_DRAFT_ROUNDS; n++) {
+    assert.equal(validateRoundCount(n, 3), n);
   }
 });
 
-test('validateBlockCount: falls back on out-of-range, fractional, or non-numeric', () => {
-  assert.equal(validateBlockCount(0, 3), 3);
-  assert.equal(validateBlockCount(MAX_DRAFT_BLOCKS + 1, 3), 3);
-  assert.equal(validateBlockCount(999, 3), 3);
-  assert.equal(validateBlockCount(-4, 3), 3);
-  assert.equal(validateBlockCount(2.5, 3), 3);
-  assert.equal(validateBlockCount(NaN, 3), 3);
-  assert.equal(validateBlockCount('4', 3), 3, 'a numeric string is not a number');
-  assert.equal(validateBlockCount(undefined, 3), 3);
-  assert.equal(validateBlockCount(null, 3), 3);
+test('validateRoundCount: falls back on out-of-range, fractional, or non-numeric', () => {
+  assert.equal(validateRoundCount(0, 3), 3);
+  assert.equal(validateRoundCount(MAX_DRAFT_ROUNDS + 1, 3), 3);
+  assert.equal(validateRoundCount(999, 3), 3);
+  assert.equal(validateRoundCount(-4, 3), 3);
+  assert.equal(validateRoundCount(2.5, 3), 3);
+  assert.equal(validateRoundCount(NaN, 3), 3);
+  assert.equal(validateRoundCount('4', 3), 3, 'a numeric string is not a number');
+  assert.equal(validateRoundCount(undefined, 3), 3);
+  assert.equal(validateRoundCount(null, 3), 3);
 });
 
-test('validateBlockCount: clamps a junk fallback into range too', () => {
-  assert.equal(validateBlockCount(undefined, 999), MAX_DRAFT_BLOCKS);
-  assert.equal(validateBlockCount(undefined, 0), MIN_DRAFT_BLOCKS);
-  assert.equal(validateBlockCount(undefined, NaN), MIN_DRAFT_BLOCKS);
+test('validateRoundCount: clamps a junk fallback into range too', () => {
+  assert.equal(validateRoundCount(undefined, 999), MAX_DRAFT_ROUNDS);
+  assert.equal(validateRoundCount(undefined, 0), MIN_DRAFT_ROUNDS);
+  assert.equal(validateRoundCount(undefined, NaN), MIN_DRAFT_ROUNDS);
 });
 
 // ---- pickerFor ----
@@ -88,7 +88,7 @@ test('pickerFor: skips seats that already picked (no repeat)', () => {
 });
 
 test('pickerFor: two-player game hands the two picks to two different seats', () => {
-  // b is last -> picks block 2. If b then climbs above a, a is now last but the
+  // b is last -> picks round 2. If b then climbs above a, a is now last but the
   // no-repeat clause still gives the next pick to a (b already picked).
   assert.equal(pickerFor(board('a', 'b'), []), 'b');
   assert.equal(pickerFor(board('b', 'a'), ['b']), 'a');
@@ -100,7 +100,7 @@ test('pickerFor: null only when there is nobody on the board', () => {
 });
 
 test('pickerFor: the rotation wraps once everyone has picked', () => {
-  // A host can set more blocks than seats, so after a full rotation the pool
+  // A host can set more rounds than seats, so after a full rotation the pool
   // resets and the lowest-ranked seat picks again.
   assert.equal(pickerFor(board('a', 'b'), ['a', 'b']), 'b');
   assert.equal(pickerFor(board('a', 'b'), ['a', 'b', 'b']), 'a');
@@ -109,7 +109,7 @@ test('pickerFor: the rotation wraps once everyone has picked', () => {
 
 test('pickerFor: wrapping never hands two picks in a row to one seat', () => {
   // The regression the count-based rotation exists to prevent: a set-based
-  // "not yet picked" test wraps once and then feeds every block to the same seat.
+  // "not yet picked" test wraps once and then feeds every round to the same seat.
   const seats = board('a', 'b', 'c');
   /** @type {string[]} */
   const history = [];

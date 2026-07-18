@@ -7,15 +7,15 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, BLOCK_BREAK_SECONDS, BLOCK_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricRound, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { BLOCK_ROUNDS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isBlockBoundary, isBlockStart, isFinalBlock, blockIndexForRound, blockCount } from '../flags/partyPlan.js';
-import { blockBreak } from '../flags/partyBreak.js';
+import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, DEFAULT_REVEAL, REVEAL_OPTIONS, NAME_REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { ROUND_QUESTIONS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
+import { roundBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
-import { SUPERLATIVE_METRICS, superlativeMetricByRoundId, hintFor } from '../flags/partyRounds/superlativeCatalog.js';
-import { blockCountFor, validateBlockCount, MIN_DRAFT_BLOCKS, MAX_DRAFT_BLOCKS } from '../flags/partyDraft.js';
-import { renderableRoundIds, roundRenderAction, canRenderQuestion } from './staleGuard.js';
+import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
+import { roundCountFor, validateRoundCount, MIN_DRAFT_ROUNDS, MAX_DRAFT_ROUNDS } from '../flags/partyDraft.js';
+import { renderableQuestionIds, questionRenderAction, canRenderQuestion } from './staleGuard.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -29,9 +29,9 @@ const PLAN_KEY = 'gridgame.party.plan';
 const TRICKY_KEY = 'gridgame.party.tricky';
 const REVEAL_KEY = 'gridgame.party.reveal';
 const MODE_KEY = 'gridgame.party.mode';
-// The host's draft length, in blocks. Absent means "follow the seat-count
-// suggestion" — see `draftBlocks` below; an explicit number sticks per device.
-const DRAFT_BLOCKS_KEY = 'gridgame.party.draftBlocks';
+// The host's draft length, in rounds. Absent means "follow the seat-count
+// suggestion" — see `draftRounds` below; an explicit number sticks per device.
+const DRAFT_ROUNDS_KEY = 'gridgame.party.draftRounds';
 
 /** The reveal-timing categories the host configures under tricky mode, in the
  *  order they appear in the setup. `label` reuses the mode-short i18n so "Flags /
@@ -90,12 +90,12 @@ const MODE_LABELS = {
 };
 
 
-/** Every round id this build can render: the two fixed picture rounds plus every
- *  superlative metric round in the catalog. The server (PartyKit, its own
- *  deploy) can be a build ahead of a still-open tab and deal a round id outside
- *  this set; when that happens {@link roundRenderAction} reloads us onto the new
- *  build rather than rendering a broken round. See `flagParty/staleGuard.js`. */
-const KNOWN_ROUND_IDS = renderableRoundIds(SUPERLATIVE_METRICS.map((m) => m.roundId));
+/** Every question id this build can render: the two fixed picture questions plus every
+ *  superlative metric question in the catalog. The server (PartyKit, its own
+ *  deploy) can be a build ahead of a still-open tab and deal a question id outside
+ *  this set; when that happens {@link questionRenderAction} reloads us onto the new
+ *  build rather than rendering a broken question. See `flagParty/staleGuard.js`. */
+const KNOWN_QUESTION_IDS = renderableQuestionIds(SUPERLATIVE_METRICS.map((m) => m.questionId));
 
 /** Little pictures leading each setup row, distinct enough to tell apart at a
  *  glance. The artwork is shared with flagQuiz's deck indicator via
@@ -114,28 +114,28 @@ const SETUP_ICONS = {
   'map-outlines': deckIconHtml('outlines', { className: 'gs-contour' }),
 };
 
-/** Metric key (the flags/metrics registry) for a superlative round id. The
- *  catalog states it outright now — it used to be resolved the long way round,
+/** Metric key (the flags/metrics registry) for a superlative question id. The
+ *  catalog states it outright now — it used to be resolved the long way question,
  *  via the values file both registries happened to name.
  *
  *  Feeds the shared per-metric icon + hue (flags/metricVisuals.js) so the party
  *  chips, the prompt lead, and the flagsdata / findFlag metric hub all wear one
- *  visual identity. Covers the population round's legacy `superlative` roundId
+ *  visual identity. Covers the population question's legacy `superlative` questionId
  *  (its mode id is `superlative-pop`) like everything else, because the catalog
- *  is keyed by roundId — an older round-id-keyed icon table missed exactly that
+ *  is keyed by questionId — an older question-id-keyed icon table missed exactly that
  *  case and rendered population prompts with no icon or hue.
  *
- *  @param {string} roundId @returns {string | null} */
-function metricKeyForRound(roundId) {
-  const m = superlativeMetricByRoundId(roundId);
+ *  @param {string} questionId @returns {string | null} */
+function metricKeyForQuestion(questionId) {
+  const m = superlativeMetricByQuestionId(questionId);
   return m ? m.key : null;
 }
 
 /** Values file for a metric key, for the reveal strip's fetch. */
 const METRIC_FILE_BY_KEY = Object.fromEntries(METRIC_FILES.map((m) => [m.key, m.file]));
 
-/** Party mode id -> catalog mode, so the draft's hand cards and block attribution
- *  resolve a mode id to its round type (for the icon) and label. */
+/** Party mode id -> catalog mode, so the draft's hand cards and round attribution
+ *  resolve a mode id to its question type (for the icon) and label. */
 const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 
 /** The icon HTML for a draft card: the picture thumbnail for a picture mode, or
@@ -144,7 +144,7 @@ function modeIconHtml(/** @type {string} */ modeId) {
   if (SETUP_ICONS[modeId]) return SETUP_ICONS[modeId];
   const mode = MODE_BY_ID[modeId];
   if (!mode) return '';
-  const key = metricKeyForRound(mode.roundId);
+  const key = metricKeyForQuestion(mode.questionId);
   return (key && METRIC_ICONS[key]) || '';
 }
 
@@ -152,20 +152,20 @@ function modeIconHtml(/** @type {string} */ modeId) {
 function modeHue(/** @type {string} */ modeId) {
   const mode = MODE_BY_ID[modeId];
   if (!mode) return null;
-  const key = metricKeyForRound(mode.roundId);
+  const key = metricKeyForQuestion(mode.questionId);
   return (key && METRIC_HUES[key]) || null;
 }
 
-/** The icon HTML for a **block title card** — the same artwork as {@link
+/** The icon HTML for a **round title card** — the same artwork as {@link
  *  modeIconHtml} but at the card's hero size (its own classes rather than the
  *  setup row's tiny slot). Empty string for an unknown mode (the caller shows a
  *  generic Flags card instead). */
 function blockCardIconHtml(/** @type {string} */ modeId) {
-  if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'blockcard-thumb' });
-  if (modeId === 'flags-territories') return deckIconHtml('weird', { className: 'blockcard-thumb' });
-  if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'blockcard-contour' });
+  if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'roundcard-thumb' });
+  if (modeId === 'flags-territories') return deckIconHtml('weird', { className: 'roundcard-thumb' });
+  if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'roundcard-contour' });
   const mode = MODE_BY_ID[modeId];
-  const key = mode ? metricKeyForRound(mode.roundId) : null;
+  const key = mode ? metricKeyForQuestion(mode.questionId) : null;
   return (key && METRIC_ICONS[key]) || '';
 }
 
@@ -173,8 +173,8 @@ function blockCardIconHtml(/** @type {string} */ modeId) {
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
  * mapping can be pinned by a test (the DOM `modeShort` below is a thin `t()`
  * wrapper). Metric modes take their short name from METRIC_SHORT keyed off the
- * ROUND id, which differs from the mode id for population ('superlative-pop' vs
- * roundId 'superlative'); picture modes fall back to their own MODE_LABELS
+ * QUESTION id, which differs from the mode id for population ('superlative-pop' vs
+ * questionId 'superlative'); picture modes fall back to their own MODE_LABELS
  * `shortKey`. A mode that resolves to neither returns `{ key: undefined }`,
  * which `flagParty/modeLabels.test.js` asserts can never happen — that gap is
  * exactly what crashed the lobby (an undefined key reached `t()` → `.split`).
@@ -184,7 +184,7 @@ function blockCardIconHtml(/** @type {string} */ modeId) {
  */
 export function modeShortLabel(id) {
   const mode = METRIC_MODES.find((m) => m.id === id);
-  const metricKey = metricKeyForRound(mode ? mode.roundId : id);
+  const metricKey = metricKeyForQuestion(mode ? mode.questionId : id);
   const short = metricKey ? METRIC_SHORT[metricKey] : null;
   if (short) return { key: short.key, fallback: short.fallback };
   const ml = MODE_LABELS[id];
@@ -204,29 +204,29 @@ export function modeFullLabel(id) {
 }
 
 /**
- * Which catalog mode a block's title card should announce, resolved from what the
- * client actually knows about the block.
+ * Which catalog mode a round's title card should announce, resolved from what the
+ * client actually knows about the round.
  *
- * - **Drafted block** (`lastPick` present) → the exact picked mode id, so a stat
- *   block names its specific metric ("Coffee production") and a flag block names
+ * - **Drafted round** (`lastPick` present) → the exact picked mode id, so a stat
+ *   round names its specific metric ("Coffee production") and a flag round names
  *   its pool ("Flags: countries" vs "Flags: others"). This is the precise path,
  *   and the only one in a Draft game.
- * - **Custom / setlist block** (no `lastPick`) → derived from the question's
- *   `roundId`, which is 1:1 with a mode for the map round and every superlative
+ * - **Custom / setlist round** (no `lastPick`) → derived from the question's
+ *   `questionId`, which is 1:1 with a mode for the map question and every superlative
  *   metric (`superlative-coffee` etc.). The one exception is the two flag pools,
- *   which **share** `roundId: 'flagPick'` and so can't be told apart from the wire
+ *   which **share** `questionId: 'flagPick'` and so can't be told apart from the wire
  *   alone → returns `null`, the caller's cue to show a generic "Flags" card.
- * - Unknown / unrenderable round id → `null` (generic), though the stale-build
- *   guard means such a round never reaches the card anyway.
+ * - Unknown / unrenderable question id → `null` (generic), though the stale-build
+ *   guard means such a question never reaches the card anyway.
  *
  * @param {{ picker: string, modeId: string } | null | undefined} lastPick
- * @param {string | undefined} roundId
+ * @param {string | undefined} questionId
  * @returns {string | null}  a PARTY_MODES mode id, or null for the generic case
  */
-export function blockModeId(lastPick, roundId) {
+export function blockModeId(lastPick, questionId) {
   if (lastPick && lastPick.modeId && MODE_BY_ID[lastPick.modeId]) return lastPick.modeId;
-  if (roundId === 'flagPick') return null; // ambiguous pool → generic Flags card
-  const mode = PARTY_MODES.find((m) => m.roundId === roundId);
+  if (questionId === 'flagPick') return null; // ambiguous pool → generic Flags card
+  const mode = PARTY_MODES.find((m) => m.questionId === questionId);
   return mode ? mode.id : null;
 }
 
@@ -258,46 +258,46 @@ export function bootFlagParty() {
   /** Fire the finish celebration (confetti / fireworks) exactly once per final
    *  screen. render() re-runs on every message and on a language switch, so a
    *  guard keeps the burst from re-triggering; reset when we leave the final
-   *  phase (a "Play again" round → final fires a fresh show). */
+   *  phase (a "Play again" question → final fires a fresh show). */
   let finalCelebrated = false;
 
   // ---- element refs ----
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
   const statusEl = $('party-status');
   const sections = {
-    start: $('pt-start'), lobby: $('pt-lobby'), round: $('pt-round'), blockcard: $('pt-blockcard'), pick: $('pt-pick'), break: $('pt-break'), final: $('pt-final'),
+    start: $('pt-start'), lobby: $('pt-lobby'), question: $('pt-question'), roundcard: $('pt-roundcard'), pick: $('pt-pick'), break: $('pt-break'), final: $('pt-final'),
   };
   const roomCodeEl = $('room-code');
   const playersEl = $('players');
   const startBtn = /** @type {HTMLButtonElement} */ ($('start-game'));
   const waitEl = $('lobby-wait');
-  const roundPill = $('round-pill');
-  const timerEl = $('round-timer');
-  const timerFill = $('round-timer-fill');
-  const timerLabel = $('round-timer-label');
+  const questionPill = $('question-pill');
+  const timerEl = $('question-timer');
+  const timerFill = $('question-timer-fill');
+  const timerLabel = $('question-timer-label');
   const promptEl = $('prompt');
   const promptLead = $('prompt-lead');
   const promptTarget = $('prompt-target');
   const gridEl = $('flags-grid');
-  const footEl = $('round-foot');
+  const footEl = $('question-foot');
   const finalSub = $('final-sub');
   const finalBoard = $('final-board');
   const breakPill = $('break-pill');
   const breakMvp = $('break-mvp');
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
-  const blockCardCount = $('blockcard-count');
-  const blockCardIc = $('blockcard-ic');
-  const blockCardName = $('blockcard-name');
-  const blockCardRounds = $('blockcard-rounds');
-  const blockCardPick = $('blockcard-pick');
-  const blockCardDouble = $('blockcard-double');
+  const roundCardCount = $('roundcard-count');
+  const blockCardIc = $('roundcard-ic');
+  const blockCardName = $('roundcard-name');
+  const roundCardQuestions = $('roundcard-questions');
+  const blockCardPick = $('roundcard-pick');
+  const blockCardDouble = $('roundcard-double');
   const partyModeEl = $('party-mode');
   const modeDraftBtn = $('mode-draft');
   const modeCustomBtn = $('mode-custom');
   const draftLengthEl = $('draft-length');
   const draftLengthHint = $('draft-length-hint');
-  const draftBlocksEl = $('draft-blocks');
+  const draftRoundsEl = $('draft-rounds');
   const draftLessBtn = /** @type {HTMLButtonElement} */ ($('draft-less'));
   const draftMoreBtn = /** @type {HTMLButtonElement} */ ($('draft-more'));
   const pickPill = $('pick-pill');
@@ -305,7 +305,7 @@ export function bootFlagParty() {
   const pickHand = $('pick-hand');
   const pickWatch = $('pick-watch');
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
-  const roundToSettingsBtn = /** @type {HTMLButtonElement} */ ($('round-to-settings'));
+  const questionToSettingsBtn = /** @type {HTMLButtonElement} */ ($('question-to-settings'));
   const joinError = $('join-error');
   const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
   // Invite icon is touch-only, same as Tic-Tac-Toe: on phones/tablets copying
@@ -321,17 +321,17 @@ export function bootFlagParty() {
   const gameSetupEl = $('game-setup');
   const gsModesEl = $('gs-modes');
   const gsMixEl = $('gs-mix');
-  const gsRoundsEl = $('gs-rounds');
+  const gsQuestionsEl = $('gs-questions');
 
   /** @type {Map<string, { code: string, name: string }>} */
   const byCode = new Map();
 
-  // Metric values for each superlative round's reveal strip, keyed by roundId
-  // (the round is judged server-side; the client only needs the numbers to show
+  // Metric values for each superlative question's reveal strip, keyed by questionId
+  // (the question is judged server-side; the client only needs the numbers to show
   // the ranking after the answer is out). Fetched once at load, best-effort: a
-  // missing metric just means that round's reveal shows no numbers.
+  // missing metric just means that question's reveal shows no numbers.
   /** @type {Record<string, { values: Record<string, number>, format: string }>} */
-  const metricByRound = {};
+  const metricByQuestion = {};
 
   // ---- helpers ----
   const fmt = (/** @type {string} */ str, /** @type {Record<string, string|number>} */ params) =>
@@ -388,7 +388,7 @@ export function bootFlagParty() {
   }
   function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
-  function showSection(/** @type {'start'|'lobby'|'round'|'blockcard'|'pick'|'break'|'final'|null} */ which) {
+  function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'|null} */ which) {
     for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
   }
 
@@ -398,7 +398,7 @@ export function bootFlagParty() {
 
   // ---- how to play: draft vs custom setlist ----
   // The host chooses at the lobby. Draft (the default) is zero-setup: the players
-  // pick each block as they go. Custom setup opens the game-setup panel below to
+  // pick each round as they go. Custom setup opens the game-setup panel below to
   // build the whole show up front. Persisted per device.
   /** @type {'draft' | 'setlist'} */
   let partyMode = loadPartyMode();
@@ -409,29 +409,29 @@ export function bootFlagParty() {
     try { window.localStorage.setItem(MODE_KEY, partyMode); } catch { /* private mode */ }
   }
 
-  // ---- draft length (host-only, blocks) ----
+  // ---- draft length (host-only, rounds) ----
   // Null means "auto": the number tracks the seat-count suggestion and keeps
   // moving as players join, which is right for the common case of starting a
   // room and waiting for friends. The first tap on -/+ pins an explicit number
   // that then sticks per device (a host who wants short games always wants short
   // games). The server re-validates whatever we send.
   /** @type {number | null} */
-  let draftBlocks = loadDraftBlocks();
+  let draftRounds = loadDraftRounds();
 
-  function loadDraftBlocks() {
+  function loadDraftRounds() {
     try {
-      const raw = window.localStorage.getItem(DRAFT_BLOCKS_KEY);
+      const raw = window.localStorage.getItem(DRAFT_ROUNDS_KEY);
       if (raw === null) return null;
       const n = Number(raw);
       // A stored value that no longer validates (a changed range, a corrupted
       // store) falls back to auto rather than to some clamped nearby number.
-      return validateBlockCount(n, 0) === n ? n : null;
+      return validateRoundCount(n, 0) === n ? n : null;
     } catch { return null; }
   }
-  function saveDraftBlocks() {
+  function saveDraftRounds() {
     try {
-      if (draftBlocks === null) window.localStorage.removeItem(DRAFT_BLOCKS_KEY);
-      else window.localStorage.setItem(DRAFT_BLOCKS_KEY, String(draftBlocks));
+      if (draftRounds === null) window.localStorage.removeItem(DRAFT_ROUNDS_KEY);
+      else window.localStorage.setItem(DRAFT_ROUNDS_KEY, String(draftRounds));
     } catch { /* private mode */ }
   }
 
@@ -440,39 +440,39 @@ export function bootFlagParty() {
     return state.roster.filter((r) => r.present).length;
   }
 
-  /** The block count a start would actually use: the host's pin, or the
+  /** The round count a start would actually use: the host's pin, or the
    *  seat-count suggestion while still on auto. */
-  function effectiveBlocks() {
-    return draftBlocks ?? blockCountFor(seatCount());
+  function effectiveRounds() {
+    return draftRounds ?? roundCountFor(seatCount());
   }
 
-  /** Paint the length row: the number, the rounds/auto hint, and the -/+ limits. */
+  /** Paint the length row: the number, the questions/auto hint, and the -/+ limits. */
   function syncDraftLength() {
-    const blocks = effectiveBlocks();
-    draftBlocksEl.textContent = String(blocks);
-    const rounds = blocks * BLOCK_ROUNDS;
-    draftLengthHint.textContent = draftBlocks === null
-      ? t('party.draftLengthAuto', '{n} rounds, set from the players here').replace('{n}', String(rounds))
-      : t('party.draftLengthRounds', '{n} rounds').replace('{n}', String(rounds));
-    draftLessBtn.disabled = blocks <= MIN_DRAFT_BLOCKS;
-    draftMoreBtn.disabled = blocks >= MAX_DRAFT_BLOCKS;
+    const rounds = effectiveRounds();
+    draftRoundsEl.textContent = String(rounds);
+    const questions = rounds * ROUND_QUESTIONS;
+    draftLengthHint.textContent = draftRounds === null
+      ? t('party.draftLengthAuto', '{n} questions, set from the players here').replace('{n}', String(questions))
+      : t('party.draftLengthQuestions', '{n} questions').replace('{n}', String(questions));
+    draftLessBtn.disabled = rounds <= MIN_DRAFT_ROUNDS;
+    draftMoreBtn.disabled = rounds >= MAX_DRAFT_ROUNDS;
   }
 
   /** Step the length by `delta`, pinning it off auto at the current value first
    *  so the first tap moves from what the host can see, not from a stale pin. */
   function stepDraftLength(delta) {
-    const next = effectiveBlocks() + delta;
-    if (next < MIN_DRAFT_BLOCKS || next > MAX_DRAFT_BLOCKS) return;
-    draftBlocks = next;
-    saveDraftBlocks();
+    const next = effectiveRounds() + delta;
+    if (next < MIN_DRAFT_ROUNDS || next > MAX_DRAFT_ROUNDS) return;
+    draftRounds = next;
+    saveDraftRounds();
     syncDraftLength();
   }
 
   // ---- game setup (host-only lobby plan) ----
-  // The host picks which modes play. Under the block model every enabled mode is
-  // one 5-round block, so a mode is simply on or off. The fixed picture trio
+  // The host picks which modes play. Under the round model every enabled mode is
+  // one 5-question round, so a mode is simply on or off. The fixed picture trio
   // (flags / territories / map) each get a toggle; the world-facts family is a
-  // row of colour chips, and each chosen statistic is its own block (five rounds
+  // row of colour chips, and each chosen statistic is its own round (five questions
   // of that one metric). The choice is local (persisted per device) until Start,
   // when buildPartyPlan() turns it into a segment plan that rides the 'start'
   // message and the server validates; this is just the picker.
@@ -519,17 +519,17 @@ export function bootFlagParty() {
     try { window.localStorage.setItem(REVEAL_KEY, JSON.stringify(revealState)); } catch { /* private mode */ }
   }
 
-  /** True when the setup would produce at least one block (a game needs rounds). */
-  function hasAnyRounds(/** @type {SetupState} */ s) {
+  /** True when the setup would produce at least one round (a game needs questions). */
+  function hasAnyQuestions(/** @type {SetupState} */ s) {
     if (PICTURE_MODES.some((m) => s.picture[m.id] && s.picture[m.id].on)) return true;
     return METRIC_MODES.some((m) => s.facts.metrics[m.id]);
   }
 
-  /** The default setup: 3 blocks on, not everything. Flags: countries and Map:
-   *  outlines play, plus one statistic block (Population — the most familiar
+  /** The default setup: 3 rounds on, not everything. Flags: countries and Map:
+   *  outlines play, plus one statistic round (Population — the most familiar
    *  metric). Flags: others and every other statistic start off, so a fresh game
-   *  is 3 blocks / 15 rounds. Since each statistic is now its own block,
-   *  everything-on would be dozens of blocks, so the default deliberately picks a
+   *  is 3 rounds / 15 questions. Since each statistic is now its own round,
+   *  everything-on would be dozens of rounds, so the default deliberately picks a
    *  single stat to keep the length sane. */
   function defaultSetup() {
     /** @type {Record<string, { on: boolean }>} */
@@ -542,7 +542,7 @@ export function bootFlagParty() {
   }
 
   /** Coerce a stored / partial setup to a valid one, filling gaps from the
-   *  default and never returning an all-off (zero-block) state. Reads only `on`
+   *  default and never returning an all-off (zero-round) state. Reads only `on`
    *  for picture modes and the per-metric booleans; a stored per-mode count (`n`,
    *  the retired stepper) or the old facts master toggle (`facts.on`) is dropped. */
   function sanitizeSetup(/** @type {any} */ raw) {
@@ -563,13 +563,13 @@ export function bootFlagParty() {
       metrics[m.id] = factsWasOff ? false : (v == null ? def.facts.metrics[m.id] : !!v);
     }
     const s = { picture, facts: { metrics } };
-    return hasAnyRounds(s) ? s : def;
+    return hasAnyQuestions(s) ? s : def;
   }
 
   /** One-time migration of a returning host's old per-mode plan (PLAN_KEY) into
-   *  the block shape: any picture mode with a positive count carries over as on;
-   *  each metric that had rounds becomes its own statistic block. Round counts are
-   *  dropped — a mode is now a block, not a count. */
+   *  the round shape: any picture mode with a positive count carries over as on;
+   *  each metric that had questions becomes its own statistic round. Question counts are
+   *  dropped — a mode is now a round, not a count. */
   function migrateModeState(/** @type {any} */ raw) {
     /** @type {Record<string, { on: boolean }>} */
     const picture = {};
@@ -601,11 +601,11 @@ export function bootFlagParty() {
   function saveSetup() {
     try { window.localStorage.setItem(SETUP_KEY, JSON.stringify(setupState)); } catch { /* private mode */ }
   }
-  /** The plan to send on Start: one block per enabled mode (picture or statistic). */
+  /** The plan to send on Start: one round per enabled mode (picture or statistic). */
   function currentPlan() {
     return buildPartyPlan(setupState);
   }
-  /** How many blocks the current setup plays: enabled picture modes + enabled statistics. */
+  /** How many rounds the current setup plays: enabled picture modes + enabled statistics. */
   function blocksOn() {
     let n = 0;
     for (const m of PICTURE_MODES) if (setupState.picture[m.id] && setupState.picture[m.id].on) n += 1;
@@ -659,8 +659,8 @@ export function bootFlagParty() {
     gsModesEl.innerHTML = '';
 
     // The fixed picture trio — a picture icon, a name, and a toggle each. Every
-    // enabled mode is exactly one 5-round block, so there's no per-mode count and
-    // no need to label each row "1 block": on or off.
+    // enabled mode is exactly one 5-question round, so there's no per-mode count and
+    // no need to label each row "1 round": on or off.
     gsModesEl.appendChild(sectionLabel('party.groupPictures', 'Flags & maps'));
     for (const m of PICTURE_MODES) {
       const row = el('div', 'gs-mode');
@@ -672,10 +672,10 @@ export function bootFlagParty() {
     }
 
     // The world-facts family: a row of colour chips, one per statistic. Each
-    // chosen statistic is its own block (five rounds of that metric), so a chip is
-    // a block toggle — no master switch. A new metric costs one chip here.
+    // chosen statistic is its own round (five questions of that metric), so a chip is
+    // a round toggle — no master switch. A new metric costs one chip here.
     gsModesEl.appendChild(sectionLabel('party.groupFacts', 'World facts'));
-    const factsHint = el('p', 'gs-facts-hint', t('party.factsHint2', 'Each statistic you pick is its own block'));
+    const factsHint = el('p', 'gs-facts-hint', t('party.factsHint2', 'Each statistic you pick is its own round'));
     factsHint.id = 'gs-facts-hint';
     gsModesEl.appendChild(factsHint);
 
@@ -685,7 +685,7 @@ export function bootFlagParty() {
       const chip = el('button', 'gs-chip');
       /** @type {HTMLButtonElement} */ (chip).type = 'button';
       chip.dataset.metric = m.id;
-      const metricKey = metricKeyForRound(m.roundId);
+      const metricKey = metricKeyForQuestion(m.questionId);
       chip.style.setProperty('--mc', (metricKey && METRIC_HUES[metricKey]) || 'currentColor');
       chip.appendChild(iconSpan((metricKey && METRIC_ICONS[metricKey]) || ''));
       chip.appendChild(el('span', 'gs-chip-label', modeShort(m.id)));
@@ -694,10 +694,10 @@ export function bootFlagParty() {
     }
     gsModesEl.appendChild(chips);
 
-    // World-facts name reveal: on a facts round the challenge is the fact, not
+    // World-facts name reveal: on a facts question the challenge is the fact, not
     // flag recognition, so the country names fade onto the tiles partway through
     // the clock (or never, if the host picks "Off"). Independent of tricky mode —
-    // it fires in a normal game too — so it lives here on the facts block, not in
+    // it fires in a normal game too — so it lives here on the facts round, not in
     // the tricky reveal box below. A native <select> with an Off option + the
     // allowed fractions, mirroring the tricky reveal pickers' look.
     const namesBox = el('div', 'gs-reveal gs-names');
@@ -779,9 +779,9 @@ export function bootFlagParty() {
 
   // ---- setup mutations ----
   function togglePicture(/** @type {string} */ id, /** @type {boolean} */ on) {
-    // A game needs at least one block — refuse a toggle-off that would zero everything.
+    // A game needs at least one round — refuse a toggle-off that would zero everything.
     const tentative = { ...setupState, picture: { ...setupState.picture, [id]: { on } } };
-    if (!hasAnyRounds(tentative)) { updateSetup(); return; }
+    if (!hasAnyQuestions(tentative)) { updateSetup(); return; }
     setupState.picture[id].on = on;
     saveSetup();
     updateSetup();
@@ -789,16 +789,16 @@ export function bootFlagParty() {
   function toggleMetric(/** @type {string} */ id) {
     const metrics = setupState.facts.metrics;
     const next = !metrics[id];
-    // Each statistic is its own block — a chip is a block toggle. A game needs at
-    // least one block, so refuse a toggle-off that would zero everything.
+    // Each statistic is its own round — a chip is a round toggle. A game needs at
+    // least one round, so refuse a toggle-off that would zero everything.
     const tentative = { ...setupState, facts: { metrics: { ...metrics, [id]: next } } };
-    if (!hasAnyRounds(tentative)) { updateSetup(); return; }
+    if (!hasAnyQuestions(tentative)) { updateSetup(); return; }
     metrics[id] = next;
     saveSetup();
     updateSetup();
   }
 
-  /** Repaint toggles, chips, the block count, and the collapsed mode mix. */
+  /** Repaint toggles, chips, the round count, and the collapsed mode mix. */
   function updateSetup() {
     gsMixEl.innerHTML = '';
     for (const m of PICTURE_MODES) {
@@ -810,7 +810,7 @@ export function bootFlagParty() {
       }
       if (st.on) gsMixEl.appendChild(el('span', '', modeShort(m.id)));
     }
-    // Chips: each is a block toggle, coloured (on) when its statistic is chosen.
+    // Chips: each is a round toggle, coloured (on) when its statistic is chosen.
     for (const m of METRIC_MODES) {
       const chip = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"]`);
       if (chip) {
@@ -821,8 +821,8 @@ export function bootFlagParty() {
         if (active) gsMixEl.appendChild(el('span', '', modeShort(m.id)));
       }
     }
-    // The meta reads "N blocks" — the game's length unit is now the block.
-    gsRoundsEl.textContent = String(blocksOn());
+    // The meta reads "N rounds" — the game's length unit is now the round.
+    gsQuestionsEl.textContent = String(blocksOn());
   }
 
   /** On a language switch, repaint the JS-set labels (sections, rows, chips, mix). */
@@ -836,7 +836,7 @@ export function bootFlagParty() {
       if (nm) nm.textContent = modeLabel(m.id);
     }
     const factsHint = gsModesEl.querySelector('#gs-facts-hint');
-    if (factsHint) factsHint.textContent = t('party.factsHint2', 'Each statistic you pick is its own block');
+    if (factsHint) factsHint.textContent = t('party.factsHint2', 'Each statistic you pick is its own round');
     for (const m of METRIC_MODES) {
       const lbl = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"] .gs-chip-label`);
       if (lbl) lbl.textContent = modeShort(m.id);
@@ -929,15 +929,15 @@ export function bootFlagParty() {
     connect();
   }
 
-  // ---- round clock ----
+  // ---- question clock ----
   // Everyone renders the countdown; only the host's timer fires the transition
   // (send 'reveal' when a question runs out, 'next' when a reveal has lingered),
   // so the room advances on its own with no host button to press. Timing lives
   // here on the page by design — the room reducer stays time-free. Caveat: the
-  // pace depends on the host's tab staying awake; if the host drops mid-round
+  // pace depends on the host's tab staying awake; if the host drops mid-question
   // the room can stall at a reveal (documented in PARTY.md, server-alarm is the
   // future fix). All-present-buzzed still auto-reveals server-side regardless.
-  /** @type {string | null} phase:roundIndex the clock is currently counting */
+  /** @type {string | null} phase:questionIndex the clock is currently counting */
   let clockToken = null;
   let clockDeadline = 0;
   let clockTotalMs = 0;
@@ -962,24 +962,24 @@ export function bootFlagParty() {
   // innerHTML is replaced), so a re-render mid-question (a late join, a buzz
   // notification) never resets either animation. The timings ride on the question
   // itself (`clearFrac` / `nameFrac`, stamped server-side from the host's config),
-  // so every client flips in step and each round can differ.
+  // so every client flips in step and each question can differ.
   let veilRaf = 0;
-  /** True when this question should fade country names on (world-facts round with
+  /** True when this question should fade country names on (world-facts question with
    *  the host's name reveal enabled). */
   function nameActive() {
-    return !!(state.question && isMetricRound(state.question.roundId) && state.question.nameFrac != null);
+    return !!(state.question && isMetricQuestion(state.question.questionId) && state.question.nameFrac != null);
   }
   /** True when this question's tiles are veiled: the host's tricky mode, and
-   *  nothing else. The final block used to veil regardless of the setting, which
+   *  nothing else. The final round used to veil regardless of the setting, which
    *  made the veil something a host could neither predict nor turn off — and in
    *  draft, where the toggle isn't offered at all, it appeared out of nowhere for
-   *  the closing block. The final block already reads as the finale through
-   *  double points. **Never on a statistics round** — the veil is a flag / outline
-   *  recognition challenge, but on a "which grows the most coffee?" round the flag
-   *  is incidental, so hiding it tests the wrong thing. Stat rounds have the
+   *  the closing round. The final round already reads as the finale through
+   *  double points. **Never on a statistics question** — the veil is a flag / outline
+   *  recognition challenge, but on a "which grows the most coffee?" question the flag
+   *  is incidental, so hiding it tests the wrong thing. Stat questions have the
    *  name-reveal for their own flag-identity problem (see `nameActive`). */
   function veilActive() {
-    if (state.question && isMetricRound(state.question.roundId)) return false;
+    if (state.question && isMetricQuestion(state.question.questionId)) return false;
     return state.tricky;
   }
   function startVeil() {
@@ -1011,29 +1011,29 @@ export function bootFlagParty() {
     return state.phase === 'reveal' ? 'reveal' : 'question';
   }
 
-  /** (Re)start the countdown when the phase or round changes; otherwise leave it. */
+  /** (Re)start the countdown when the phase or question changes; otherwise leave it. */
   function syncClock() {
     const mode = clockMode();
-    const token = `${mode}:${state.roundIndex}`;
+    const token = `${mode}:${state.questionIndex}`;
     if (token === clockToken) return;
     clockToken = token;
     clockFired = false;
-    // The reveal length depends on the round, not the room: a clean sweep (every
+    // The reveal length depends on the question, not the room: a clean sweep (every
     // present player got it right) snaps on; a miss holds so the correct flag
     // can be read. Question time is fixed. (flagQuiz's correct-fast/wrong-slow.)
     // The draft pick has its own fixed window.
     const clean = mode === 'reveal' && isCleanReveal(state.roster, state.reveal);
-    // A block-boundary reveal plays two beats — the answer tiles for a normal
+    // A round-boundary reveal plays two beats — the answer tiles for a normal
     // reveal, then the standings break — so the host holds the sum before sending
     // `next`, keeping the break its full duration after the answer is shown. An
     // ordinary reveal is just its own beat.
-    const revealSecs = atBlockBreak() ? revealSecondsFor(clean) + BLOCK_BREAK_SECONDS : revealSecondsFor(clean);
+    const revealSecs = atRoundBreak() ? revealSecondsFor(clean) + ROUND_BREAK_SECONDS : revealSecondsFor(clean);
     // The pick has no visible countdown (choosing isn't a race); its clock is the
     // long invisible anti-stall fallback that force-picks only an absent picker.
     const secs = mode === 'picking' ? PICK_TIMEOUT_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
     clockTotalMs = secs * 1000;
     clockDeadline = Date.now() + clockTotalMs;
-    // Only the question phase shows the round bar. The reveal and the pick are
+    // Only the question phase shows the question bar. The reveal and the pick are
     // bar-less (the reveal is sub-second; the pick shouldn't feel timed).
     timerEl.hidden = mode !== 'question';
     timerEl.setAttribute('data-mode', mode);
@@ -1068,7 +1068,7 @@ export function bootFlagParty() {
 
   // ---- stale-client reload guard ----
   // Set only in the instant before a version-skew reload, cleared the moment we
-  // successfully render a server-dealt round (proof our build is compatible), so
+  // successfully render a server-dealt question (proof our build is compatible), so
   // it re-arms for a future deploy while blocking a reload loop if the reload
   // came back on the same stale build. sessionStorage: per-tab, gone on close.
   const UPDATE_RELOAD_KEY = 'gridgame.party.updateReload';
@@ -1077,10 +1077,10 @@ export function bootFlagParty() {
   const clearUpdateReload = () => { try { window.sessionStorage.removeItem(UPDATE_RELOAD_KEY); } catch { /* private mode */ } };
 
   /** The blocked fallback: a stale tab that reloaded and is *still* on an old
-   *  build (cached HTML, offline). Show a plain notice in the round frame rather
-   *  than looping the reload or rendering the broken round. */
+   *  build (cached HTML, offline). Show a plain notice in the question frame rather
+   *  than looping the reload or rendering the broken question. */
   function renderUpdateNotice() {
-    roundPill.textContent = '';
+    questionPill.textContent = '';
     timerEl.hidden = true;
     promptLead.hidden = true; promptLead.textContent = '';
     promptTarget.textContent = t('party.updateNeeded', 'A new version is available. Refresh the page to keep playing.');
@@ -1088,17 +1088,17 @@ export function bootFlagParty() {
     footEl.innerHTML = '';
   }
 
-  // ---- between-blocks break ----
-  // The break is a longer reveal, not a room phase: at a block boundary the room
-  // stays in `reveal`, the host just holds BLOCK_BREAK_SECONDS instead of the
+  // ---- between-rounds break ----
+  // The break is a longer reveal, not a room phase: at a round boundary the room
+  // stays in `reveal`, the host just holds ROUND_BREAK_SECONDS instead of the
   // usual reveal beat, and every client paints the standings break in place of
   // the answer. `prevBreakBoard` is the scoreboard snapshot from the last break
-  // (null before the first), so each break diffs against the last to show block
+  // (null before the first), so each break diffs against the last to show round
   // gains and rank movement. Reset when a fresh game begins (lobby).
   /** @type {Array<{ playerId: string, nickname: string, score: number }> | null} */
   let prevBreakBoard = null;
   /** The baseline for the NEXT break, captured when a break is first shown but
-   *  not committed to `prevBreakBoard` until the next block's question arrives —
+   *  not committed to `prevBreakBoard` until the next round's question arrives —
    *  so re-renders of the same break keep diffing against the old baseline
    *  (committing early would zero the deltas mid-break). */
   let pendingBreakBoard = null;
@@ -1111,68 +1111,68 @@ export function bootFlagParty() {
    *  double-tap can't fire two picks; reset when we leave the picking phase. */
   let pickSent = false;
 
-  // ---- block title card ----
-  // A short beat (BLOCK_INTRO_SECONDS) announcing a new block before its first
-  // round, on blocks 2..N (the opener starts play straight away). It's a
+  // ---- round title card ----
+  // A short beat (ROUND_INTRO_SECONDS) announcing a new round before its first
+  // question, on rounds 2..N (the opener starts play straight away). It's a
   // client-side hold: the question is already dealt, but we show the card first
-  // and only start the round + clock + veil when the beat ends — so it costs no
+  // and only start the question + clock + veil when the beat ends — so it costs no
   // answer time, and because every client (host included) holds the same beat it
-  // introduces no clock drift. `blockIntroToken` guards the once-per-block-start
-  // arm against render()'s many re-runs; `blockIntroActive` is true while the
+  // introduces no clock drift. `roundIntroToken` guards the once-per-round-start
+  // arm against render()'s many re-runs; `roundIntroActive` is true while the
   // beat is on screen.
-  let blockIntroTimer = 0;
+  let roundIntroTimer = 0;
   /** @type {string | null} */
-  let blockIntroToken = null;
-  let blockIntroActive = false;
-  function armBlockIntro(/** @type {string} */ token) {
-    blockIntroToken = token;
-    blockIntroActive = true;
-    window.clearTimeout(blockIntroTimer);
-    blockIntroTimer = window.setTimeout(() => { blockIntroActive = false; render(); }, BLOCK_INTRO_SECONDS * 1000);
+  let roundIntroToken = null;
+  let roundIntroActive = false;
+  function armRoundIntro(/** @type {string} */ token) {
+    roundIntroToken = token;
+    roundIntroActive = true;
+    window.clearTimeout(roundIntroTimer);
+    roundIntroTimer = window.setTimeout(() => { roundIntroActive = false; render(); }, ROUND_INTRO_SECONDS * 1000);
   }
-  function resetBlockIntro() {
-    window.clearTimeout(blockIntroTimer);
-    blockIntroTimer = 0;
-    blockIntroToken = null;
-    blockIntroActive = false;
-    resetBlockBreakAnswer();
+  function resetRoundIntro() {
+    window.clearTimeout(roundIntroTimer);
+    roundIntroTimer = 0;
+    roundIntroToken = null;
+    roundIntroActive = false;
+    resetRoundBreakAnswer();
   }
 
-  // ---- block-boundary answer beat ----
-  // A block ends on its 5th round, and the client shows the standings break in
-  // place of that reveal — which meant the block's LAST round never got to show
+  // ---- round-boundary answer beat ----
+  // A round ends on its 5th question, and the client shows the standings break in
+  // place of that reveal — which meant the round's LAST question never got to show
   // its correct / wrong answers. So a boundary reveal now plays two beats: first
   // the answer tiles for a normal reveal beat (proper/wrong answers, like every
-  // other round), then the standings break. A client-side hold flips between
-  // them, exactly like the block-intro card; the host holds the whole window
+  // other question), then the standings break. A client-side hold flips between
+  // them, exactly like the question-intro card; the host holds the whole window
   // (answer beat + break) before it sends `next`, so the break keeps its full
-  // duration. `blockBreakToken` guards the once-per-boundary arm against
-  // render()'s re-runs; `blockBreakAnswerActive` is true while the answer tiles
+  // duration. `roundBreakToken` guards the once-per-boundary arm against
+  // render()'s re-runs; `roundBreakAnswerActive` is true while the answer tiles
   // are on screen, false once we've flipped to the standings.
   let blockBreakTimer = 0;
   /** @type {string | null} */
-  let blockBreakToken = null;
-  let blockBreakAnswerActive = false;
-  function armBlockBreakAnswer(/** @type {string} */ token) {
-    blockBreakToken = token;
-    blockBreakAnswerActive = true;
+  let roundBreakToken = null;
+  let roundBreakAnswerActive = false;
+  function armRoundBreakAnswer(/** @type {string} */ token) {
+    roundBreakToken = token;
+    roundBreakAnswerActive = true;
     window.clearTimeout(blockBreakTimer);
     const clean = isCleanReveal(state.roster, state.reveal);
-    blockBreakTimer = window.setTimeout(() => { blockBreakAnswerActive = false; render(); }, revealSecondsFor(clean) * 1000);
+    blockBreakTimer = window.setTimeout(() => { roundBreakAnswerActive = false; render(); }, revealSecondsFor(clean) * 1000);
   }
-  function resetBlockBreakAnswer() {
+  function resetRoundBreakAnswer() {
     window.clearTimeout(blockBreakTimer);
     blockBreakTimer = 0;
-    blockBreakToken = null;
-    blockBreakAnswerActive = false;
+    roundBreakToken = null;
+    roundBreakAnswerActive = false;
   }
 
-  /** True when the current reveal is a between-blocks break (a boundary round
-   *  with another block to follow). Client-derived from roundIndex + totalRounds
+  /** True when the current reveal is a between-rounds break (a boundary question
+   *  with another round to follow). Client-derived from questionIndex + totalQuestions
    *  — no plan needed. */
-  function atBlockBreak() {
+  function atRoundBreak() {
     return state.phase === 'reveal' && !!state.reveal
-      && isBlockBoundary(state.roundIndex, state.totalRounds);
+      && isRoundBoundary(state.questionIndex, state.totalQuestions);
   }
 
   // ---- render ----
@@ -1187,57 +1187,57 @@ export function bootFlagParty() {
       // A question this build can't render means the server is a build ahead of
       // us (its deploy landed while this tab stayed open). Reload onto the new
       // build once; the seat survives (room code in URL, pid persisted).
-      // `canRenderQuestion` judges the whole question, not just its round id — a
+      // `canRenderQuestion` judges the whole question, not just its question id — a
       // known metric dealt in a direction we have no copy for is skew too, and
       // rendering it anyway would mis-score silently.
       const q = state.question;
-      const action = roundRenderAction(canRenderQuestion(q, KNOWN_ROUND_IDS), updateReloadTried());
+      const action = questionRenderAction(canRenderQuestion(q, KNOWN_QUESTION_IDS), updateReloadTried());
       if (action === 'reload') { markUpdateReload(); stopClock(); stopVeil(); window.location.reload(); return; }
-      if (action === 'blocked') { stopClock(); stopVeil(); showSection('round'); renderUpdateNotice(); return; }
+      if (action === 'blocked') { stopClock(); stopVeil(); showSection('question'); renderUpdateNotice(); return; }
       clearUpdateReload();
-      // Leaving a break (the next block's first question is here): the standings
+      // Leaving a break (the next round's first question is here): the standings
       // we just showed become the baseline the following break diffs against.
       if (state.phase === 'question' && pendingBreakBoard) { prevBreakBoard = pendingBreakBoard; pendingBreakBoard = null; }
-      // Every block opens with a title-card beat before its first round — the
-      // opening block included, so it doubles as the synchronized "get ready" beat
+      // Every round opens with a title-card beat before its first question — the
+      // opening round included, so it doubles as the synchronized "get ready" beat
       // at game start (the host who clicked Start doesn't see the first question
       // ahead of the other seats). The question is already dealt; we hold the card
-      // and start the round + clock + veil only when the beat ends, so the card
-      // costs no answer time. Armed once per block-start (the token guards
+      // and start the question + clock + veil only when the beat ends, so the card
+      // costs no answer time. Armed once per round-start (the token guards
       // render()'s re-runs from restarting it).
-      if (state.phase === 'question' && isBlockStart(state.roundIndex, state.totalRounds)) {
-        const token = String(state.roundIndex);
-        if (blockIntroToken !== token) armBlockIntro(token);
-        if (blockIntroActive) { stopClock(); stopVeil(); showSection('blockcard'); renderBlockCard(); return; }
+      if (state.phase === 'question' && isRoundStart(state.questionIndex, state.totalQuestions)) {
+        const token = String(state.questionIndex);
+        if (roundIntroToken !== token) armRoundIntro(token);
+        if (roundIntroActive) { stopClock(); stopVeil(); showSection('roundcard'); renderRoundCard(); return; }
       }
-      // At a block boundary the reveal becomes the standings break instead of the
+      // At a round boundary the reveal becomes the standings break instead of the
       // answer tiles. The clock still runs (host advances after the break beat),
-      // just against the break duration; syncClock reads atBlockBreak() for it.
-      // A block-boundary reveal plays two beats: the answer tiles first (so the
-      // block's last round shows proper/wrong answers like any other round), then
+      // just against the break duration; syncClock reads atRoundBreak() for it.
+      // A round-boundary reveal plays two beats: the answer tiles first (so the
+      // round's last question shows proper/wrong answers like any other question), then
       // the standings break. The client-side hold flips between them; syncClock
       // holds the whole window (answer beat + break) so the break keeps its beat.
-      if (atBlockBreak()) {
-        const token = String(state.roundIndex);
-        if (blockBreakToken !== token) armBlockBreakAnswer(token);
-        if (blockBreakAnswerActive) { stopVeil(); showSection('round'); renderRound(); syncClock(); return; }
+      if (atRoundBreak()) {
+        const token = String(state.questionIndex);
+        if (roundBreakToken !== token) armRoundBreakAnswer(token);
+        if (roundBreakAnswerActive) { stopVeil(); showSection('question'); renderQuestion(); syncClock(); return; }
         stopVeil(); showSection('break'); renderBreak(); syncClock(); return;
       }
-      showSection('round'); renderRound(); syncClock();
+      showSection('question'); renderQuestion(); syncClock();
       // The veil + name reveal animate during the question only; the reveal phase
       // always shows crisp tiles (stopVeil pins `--veil-p` to 1 and clears
       // `names-shown`). Run the loop when tricky is on, or when a world-facts
-      // round has name-reveal enabled.
+      // question has name-reveal enabled.
       if (state.phase === 'question' && (veilActive() || nameActive())) startVeil(); else stopVeil();
     }
     else if (state.phase === 'picking') { stopVeil(); showSection('pick'); renderPick(); syncClock(); }
     else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
     else {
-      // Lobby = a fresh game (or play-again reset): forget the block baselines so
+      // Lobby = a fresh game (or play-again reset): forget the round baselines so
       // the first break of the next game shows gains-from-zero, no deltas, and
-      // clear any pending block-intro beat.
+      // clear any pending question-intro beat.
       prevBreakBoard = null; pendingBreakBoard = null; breakSnapToken = null; breakAnimToken = null;
-      resetBlockIntro();
+      resetRoundIntro();
       stopClock(); stopVeil(); showSection('lobby'); renderLobby();
     }
   }
@@ -1282,39 +1282,39 @@ export function bootFlagParty() {
     syncDraftLength();
   }
 
-  function renderRound() {
+  function renderQuestion() {
     const q = state.question;
     if (!q) return;
     // Only the host can abort a game back to the settings screen (it resets the
     // whole room); guests just have Home. The adjacent `·` hides itself via CSS
     // when this button is hidden, so there's nothing else to toggle.
-    roundToSettingsBtn.hidden = !state.isHost;
-    // The pill carries the act structure: which block of how many, and the round
-    // within the whole game. Makes the block boundaries legible during play, not
+    questionToSettingsBtn.hidden = !state.isHost;
+    // The pill carries the act structure: which round of how many, and the question
+    // within the whole game. Makes the round boundaries legible during play, not
     // just at the break.
-    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
-    roundPill.textContent = fmt(t('party.roundBlock', 'Block {b}/{blocks} · Round {n}/{total}'), {
-      b: blockIndexForRound(state.roundIndex) + 1, blocks: totalBlocks,
-      n: state.roundIndex + 1, total: state.totalRounds,
+    const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
+    questionPill.textContent = fmt(t('party.roundQuestion', 'Round {b}/{rounds} · Question {n}/{total}'), {
+      b: roundIndexAt(state.questionIndex) + 1, rounds: totalRounds,
+      n: state.questionIndex + 1, total: state.totalQuestions,
     });
-    // On the first round of a drafted block, name who chose it ("Zosia's pick").
+    // On the first question of a drafted round, name who chose it ("Zosia's pick").
     if (state.lastPick) {
       const seat = state.roster.find((r) => r.playerId === state.lastPick?.picker);
       if (seat) {
-        roundPill.appendChild(el('span', 'pill-pick', ` · ${fmt(t('party.blockPick', "{name}'s pick"), { name: seat.nickname })}`));
+        questionPill.appendChild(el('span', 'pill-pick', ` · ${fmt(t('party.roundPick', "{name}'s pick"), { name: seat.nickname })}`));
       }
     }
-    // The final block scores double and plays veiled — badge it so the stakes read.
-    if (isFinalBlock(state.roundIndex, state.totalRounds)) {
-      roundPill.appendChild(el('span', 'pill-double', t('party.doublePoints', 'Double points')));
+    // The final round scores double and plays veiled — badge it so the stakes read.
+    if (isFinalRound(state.questionIndex, state.totalQuestions)) {
+      questionPill.appendChild(el('span', 'pill-double', t('party.doublePoints', 'Double points')));
     }
     const isReveal = state.phase === 'reveal' && state.reveal;
-    const isMap = q.roundId === 'mapPick';
-    const superCfg = superlativeMetricByRoundId(q.roundId);
+    const isMap = q.questionId === 'mapPick';
+    const superCfg = superlativeMetricByQuestionId(q.questionId);
     const isSuperlative = superCfg !== null;
-    // Country-name rounds (flag / map) show one prominent line, nothing else:
+    // Country-name questions (flag / map) show one prominent line, nothing else:
     // the tiles already say you're matching a flag or outline, so a "Which flag?"
-    // cue was just extra reading. Superlative rounds instead lead the criterion
+    // cue was just extra reading. Superlative questions instead lead the criterion
     // label with the metric's icon (below) — a picture reads the stat faster than
     // the phrase alone. Reset both cues each render, then the branches opt in.
     promptEl.classList.remove('superlative');
@@ -1328,7 +1328,7 @@ export function bootFlagParty() {
       // Same label in both phases — stable (no grid shift), and it names the
       // criterion, not the winner, so it never leaks the answer the tiles reveal.
       // The metric icon leads it, tinted with the metric's setting hue (--mc, set
-      // from q.roundId via [data-metric] in index.css — the same per-metric hue
+      // from q.questionId via [data-metric] in index.css — the same per-metric hue
       // the setup chips use).
       // `q.prompt` is off the wire, so it's a bare string to the checker; narrow
       // it here rather than widening hintFor, so flagQuiz's typed call site keeps
@@ -1336,8 +1336,8 @@ export function bootFlagParty() {
       // either-way branch this line has always been.
       const label = hintFor(superCfg, q.prompt === 'least' ? 'least' : 'most');
       promptEl.classList.add('superlative');
-      promptEl.dataset.metric = q.roundId;
-      const promptMetricKey = metricKeyForRound(q.roundId);
+      promptEl.dataset.metric = q.questionId;
+      const promptMetricKey = metricKeyForQuestion(q.questionId);
       promptEl.style.setProperty('--mc', (promptMetricKey && METRIC_HUES[promptMetricKey]) || 'currentColor');
       promptLead.innerHTML = (promptMetricKey && METRIC_ICONS[promptMetricKey]) || '';
       promptLead.hidden = !promptLead.innerHTML;
@@ -1349,10 +1349,10 @@ export function bootFlagParty() {
     }
 
     // On a superlative reveal, each tile shows its country + population so the
-    // whole ranking is readable at a glance — the round's learning payoff. Only
+    // whole ranking is readable at a glance — the question's learning payoff. Only
     // on reveal (the numbers are hidden during the question), and only when the
     // population data actually loaded.
-    const metricData = isSuperlative ? metricByRound[q.roundId] : null;
+    const metricData = isSuperlative ? metricByQuestion[q.questionId] : null;
     const popStrip = (/** @type {string} */ code) => {
       if (!(isSuperlative && isReveal) || !metricData) return null;
       const v = metricData.values[code];
@@ -1377,7 +1377,7 @@ export function bootFlagParty() {
       } else {
         const selected = state.myChoice === code;
         const dim = state.myChoice != null && !selected;
-        // World-facts rounds fade the country name onto each tile once the clock
+        // World-facts questions fade the country name onto each tile once the clock
         // passes the host's name-reveal point (the grid's `names-shown` class,
         // toggled by the veil loop). The strip is pre-rendered here; CSS keeps it
         // hidden until then. Name only, no value — the value would leak the answer.
@@ -1414,7 +1414,7 @@ export function bootFlagParty() {
     }
     const img = document.createElement('img');
     img.className = opts.isMap ? 'contour' : 'flag';
-    // The map round is the literal mirror of flag-pick: same tile, just swap the
+    // The map question is the literal mirror of flag-pick: same tile, just swap the
     // asset folder (contours instead of flags/svg).
     img.src = opts.isMap ? `../flags/contours/${code}.svg` : `../flags/svg/${code}.svg`;
     img.alt = '';
@@ -1452,13 +1452,13 @@ export function bootFlagParty() {
     return node;
   }
 
-  /** The draft pick screen: the picker chooses the next block from a hand of
+  /** The draft pick screen: the picker chooses the next round from a hand of
    *  cards; everyone else watches "X is choosing". The pick countdown (drawn by
    *  the clock) is visible to all; the host's timer fires `forcePick` at 0. */
   function renderPick() {
-    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
-    const nextBlock = blockIndexForRound(state.roundIndex) + 2; // 1-based: the block being chosen
-    pickPill.textContent = fmt(t('party.choosingBlock', 'Choosing block {n} of {total}'), { n: nextBlock, total: totalBlocks });
+    const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
+    const nextRound = roundIndexAt(state.questionIndex) + 2; // 1-based: the round being chosen
+    pickPill.textContent = fmt(t('party.choosingRound', 'Choosing round {n} of {total}'), { n: nextRound, total: totalRounds });
 
     // Server-authoritative: the server told us whether we're the picker (never
     // re-derived from `you === picker`, which a stale identity could get wrong).
@@ -1468,7 +1468,7 @@ export function bootFlagParty() {
 
     if (youPick) {
       pickLead.hidden = false;
-      pickLead.textContent = t('party.yourPick', 'Your pick, choose the next block');
+      pickLead.textContent = t('party.yourPick', 'Your pick, choose the next round');
       pickWatch.hidden = true;
       pickHand.hidden = false;
       pickHand.innerHTML = '';
@@ -1501,70 +1501,70 @@ export function bootFlagParty() {
     }
   }
 
-  /** The block title card: a short beat before each block's first round (the
-   *  opening block included — it doubles as the game's "get ready" beat), naming
-   *  the block number, its mode (icon + full label, metric hue on the icon),
-   *  "5 rounds", who picked it (draft), and the double-points stakes on the final
-   *  block. Paints in `#pt-blockcard`; the round follows when the beat elapses
-   *  (see `render` / `armBlockIntro`). A big-card counterpart to the round pill's
+  /** The round title card: a short beat before each round's first question (the
+   *  opening round included — it doubles as the game's "get ready" beat), naming
+   *  the round number, its mode (icon + full label, metric hue on the icon),
+   *  "5 questions", who picked it (draft), and the double-points stakes on the final
+   *  round. Paints in `#pt-roundcard`; the question follows when the beat elapses
+   *  (see `render` / `armRoundIntro`). A big-card counterpart to the question pill's
    *  "Zosia's pick" attribution — the deferred "full title card" from PARTY.md. */
-  function renderBlockCard() {
-    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
-    const blockNum = blockIndexForRound(state.roundIndex) + 1;
-    blockCardCount.textContent = fmt(t('party.blockCardCount', 'Block {n} of {total}'), { n: blockNum, total: totalBlocks });
+  function renderRoundCard() {
+    const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
+    const roundNum = roundIndexAt(state.questionIndex) + 1;
+    roundCardCount.textContent = fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds });
 
-    const modeId = blockModeId(state.lastPick, state.question ? state.question.roundId : undefined);
+    const modeId = blockModeId(state.lastPick, state.question ? state.question.questionId : undefined);
     if (modeId) {
       blockCardIc.innerHTML = blockCardIconHtml(modeId);
       blockCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
       const label = modeFullLabel(modeId);
       blockCardName.textContent = t(label.key || '', label.fallback || '');
     } else {
-      // The one ambiguous case: a custom-setup flag block, whose pool ('countries'
+      // The one ambiguous case: a custom-setup flag round, whose pool ('countries'
       // vs 'others') isn't on the wire — announce it generically.
-      blockCardIc.innerHTML = deckIconHtml('flags', { className: 'blockcard-thumb' });
+      blockCardIc.innerHTML = deckIconHtml('flags', { className: 'roundcard-thumb' });
       blockCardIc.style.setProperty('--mc', 'currentColor');
       blockCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
     }
 
-    blockCardRounds.textContent = fmt(t('party.blockCardRounds', '{n} rounds'), { n: BLOCK_ROUNDS });
+    roundCardQuestions.textContent = fmt(t('party.roundCardQuestions', '{n} questions'), { n: ROUND_QUESTIONS });
 
-    // Draft: name who chose this block (the big-card version of the round pill's
-    // "Zosia's pick"). Absent on a custom block (no picker).
+    // Draft: name who chose this round (the big-card version of the question pill's
+    // "Zosia's pick"). Absent on a custom round (no picker).
     blockCardPick.innerHTML = '';
     const pickSeat = state.lastPick ? state.roster.find((r) => r.playerId === state.lastPick?.picker) : null;
     blockCardPick.hidden = !pickSeat;
     if (pickSeat) {
       blockCardPick.appendChild(buildAvatar(pickSeat.playerId));
-      blockCardPick.appendChild(el('span', 'blockcard-pick-name', fmt(t('party.blockPick', "{name}'s pick"), { name: pickSeat.nickname })));
+      blockCardPick.appendChild(el('span', 'roundcard-pick-name', fmt(t('party.roundPick', "{name}'s pick"), { name: pickSeat.nickname })));
     }
 
-    // The final block scores double and plays veiled — announce the stakes.
-    const isFinal = isFinalBlock(state.roundIndex, state.totalRounds);
+    // The final round scores double and plays veiled — announce the stakes.
+    const isFinal = isFinalRound(state.questionIndex, state.totalQuestions);
     blockCardDouble.hidden = !isFinal;
     if (isFinal) blockCardDouble.textContent = t('party.doublePoints', 'Double points');
   }
 
-  /** The between-blocks standings break: the block's MVP, then the full board
+  /** The between-rounds standings break: the round's MVP, then the full board
    *  with rank movement since the last break and each player's own gap to the
-   *  leader. Paints in `#pt-break`; the host's clock advances to the next block
-   *  after BLOCK_BREAK_SECONDS. */
+   *  leader. Paints in `#pt-break`; the host's clock advances to the next round
+   *  after ROUND_BREAK_SECONDS. */
   function renderBreak() {
-    const totalBlocks = Math.max(1, Math.ceil(state.totalRounds / BLOCK_ROUNDS));
-    const endedBlock = blockIndexForRound(state.roundIndex) + 1;
-    breakPill.textContent = fmt(t('party.afterBlock', 'After block {n} of {total}'), { n: endedBlock, total: totalBlocks });
+    const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
+    const endedRound = roundIndexAt(state.questionIndex) + 1;
+    breakPill.textContent = fmt(t('party.afterRound', 'After round {n} of {total}'), { n: endedRound, total: totalRounds });
 
     const board = state.scoreboard || [];
-    const { rows, mvp } = blockBreak(prevBreakBoard, board);
+    const { rows, mvp } = roundBreak(prevBreakBoard, board);
 
-    // MVP banner — hidden when nobody scored in the block.
+    // MVP banner — hidden when nobody scored in the round.
     const mvpRow = mvp ? rows.find((r) => r.playerId === mvp) : null;
     breakMvp.innerHTML = '';
     breakMvp.hidden = !mvpRow;
     if (mvpRow) {
       breakMvp.appendChild(buildAvatar(mvpRow.playerId));
       const txt = el('span', 'break-mvp-text');
-      txt.append(document.createTextNode(`${t('party.blockMvp', 'Best of the block')} · `), el('span', 'break-mvp-name', mvpRow.nickname));
+      txt.append(document.createTextNode(`${t('party.roundMvp', 'Best of the round')} · `), el('span', 'break-mvp-name', mvpRow.nickname));
       breakMvp.appendChild(txt);
       breakMvp.appendChild(el('span', 'break-mvp-gain', `+${mvpRow.blockGain}`));
     }
@@ -1593,7 +1593,7 @@ export function bootFlagParty() {
     });
 
     // Capture this board as the baseline for the next break, once per break.
-    const token = String(state.roundIndex);
+    const token = String(state.questionIndex);
     if (breakSnapToken !== token) {
       breakSnapToken = token;
       pendingBreakBoard = board.map((e) => ({ playerId: e.playerId, nickname: e.nickname, score: e.score }));
@@ -1612,7 +1612,7 @@ export function bootFlagParty() {
   /**
    * Slide the break's standings rows from their previous rank to the new one — a
    * FLIP driven by `rankDelta` (places climbed since the last break, from
-   * `blockBreak`). A row that moved up starts `rankDelta` slots lower and rises to
+   * `roundBreak`). A row that moved up starts `rankDelta` slots lower and rises to
    * place; one that dropped starts higher and falls. Rows are uniform height, so
    * one measured stride (row + gap) converts a rank delta to a pixel offset. The
    * climber gets a lifted z-index so it reads as passing over the row it overtakes.
@@ -1666,7 +1666,7 @@ export function bootFlagParty() {
       list.appendChild(toast);
     }
     footEl.appendChild(list);
-    // No "Next round" button and no countdown: the round advances on its own
+    // No "Next question" button and no countdown: the question advances on its own
     // after a short beat (the host's clock sends 'next'), so the reveal just
     // shows who scored and moves on.
   }
@@ -1789,20 +1789,20 @@ export function bootFlagParty() {
   draftLessBtn.addEventListener('click', () => stepDraftLength(-1));
   draftMoreBtn.addEventListener('click', () => stepDraftLength(1));
   startBtn.addEventListener('click', () => {
-    // Draft is zero-setup: the players pick each block, so the start carries no
-    // plan (the server builds the opening Flags block and sizes the game from the
+    // Draft is zero-setup: the players pick each round, so the start carries no
+    // plan (the server builds the opening Flags round and sizes the game from the
     // seat count). Custom sends the built plan as before. Tricky / reveal ride
     // along either way.
     if (partyMode === 'draft') {
       // No `tricky`: it is a Custom-only option and the draft door never showed
       // the toggle (the server forces it false for drafts regardless).
-      send({ type: 'start', draft: true, blocks: effectiveBlocks(), reveal: revealState });
+      send({ type: 'start', draft: true, rounds: effectiveRounds(), reveal: revealState });
     } else {
       send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState });
     }
   });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
-  roundToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
+  questionToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
   // clipboard fallback), so the invite icon behaves identically across the two
@@ -1829,9 +1829,9 @@ export function bootFlagParty() {
   document.addEventListener('langchanged', () => { paintJoinError(); repaintSetupLabels(); render(); });
 
   // ---- load data + route ----
-  // Countries (for names + flags) and every superlative round's metric (for the
+  // Countries (for names + flags) and every superlative question's metric (for the
   // reveal strip) load together. Metrics are best-effort: a failed fetch just
-  // means that round's reveal shows no numbers, so it can't block the game;
+  // means that question's reveal shows no numbers, so it can't round the game;
   // countries failing still falls through to a bare render().
   Promise.all([
     fetch('../flags/countries.json').then((r) => r.json()).then(loadCountries),
@@ -1840,9 +1840,9 @@ export function bootFlagParty() {
   ])
     .then(([countries, ...metrics]) => {
       for (const c of countries) byCode.set(c.code, c);
-      SUPERLATIVE_METRICS.forEach(({ roundId }, i) => {
+      SUPERLATIVE_METRICS.forEach(({ questionId }, i) => {
         const m = metrics[i];
-        if (m && m.values) metricByRound[roundId] = { values: m.values, format: m.format || 'compact' };
+        if (m && m.values) metricByQuestion[questionId] = { values: m.values, format: m.format || 'compact' };
       });
       const roomParam = new URLSearchParams(location.search).get('room');
       if (roomParam && isValidRoomCode(roomParam.toUpperCase())) {

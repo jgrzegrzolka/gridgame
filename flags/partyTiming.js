@@ -17,7 +17,7 @@
 export const QUESTION_SECONDS = 20;
 
 /** Seconds a clean reveal lingers — every present player got it right, so
- *  there's nothing to study and the round snaps on. Mirrors flagQuiz's pace
+ *  there's nothing to study and the question snaps on. Mirrors flagQuiz's pace
  *  (a correct pick advances almost immediately). */
 export const CLEAN_REVEAL_SECONDS = 0.9;
 
@@ -28,8 +28,8 @@ export const CLEAN_REVEAL_SECONDS = 0.9;
 export const MISS_REVEAL_SECONDS = 2.5;
 
 /**
- * How long the reveal lingers, keyed on whether the round was a clean sweep. A
- * clean round ({@link CLEAN_REVEAL_SECONDS}) moves fast; a missed one
+ * How long the reveal lingers, keyed on whether the question was a clean sweep. A
+ * clean question ({@link CLEAN_REVEAL_SECONDS}) moves fast; a missed one
  * ({@link MISS_REVEAL_SECONDS}) holds so the answer can be read.
  * @param {boolean} clean  every present player picked the correct answer
  * @returns {number}
@@ -45,43 +45,43 @@ export function revealSecondsFor(clean) {
  *  seat can't stall the show. A present player picks long before it. */
 export const PICK_TIMEOUT_SECONDS = 45;
 
-/** Seconds a between-blocks **break** lingers before the host advances to the
- *  next block. The break shows the block's MVP and the standings (with rank
+/** Seconds a between-rounds **break** lingers before the host advances to the
+ *  next round. The break shows the round's MVP and the standings (with rank
  *  movement) — a beat to read where everyone landed, so it holds longer than a
  *  reveal. Host-authoritative like the reveal: the host's page counts this down
  *  and fires `next` when it elapses; other clients just render the break. Keyed
- *  to reading a scoreboard, not to a round, so it's a flat duration rather than
+ *  to reading a scoreboard, not to a question, so it's a flat duration rather than
  *  the reveal's clean/miss split. */
-export const BLOCK_BREAK_SECONDS = 6;
+export const ROUND_BREAK_SECONDS = 6;
 
-/** Seconds the **block title card** holds before the first round of a new block
- *  begins (block 2..N — the opening block starts play straight away). A short
- *  beat announcing "Block 2 of 3 · Coffee · 5 rounds" with who picked it; the
+/** Seconds the **round title card** holds before the first question of a new round
+ *  begins (round 2..N — the opening round starts play straight away). A short
+ *  beat announcing "Round 2 of 3 · Coffee · 5 questions" with who picked it; the
  *  question clock and veil start fresh *after* it, so it costs no answer time.
  *  Client-side and uniform — every client (host included) holds the same beat, so
  *  no clock drift is introduced (the host's authoritative reveal clock simply
  *  starts after the card, like everyone else's). */
-export const BLOCK_INTRO_SECONDS = 2;
+export const ROUND_INTRO_SECONDS = 2;
 
-/** Tricky mode: the reveal-timing options a host can pick per round category — a
+/** Tricky mode: the reveal-timing options a host can pick per question category — a
  *  tile stays veiled until this fraction of the question window has elapsed, then
  *  it is fully clear. Every option is below 1, so a late decider always gets a
  *  clean look while an early buzzer gambled on partial detail for the speed bonus. */
 export const REVEAL_OPTIONS = [0.2, 0.4, 0.6, 0.8];
 
 /** Tricky mode is about flag *visibility*; the world-facts name reveal is about
- *  flag *identity* — a separate axis. On a world-facts round the answer is a fact
+ *  flag *identity* — a separate axis. On a world-facts question the answer is a fact
  *  ("which grows the most coffee?"), not flag recognition, so a player who knows
  *  the fact but can't pick the country's flag out of four is blocked on the wrong
  *  skill. At `name` of the way through the window the country names fade onto the
  *  tiles, so an early flag-recognizer still buzzes first for the speed bonus while
  *  a fact-knower gets a fair shot once the labels land. `null` = off (never named,
- *  pure recognition). Applies to metric rounds only, independent of tricky mode. */
+ *  pure recognition). Applies to metric questions only, independent of tricky mode. */
 export const NAME_REVEAL_OPTIONS = [0.4, 0.5, 0.6, 0.8];
 
-/** Default reveal fraction per round category. Flags stay obscured longest (they
+/** Default reveal fraction per question category. Flags stay obscured longest (they
  *  carry the most give-away detail); outlines clear earlier (a monochrome
- *  silhouette is already hard, and grey does nothing to it); metric rounds clear
+ *  silhouette is already hard, and grey does nothing to it); metric questions clear
  *  earliest (the flags are incidental there — the question is the number — so the
  *  veil is just flavour). `name` is the world-facts name-reveal fraction (see
  *  {@link NAME_REVEAL_OPTIONS}); defaults to halfway. The host can override each
@@ -89,30 +89,30 @@ export const NAME_REVEAL_OPTIONS = [0.4, 0.5, 0.6, 0.8];
 export const DEFAULT_REVEAL = { flag: 0.8, map: 0.4, metric: 0.2, name: 0.5 };
 
 /**
- * Whether a round plays a world metric (population / area / GDP / coffee / …).
+ * Whether a question plays a world metric (population / area / GDP / coffee / …).
  * Every superlative instance shares the `superlative` id prefix (`superlative`
  * for population, `superlative-area`, `superlative-coffee`, …), so one prefix
  * test catches them all — unlike {@link revealCategoryFor}, which only maps the
- * literal `superlative` id to `metric`. Used to decide which rounds get the
+ * literal `superlative` id to `metric`. Used to decide which questions get the
  * name-reveal strip, both server-side (stamping `nameFrac`) and client-side.
- * @param {string} [roundId]
+ * @param {string} [questionId]
  * @returns {boolean}
  */
-export function isMetricRound(roundId) {
-  return typeof roundId === 'string' && roundId.startsWith('superlative');
+export function isMetricQuestion(questionId) {
+  return typeof questionId === 'string' && questionId.startsWith('superlative');
 }
 
 /**
- * The reveal category for a round, from its `roundId`: the map round is `map`,
- * the population / superlative round is `metric`, and every flag-pick round
+ * The reveal category for a question, from its `questionId`: the map question is `map`,
+ * the population / superlative question is `metric`, and every flag-pick question
  * (sovereign or territory) is `flag`. Both flag modes share one category — the
  * distinction that matters to the veil is flags vs outlines vs numbers.
- * @param {string} [roundId]
+ * @param {string} [questionId]
  * @returns {'flag' | 'map' | 'metric'}
  */
-export function revealCategoryFor(roundId) {
-  if (roundId === 'mapPick') return 'map';
-  if (roundId === 'superlative') return 'metric';
+export function revealCategoryFor(questionId) {
+  if (questionId === 'mapPick') return 'map';
+  if (questionId === 'superlative') return 'metric';
   return 'flag';
 }
 

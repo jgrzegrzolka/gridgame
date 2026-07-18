@@ -21,16 +21,16 @@
  *
  * The rules for each metric (which direction to ask, whether a real 0 means "not
  * a candidate") are NOT decided here — they come from `superlativeCatalog.js`
- * via `buildSuperlativeRound`, the same path Flag Party's server takes. This
+ * via `buildSuperlativeQuestion`, the same path Flag Party's server takes. This
  * module only picks which metric to ask about next.
  */
 
-import { buildSuperlativeRound } from './partyRounds/superlativeCore.js';
-import { hintFor } from './partyRounds/superlativeCatalog.js';
+import { buildSuperlativeQuestion } from './partyQuestions/superlativeCore.js';
+import { hintFor } from './partyQuestions/superlativeCatalog.js';
 
 /** @typedef {import('./group.js').Country} Country */
-/** @typedef {import('./partyRounds/superlativeCatalog.js').SuperlativeMetric} SuperlativeMetric */
-/** @typedef {import('./partyRounds/superlativeCatalog.js').Hint} Hint */
+/** @typedef {import('./partyQuestions/superlativeCatalog.js').SuperlativeMetric} SuperlativeMetric */
+/** @typedef {import('./partyQuestions/superlativeCatalog.js').Hint} Hint */
 
 /**
  * A loaded metric: its catalog entry plus the values file the page fetched.
@@ -41,7 +41,7 @@ import { hintFor } from './partyRounds/superlativeCatalog.js';
  * @typedef {Object} FactsQuestion
  * @property {Country} answer the country at the extreme
  * @property {Country[]} choices four countries, the answer among them
- * @property {{ metricKey: string, roundId: string, direction: 'most' | 'least', hint: Hint }} prompt
+ * @property {{ metricKey: string, questionId: string, direction: 'most' | 'least', hint: Hint }} prompt
  *   what to ask. `hint` is the criterion label; `metricKey` drives the icon and
  *   hue, the same per-metric identity Flag Party's prompt wears.
  */
@@ -93,11 +93,11 @@ export function createFactsQuiz({ metrics, pool, rng = Math.random }) {
 
   const byCode = new Map(pool.map((c) => [c.code, c]));
   const entries = pool.map((c) => ({ code: c.code }));
-  // One round per metric, built once. `buildSuperlativeRound` applies the
+  // One round per metric, built once. `buildSuperlativeQuestion` applies the
   // catalog's zero-filter and direction lock — the same call the server makes.
   const rounds = metrics.map((m) => ({
     metric: m.entry,
-    round: buildSuperlativeRound(m.entry, m.data),
+    round: buildSuperlativeQuestion(m.entry, m.data),
   }));
 
   /** Answer codes from the last few questions, so a country doesn't recur. */
@@ -129,7 +129,7 @@ export function createFactsQuiz({ metrics, pool, rng = Math.random }) {
       choices: /** @type {Country[]} */ (choices),
       prompt: {
         metricKey: metric.key,
-        roundId: metric.roundId,
+        questionId: metric.questionId,
         direction: q.prompt,
         hint: hintFor(metric, q.prompt),
       },

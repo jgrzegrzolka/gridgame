@@ -36,7 +36,7 @@ import { buildQuizMenu } from './menu.js';
 import { DECKS, deckOf, defaultVariantForDeck } from '../flags/decks.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { createFactsQuiz } from '../flags/factsQuiz.js';
-import { SUPERLATIVE_METRICS } from '../flags/partyRounds/superlativeCatalog.js';
+import { SUPERLATIVE_METRICS } from '../flags/partyQuestions/superlativeCatalog.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { METRIC_HUES, metricIconSpan } from '../flags/metricVisuals.js';
 import { QUIZ_MAP_CONFIG } from './mapConfig.js';
