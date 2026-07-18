@@ -8,8 +8,6 @@ import {
   PARTY_MODES,
   MAX_QUESTIONS_PER_MODE,
   MAX_TOTAL_QUESTIONS,
-  countsForPlan,
-  planFromModeCounts,
   validatePlan,
   PICTURE_MODES,
   METRIC_MODES,
@@ -17,7 +15,6 @@ import {
   ROUND_QUESTIONS,
   roundIndexAt,
   roundCount,
-  isRoundEnd,
   isRoundBoundary,
   isRoundStart,
   isFinalRound,
@@ -72,32 +69,6 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
   // ids are unique and kebab-case
   assert.equal(new Set(PARTY_MODES.map((m) => m.id)).size, PARTY_MODES.length);
   for (const m of PARTY_MODES) assert.match(m.id, /^[a-z]+(-[a-z]+)*$/);
-});
-
-test('countsForPlan: default plan gives 4 / 4 / 4 / 4 keyed by mode id', () => {
-  assert.deepEqual(countsForPlan(DEFAULT_PLAN), {
-    'flags-all': 4, 'flags-territories': 4, 'map-outlines': 4, 'superlative-pop': 4, 'superlative-area': 0, 'superlative-density': 0, 'superlative-gdp': 0, 'superlative-gdppc': 0, 'superlative-coffee': 0, 'superlative-wine': 0, 'superlative-cocoa': 0, 'superlative-banana': 0, 'superlative-apple': 0, 'superlative-elevation': 0, 'superlative-coastline': 0, 'superlative-forest': 0, 'superlative-oil': 0, 'superlative-rice': 0, 'superlative-coal': 0, 'superlative-sheep': 0, 'superlative-cattle': 0, 'superlative-beer': 0, 'superlative-tea': 0, 'superlative-sugarcane': 0, 'superlative-gold': 0, 'superlative-alcohol': 0, 'superlative-meat': 0, 'superlative-borders': 0, 'superlative-olive-oil': 0, 'superlative-honey': 0, 'superlative-temperature': 0, 'superlative-happiness': 0, 'superlative-corruption': 0, 'superlative-tourism': 0, 'superlative-electricity': 0,
-  });
-});
-
-test('countsForPlan: a mode absent from the plan reads 0', () => {
-  const counts = countsForPlan([{ poolId: 'sovereign', questionId: 'mapPick', questions: 4 }]);
-  assert.equal(counts['map-outlines'], 4);
-  assert.equal(counts['flags-all'], 0);
-  assert.equal(counts['flags-territories'], 0);
-  assert.equal(counts['superlative-pop'], 0);
-});
-
-test('planFromModeCounts round-trips the default counts back to DEFAULT_PLAN', () => {
-  assert.deepEqual(planFromModeCounts(countsForPlan(DEFAULT_PLAN)), DEFAULT_PLAN);
-});
-
-test('planFromModeCounts: drops modes at 0, keeps catalog order, clamps per-mode', () => {
-  const plan = planFromModeCounts({ 'flags-all': 0, 'flags-territories': 2, 'map-outlines': 99 });
-  assert.deepEqual(plan, [
-    { poolId: 'nonSovereign', questionId: 'flagPick', questions: 2 },
-    { poolId: 'sovereign', questionId: 'mapPick', questions: MAX_QUESTIONS_PER_MODE },
-  ]);
 });
 
 test('validatePlan: a clean plan passes through unchanged', () => {
@@ -241,35 +212,30 @@ test('roundCount: one round per 5 questions, final short round questions up', ()
   assert.equal(roundCount([{ poolId: 'sovereign', questionId: 'flagPick', questions: 7 }]), 2);
 });
 
-test('isRoundEnd: true at each 5-question boundary except the game\'s final question', () => {
-  const plan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 15 }]; // 3 rounds, 15 questions
-  const ends = [];
-  for (let i = 0; i < totalQuestions(plan); i++) if (isRoundEnd(plan, i)) ends.push(i);
-  // breaks after question 4 (end of round 1) and question 9 (end of round 2), NOT question 14 (final board)
-  assert.deepEqual(ends, [4, 9]);
-});
-
-test('isRoundEnd fires exactly roundCount - 1 times', () => {
-  const plan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 20 }]; // 4 rounds
-  let breaks = 0;
-  for (let i = 0; i < totalQuestions(plan); i++) if (isRoundEnd(plan, i)) breaks++;
-  assert.equal(breaks, roundCount(plan) - 1);
-});
-
-test('isRoundEnd: a single short round never breaks (nothing follows it)', () => {
-  const plan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 3 }];
-  assert.equal(isRoundEnd(plan, 2), false);
-});
-
-test('isRoundBoundary: keyed on index + total, matches isRoundEnd for a plan', () => {
-  const plan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 15 }]; // 15 questions
-  for (let i = 0; i < 15; i++) {
-    assert.equal(isRoundBoundary(i, 15), isRoundEnd(plan, i), `question ${i}`);
+test('isRoundBoundary: true at each 5-question boundary except the final question', () => {
+  // A boundary is where a round ends and another follows — the beat that opens a
+  // draft pick and shows the standings break. The last question of the game is
+  // NOT one: nothing follows it, the final board does.
+  const total = 20; // 4 rounds of 5
+  for (let i = 0; i < total; i++) {
+    const expected = (i + 1) % ROUND_QUESTIONS === 0 && i !== total - 1;
+    assert.equal(isRoundBoundary(i, total), expected, `question ${i}`);
   }
-  // the client's view: boundaries at 4 and 9, never at the final question 14
-  assert.equal(isRoundBoundary(4, 15), true);
-  assert.equal(isRoundBoundary(9, 15), true);
-  assert.equal(isRoundBoundary(14, 15), false);
+});
+
+test('isRoundBoundary: fires exactly roundCount - 1 times over a game', () => {
+  for (const rounds of [1, 2, 3, 5]) {
+    const total = rounds * ROUND_QUESTIONS;
+    let hits = 0;
+    for (let i = 0; i < total; i++) if (isRoundBoundary(i, total)) hits++;
+    assert.equal(hits, rounds - 1, `${rounds} rounds`);
+  }
+});
+
+test('isRoundBoundary: a single round never breaks (nothing follows it)', () => {
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
+    assert.equal(isRoundBoundary(i, ROUND_QUESTIONS), false, `question ${i}`);
+  }
 });
 
 test('isRoundStart: true on the first question of every round, including the opener', () => {

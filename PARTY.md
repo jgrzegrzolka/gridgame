@@ -173,8 +173,11 @@ final-round polish (#952) and the pick-screen polish (#953). The **round title c
 
 Shipped and on `main`: the show engine, three question types (flag-pick, map, superlative), the clock,
 tricky mode + its configurable reveal timing, the host game-setup panel, the grouped setup, the
-rounds + standings break (#950), the draft (#951), the double-points/always-tricky final round (#952),
-and the pick-screen polish (#953).
+rounds + standings break (#950), the draft (#951), the double-points final round (#952),
+and the pick-screen polish (#953). Since then (2026-07-18): draft length is set as rounds-per-player
+(#961, #964), tricky is Custom-only and the final round no longer veils itself (#961, #962), the
+block/round/question vocabulary was renamed (#963), and the world-facts name reveal became a fixed
+3 s instead of a host-configured fraction (#965).
 
 Still open:
 

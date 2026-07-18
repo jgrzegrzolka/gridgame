@@ -81,16 +81,6 @@ export function isRoundBoundary(index, total) {
   return (index + 1) % ROUND_QUESTIONS === 0 && index < total - 1;
 }
 
-/**
- * Whether a 0-based question is a round boundary in a given plan — the server-side
- * convenience over {@link isRoundBoundary} for callers that hold the plan.
- * @param {Segment[]} plan
- * @param {number} index
- * @returns {boolean}
- */
-export function isRoundEnd(plan, index) {
-  return isRoundBoundary(index, totalQuestions(plan));
-}
 
 /**
  * Whether a 0-based question is the **first question of a round** — the beat where the
@@ -243,42 +233,7 @@ function modeIdForSegment(seg) {
   return m ? m.id : null;
 }
 
-/**
- * Questions-per-mode for a plan, as a `{ modeId: count }` map covering every
- * catalog mode (0 when a mode isn't in the plan). Segments that map to the same
- * mode sum. This is what the lobby setup reads to seed its steppers.
- * @param {Segment[]} plan
- * @returns {Record<string, number>}
- */
-export function countsForPlan(plan) {
-  /** @type {Record<string, number>} */
-  const counts = {};
-  for (const m of PARTY_MODES) counts[m.id] = 0;
-  for (const seg of plan) {
-    const id = modeIdForSegment(seg);
-    if (id) counts[id] += seg.questions;
-  }
-  return counts;
-}
 
-/**
- * Build a plan from a `{ modeId: count }` map: one segment per catalog mode with
- * a positive count, in catalog order, each clamped to `MAX_QUESTIONS_PER_MODE`.
- * Modes at 0 (or off) are dropped. This is what the host's lobby sends on start.
- * @param {Record<string, number>} counts
- * @returns {Segment[]}
- */
-export function planFromModeCounts(counts) {
-  /** @type {Segment[]} */
-  const plan = [];
-  for (const m of PARTY_MODES) {
-    const n = counts[m.id];
-    if (Number.isInteger(n) && n > 0) {
-      plan.push({ poolId: m.poolId, questionId: m.questionId, questions: Math.min(n, MAX_QUESTIONS_PER_MODE) });
-    }
-  }
-  return plan;
-}
 
 /**
  * Sanitize an untrusted plan arriving from a host over the wire: keep only
