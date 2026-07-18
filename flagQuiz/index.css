@@ -225,7 +225,8 @@ body {
 }
 /* Flag artwork carries its own colours (like every flags/svg/*.svg), so the
    thumb is framed with the same 1px inset the game tiles use rather than
-   tinted. 24×18 matches Flag Party's .gs-thumb. */
+   tinted. 24×18 was matched to Flag Party's setup-row thumbnail, which has since
+   been retired with the custom-setup panel — this box is now its own reference. */
 .deck-ind .deck-ind-art {
   width: 24px;
   height: 18px;

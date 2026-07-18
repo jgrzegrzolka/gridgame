@@ -1,8 +1,8 @@
 import rawCountries from '../flags/countries.json' with { type: 'json' };
 import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
-import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, validatePlan, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
-import { DEFAULT_REVEAL, revealCategoryFor, validateReveal } from '../flags/partyTiming.js';
+import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
+import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
 import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID } from '../flags/partyDraft.js';
 import {
   createRoom,
@@ -252,33 +252,21 @@ export default class PartyGameServer {
         case 'start': {
           this.usedCodes = new Set();
           this.usedModes = new Set();
-          // Tricky mode is a client render flag the host chooses; coerce to a
-          // strict boolean so a malformed value can't reach the room. The
-          // per-category reveal timing is snapped to the allowed option set.
-          const tricky = parsed.tricky === true;
-          const reveal = validateReveal(parsed.reveal);
-          if (parsed.draft === true) {
-            // Draft: the plan grows one round per pick. Open with a single Flags
-            // round, then run one round per pick — every seated player picks
-            // `picks` times, so the length is `seats x picks + 1`. Question 0
-            // comes from the opening round, not a host plan.
-            const targetRounds = roundCountFor(this.room.present.size, validatePicksPerPlayer(parsed.picks));
-            const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
-            this.usedModes.add(OPENING_MODE_ID);
-            const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, reveal);
-            // Draft has no tricky mode: it is a Custom-setup option, and the draft
-            // door never showed the toggle. Forcing it false here (rather than
-            // trusting the client) closes the leak where a device that once
-            // enabled tricky in Custom silently veiled every later draft game.
-            result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, false, reveal, { draft: true, targetRounds });
-            break;
-          }
-          // Setlist: the host's plan rides in on the start message; never trust it
-          // raw. validatePlan strips anything malformed and returns null if nothing
-          // valid survives, so a missing / bad plan cleanly falls back to the
-          // default. Generate question 0 from the same validated plan.
-          const plan = validatePlan(parsed.plan) ?? DEFAULT_PLAN;
-          result = applyStart(this.room, playerId, this.generateQuestion(0, plan, reveal), plan, totalQuestions(plan), tricky, reveal);
+          // Draft is the only way a game starts. The plan grows one round per
+          // pick: open with a single Flags round, then run one round per pick —
+          // every seated player picks `picks` times, so the length is
+          // `seats x picks + 1`. Question 0 comes from the opening round.
+          //
+          // The host's "Custom setup" door (a plan + a tricky toggle + per-category
+          // reveal timing riding on this message) was retired. Tricky is now a
+          // per-round choice the picker arms (`segment.veil`), not a game-wide
+          // host flag, so start always applies false and lets the pick set it.
+          // Reveal timing is the fixed DEFAULT_REVEAL constant.
+          const targetRounds = roundCountFor(this.room.present.size, validatePicksPerPlayer(parsed.picks));
+          const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
+          this.usedModes.add(OPENING_MODE_ID);
+          const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, DEFAULT_REVEAL);
+          result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, false, DEFAULT_REVEAL, { draft: true, targetRounds });
           break;
         }
         case 'buzz': {
@@ -296,7 +284,7 @@ export default class PartyGameServer {
           // In a draft, a `next` that lands on a round boundary opens a pick
           // instead of dealing the next question: the lowest-ranked seat that
           // hasn't picked chooses the next round from a dealt hand. Otherwise
-          // (and always in setlist) it advances the question or ends the game.
+          // otherwise it advances the question or ends the game.
           const picker = pendingPickAfterReveal(this.room)
             ? pickerFor(this.scoreboard(), this.room.pickedBy) : null;
           if (picker) {

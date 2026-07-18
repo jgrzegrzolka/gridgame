@@ -6,7 +6,7 @@ import { METRIC_SHORT } from '../flags/metricVisuals.js';
 import { modeShortLabel, modeFullLabel, roundModeId } from './page.js';
 
 // Every mode the lobby can render — the two fixed picture modes plus every
-// metric superlative mode. `buildSetup` labels each of these, so each MUST
+// metric superlative mode. The draft hand labels each of these, so each MUST
 // resolve a real label.
 const ALL_MODE_IDS = [...PICTURE_MODES, ...METRIC_MODES].map((m) => m.id);
 

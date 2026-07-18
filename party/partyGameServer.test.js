@@ -115,16 +115,6 @@ test('draft start: tricky mode is forced off even if a stale client sends it', a
   assert.equal(conn.last('question').tricky, false, 'and clients are told not to veil');
 });
 
-test('setlist start: tricky mode still rides the host plan', async () => {
-  // The draft override must not disarm tricky for Custom setup.
-  const conn = mockConn('a');
-  const srv = new PartyGameServer(mockParty([conn]));
-  await srv.onStart();
-  await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'start', tricky: true }), conn);
-  assert.equal(srv.room.tricky, true);
-});
-
 test('draft: a round boundary opens a pick with a hand that excludes the played mode', async () => {
   const { srv, conn } = await startSoloDraft();
   await playBlock(srv, conn); // 5 questions of Flags, then next -> picking

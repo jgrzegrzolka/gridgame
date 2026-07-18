@@ -7,8 +7,8 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
-import { ROUND_QUESTIONS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
+import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL } from '../flags/partyTiming.js';
+import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
@@ -21,26 +21,16 @@ import { buildAvatar, shareUrl } from '../common.js';
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
 const NICKNAME_KEY = 'gridgame.nickname';
-// Setup state (the grouped picture-modes + world-facts shape). Supersedes the
-// old per-mode PLAN_KEY, which is still read once for a one-time migration of a
-// returning host's saved choices into the new shape.
-const SETUP_KEY = 'gridgame.party.setup';
-const PLAN_KEY = 'gridgame.party.plan';
-const TRICKY_KEY = 'gridgame.party.tricky';
-const REVEAL_KEY = 'gridgame.party.reveal';
-const MODE_KEY = 'gridgame.party.mode';
 // How many rounds each player picks (1-4). The game's length follows from it
 // and the seat count, so this is the only thing the host stores.
+//
+// The host-built "Custom setup" door was retired: it stored a plan, a tricky
+// toggle and per-category reveal timing (`gridgame.party.{setup,plan,tricky,
+// reveal,mode}`). Draft is the only way a game starts now, so the plan comes
+// from the players' picks and the veil timing is a fixed constant
+// (DEFAULT_REVEAL). Those five keys are dead — left unread rather than migrated,
+// since nothing in the draft flow has a use for what they held.
 const PICKS_KEY = 'gridgame.party.picksPerPlayer';
-
-/** The reveal-timing categories the host configures under tricky mode, in the
- *  order they appear in the setup. `label` reuses the mode-short i18n so "Flags /
- *  Maps / Population" read the same as the mode dials above. */
-const REVEAL_CATS = [
-  { key: 'flag', labelKey: 'party.modeShort.flagsAll', label: 'Flags' },
-  { key: 'map', labelKey: 'party.modeShort.mapOutlines', label: 'Maps' },
-  { key: 'metric', labelKey: 'party.groupFacts', label: 'World facts' },
-];
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -97,21 +87,21 @@ const MODE_LABELS = {
  *  build rather than rendering a broken question. See `flagParty/staleGuard.js`. */
 const KNOWN_QUESTION_IDS = renderableQuestionIds(SUPERLATIVE_METRICS.map((m) => m.questionId));
 
-/** Little pictures leading each setup row, distinct enough to tell apart at a
- *  glance. The artwork is shared with flagQuiz's deck indicator via
+/** Little pictures leading each draft hand card, distinct enough to tell apart at
+ *  a glance. The artwork is shared with flagQuiz's deck indicator via
  *  `flags/deckIcons.js` — promoted there when that second consumer arrived
- *  (Feature V). Only the sizing is ours: `.gs-thumb` / `.gs-contour` in
- *  index.css put them in a 24x24 slot leading a settings row, which is not
- *  the box flagQuiz wants, so the shared module deliberately ships artwork
- *  without sizing and each consumer passes its own class.
+ *  (Feature V). Sizing is the card's: `.pick-card-ic img` in index.css. These
+ *  classes carry no rules of their own — they used to size the retired setup
+ *  panel's 24x24 rows, and are kept only because the shared module requires a
+ *  class name (it deliberately ships artwork without sizing so each consumer
+ *  brings its own box).
  *
  *  Keyed by party mode id, which is not the deck id — this table is the
- *  mapping. Rendered via `iconSpan` (innerHTML), so `<img>` and inline `<svg>`
- *  both work. */
-const SETUP_ICONS = {
-  'flags-all': deckIconHtml('flags', { className: 'gs-thumb' }),
-  'flags-weird': deckIconHtml('weird', { className: 'gs-thumb' }),
-  'map-outlines': deckIconHtml('outlines', { className: 'gs-contour' }),
+ *  mapping. Injected as innerHTML, so `<img>` and inline `<svg>` both work. */
+const MODE_ICONS = {
+  'flags-all': deckIconHtml('flags', { className: 'mode-thumb' }),
+  'flags-weird': deckIconHtml('weird', { className: 'mode-thumb' }),
+  'map-outlines': deckIconHtml('outlines', { className: 'mode-contour' }),
 };
 
 /** Metric key (the flags/metrics registry) for a superlative question id. The
@@ -141,7 +131,7 @@ const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 /** The icon HTML for a draft card: the picture thumbnail for a picture mode, or
  *  the metric's own icon for a statistic. Empty string if unknown. */
 function modeIconHtml(/** @type {string} */ modeId) {
-  if (SETUP_ICONS[modeId]) return SETUP_ICONS[modeId];
+  if (MODE_ICONS[modeId]) return MODE_ICONS[modeId];
   const mode = MODE_BY_ID[modeId];
   if (!mode) return '';
   const key = metricKeyForQuestion(mode.questionId);
@@ -171,8 +161,9 @@ function roundCardIconHtml(/** @type {string} */ modeId) {
 
 /**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
- * mapping can be pinned by a test (the DOM `modeShort` below is a thin `t()`
- * wrapper). Metric modes take their short name from METRIC_SHORT keyed off the
+ * mapping can be pinned by a test; `modeShortLabel` has no DOM caller of its own
+ * now that the custom-setup panel is gone, but the round-card path resolves
+ * through it. Metric modes take their short name from METRIC_SHORT keyed off the
  * QUESTION id, which differs from the mode id for population ('superlative-pop' vs
  * questionId 'superlative'); picture modes fall back to their own MODE_LABELS
  * `shortKey`. A mode that resolves to neither returns `{ key: undefined }`,
@@ -211,7 +202,8 @@ export function modeFullLabel(id) {
  *   round names its specific metric ("Coffee production") and a flag round names
  *   its pool ("Flags: countries" vs "Flags: others"). This is the precise path,
  *   and the only one in a Draft game.
- * - **Custom / setlist round** (no `lastPick`) → derived from the question's
+ * - **Opening round** (no `lastPick` — the server-dealt Flags round every draft
+ *   starts with) → derived from the question's
  *   `questionId`, which is 1:1 with a mode for the map question and every superlative
  *   metric (`superlative-coffee` etc.). The one exception is the two flag pools,
  *   which **share** `questionId: 'flagPick'` and so can't be told apart from the wire
@@ -292,9 +284,6 @@ export function bootFlagParty() {
   const roundCardQuestions = $('roundcard-questions');
   const roundCardPick = $('roundcard-pick');
   const roundCardDouble = $('roundcard-double');
-  const partyModeEl = $('party-mode');
-  const modeDraftBtn = $('mode-draft');
-  const modeCustomBtn = $('mode-custom');
   const draftLengthEl = $('draft-length');
   const draftLengthHint = $('draft-length-hint');
   const draftPickBtns = /** @type {HTMLButtonElement[]} */ (
@@ -317,10 +306,6 @@ export function bootFlagParty() {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(pointer: coarse)').matches;
   shareBtn.hidden = !isTouchDevice;
-  const gameSetupEl = $('game-setup');
-  const gsModesEl = $('gs-modes');
-  const gsMixEl = $('gs-mix');
-  const gsQuestionsEl = $('gs-questions');
 
   /** @type {Map<string, { code: string, name: string }>} */
   const byCode = new Map();
@@ -395,19 +380,6 @@ export function bootFlagParty() {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
 
-  // ---- how to play: draft vs custom setlist ----
-  // The host chooses at the lobby. Draft (the default) is zero-setup: the players
-  // pick each round as they go. Custom setup opens the game-setup panel below to
-  // build the whole show up front. Persisted per device.
-  /** @type {'draft' | 'setlist'} */
-  let partyMode = loadPartyMode();
-  function loadPartyMode() {
-    try { return window.localStorage.getItem(MODE_KEY) === 'setlist' ? 'setlist' : 'draft'; } catch { return 'draft'; }
-  }
-  function savePartyMode() {
-    try { window.localStorage.setItem(MODE_KEY, partyMode); } catch { /* private mode */ }
-  }
-
   // ---- draft length (host-only): how many rounds each player picks ----
   // Length is expressed as picks-per-player, not a total: "each of you picks 2
   // rounds" is something a host can reason about, where a bare "5" left them to
@@ -448,147 +420,6 @@ export function bootFlagParty() {
     });
   }
 
-  // ---- game setup (host-only lobby plan) ----
-  // The host picks which modes play. Under the round model every enabled mode is
-  // one 5-question round, so a mode is simply on or off. The fixed picture trio
-  // (flags / territories / map) each get a toggle; the world-facts family is a
-  // row of colour chips, and each chosen statistic is its own round (five questions
-  // of that one metric). The choice is local (persisted per device) until Start,
-  // when buildPartyPlan() turns it into a segment plan that rides the 'start'
-  // message and the server validates; this is just the picker.
-  /** @typedef {{ picture: Record<string, { on: boolean }>, facts: { metrics: Record<string, boolean> } }} SetupState */
-  /** @type {SetupState} */
-  const setupState = loadSetup();
-  // Game-wide tricky-mode toggle (not per-mode). Persisted per device like the
-  // plan; rides on the 'start' message and the server broadcasts it back so
-  // every client veils the tiles in step.
-  let trickyOn = loadTricky();
-  // Per-category reveal timing (fraction of the window each veil clears at), only
-  // meaningful when tricky is on. Persisted and sent with the plan on start. The
-  // world-facts name reveal used to live here as a fifth value; it is a fixed beat
-  // now (NAME_REVEAL_SECONDS) and needs no config.
-  /** @type {{ flag: number, map: number, metric: number }} */
-  let revealState = loadReveal();
-
-  function loadTricky() {
-    try { return window.localStorage.getItem(TRICKY_KEY) === '1'; } catch { return false; }
-  }
-  function saveTricky() {
-    try { window.localStorage.setItem(TRICKY_KEY, trickyOn ? '1' : '0'); } catch { /* private mode */ }
-  }
-  /** Load the saved reveal config, snapping each value to an allowed option and
-   *  filling any gap with the default (so a stale / partial store can't break it). */
-  function loadReveal() {
-    /** @type {any} */
-    let raw = null;
-    try { raw = JSON.parse(window.localStorage.getItem(REVEAL_KEY) || 'null'); } catch { /* private mode */ }
-    const pick = (/** @type {any} */ v, /** @type {number} */ def) =>
-      (REVEAL_OPTIONS.includes(v) ? v : def);
-    const r = raw && typeof raw === 'object' ? raw : {};
-    return {
-      flag: pick(r.flag, DEFAULT_REVEAL.flag),
-      map: pick(r.map, DEFAULT_REVEAL.map),
-      metric: pick(r.metric, DEFAULT_REVEAL.metric),
-    };
-  }
-  function saveReveal() {
-    try { window.localStorage.setItem(REVEAL_KEY, JSON.stringify(revealState)); } catch { /* private mode */ }
-  }
-
-  /** True when the setup would produce at least one round (a game needs questions). */
-  function hasAnyQuestions(/** @type {SetupState} */ s) {
-    if (PICTURE_MODES.some((m) => s.picture[m.id] && s.picture[m.id].on)) return true;
-    return METRIC_MODES.some((m) => s.facts.metrics[m.id]);
-  }
-
-  /** The default setup: 3 rounds on, not everything. Flags: countries and Map:
-   *  outlines play, plus one statistic round (Population — the most familiar
-   *  metric). Flags: others and every other statistic start off, so a fresh game
-   *  is 3 rounds / 15 questions. Since each statistic is now its own round,
-   *  everything-on would be dozens of rounds, so the default deliberately picks a
-   *  single stat to keep the length sane. */
-  function defaultSetup() {
-    /** @type {Record<string, { on: boolean }>} */
-    const picture = {};
-    for (const m of PICTURE_MODES) picture[m.id] = { on: m.id !== 'flags-weird' };
-    /** @type {Record<string, boolean>} */
-    const metrics = {};
-    for (const m of METRIC_MODES) metrics[m.id] = m.id === 'superlative-pop';
-    return { picture, facts: { metrics } };
-  }
-
-  /** Coerce a stored / partial setup to a valid one, filling gaps from the
-   *  default and never returning an all-off (zero-round) state. Reads only `on`
-   *  for picture modes and the per-metric booleans; a stored per-mode count (`n`,
-   *  the retired stepper) or the old facts master toggle (`facts.on`) is dropped. */
-  function sanitizeSetup(/** @type {any} */ raw) {
-    const def = defaultSetup();
-    /** @type {Record<string, { on: boolean }>} */
-    const picture = {};
-    for (const m of PICTURE_MODES) {
-      const e = raw && raw.picture && raw.picture[m.id];
-      picture[m.id] = e && typeof e === 'object' ? { on: !!e.on } : def.picture[m.id];
-    }
-    // An old store carried a facts master toggle: if it was off, treat every
-    // metric as off regardless of the per-metric flags (they were inert then).
-    const factsWasOff = raw && raw.facts && typeof raw.facts.on === 'boolean' && !raw.facts.on;
-    /** @type {Record<string, boolean>} */
-    const metrics = {};
-    for (const m of METRIC_MODES) {
-      const v = raw && raw.facts && raw.facts.metrics ? raw.facts.metrics[m.id] : undefined;
-      metrics[m.id] = factsWasOff ? false : (v == null ? def.facts.metrics[m.id] : !!v);
-    }
-    const s = { picture, facts: { metrics } };
-    return hasAnyQuestions(s) ? s : def;
-  }
-
-  /** One-time migration of a returning host's old per-mode plan (PLAN_KEY) into
-   *  the round shape: any picture mode with a positive count carries over as on;
-   *  each metric that had questions becomes its own statistic round. Question counts are
-   *  dropped — a mode is now a round, not a count. */
-  function migrateModeState(/** @type {any} */ raw) {
-    /** @type {Record<string, { on: boolean }>} */
-    const picture = {};
-    for (const m of PICTURE_MODES) {
-      const e = raw[m.id];
-      picture[m.id] = { on: !!(e && e.on && (typeof e.n !== 'number' || e.n >= 1)) };
-    }
-    /** @type {Record<string, boolean>} */
-    const metrics = {};
-    for (const m of METRIC_MODES) {
-      const e = raw[m.id];
-      metrics[m.id] = !!(e && e.on);
-    }
-    return sanitizeSetup({ picture, facts: { metrics } });
-  }
-
-  function loadSetup() {
-    try {
-      const raw = JSON.parse(window.localStorage.getItem(SETUP_KEY) || 'null');
-      if (raw && raw.picture && raw.facts) return sanitizeSetup(raw);
-    } catch { /* private mode / malformed */ }
-    // Fall back to a one-time migration from the old per-mode plan store.
-    try {
-      const old = JSON.parse(window.localStorage.getItem(PLAN_KEY) || 'null');
-      if (old && typeof old === 'object') return migrateModeState(old);
-    } catch { /* ignore */ }
-    return defaultSetup();
-  }
-  function saveSetup() {
-    try { window.localStorage.setItem(SETUP_KEY, JSON.stringify(setupState)); } catch { /* private mode */ }
-  }
-  /** The plan to send on Start: one round per enabled mode (picture or statistic). */
-  function currentPlan() {
-    return buildPartyPlan(setupState);
-  }
-  /** How many rounds the current setup plays: enabled picture modes + enabled statistics. */
-  function roundsOn() {
-    let n = 0;
-    for (const m of PICTURE_MODES) if (setupState.picture[m.id] && setupState.picture[m.id].on) n += 1;
-    for (const m of METRIC_MODES) if (setupState.facts.metrics[m.id]) n += 1;
-    return n;
-  }
-
   // Thin `t()` wrappers over the pure resolvers (modeFullLabel / modeShortLabel
   // above) — the id→label mapping lives up there so it can be pinned by
   // flagParty/modeLabels.test.js; here we just localize the resolved key.
@@ -596,207 +427,6 @@ export function bootFlagParty() {
     const { key, fallback } = modeFullLabel(id);
     return t(key, fallback);
   };
-  const modeShort = (/** @type {string} */ id) => {
-    const { key, fallback } = modeShortLabel(id);
-    return t(key, fallback);
-  };
-
-  // ---- setup row builders (shared bits) ----
-  /** @param {string} svg */
-  function iconSpan(svg) {
-    const span = el('span', 'gs-ic');
-    span.innerHTML = svg;
-    span.setAttribute('aria-hidden', 'true');
-    return span;
-  }
-  /** @param {string} key @param {string} fallback */
-  function sectionLabel(key, fallback) {
-    const s = el('div', 'gs-sec', t(key, fallback));
-    s.dataset.i18nKey = key;
-    return s;
-  }
-  /** The site's shared switch, wired to callbacks. @param {() => boolean} getOn @param {(on: boolean) => void} onToggle @param {string} ariaLabel */
-  function toggleEl(getOn, onToggle, ariaLabel) {
-    const sw = document.createElement('label');
-    sw.className = 'scope-toggle-switch';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = getOn();
-    input.setAttribute('aria-label', ariaLabel);
-    input.addEventListener('change', () => onToggle(input.checked));
-    const track = el('span', 'scope-toggle-track');
-    track.appendChild(el('span', 'scope-toggle-thumb'));
-    sw.append(input, track);
-    return sw;
-  }
-
-  /** Build the setup rows once; their values are painted by updateSetup(). */
-  function buildSetup() {
-    gsModesEl.innerHTML = '';
-
-    // The fixed picture trio — a picture icon, a name, and a toggle each. Every
-    // enabled mode is exactly one 5-question round, so there's no per-mode count and
-    // no need to label each row "1 round": on or off.
-    gsModesEl.appendChild(sectionLabel('party.groupPictures', 'Flags & maps'));
-    for (const m of PICTURE_MODES) {
-      const row = el('div', 'gs-mode');
-      row.dataset.mode = m.id;
-      row.appendChild(iconSpan(SETUP_ICONS[m.id]));
-      row.appendChild(el('span', 'gs-name', modeLabel(m.id)));
-      row.appendChild(toggleEl(() => setupState.picture[m.id].on, (on) => togglePicture(m.id, on), modeLabel(m.id)));
-      gsModesEl.appendChild(row);
-    }
-
-    // The world-facts family: a row of colour chips, one per statistic. Each
-    // chosen statistic is its own round (five questions of that metric), so a chip is
-    // a round toggle — no master switch. A new metric costs one chip here.
-    gsModesEl.appendChild(sectionLabel('party.groupFacts', 'World facts'));
-    const factsHint = el('p', 'gs-facts-hint', t('party.factsHint2', 'Each statistic you pick is its own round'));
-    factsHint.id = 'gs-facts-hint';
-    gsModesEl.appendChild(factsHint);
-
-    const chips = el('div', 'gs-chips');
-    chips.id = 'gs-chips';
-    for (const m of METRIC_MODES) {
-      const chip = el('button', 'gs-chip');
-      /** @type {HTMLButtonElement} */ (chip).type = 'button';
-      chip.dataset.metric = m.id;
-      const metricKey = metricKeyForQuestion(m.questionId);
-      chip.style.setProperty('--mc', (metricKey && METRIC_HUES[metricKey]) || 'currentColor');
-      chip.appendChild(iconSpan((metricKey && METRIC_ICONS[metricKey]) || ''));
-      chip.appendChild(el('span', 'gs-chip-label', modeShort(m.id)));
-      chip.addEventListener('click', () => toggleMetric(m.id));
-      chips.appendChild(chip);
-    }
-    gsModesEl.appendChild(chips);
-
-    // Game-wide tricky toggle (a mode-frame row with no stepper) + the
-    // per-category reveal-timing pickers shown only while tricky is on.
-    const trickyRow = el('div', 'gs-mode gs-option');
-    const nameCol = el('span', 'gs-name');
-    nameCol.appendChild(el('span', 'gs-opt-title', t('party.tricky', 'Tricky mode')));
-    nameCol.appendChild(el('span', 'gs-opt-hint', t('party.trickyHint', 'Flags start hidden and clear as the clock runs')));
-    trickyRow.appendChild(nameCol);
-    trickyRow.appendChild(toggleEl(() => trickyOn, (on) => { trickyOn = on; saveTricky(); syncRevealVisibility(); }, t('party.tricky', 'Tricky mode')));
-    gsModesEl.appendChild(trickyRow);
-
-    // Per-category reveal timing, shown only while tricky is on. Each category
-    // (Flags / Maps / World facts) picks when its veil fully clears, as a
-    // fraction of the question window (later = harder). A native <select> keeps
-    // it compact and accessible on a phone.
-    const revealBox = el('div', 'gs-reveal');
-    revealBox.id = 'gs-reveal';
-    revealBox.appendChild(el('p', 'gs-reveal-hint', t('party.revealHint', 'Clear the flag after…')));
-    for (const cat of REVEAL_CATS) {
-      const line = el('div', 'gs-reveal-row');
-      line.appendChild(el('span', 'gs-reveal-name', t(cat.labelKey, cat.label)));
-      const sel = document.createElement('select');
-      sel.className = 'gs-reveal-pick';
-      sel.dataset.cat = cat.key;
-      sel.setAttribute('aria-label', t(cat.labelKey, cat.label));
-      for (const opt of REVEAL_OPTIONS) {
-        const o = document.createElement('option');
-        o.value = String(opt);
-        o.textContent = `${Math.round(opt * 100)}%`;
-        if (opt === revealState[/** @type {'flag'|'map'|'metric'} */ (cat.key)]) o.selected = true;
-        sel.appendChild(o);
-      }
-      sel.addEventListener('change', () => {
-        const v = Number(sel.value);
-        if (REVEAL_OPTIONS.includes(v)) { revealState[/** @type {'flag'|'map'|'metric'} */ (cat.key)] = v; saveReveal(); }
-      });
-      line.appendChild(sel);
-      revealBox.appendChild(line);
-    }
-    gsModesEl.appendChild(revealBox);
-    syncRevealVisibility();
-
-    updateSetup();
-  }
-
-  /** Show the per-category reveal pickers only while tricky mode is on. */
-  function syncRevealVisibility() {
-    const box = gsModesEl.querySelector('#gs-reveal');
-    if (box) /** @type {HTMLElement} */ (box).hidden = !trickyOn;
-  }
-
-  // ---- setup mutations ----
-  function togglePicture(/** @type {string} */ id, /** @type {boolean} */ on) {
-    // A game needs at least one round — refuse a toggle-off that would zero everything.
-    const tentative = { ...setupState, picture: { ...setupState.picture, [id]: { on } } };
-    if (!hasAnyQuestions(tentative)) { updateSetup(); return; }
-    setupState.picture[id].on = on;
-    saveSetup();
-    updateSetup();
-  }
-  function toggleMetric(/** @type {string} */ id) {
-    const metrics = setupState.facts.metrics;
-    const next = !metrics[id];
-    // Each statistic is its own round — a chip is a round toggle. A game needs at
-    // least one round, so refuse a toggle-off that would zero everything.
-    const tentative = { ...setupState, facts: { metrics: { ...metrics, [id]: next } } };
-    if (!hasAnyQuestions(tentative)) { updateSetup(); return; }
-    metrics[id] = next;
-    saveSetup();
-    updateSetup();
-  }
-
-  /** Repaint toggles, chips, the round count, and the collapsed mode mix. */
-  function updateSetup() {
-    gsMixEl.innerHTML = '';
-    for (const m of PICTURE_MODES) {
-      const st = setupState.picture[m.id];
-      const row = /** @type {HTMLElement | null} */ (gsModesEl.querySelector(`[data-mode="${m.id}"]`));
-      if (row) {
-        row.classList.toggle('off', !st.on);
-        const inp = /** @type {HTMLInputElement | null} */ (row.querySelector('input')); if (inp) inp.checked = st.on;
-      }
-      if (st.on) gsMixEl.appendChild(el('span', '', modeShort(m.id)));
-    }
-    // Chips: each is a round toggle, coloured (on) when its statistic is chosen.
-    for (const m of METRIC_MODES) {
-      const chip = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"]`);
-      if (chip) {
-        const active = !!setupState.facts.metrics[m.id];
-        chip.classList.toggle('on', active);
-        chip.classList.toggle('off', !active);
-        chip.setAttribute('aria-pressed', String(active));
-        if (active) gsMixEl.appendChild(el('span', '', modeShort(m.id)));
-      }
-    }
-    // The meta reads "N rounds" — the game's length unit is now the round.
-    gsQuestionsEl.textContent = String(roundsOn());
-  }
-
-  /** On a language switch, repaint the JS-set labels (sections, rows, chips, mix). */
-  function repaintSetupLabels() {
-    for (const s of /** @type {NodeListOf<HTMLElement>} */ (gsModesEl.querySelectorAll('.gs-sec'))) {
-      const key = s.dataset.i18nKey; if (key) s.textContent = t(key, s.textContent || '');
-    }
-    for (const m of PICTURE_MODES) {
-      const row = gsModesEl.querySelector(`[data-mode="${m.id}"]`);
-      const nm = row && row.querySelector('.gs-name');
-      if (nm) nm.textContent = modeLabel(m.id);
-    }
-    const factsHint = gsModesEl.querySelector('#gs-facts-hint');
-    if (factsHint) factsHint.textContent = t('party.factsHint2', 'Each statistic you pick is its own round');
-    for (const m of METRIC_MODES) {
-      const lbl = gsModesEl.querySelector(`.gs-chip[data-metric="${m.id}"] .gs-chip-label`);
-      if (lbl) lbl.textContent = modeShort(m.id);
-    }
-    const optTitle = gsModesEl.querySelector('.gs-option .gs-opt-title');
-    if (optTitle) optTitle.textContent = t('party.tricky', 'Tricky mode');
-    const optHint = gsModesEl.querySelector('.gs-option .gs-opt-hint');
-    if (optHint) optHint.textContent = t('party.trickyHint', 'Flags start hidden and clear as the clock runs');
-    const revealHint = gsModesEl.querySelector('.gs-reveal-hint');
-    if (revealHint) revealHint.textContent = t('party.revealHint', 'Clear the flag after…');
-    for (const cat of REVEAL_CATS) {
-      const nm = gsModesEl.querySelector(`.gs-reveal-pick[data-cat="${cat.key}"]`);
-      const nameEl = nm && nm.previousElementSibling;
-      if (nameEl) nameEl.textContent = t(cat.labelKey, cat.label);
-    }
-    updateSetup();
-  }
 
   // ---- connection ----
   function wsUrl(/** @type {string} */ code, /** @type {'create'|'join'} */ intent) {
@@ -1199,23 +829,9 @@ export function bootFlagParty() {
     // greys out the impossible empty-roster case.
     startBtn.disabled = state.roster.filter((r) => r.present).length < 1;
     waitEl.hidden = !(!state.isHost && inLobby);
-    // Draft-vs-custom is the host's choice; the game-setup panel only shows under
-    // Custom. Both are host-only, lobby-only.
-    partyModeEl.hidden = !hostSetup;
-    syncPartyMode();
-    gameSetupEl.hidden = !(hostSetup && partyMode === 'setlist');
-  }
-
-  /** Reflect the selected mode on the two doors (and the setup panel's visibility
-   *  is handled by renderLobby). */
-  function syncPartyMode() {
-    modeDraftBtn.classList.toggle('on', partyMode === 'draft');
-    modeCustomBtn.classList.toggle('on', partyMode === 'setlist');
-    modeDraftBtn.setAttribute('aria-pressed', String(partyMode === 'draft'));
-    modeCustomBtn.setAttribute('aria-pressed', String(partyMode === 'setlist'));
-    // The length row belongs to the Draft door; Custom sizes its game from the
-    // plan instead. `partyModeEl.hidden` already gates host-and-lobby.
-    draftLengthEl.hidden = partyMode !== 'draft';
+    // Draft is the only mode, so the length row is the whole host setup: it shows
+    // exactly when the start button does.
+    draftLengthEl.hidden = !hostSetup;
     syncDraftLength();
   }
 
@@ -1744,14 +1360,6 @@ export function bootFlagParty() {
     enterRoom(code, 'join');
   });
 
-  for (const btn of [modeDraftBtn, modeCustomBtn]) {
-    btn.addEventListener('click', () => {
-      partyMode = /** @type {'draft'|'setlist'} */ (btn.dataset.mode === 'setlist' ? 'setlist' : 'draft');
-      savePartyMode();
-      syncPartyMode();
-      gameSetupEl.hidden = !(state.isHost && state.phase === 'lobby' && partyMode === 'setlist');
-    });
-  }
   for (const btn of draftPickBtns) {
     btn.addEventListener('click', () => {
       picksPerPlayer = validatePicksPerPlayer(Number(btn.dataset.picks));
@@ -1760,17 +1368,12 @@ export function bootFlagParty() {
     });
   }
   startBtn.addEventListener('click', () => {
-    // Draft is zero-setup: the players pick each round, so the start carries no
+    // Draft is the only way a game starts: zero setup, so the start carries no
     // plan (the server builds the opening Flags round and sizes the game from the
-    // seat count). Custom sends the built plan as before. Tricky / reveal ride
-    // along either way.
-    if (partyMode === 'draft') {
-      // No `tricky`: it is a Custom-only option and the draft door never showed
-      // the toggle (the server forces it false for drafts regardless).
-      send({ type: 'start', draft: true, picks: picksPerPlayer, reveal: revealState });
-    } else {
-      send({ type: 'start', plan: currentPlan(), tricky: trickyOn, reveal: revealState });
-    }
+    // seat count) and no reveal config (the veil clear timing is a fixed constant
+    // now — see DEFAULT_REVEAL). The only host input is how many rounds each
+    // player picks.
+    send({ type: 'start', draft: true, picks: picksPerPlayer });
   });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
   questionToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
@@ -1794,10 +1397,8 @@ export function bootFlagParty() {
     window.setTimeout(() => shareBtn.classList.remove('copied'), 1500);
   }
 
-  buildSetup();
-
   // Re-render dynamic text (country names, labels) on a soft language switch.
-  document.addEventListener('langchanged', () => { paintJoinError(); repaintSetupLabels(); render(); });
+  document.addEventListener('langchanged', () => { paintJoinError(); render(); });
 
   // ---- load data + route ----
   // Countries (for names + flags) and every superlative question's metric (for the

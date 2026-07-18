@@ -7,13 +7,10 @@ import {
   revealSecondsFor,
   secondsLeft,
   remainingFraction,
-  REVEAL_OPTIONS,
   NAME_REVEAL_SECONDS,
   DEFAULT_REVEAL,
   revealCategoryFor,
   isMetricQuestion,
-  clampReveal,
-  validateReveal,
   veilProgress,
   namesRevealed,
   veilActive,
@@ -67,12 +64,11 @@ test('remainingFraction: a non-positive total is a safe 0 (no divide-by-zero)', 
   assert.equal(remainingFraction(1_000, 1_000, 0), 0);
 });
 
-test('DEFAULT_REVEAL: flags obscured longest, metrics shortest, all an allowed option below 1', () => {
+test('DEFAULT_REVEAL: flags obscured longest, metrics shortest, all below 1', () => {
   assert.ok(DEFAULT_REVEAL.metric < DEFAULT_REVEAL.map, 'metrics clear before maps');
   assert.ok(DEFAULT_REVEAL.map < DEFAULT_REVEAL.flag, 'maps clear before flags');
   for (const v of [DEFAULT_REVEAL.flag, DEFAULT_REVEAL.map, DEFAULT_REVEAL.metric]) {
-    assert.ok(REVEAL_OPTIONS.includes(v), `${v} is a pickable option`);
-    assert.ok(v < 1, 'the tile is fully clear before the buzzer');
+    assert.ok(v > 0 && v < 1, 'the tile starts veiled and is fully clear before the buzzer');
   }
   assert.deepEqual(DEFAULT_REVEAL, { flag: 0.8, map: 0.4, metric: 0.2 }, 'the agreed defaults');
   assert.ok(NAME_REVEAL_SECONDS * 1000 < QUESTION_SECONDS * 1000, 'names land well before the buzzer');
@@ -97,23 +93,6 @@ test('isMetricQuestion: every superlative id is metric, catching the ones reveal
   // id metric, so the other superlative questions would slip past a category check.
   assert.notEqual(revealCategoryFor('superlative-area'), 'metric');
   assert.equal(isMetricQuestion('superlative-area'), true);
-});
-
-test('clampReveal: snaps to the nearest option, falls back on non-numbers', () => {
-  assert.equal(clampReveal(0.4, 0.8), 0.4, 'an exact option is kept');
-  assert.equal(clampReveal(0.55, 0.8), 0.6, 'snaps to the nearest option');
-  assert.equal(clampReveal(0.05, 0.8), 0.2, 'clamps a too-low value up to the lowest option');
-  assert.equal(clampReveal(9, 0.8), 0.8, 'clamps a too-high value down to the highest option');
-  assert.equal(clampReveal('40', 0.4), 0.4, 'a non-number falls back to the default');
-  assert.equal(clampReveal(NaN, 0.6), 0.6, 'NaN falls back to the default');
-});
-
-test('validateReveal: fills a full config, snapping and defaulting each field', () => {
-  assert.deepEqual(validateReveal({ flag: 0.6, map: 0.2, metric: 0.4 }), { flag: 0.6, map: 0.2, metric: 0.4 });
-  assert.deepEqual(validateReveal({ flag: 0.55 }), { flag: 0.6, map: DEFAULT_REVEAL.map, metric: DEFAULT_REVEAL.metric }, 'missing fields default, present ones snap');
-  assert.deepEqual(validateReveal({ name: 0.5 }), DEFAULT_REVEAL, 'a stale name field is ignored, not carried through');
-  assert.deepEqual(validateReveal(null), DEFAULT_REVEAL, 'a missing config is the full default');
-  assert.deepEqual(validateReveal('nope'), DEFAULT_REVEAL, 'a garbage config is the full default');
 });
 
 // ---- veilActive ----

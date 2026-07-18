@@ -6,12 +6,8 @@ import {
   poolIdAt,
   questionIdAt,
   PARTY_MODES,
-  MAX_QUESTIONS_PER_MODE,
-  MAX_TOTAL_QUESTIONS,
-  validatePlan,
   PICTURE_MODES,
   METRIC_MODES,
-  buildPartyPlan,
   ROUND_QUESTIONS,
   roundIndexAt,
   roundCount,
@@ -71,45 +67,6 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
   for (const m of PARTY_MODES) assert.match(m.id, /^[a-z]+(-[a-z]+)*$/);
 });
 
-test('validatePlan: a clean plan passes through unchanged', () => {
-  assert.deepEqual(validatePlan(DEFAULT_PLAN), DEFAULT_PLAN);
-});
-
-test('validatePlan: drops segments with an unknown mode or a bad count', () => {
-  const dirty = [
-    { poolId: 'sovereign', questionId: 'flagPick', questions: 2 },   // ok
-    { poolId: 'sovereign', questionId: 'nopeQuestion', questions: 3 },  // unknown questionId
-    { poolId: 'atlantis', questionId: 'flagPick', questions: 3 },    // unknown poolId
-    { poolId: 'sovereign', questionId: 'mapPick', questions: 0 },    // count < 1
-    { poolId: 'sovereign', questionId: 'mapPick', questions: 2.5 },  // non-integer
-    { poolId: 'sovereign', questionId: 'mapPick', questions: 4 },    // ok
-  ];
-  assert.deepEqual(validatePlan(dirty), [
-    { poolId: 'sovereign', questionId: 'flagPick', questions: 2 },
-    { poolId: 'sovereign', questionId: 'mapPick', questions: 4 },
-  ]);
-});
-
-test('validatePlan: caps the running total at MAX_TOTAL_QUESTIONS', () => {
-  // Enough max-size segments to overshoot the total cap regardless of how the
-  // per-mode / total constants are tuned. validatePlan doesn't dedupe modes, so
-  // repeating a valid one is fine.
-  const segments = Math.ceil(MAX_TOTAL_QUESTIONS / MAX_QUESTIONS_PER_MODE) + 1;
-  const huge = Array.from({ length: segments }, () => (
-    { poolId: 'sovereign', questionId: 'flagPick', questions: MAX_QUESTIONS_PER_MODE }
-  ));
-  const out = validatePlan(huge);
-  assert.equal(totalQuestions(/** @type {any} */ (out)), MAX_TOTAL_QUESTIONS);
-});
-
-test('validatePlan: non-array, empty, or all-invalid input returns null', () => {
-  assert.equal(validatePlan(null), null);
-  assert.equal(validatePlan('nope'), null);
-  assert.equal(validatePlan(undefined), null);
-  assert.equal(validatePlan([]), null);
-  assert.equal(validatePlan([{ poolId: 'x', questionId: 'y', questions: 3 }]), null);
-});
-
 // ---- grouped setup: picture trio vs the world-metric family ----
 
 test('PARTY_MODES: split into a fixed picture trio and the metric family', () => {
@@ -118,78 +75,6 @@ test('PARTY_MODES: split into a fixed picture trio and the metric family', () =>
   for (const m of PICTURE_MODES) assert.equal(m.group, 'picture');
   for (const m of METRIC_MODES) assert.equal(m.group, 'metric');
 });
-
-test('buildPartyPlan: each on picture mode is one ROUND_QUESTIONS round, off dropped', () => {
-  const plan = buildPartyPlan({
-    picture: {
-      'flags-all': { on: true },
-      'flags-weird': { on: false },
-      'map-outlines': { on: true },
-    },
-    facts: { metrics: {} },
-  });
-  assert.deepEqual(plan, [
-    { poolId: 'sovereign', questionId: 'flagPick', questions: ROUND_QUESTIONS },
-    { poolId: 'sovereign', questionId: 'mapPick', questions: ROUND_QUESTIONS },
-  ]);
-});
-
-test('buildPartyPlan: each enabled statistic is its own ROUND_QUESTIONS round', () => {
-  const plan = buildPartyPlan({
-    picture: { 'flags-all': { on: true } },
-    facts: { metrics: { 'superlative-pop': true, 'superlative-coffee': true } },
-  });
-  assert.deepEqual(plan, [
-    { poolId: 'sovereign', questionId: 'flagPick', questions: ROUND_QUESTIONS },
-    { poolId: 'sovereign', questionId: 'superlative', questions: ROUND_QUESTIONS },       // population
-    { poolId: 'sovereign', questionId: 'superlative-coffee', questions: ROUND_QUESTIONS },
-  ]);
-  // three enabled modes = three whole rounds
-  assert.equal(roundCount(plan), 3);
-  // every stat round is one metric only (never mixed)
-  for (const s of plan) assert.equal(s.questions, ROUND_QUESTIONS);
-});
-
-test('buildPartyPlan: statistic rounds follow the catalog order, after the picture rounds', () => {
-  const plan = buildPartyPlan({
-    picture: { 'map-outlines': { on: true } },
-    facts: { metrics: { 'superlative-area': true, 'superlative-pop': true } }, // pop precedes area in the catalog
-  });
-  assert.deepEqual(plan.map((s) => s.questionId), ['mapPick', 'superlative', 'superlative-area']);
-});
-
-test('buildPartyPlan: no metric enabled contributes no stat rounds', () => {
-  const plan = buildPartyPlan({
-    picture: { 'map-outlines': { on: true } },
-    facts: { metrics: { 'superlative-pop': false } },
-  });
-  assert.deepEqual(plan, [{ poolId: 'sovereign', questionId: 'mapPick', questions: ROUND_QUESTIONS }]);
-});
-
-test('buildPartyPlan: roundCount equals enabled picture modes + enabled statistics', () => {
-  const plan = buildPartyPlan({
-    picture: { 'flags-all': { on: true }, 'flags-weird': { on: true }, 'map-outlines': { on: false } },
-    facts: { metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-gdp': true } },
-  });
-  // 2 picture + 3 statistics = 5 rounds
-  assert.equal(roundCount(plan), 5);
-});
-
-test('buildPartyPlan: output always survives validatePlan', () => {
-  const plan = buildPartyPlan({
-    picture: {
-      'flags-all': { on: true },
-      'flags-weird': { on: true },
-      'map-outlines': { on: true },
-    },
-    facts: { metrics: { 'superlative-pop': true, 'superlative-area': true, 'superlative-density': true } },
-  });
-  const cleaned = validatePlan(plan);
-  assert.ok(cleaned, 'built plan should validate');
-  assert.equal(totalQuestions(/** @type {any} */ (cleaned)), totalQuestions(plan));
-});
-
-// ---- rounds (Iteration 8) ----
 
 test('ROUND_QUESTIONS is 5', () => {
   assert.equal(ROUND_QUESTIONS, 5);
@@ -274,20 +159,4 @@ test('isFinalRound: a single-round game has no final round (nothing to contrast)
   // two rounds: the second is the final one
   assert.equal(isFinalRound(4, 10), false);
   assert.equal(isFinalRound(5, 10), true);
-});
-
-// A draft round's veil rides on its segment, so it has to survive the same
-// validation any other plan field does -- validatePlan rebuilds segments
-// field-by-field, so an unlisted key is dropped silently.
-test('validatePlan: keeps a segment veil flag, and only when it is exactly true', () => {
-  const dirty = [
-    { poolId: 'sovereign', questionId: 'flagPick', questions: 5, veil: true },
-    { poolId: 'sovereign', questionId: 'mapPick', questions: 5, veil: 'yes' },
-    { poolId: 'nonSovereign', questionId: 'flagPick', questions: 5 },
-  ];
-  assert.deepEqual(validatePlan(dirty), [
-    { poolId: 'sovereign', questionId: 'flagPick', questions: 5, veil: true },
-    { poolId: 'sovereign', questionId: 'mapPick', questions: 5 },
-    { poolId: 'nonSovereign', questionId: 'flagPick', questions: 5 },
-  ]);
 });

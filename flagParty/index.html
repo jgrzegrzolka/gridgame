@@ -89,43 +89,20 @@
       <section class="pt-lobby" id="pt-lobby" hidden>
         <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
-        <!-- Host-only: how to play — Draft (players pick each round) or Custom setup. -->
-        <div class="party-mode" id="party-mode" hidden>
-          <button type="button" class="mode-door" id="mode-draft" data-mode="draft">
-            <span class="mode-door-title" data-i18n="party.doorDraftTitle">Draft</span>
-            <span class="mode-door-desc" data-i18n="party.doorDraftDesc">Start now. After each round, whoever is last picks what everyone plays next.</span>
-          </button>
-          <div class="draft-length" id="draft-length" hidden>
-            <span class="dl-text">
-              <span class="dl-title" data-i18n="party.draftLength">Rounds each player picks</span>
-              <span class="dl-hint" id="draft-length-hint"></span>
-            </span>
-            <span class="dl-step" role="group" aria-label="Rounds each player picks">
-              <button type="button" class="dl-pick" data-picks="1" aria-pressed="true">1</button>
-              <button type="button" class="dl-pick" data-picks="2" aria-pressed="false">2</button>
-              <button type="button" class="dl-pick" data-picks="3" aria-pressed="false">3</button>
-              <button type="button" class="dl-pick" data-picks="4" aria-pressed="false">4</button>
-            </span>
-          </div>
-          <button type="button" class="mode-door" id="mode-custom" data-mode="setlist">
-            <span class="mode-door-title" data-i18n="party.doorCustomTitle">Custom setup</span>
-            <span class="mode-door-desc" data-i18n="party.doorCustomDesc">Build the whole show up front. You choose every round.</span>
-          </button>
+        <!-- Host-only: game length. Draft is the only mode, so this is the whole
+             setup — how many rounds each player picks. -->
+        <div class="draft-length" id="draft-length" hidden>
+          <span class="dl-text">
+            <span class="dl-title" data-i18n="party.draftLength">Rounds each player picks</span>
+            <span class="dl-hint" id="draft-length-hint"></span>
+          </span>
+          <span class="dl-step" role="group" aria-label="Rounds each player picks">
+            <button type="button" class="dl-pick" data-picks="1" aria-pressed="true">1</button>
+            <button type="button" class="dl-pick" data-picks="2" aria-pressed="false">2</button>
+            <button type="button" class="dl-pick" data-picks="3" aria-pressed="false">3</button>
+            <button type="button" class="dl-pick" data-picks="4" aria-pressed="false">4</button>
+          </span>
         </div>
-        <details class="game-setup" id="game-setup" hidden>
-          <summary class="game-setup-head">
-            <span class="gs-head-row">
-              <span class="gs-title" data-i18n="party.gameSetup">Game setup</span>
-              <span class="gs-meta">
-                <span class="gs-questions" id="gs-questions">3</span>
-                <span data-i18n="party.roundsLabel">rounds</span>
-                <span class="gs-caret" aria-hidden="true"></span>
-              </span>
-            </span>
-            <span class="gs-mix" id="gs-mix"></span>
-          </summary>
-          <div class="gs-modes" id="gs-modes"></div>
-        </details>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">
           <button type="button" class="row-cta" id="start-game" data-i18n="party.startGame" hidden>Start game</button>

@@ -1,7 +1,8 @@
 /**
  * The four deck icons — one per question type the flag games can ask.
  *
- * Born in `flagParty/page.js` as `SETUP_ICONS`, promoted here when flagQuiz
+ * Born in `flagParty/page.js` (as the setup panel's icon table, now `MODE_ICONS`),
+ * promoted here when flagQuiz
  * became the second consumer (Feature V: the play-screen deck indicator + its
  * picker popover). Per the repo's "promote on the second consumer" rule, this
  * is that moment; before it, sharing would have locked the wrong shape.

@@ -63,12 +63,6 @@ export const ROUND_BREAK_SECONDS = 6;
  *  starts after the card, like everyone else's). */
 export const ROUND_INTRO_SECONDS = 2;
 
-/** Tricky mode: the reveal-timing options a host can pick per question category — a
- *  tile stays veiled until this fraction of the question window has elapsed, then
- *  it is fully clear. Every option is below 1, so a late decider always gets a
- *  clean look while an early buzzer gambled on partial detail for the speed bonus. */
-export const REVEAL_OPTIONS = [0.2, 0.4, 0.6, 0.8];
-
 /** Tricky mode is about flag *visibility*; the world-facts name reveal is about
  *  flag *identity* — a separate axis. On a world-facts question the answer is a fact
  *  ("which grows the most coffee?"), not flag recognition, so a player who knows
@@ -90,7 +84,14 @@ export const NAME_REVEAL_SECONDS = 3;
  *  carry the most give-away detail); outlines clear earlier (a monochrome
  *  silhouette is already hard, and grey does nothing to it); metric questions clear
  *  earliest (the flags are incidental there — the question is the number — so the
- *  veil is just flavour). The host can override each in the lobby. */
+ *  veil is just flavour).
+ *
+ *  **Fixed, not configurable** — same call as NAME_REVEAL_SECONDS above. These were
+ *  host-editable per category (a 20/40/60/80% picker each) in the retired "Custom
+ *  setup" panel, which cost three rows in the lobby, a persisted config, a wire
+ *  field on `start` and a validator, to tune a beat no host had a reason to touch.
+ *  Whether a round is veiled at all is still a live choice — the draft picker arms
+ *  it per round (`segment.veil`); only the clear timing is settled here. */
 export const DEFAULT_REVEAL = { flag: 0.8, map: 0.4, metric: 0.2 };
 
 /**
@@ -119,39 +120,6 @@ export function revealCategoryFor(questionId) {
   if (questionId === 'mapPick') return 'map';
   if (questionId === 'superlative') return 'metric';
   return 'flag';
-}
-
-/**
- * Snap an untrusted reveal fraction to the nearest allowed option, or fall back
- * to `fallback` when it isn't a usable number — so a host's pick (or a malformed
- * wire value) always lands inside the {20, 40, 60, 80}% set the UI offers.
- * @param {unknown} value
- * @param {number} fallback
- * @returns {number}
- */
-export function clampReveal(value, fallback) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  let best = REVEAL_OPTIONS[0];
-  for (const opt of REVEAL_OPTIONS) {
-    if (Math.abs(opt - value) < Math.abs(best - value)) best = opt;
-  }
-  return best;
-}
-
-/**
- * Sanitize an untrusted per-category reveal config into a full `{ flag, map,
- * metric }` with every value snapped to an allowed option, defaulting anything
- * missing. The server must never trust a client-supplied reveal config directly.
- * @param {unknown} reveal
- * @returns {{ flag: number, map: number, metric: number }}
- */
-export function validateReveal(reveal) {
-  const r = (reveal && typeof reveal === 'object') ? /** @type {any} */ (reveal) : {};
-  return {
-    flag: clampReveal(r.flag, DEFAULT_REVEAL.flag),
-    map: clampReveal(r.map, DEFAULT_REVEAL.map),
-    metric: clampReveal(r.metric, DEFAULT_REVEAL.metric),
-  };
 }
 
 /**
