@@ -6,10 +6,11 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
+import { CORRECT_POINTS, SPEED_BONUS, FINAL_ROUND_MULTIPLIER } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
+import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
@@ -689,6 +690,12 @@ export function bootFlagParty() {
   let breakAnimToken = null;
   /** Monotonic break counter, the value behind `breakAnimToken`. */
   let breakSeq = 0;
+  /** This round's running score breakdown, per player, for the break's chips.
+   *  Reset when a round starts; added to once per question (the tokens below guard
+   *  render()'s re-runs, which would otherwise count a question twice). */
+  let roundTally = emptyTally();
+  let tallyRoundToken = null;
+  let tallyQuestionToken = null;
   /** True once this device has sent its pick for the current draft turn, so a
    *  double-tap can't fire two picks; reset when we leave the picking phase. */
   let pickSent = false;
@@ -785,6 +792,24 @@ export function bootFlagParty() {
       // Leaving a break (the next round's first question is here): the standings
       // we just showed become the baseline the following break diffs against.
       if (state.phase === 'question' && pendingBreakBoard) { prevBreakBoard = pendingBreakBoard; pendingBreakBoard = null; }
+      // A new round starts a fresh breakdown: the chips describe the round that
+      // just ended, not the game so far.
+      if (state.phase === 'question' && isRoundStart(state.questionIndex, state.totalQuestions)) {
+        const t = String(state.questionIndex);
+        if (tallyRoundToken !== t) { tallyRoundToken = t; roundTally = emptyTally(); }
+      }
+      // Fold each question's points into the round's tally, once per question. The
+      // reveal renders repeatedly while it's on screen, so without the token a
+      // re-render would count the same question again and the chips would drift
+      // away from the gain beside them.
+      if (state.phase === 'reveal' && state.reveal) {
+        const t = String(state.questionIndex);
+        if (tallyQuestionToken !== t) {
+          tallyQuestionToken = t;
+          const multiplier = state.reveal.doubled ? FINAL_ROUND_MULTIPLIER : 1;
+          roundTally = addQuestionToTally(roundTally, state.reveal.points || {}, multiplier);
+        }
+      }
       // Every round opens with a title-card beat before its first question — the
       // opening round included, so it doubles as the synchronized "get ready" beat
       // at game start (the host who clicked Start doesn't see the first question
@@ -1238,11 +1263,30 @@ export function bootFlagParty() {
       if (you && r.gapToLeader > 0) {
         row.appendChild(el('span', 'gap', fmt(t('party.behind', '{n} behind'), { n: r.gapToLeader })));
       }
-      // The round's gain, beside the total. Hidden until the count-up starts and
-      // faded out once the rows have settled, so the board ends up as clean as it
-      // was before — the chip answers "what did I just get?" during the beat where
-      // that's the question, then gets out of the way.
-      row.appendChild(el('span', 'gain', `+${r.roundGain}`));
+      // The round's gain, beside the total, broken into what earned it. Hidden
+      // until the count-up starts and faded out once the rows have settled, so the
+      // board ends up as clean as it was before — the chips answer "what did I just
+      // get, and for what?" during the beat where that's the question, then get out
+      // of the way. `speed` is the bonus for being among the first correct answers,
+      // which was previously invisible the moment the reveal passed.
+      const gain = el('span', 'gain');
+      const chips = chipsFor(roundTally[r.playerId]);
+      // Fall back to the plain total when the tally has nothing to say — a player
+      // who joined mid-round, or a reconnect that missed the questions. The number
+      // is always right; only the attribution is best-effort.
+      if (chips.length && chips.reduce((s, c) => s + c.value, 0) === r.roundGain) {
+        for (const c of chips) {
+          const chip = el('span', `chip chip-${c.kind}`, `+${c.value}`);
+          if (c.kind === 'speed') chip.setAttribute('aria-label', `${c.value} ${t('party.fastest', 'Fastest')}`);
+          gain.appendChild(chip);
+        }
+      } else if (r.roundGain > 0) {
+        // Same rule as `chipsFor`: a scoreless round gets no chip at all, never a
+        // "+0". The row's total already says it, and a zero chip reads as a jab at
+        // whoever had the bad round.
+        gain.appendChild(el('span', 'chip chip-base', `+${r.roundGain}`));
+      }
+      row.appendChild(gain);
       // No ▲/▼ delta arrow: the rank movement is shown by the row physically
       // sliding to its new place (animateStandingsMovement, from the same
       // `rankDelta`), so a second numeric indicator would be redundant.
