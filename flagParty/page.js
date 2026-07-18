@@ -7,7 +7,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, REVEAL_OPTIONS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, PICTURE_MODES, METRIC_MODES, PARTY_MODES, buildPartyPlan, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
@@ -160,7 +160,7 @@ function modeHue(/** @type {string} */ modeId) {
  *  modeIconHtml} but at the card's hero size (its own classes rather than the
  *  setup row's tiny slot). Empty string for an unknown mode (the caller shows a
  *  generic Flags card instead). */
-function blockCardIconHtml(/** @type {string} */ modeId) {
+function roundCardIconHtml(/** @type {string} */ modeId) {
   if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'roundcard-thumb' });
   if (modeId === 'flags-territories') return deckIconHtml('weird', { className: 'roundcard-thumb' });
   if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'roundcard-contour' });
@@ -223,7 +223,7 @@ export function modeFullLabel(id) {
  * @param {string | undefined} questionId
  * @returns {string | null}  a PARTY_MODES mode id, or null for the generic case
  */
-export function blockModeId(lastPick, questionId) {
+export function roundModeId(lastPick, questionId) {
   if (lastPick && lastPick.modeId && MODE_BY_ID[lastPick.modeId]) return lastPick.modeId;
   if (questionId === 'flagPick') return null; // ambiguous pool → generic Flags card
   const mode = PARTY_MODES.find((m) => m.questionId === questionId);
@@ -287,11 +287,11 @@ export function bootFlagParty() {
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
   const roundCardCount = $('roundcard-count');
-  const blockCardIc = $('roundcard-ic');
-  const blockCardName = $('roundcard-name');
+  const roundCardIc = $('roundcard-ic');
+  const roundCardName = $('roundcard-name');
   const roundCardQuestions = $('roundcard-questions');
-  const blockCardPick = $('roundcard-pick');
-  const blockCardDouble = $('roundcard-double');
+  const roundCardPick = $('roundcard-pick');
+  const roundCardDouble = $('roundcard-double');
   const partyModeEl = $('party-mode');
   const modeDraftBtn = $('mode-draft');
   const modeCustomBtn = $('mode-custom');
@@ -582,7 +582,7 @@ export function bootFlagParty() {
     return buildPartyPlan(setupState);
   }
   /** How many rounds the current setup plays: enabled picture modes + enabled statistics. */
-  function blocksOn() {
+  function roundsOn() {
     let n = 0;
     for (const m of PICTURE_MODES) if (setupState.picture[m.id] && setupState.picture[m.id].on) n += 1;
     for (const m of METRIC_MODES) if (setupState.facts.metrics[m.id]) n += 1;
@@ -765,7 +765,7 @@ export function bootFlagParty() {
       }
     }
     // The meta reads "N rounds" — the game's length unit is now the round.
-    gsQuestionsEl.textContent = String(blocksOn());
+    gsQuestionsEl.textContent = String(roundsOn());
   }
 
   /** On a language switch, repaint the JS-set labels (sections, rows, chips, mix). */
@@ -910,18 +910,10 @@ export function bootFlagParty() {
   function nameActive() {
     return isMetricQuestion(state.question?.questionId);
   }
-  /** True when this question's tiles are veiled: the host's tricky mode, and
-   *  nothing else. The final round used to veil regardless of the setting, which
-   *  made the veil something a host could neither predict nor turn off — and in
-   *  draft, where the toggle isn't offered at all, it appeared out of nowhere for
-   *  the closing round. The final round already reads as the finale through
-   *  double points. **Never on a statistics question** — the veil is a flag / outline
-   *  recognition challenge, but on a "which grows the most coffee?" question the flag
-   *  is incidental, so hiding it tests the wrong thing. Stat questions have the
-   *  name-reveal for their own flag-identity problem (see `nameActive`). */
+  /** Whether this question's tiles are veiled. The rules live in partyTiming so
+   *  they are unit-pinned; this only supplies the current state. */
   function veilActive() {
-    if (state.question && isMetricQuestion(state.question.questionId)) return false;
-    return state.tricky;
+    return veilActiveFor(state.tricky, state.question?.questionId);
   }
   function startVeil() {
     if (veilRaf) return;
@@ -1089,20 +1081,20 @@ export function bootFlagParty() {
   // duration. `roundBreakToken` guards the once-per-boundary arm against
   // render()'s re-runs; `roundBreakAnswerActive` is true while the answer tiles
   // are on screen, false once we've flipped to the standings.
-  let blockBreakTimer = 0;
+  let roundBreakTimer = 0;
   /** @type {string | null} */
   let roundBreakToken = null;
   let roundBreakAnswerActive = false;
   function armRoundBreakAnswer(/** @type {string} */ token) {
     roundBreakToken = token;
     roundBreakAnswerActive = true;
-    window.clearTimeout(blockBreakTimer);
+    window.clearTimeout(roundBreakTimer);
     const clean = isCleanReveal(state.roster, state.reveal);
-    blockBreakTimer = window.setTimeout(() => { roundBreakAnswerActive = false; render(); }, revealSecondsFor(clean) * 1000);
+    roundBreakTimer = window.setTimeout(() => { roundBreakAnswerActive = false; render(); }, revealSecondsFor(clean) * 1000);
   }
   function resetRoundBreakAnswer() {
-    window.clearTimeout(blockBreakTimer);
-    blockBreakTimer = 0;
+    window.clearTimeout(roundBreakTimer);
+    roundBreakTimer = 0;
     roundBreakToken = null;
     roundBreakAnswerActive = false;
   }
@@ -1453,36 +1445,36 @@ export function bootFlagParty() {
     const roundNum = roundIndexAt(state.questionIndex) + 1;
     roundCardCount.textContent = fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds });
 
-    const modeId = blockModeId(state.lastPick, state.question ? state.question.questionId : undefined);
+    const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined);
     if (modeId) {
-      blockCardIc.innerHTML = blockCardIconHtml(modeId);
-      blockCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
+      roundCardIc.innerHTML = roundCardIconHtml(modeId);
+      roundCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
       const label = modeFullLabel(modeId);
-      blockCardName.textContent = t(label.key || '', label.fallback || '');
+      roundCardName.textContent = t(label.key || '', label.fallback || '');
     } else {
       // The one ambiguous case: a custom-setup flag round, whose pool ('countries'
       // vs 'others') isn't on the wire — announce it generically.
-      blockCardIc.innerHTML = deckIconHtml('flags', { className: 'roundcard-thumb' });
-      blockCardIc.style.setProperty('--mc', 'currentColor');
-      blockCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
+      roundCardIc.innerHTML = deckIconHtml('flags', { className: 'roundcard-thumb' });
+      roundCardIc.style.setProperty('--mc', 'currentColor');
+      roundCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
     }
 
     roundCardQuestions.textContent = fmt(t('party.roundCardQuestions', '{n} questions'), { n: ROUND_QUESTIONS });
 
     // Draft: name who chose this round (the big-card version of the question pill's
     // "Zosia's pick"). Absent on a custom round (no picker).
-    blockCardPick.innerHTML = '';
+    roundCardPick.innerHTML = '';
     const pickSeat = state.lastPick ? state.roster.find((r) => r.playerId === state.lastPick?.picker) : null;
-    blockCardPick.hidden = !pickSeat;
+    roundCardPick.hidden = !pickSeat;
     if (pickSeat) {
-      blockCardPick.appendChild(buildAvatar(pickSeat.playerId));
-      blockCardPick.appendChild(el('span', 'roundcard-pick-name', fmt(t('party.roundPick', "{name}'s pick"), { name: pickSeat.nickname })));
+      roundCardPick.appendChild(buildAvatar(pickSeat.playerId));
+      roundCardPick.appendChild(el('span', 'roundcard-pick-name', fmt(t('party.roundPick', "{name}'s pick"), { name: pickSeat.nickname })));
     }
 
     // The final round scores double and plays veiled — announce the stakes.
     const isFinal = isFinalRound(state.questionIndex, state.totalQuestions);
-    blockCardDouble.hidden = !isFinal;
-    if (isFinal) blockCardDouble.textContent = t('party.doublePoints', 'Double points');
+    roundCardDouble.hidden = !isFinal;
+    if (isFinal) roundCardDouble.textContent = t('party.doublePoints', 'Double points');
   }
 
   /** The between-rounds standings break: the round's MVP, then the full board
@@ -1506,7 +1498,7 @@ export function bootFlagParty() {
       const txt = el('span', 'break-mvp-text');
       txt.append(document.createTextNode(`${t('party.roundMvp', 'Best of the round')} · `), el('span', 'break-mvp-name', mvpRow.nickname));
       breakMvp.appendChild(txt);
-      breakMvp.appendChild(el('span', 'break-mvp-gain', `+${mvpRow.blockGain}`));
+      breakMvp.appendChild(el('span', 'break-mvp-gain', `+${mvpRow.roundGain}`));
     }
 
     breakStandingsLabel.textContent = t('party.standings', 'Standings');

@@ -8,7 +8,7 @@ const board = (...pairs) => pairs.map(([playerId, score]) => ({ playerId, nickna
 test('first break (prev = null): full score is the gain, no rank deltas, MVP is top gainer', () => {
   const curr = board(['a', 30], ['b', 20], ['c', 10]);
   const { rows, mvp } = roundBreak(null, curr);
-  assert.deepEqual(rows.map((r) => r.blockGain), [30, 20, 10]);
+  assert.deepEqual(rows.map((r) => r.roundGain), [30, 20, 10]);
   assert.deepEqual(rows.map((r) => r.rankDelta), [null, null, null]);
   assert.equal(mvp, 'a');
 });
@@ -22,7 +22,7 @@ test('round gain diffs against the previous break, not the whole game', () => {
   const prev = board(['a', 30], ['b', 20], ['c', 10]);
   const curr = board(['c', 40], ['a', 35], ['b', 22]); // c +30, a +5, b +2
   const { rows, mvp } = roundBreak(prev, curr);
-  const gain = Object.fromEntries(rows.map((r) => [r.playerId, r.blockGain]));
+  const gain = Object.fromEntries(rows.map((r) => [r.playerId, r.roundGain]));
   assert.deepEqual(gain, { a: 5, b: 2, c: 30 });
   assert.equal(mvp, 'c'); // biggest gainer this round, though not overall leader last break
 });
@@ -44,7 +44,7 @@ test('a player absent from the previous break has null rankDelta and full-gain f
   const c = rows.find((r) => r.playerId === 'c');
   assert.ok(c);
   assert.equal(c.rankDelta, null);
-  assert.equal(c.blockGain, 15);
+  assert.equal(c.roundGain, 15);
 });
 
 test('a round where nobody scored has no MVP', () => {
@@ -52,7 +52,7 @@ test('a round where nobody scored has no MVP', () => {
   const curr = board(['a', 30], ['b', 20]);
   const { rows, mvp } = roundBreak(prev, curr);
   assert.equal(mvp, null);
-  assert.deepEqual(rows.map((r) => r.blockGain), [0, 0]);
+  assert.deepEqual(rows.map((r) => r.roundGain), [0, 0]);
 });
 
 test('MVP ties break toward the higher total (earlier row in the sorted board)', () => {

@@ -174,6 +174,32 @@ export function veilProgress(deadlineMs, nowMs, totalMs, clearFrac) {
 }
 
 /**
+ * Whether a question's tiles are veiled (tricky mode's grey/blur/panel resolve).
+ * Two rules, and deliberately no third:
+ *
+ * - the host's tricky setting decides it, and nothing else. The final round used
+ *   to veil regardless — which made the veil something a host could neither
+ *   predict nor turn off, and in draft, where the toggle is never offered, it
+ *   appeared out of nowhere for the closing round. The finale reads as the finale
+ *   through double points instead.
+ * - **never on a statistics question.** The veil is a flag / outline recognition
+ *   challenge; on a "which grows the most coffee?" question the flag is
+ *   incidental, so hiding it tests the wrong skill. Statistics questions get the
+ *   name reveal for their own flag-identity problem instead.
+ *
+ * Lives here rather than in the page so both rules are pinned by tests — they
+ * have each been wrong in production once.
+ *
+ * @param {boolean} tricky  the host's tricky-mode setting
+ * @param {string} [questionId]  the question being shown
+ * @returns {boolean}
+ */
+export function veilActive(tricky, questionId) {
+  if (isMetricQuestion(questionId)) return false;
+  return tricky === true;
+}
+
+/**
  * Whether the world-facts country names should be shown yet: true once
  * {@link NAME_REVEAL_SECONDS} have elapsed in the question window. Reads the same
  * clock as the veil and the countdown, so every client flips the names on at the
