@@ -99,3 +99,33 @@ test('flagParty: every flex element toggled via .hidden has a [hidden] guard', (
     );
   }
 });
+
+/**
+ * The sibling trap: a class that DISABLES interaction must be removable.
+ *
+ * `.pick-hand.sent { pointer-events: none }` was added on pick but never
+ * removed, while its JS twin `pickSent` was reset on leaving the phase. One
+ * concept, two pieces of state, only one of them reset — so from the second pick
+ * of a game onward the hand rendered normally and ignored every tap until the
+ * player refreshed. It survived review because a game used to contain at most
+ * one pick per player, so the stuck class had nothing to break.
+ *
+ * Any class page.js adds that kills pointer events must also be removed (or
+ * driven by `classList.toggle`, which is the same thing done right).
+ */
+test('every interaction-disabling class page.js adds is also removed', () => {
+  const disabling = new Set();
+  for (const { sel, body } of RULES) {
+    if (!/pointer-events\s*:\s*none/.test(body)) continue;
+    // `.pick-hand.sent` -> the state class is the last one in the selector.
+    for (const cls of sel.match(/\.[a-z][a-z0-9-]*/gi) ?? []) disabling.add(cls.slice(1));
+  }
+  /** @type {string[]} */
+  const stuck = [];
+  for (const cls of disabling) {
+    const added = pageJs.includes(`classList.add('${cls}')`);
+    const cleared = pageJs.includes(`classList.remove('${cls}')`) || pageJs.includes(`classList.toggle('${cls}'`);
+    if (added && !cleared) stuck.push(cls);
+  }
+  assert.deepEqual(stuck, [], `added but never removed: ${stuck.join(', ')}`);
+});
