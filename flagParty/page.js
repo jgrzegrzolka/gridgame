@@ -7,7 +7,7 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { CORRECT_POINTS, SPEED_BONUS } from '../flags/partyScore.js';
-import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_HOLD_MS, LEDGER_COUNT_MS, LEDGER_SETTLE_MS, LEDGER_SLIDE_MS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { formatValue } from '../flags/metricLens.js';
@@ -1307,8 +1307,14 @@ export function bootFlagParty() {
       return;
     }
 
-    // Beat 1: rewind the board to where it stood before the round.
-    rows.forEach((r, i) => { scores[i].textContent = String(r.prevScore); });
+    // Beat 1: the rows arrive, bottom-to-top, showing where everyone stood before
+    // the round. Fading only — see `scoreline-fade-in`; the seat offsets below own
+    // `transform`, and an entrance that animated it would erase them.
+    rows.forEach((r, i) => {
+      scores[i].textContent = String(r.prevScore);
+      nodes[i].classList.add('enter-fade');
+      nodes[i].style.setProperty('--enter-delay', `${(rows.length - 1 - i) * LEDGER_ENTER_STAGGER_MS}ms`);
+    });
     const stride = nodes.length > 1 ? nodes[1].offsetTop - nodes[0].offsetTop : 0;
     const movers = stride
       ? rows.map((r, i) => (r.rankDelta ? i : -1)).filter((i) => i >= 0)
@@ -1321,27 +1327,37 @@ export function bootFlagParty() {
     }
     void breakBoard.offsetHeight; // commit the start positions before releasing
 
-    // Beat 2 → 3: hold, then count every row up while its gain chip fades in.
-    window.setTimeout(() => {
-      if (breakAnimToken !== token) return;
-      gains.forEach((g, i) => { if (showGain[i]) g.classList.add('on'); });
-      rows.forEach((r, i) => countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => breakAnimToken !== token));
+    // Beats 3 and 4 are scheduled as ABSOLUTE offsets from now, off the tested
+    // `ledgerSchedule()`. They used to be nested timers with relative delays, and
+    // the inner one measured its delay from the moment the count *started* rather
+    // than the moment it *finished* — so the rows slid while the numbers were still
+    // climbing, blurring the two motions the settle beat exists to separate. Flat
+    // timers off one clock can't drift that way, and the ordering is unit-pinned.
+    const { countAt, slideAt, chipsOffAt } = ledgerSchedule(rows.length);
+    const stillOurs = () => breakAnimToken === token;
 
-      // Beat 4: a breath, then release the rows to their new slots.
-      window.setTimeout(() => {
-        if (breakAnimToken !== token) return;
-        for (const i of movers) {
-          nodes[i].style.transition = 'transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)';
-          nodes[i].style.transform = 'translateY(0)';
-        }
-        // The chips have done their job; drop them so the break settles on a clean
-        // board of totals, which is what the remaining seconds are for reading.
-        window.setTimeout(() => {
-          if (breakAnimToken !== token) return;
-          gains.forEach((g) => g.classList.remove('on'));
-        }, LEDGER_SLIDE_MS);
-      }, LEDGER_SETTLE_MS);
-    }, LEDGER_HOLD_MS);
+    // Beat 3: every row counts up at once, its gain chip fading in beside it.
+    window.setTimeout(() => {
+      if (!stillOurs()) return;
+      gains.forEach((g, i) => { if (showGain[i]) g.classList.add('on'); });
+      rows.forEach((r, i) => countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => !stillOurs()));
+    }, countAt);
+
+    // Beat 4: the counting has finished and been read; now the rows change places.
+    window.setTimeout(() => {
+      if (!stillOurs()) return;
+      for (const i of movers) {
+        nodes[i].style.transition = 'transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)';
+        nodes[i].style.transform = 'translateY(0)';
+      }
+    }, slideAt);
+
+    // The chips have done their job; drop them so the break settles on a clean
+    // board of totals, which is what the remaining seconds are for reading.
+    window.setTimeout(() => {
+      if (!stillOurs()) return;
+      gains.forEach((g) => g.classList.remove('on'));
+    }, chipsOffAt);
   }
 
 

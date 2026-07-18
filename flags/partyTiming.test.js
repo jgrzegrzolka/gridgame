@@ -19,6 +19,9 @@ import {
   LEDGER_COUNT_MS,
   LEDGER_SETTLE_MS,
   LEDGER_SLIDE_MS,
+  ledgerSchedule,
+  LEDGER_ENTER_MS,
+  LEDGER_ENTER_STAGGER_MS,
 } from './partyTiming.js';
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
@@ -186,4 +189,47 @@ test('the ledger animation fits inside the break with reading time left over', (
   assert.ok(motion < ROUND_BREAK_SECONDS * 1000, 'ledger must finish before the host advances');
   // The break exists to be read, not watched: at least a third of it stays still.
   assert.ok(ROUND_BREAK_SECONDS * 1000 - motion >= ROUND_BREAK_SECONDS * 1000 / 3);
+});
+
+test('ledgerSchedule: the rows slide only AFTER the counting finishes', () => {
+  const s = ledgerSchedule(4);
+  const countEndsAt = s.countAt + LEDGER_COUNT_MS;
+  // The whole point of the settle beat: counting and row movement must not overlap,
+  // or they read as one blur instead of cause and effect.
+  assert.ok(s.slideAt >= countEndsAt, `slide at ${s.slideAt}ms must not start before the count ends at ${countEndsAt}ms`);
+  assert.equal(s.slideAt - countEndsAt, LEDGER_SETTLE_MS, 'the breath between them is exactly the settle beat');
+});
+
+test('ledgerSchedule: beats run in order and the chips outlast the slide', () => {
+  const s = ledgerSchedule(4);
+  assert.ok(s.countAt < s.slideAt, 'count comes before the slide');
+  assert.ok(s.slideAt < s.chipsOffAt, 'the gain chips stay up through the slide');
+  assert.equal(s.chipsOffAt - s.slideAt, LEDGER_SLIDE_MS);
+});
+
+test('ledgerSchedule: the whole sequence still fits inside the break with reading time', () => {
+  const s = ledgerSchedule(4);
+  assert.ok(s.totalMs < ROUND_BREAK_SECONDS * 1000);
+  assert.ok(ROUND_BREAK_SECONDS * 1000 - s.totalMs >= ROUND_BREAK_SECONDS * 1000 / 3);
+});
+
+test('ledgerSchedule: the hold starts only once the last row has faded in', () => {
+  for (const rows of [2, 4, 8]) {
+    const s = ledgerSchedule(rows);
+    const lastRowLandsAt = (rows - 1) * LEDGER_ENTER_STAGGER_MS + LEDGER_ENTER_MS;
+    assert.equal(s.enterMs, lastRowLandsAt, `entrance for ${rows} rows`);
+    assert.ok(s.countAt > s.enterMs, 'counting must not start mid-arrival');
+  }
+});
+
+test('ledgerSchedule: even a full room finishes with reading time left in the break', () => {
+  // 8 seats is the biggest room worth planning for; the cascade grows with seats,
+  // so this is where the budget would blow if the stagger were ever raised.
+  const s = ledgerSchedule(8);
+  assert.ok(s.totalMs < ROUND_BREAK_SECONDS * 1000, `8-row ledger takes ${s.totalMs}ms`);
+  assert.ok(ROUND_BREAK_SECONDS * 1000 - s.totalMs >= 2000, 'at least 2s to actually read the board');
+});
+
+test('ledgerSchedule: an empty board has no entrance to wait for', () => {
+  assert.equal(ledgerSchedule(0).enterMs, 0);
 });
