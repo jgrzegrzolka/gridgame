@@ -76,6 +76,44 @@ export const LEDGER_SETTLE_MS = 180;
  *  `animateStandingsMovement` — change both together. */
 export const LEDGER_SLIDE_MS = 800;
 
+/** How long a single break row takes to fade in, and the gap between one row
+ *  starting and the next. The break board cascades in bottom-to-top like the final
+ *  board — but fading only, never sliding: the rows are already held at their
+ *  *previous* ranks by the ledger's FLIP (an inline transform), and a CSS animation
+ *  overrides inline styles, so an entrance that animated `transform` would throw
+ *  every row to its final slot and destroy the movement the break exists to show. */
+export const LEDGER_ENTER_MS = 400;
+export const LEDGER_ENTER_STAGGER_MS = 90;
+
+/**
+ * When each ledger beat fires, as milliseconds from the moment the break appears.
+ *
+ * This exists because the beats are **nested timers** in `playLedger`, and nesting
+ * makes an offset easy to measure from the wrong instant: the rows' slide was
+ * scheduled `LEDGER_SETTLE_MS` after the count *started* rather than after it
+ * *finished*, so the board slid while the numbers were still climbing — the two
+ * motions blurring into one, which is the exact thing the settle beat exists to
+ * prevent. Summing the four constants (the old test) could never catch that, since
+ * the total was right and only the order was wrong. Expressing the schedule as
+ * absolute offsets makes the ordering itself the thing under test.
+ *
+ * `rowCount` sets how long the entrance cascade takes, so the hold begins only once
+ * the last row has arrived — the beat is "everyone is on screen, now look at them",
+ * which a fixed allowance would get wrong at both two seats and eight.
+ *
+ * @param {number} rowCount  how many standings rows the break is showing
+ * @returns {{ enterMs: number, countAt: number, slideAt: number, chipsOffAt: number, totalMs: number }}
+ */
+export function ledgerSchedule(rowCount = 0) {
+  const rows = Math.max(0, rowCount);
+  const enterMs = rows > 0 ? (rows - 1) * LEDGER_ENTER_STAGGER_MS + LEDGER_ENTER_MS : 0;
+  const countAt = enterMs + LEDGER_HOLD_MS;
+  // The breath is between the counting FINISHING and the rows starting to move.
+  const slideAt = countAt + LEDGER_COUNT_MS + LEDGER_SETTLE_MS;
+  const chipsOffAt = slideAt + LEDGER_SLIDE_MS;
+  return { enterMs, countAt, slideAt, chipsOffAt, totalMs: chipsOffAt };
+}
+
 /** Seconds the **round title card** holds before the first question of a new round
  *  begins (round 2..N — the opening round starts play straight away). A short
  *  beat announcing "Round 2 of 3 · Coffee · 5 questions" with who picked it; the

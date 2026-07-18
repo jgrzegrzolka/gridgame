@@ -627,6 +627,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
     animation: scoreline-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     animation-delay: var(--enter-delay, 0ms);
   }
+  .scoreline.enter-fade {
+    animation: scoreline-fade-in 0.4s ease both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
   .scoreline.win.enter {
     animation: scoreline-win-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     animation-delay: var(--enter-delay, 0ms);
@@ -648,6 +652,15 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 @keyframes scoreline-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+/* The between-rounds board's entrance. Deliberately fades WITHOUT moving, unlike
+   `scoreline-in` above: the ledger holds each row at its previous rank with an
+   inline transform, and a CSS animation beats an inline style, so animating
+   `transform` here would snap every row to its final slot and there would be no
+   movement left to watch. Same cascade idea, opacity only. */
+@keyframes scoreline-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes scoreline-win-in {
   0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
