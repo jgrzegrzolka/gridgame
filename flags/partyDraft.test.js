@@ -7,6 +7,7 @@ import {
   handFor,
   isValidPick,
   OPENING_MODE_ID,
+  REPEATABLE_MODE_IDS,
   MAX_DRAFT_ROUNDS,
   PICKS_PER_PLAYER_OPTIONS,
   DEFAULT_PICKS_PER_PLAYER,
@@ -139,18 +140,25 @@ test('pickerFor: a departed seat does not stall the rotation', () => {
 
 // ---- handFor ----
 
-test('handFor: returns HAND_SIZE ids, none already used', () => {
-  const hand = handFor([OPENING_MODE_ID], seeded(1));
+test('handFor: returns HAND_SIZE ids, no non-repeatable already used', () => {
+  const hand = handFor(['map-outlines'], seeded(1));
   assert.equal(hand.length, HAND_SIZE);
-  assert.ok(!hand.includes(OPENING_MODE_ID));
+  assert.ok(!hand.includes('map-outlines'), 'a played one-shot mode is gone');
   assert.equal(new Set(hand).size, hand.length, 'no duplicates in a hand');
 });
 
 test('handFor: surfaces the unused picture modes (they are few and characterful)', () => {
-  // Only flags-all used -> the other two picture modes should both be in the hand.
-  const hand = handFor([OPENING_MODE_ID], seeded(7));
-  const remainingPics = PICTURE_MODES.filter((m) => m.id !== OPENING_MODE_ID).map((m) => m.id);
-  for (const id of remainingPics) assert.ok(hand.includes(id), `expected ${id} in the hand`);
+  const hand = handFor(['map-outlines'], seeded(7));
+  for (const id of REPEATABLE_MODE_IDS) assert.ok(hand.includes(id), `expected ${id} in the hand`);
+});
+
+test('handFor: Flags and Weird flags stay on offer however often they are played', () => {
+  // They are the game itself, and Flags is the fixed opener — the no-repeat rule
+  // retired it before anyone could choose it even once.
+  const playedALot = [...REPEATABLE_MODE_IDS, ...REPEATABLE_MODE_IDS, 'map-outlines'];
+  const hand = handFor(playedALot, seeded(11));
+  for (const id of REPEATABLE_MODE_IDS) assert.ok(hand.includes(id), `${id} still offered`);
+  assert.ok(!hand.includes('map-outlines'), 'the one-shot modes still drop out');
 });
 
 test('handFor: the picture modes always lead, in catalog order', () => {
@@ -163,10 +171,11 @@ test('handFor: the picture modes always lead, in catalog order', () => {
   }
 });
 
-test('handFor: already-played picture modes drop out without disturbing the order', () => {
-  const hand = handFor([OPENING_MODE_ID], seeded(5));
-  const remaining = PICTURE_MODES.filter((m) => m.id !== OPENING_MODE_ID).map((m) => m.id);
-  assert.deepEqual(hand.slice(0, remaining.length), remaining, 'the rest still lead, still in order');
+test('handFor: a played one-shot picture mode drops out without disturbing the order', () => {
+  const hand = handFor(['map-outlines'], seeded(5));
+  assert.deepEqual(hand.slice(0, REPEATABLE_MODE_IDS.length), REPEATABLE_MODE_IDS,
+    'the repeatable pair still leads, still in order');
+  assert.ok(!hand.includes('map-outlines'));
 });
 
 test('handFor: the statistics below stay shuffled', () => {
@@ -181,17 +190,30 @@ test('handFor: the statistics below stay shuffled', () => {
 });
 
 test('handFor: fills the rest with statistics', () => {
+  // After the opener, all three picture modes are still on offer (the two
+  // repeatables plus the unplayed outlines), so statistics fill the remaining
+  // seven of ten.
   const hand = handFor([OPENING_MODE_ID], seeded(3));
   const metricIds = new Set(METRIC_MODES.map((m) => m.id));
   const metricsInHand = hand.filter((id) => metricIds.has(id));
-  // 2 picture modes remain + 3 metrics = 5.
-  assert.equal(metricsInHand.length, HAND_SIZE - 2);
+  assert.equal(metricsInHand.length, HAND_SIZE - PICTURE_MODES.length);
 });
 
 test('handFor: shrinks gracefully when few modes remain', () => {
+  // Everything played except the last two statistics. The hand is those two plus
+  // the repeatable pair, which never runs out — so a late-game picker always has
+  // a real choice rather than a single forced card.
   const allButTwo = [...PICTURE_MODES, ...METRIC_MODES].map((m) => m.id).slice(0, -2);
   const hand = handFor(allButTwo, seeded(9));
-  assert.equal(hand.length, 2);
+  assert.equal(hand.length, 2 + REPEATABLE_MODE_IDS.length);
+  for (const id of REPEATABLE_MODE_IDS) assert.ok(hand.includes(id), `${id} always available`);
+});
+
+test('handFor: never empties, even with the whole catalog played', () => {
+  // The old rule could deal an empty hand once everything was used; the picker
+  // then had nothing to choose and the server picked at random for them.
+  const everything = [...PICTURE_MODES, ...METRIC_MODES].map((m) => m.id);
+  assert.deepEqual(handFor(everything, seeded(4)), REPEATABLE_MODE_IDS);
 });
 
 test('handFor: deterministic under a seeded rng', () => {
@@ -202,6 +224,13 @@ test('handFor: deterministic under a seeded rng', () => {
 
 test('isValidPick: a real, unused catalog mode passes', () => {
   assert.equal(isValidPick('map-outlines', [OPENING_MODE_ID]), true);
+});
+
+test('isValidPick: a repeatable mode passes however often it has been played', () => {
+  for (const id of REPEATABLE_MODE_IDS) {
+    assert.equal(isValidPick(id, [id]), true, `${id} after one play`);
+    assert.equal(isValidPick(id, [id, id, id]), true, `${id} after three`);
+  }
 });
 
 test('isValidPick: rejects a repeat, an unknown mode, and non-strings', () => {
