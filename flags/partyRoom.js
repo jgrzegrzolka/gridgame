@@ -369,7 +369,7 @@ export function applyEnterPicking(room, playerId, picker, hand) {
  * @param {Room} room
  * @param {string} pickerId  the seat picking; must equal `room.picker`
  * @param {string} modeId  the picked mode (for attribution)
- * @param {{ poolId: string, questionId: string, questions: number }} segment  the round to append
+ * @param {{ poolId: string, questionId: string, questions: number, veil?: boolean }} segment  the round to append
  * @param {Question} question  the round's first question
  * @returns {ApplyResult}
  */
@@ -384,6 +384,11 @@ export function applyPick(room, pickerId, modeId, segment, question) {
     plan,
     question,
     buzzes: [],
+    // In a draft the veil belongs to the round, not the game: it is whatever
+    // THIS picker chose, so it is re-derived from the segment every pick rather
+    // than carried over. Assigning unconditionally is the point — a veiled round
+    // must not latch the veil on for every round after it.
+    tricky: segment.veil === true,
     pickedBy: [...room.pickedBy, pickerId],
     picker: null,
     hand: null,

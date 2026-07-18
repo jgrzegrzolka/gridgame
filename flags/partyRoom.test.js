@@ -576,3 +576,28 @@ test('final round: the reveal doubles points and flags doubled; earlier rounds d
   // and the seat's running total reflects the doubled award
   assert.equal(r.room.seats.get('alice')?.score, CORRECT_POINTS + CORRECT_POINTS * 2);
 });
+
+test('applyPick: a veiled segment turns the veil on for that round only', () => {
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
+  const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5, veil: true };
+  const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
+  assert.equal(r.room.tricky, true, 'the picked round veils');
+  assert.equal(msg(r, 'question').tricky, true, 'and the clients are told');
+  assert.deepEqual(r.room.plan?.[r.room.plan.length - 1], segment, 'veil persists on the segment');
+});
+
+// The veil is a property of the picked round, not of the game: whatever the
+// previous round did, an unveiled pick must deal a clear round. Without this
+// the first veiled pick would leave `tricky` latched on for the rest of the
+// draft -- exactly the leak the draft's forced `tricky: false` at start exists
+// to prevent, just arriving one round later.
+test('applyPick: an unveiled pick clears a veil left on by the previous round', () => {
+  let room = draftRevealAtBoundary(4);
+  room = { ...room, tricky: true };
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
+  const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
+  const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa'));
+  assert.equal(r.room.tricky, false, 'no veil on the segment -> no veil on the round');
+  assert.equal(msg(r, 'question').tricky, false);
+});

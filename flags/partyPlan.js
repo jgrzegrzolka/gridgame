@@ -11,7 +11,12 @@
  * and each `questionId` to a question module (`flags/partyQuestions/<id>.js`); this
  * module stays pure and agnostic of both.
  *
- * @typedef {{ poolId: string, questionId: string, questions: number }} Segment
+ * `veil` is set only by a draft pick: the picker may choose to veil their own
+ * round (see `canVeilMode` — picture modes only), so the veil is a property of
+ * the round rather than of the game. Absent on every host-built segment, where
+ * the game-wide tricky toggle still decides.
+ *
+ * @typedef {{ poolId: string, questionId: string, questions: number, veil?: boolean }} Segment
  */
 
 /** @type {Segment[]} */
@@ -259,7 +264,14 @@ export function validatePlan(plan) {
     let n = Math.min(questions, MAX_QUESTIONS_PER_MODE);
     if (total + n > MAX_TOTAL_QUESTIONS) n = MAX_TOTAL_QUESTIONS - total;
     if (n < 1) break;
-    out.push({ poolId: /** @type {Segment} */ (seg).poolId, questionId: /** @type {Segment} */ (seg).questionId, questions: n });
+    /** @type {Segment} */
+    const clean = { poolId: /** @type {Segment} */ (seg).poolId, questionId: /** @type {Segment} */ (seg).questionId, questions: n };
+    // A draft round's veil rides on the segment, so it has to be carried across
+    // explicitly — this rebuilds segments field-by-field, so an unlisted key is
+    // dropped. Only the literal `true` survives, and the key stays absent
+    // otherwise so an unveiled segment keeps its original shape.
+    if (/** @type {Segment} */ (seg).veil === true) clean.veil = true;
+    out.push(clean);
     total += n;
   }
   return out.length ? out : null;
