@@ -132,11 +132,17 @@ function shuffle(arr, rng) {
 
 /**
  * The hand a picker chooses from: up to {@link HAND_SIZE} mode ids drawn from the
- * modes **not yet played this game** (`usedModeIds`) — no mode twice. Unused
- * picture modes are included first (they're few and characterful), then the rest
- * is filled with a random draw of unused statistics, and the whole hand is
- * shuffled so the picture cards don't always lead. A list of 30-odd metrics would
- * be a form; a hand of five is a three-second choice.
+ * modes **not yet played this game** (`usedModeIds`) — no mode twice.
+ *
+ * **The picture modes always lead, in catalog order** (Flags, Weird flags,
+ * Outlines), with a random draw of unused statistics filling the rest. They are
+ * the modes everyone recognises and the ones a picker most often wants, so
+ * burying them at a random depth in a list of ten made the common choice a
+ * search. Their fixed order also means a returning player finds them where they
+ * were last time, which a shuffle actively prevents.
+ *
+ * The statistics below them stay shuffled: there are 30-odd and no reason to
+ * privilege any, so a fixed order there would just favour whatever sorts first.
  *
  * @param {Iterable<string>} usedModeIds  modes already played (excluded)
  * @param {() => number} [rng]
@@ -146,8 +152,7 @@ export function handFor(usedModeIds, rng = Math.random) {
   const used = new Set(usedModeIds);
   const pics = PICTURE_MODES.filter((m) => !used.has(m.id)).map((m) => m.id);
   const mets = shuffle(METRIC_MODES.filter((m) => !used.has(m.id)).map((m) => m.id), rng);
-  const hand = [...pics, ...mets].slice(0, HAND_SIZE);
-  return shuffle(hand, rng);
+  return [...pics, ...mets].slice(0, HAND_SIZE);
 }
 
 /** The set of all catalog mode ids, for validating a pick came from the catalog. */

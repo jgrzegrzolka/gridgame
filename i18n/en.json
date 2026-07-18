@@ -557,7 +557,7 @@
     "factsHint2": "Each statistic you pick is its own round",
     "mode": {
       "flagsAll": "Flags: countries",
-      "flagsTerritories": "Flags: others",
+      "flagsWeird": "Weird flags",
       "mapOutlines": "Map: outlines",
       "superlativePop": "Population: most & least",
       "superlativeArea": "Land area: largest & smallest",
@@ -594,7 +594,7 @@
     },
     "modeShort": {
       "flagsAll": "Flags",
-      "flagsTerritories": "Others",
+      "flagsWeird": "Weird",
       "mapOutlines": "Maps",
       "superlativePop": "Population",
       "superlativeArea": "Land area",
@@ -641,7 +641,7 @@
     "doorCustomTitle": "Custom setup",
     "doorCustomDesc": "Build the whole show up front. You choose every round.",
     "choosingRound": "Choosing round {n} of {total}",
-    "yourPick": "Your pick, choose the next block",
+    "yourPick": "Your pick, choose the next round",
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "roundPick": "{name}'s pick",

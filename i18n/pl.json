@@ -557,7 +557,7 @@
     "factsHint2": "Każda wybrana statystyka to osobna runda",
     "mode": {
       "flagsAll": "Flagi: kraje",
-      "flagsTerritories": "Flagi: inne",
+      "flagsWeird": "Dziwne flagi",
       "mapOutlines": "Mapa: kształty",
       "superlativePop": "Populacja: najwięcej i najmniej",
       "superlativeArea": "Powierzchnia: największe i najmniejsze",
@@ -594,7 +594,7 @@
     },
     "modeShort": {
       "flagsAll": "Flagi",
-      "flagsTerritories": "Inne",
+      "flagsWeird": "Dziwne",
       "mapOutlines": "Mapy",
       "superlativePop": "Populacja",
       "superlativeArea": "Powierzchnia",
@@ -641,7 +641,7 @@
     "doorCustomTitle": "Własne ustawienia",
     "doorCustomDesc": "Zbuduj całą grę z góry. Ty wybierasz każdą rundę.",
     "choosingRound": "Wybór rundy {n} z {total}",
-    "yourPick": "Twój wybór, wskaż następny blok",
+    "yourPick": "Twój wybór, wskaż następną rundę",
     "isChoosing": "{name} wybiera…",
     "aPlayer": "Gracz",
     "roundPick": "wybór: {name}",

@@ -17,6 +17,12 @@ before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
 - **Game** — a sequence of rounds. Draft length is `players x picksPerPlayer + 1`, where the host
   chooses `picksPerPlayer` from a fixed 1 / 2 / 3 / 4 and the `+1` is the opening Flags round.
 
+**Weird flags, not "others" (2026-07-18).** The non-sovereign picture mode is `flags-weird`
+(`party.mode.flagsWeird`), labelled "Weird flags" / "Dziwne flagi" to match `variant.weird` and
+`deck.weird` in the rest of the app. It was `flags-territories` / "Flags: others" — one feature's
+private word for a thing the rest of the site already named. The party icon was already the weird
+deck's, so the code half-believed it too.
+
 **Renamed 2026-07-18.** These two used to be called *round* (one prompt) and *block* (five
 of them), which put two different things under the word "round" and made the progress pill
 ("Block 1/2 · Round 3/10") unreadable. Everything moved down one: block → round, round →
