@@ -586,7 +586,7 @@
       "superlativeElectricity": "Zużycie prądu na osobę",
       "superlativeMcdonalds": "McDonald's na milion mieszkańców",
       "superlativeNobel": "Nobliści",
-      "superlativeNobelPc": "Nobliści na milion mieszkańców",
+      "superlativeNobelPc": "Nobliści na mieszkańca",
       "economy": "Gospodarka",
       "nobel": "Nobliści"
     },
@@ -632,7 +632,7 @@
       "superlativeElectricity": "Prąd",
       "superlativeMcdonalds": "McDonald's",
       "superlativeNobel": "Nobliści",
-      "superlativeNobelPc": "Nobliści na milion"
+      "superlativeNobelPc": "Nobliści na mieszkańca"
     },
     "roundQuestion": "Runda {b}/{rounds} · Pytanie {n}/{total}",
     "afterRound": "Po rundzie {n} z {total}",
