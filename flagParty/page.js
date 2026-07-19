@@ -6,11 +6,12 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
+import { CLOSENESS_LADDER } from '../flags/partyScore.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -678,7 +679,13 @@ export function bootFlagParty() {
     // reveal, then the standings break — so the host holds the sum before sending
     // `next`, keeping the break its full duration after the answer is shown. An
     // ordinary reveal is just its own beat.
-    const revealSecs = atRoundBreak() ? revealSecondsFor(clean) + ROUND_BREAK_SECONDS : revealSecondsFor(clean);
+    // A world-facts reveal draws the ranked chart, which needs its own longer
+    // beat whether or not the question was swept: the ranking is the payoff of
+    // the question, not a consolation for missing it.
+    const chart = mode === 'reveal' && chartReveal();
+    const revealSecs = atRoundBreak()
+      ? revealSecondsFor(clean, chart) + ROUND_BREAK_SECONDS
+      : revealSecondsFor(clean, chart);
     // The pick has no visible countdown (choosing isn't a race); its clock is the
     // long invisible anti-stall fallback that force-picks only an absent picker.
     const secs = mode === 'picking' ? PICK_TIMEOUT_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
@@ -885,7 +892,7 @@ export function bootFlagParty() {
     roundBreakAnswerActive = true;
     window.clearTimeout(roundBreakTimer);
     const clean = isCleanReveal(state.roster, state.reveal);
-    roundBreakTimer = window.setTimeout(() => { roundBreakAnswerActive = false; render(); }, revealSecondsFor(clean) * 1000);
+    roundBreakTimer = window.setTimeout(() => { roundBreakAnswerActive = false; render(); }, revealSecondsFor(clean, chartReveal()) * 1000);
   }
   function resetRoundBreakAnswer() {
     window.clearTimeout(roundBreakTimer);
@@ -1106,6 +1113,12 @@ export function bootFlagParty() {
     };
 
     gridEl.innerHTML = '';
+    // The world-facts REVEAL is a ranking, not four tiles. Every other reveal,
+    // and the world-facts question phase itself, still draws the grid.
+    gridEl.classList.toggle('as-chart', isReveal && chartReveal());
+    if (isReveal && state.reveal && chartReveal()) {
+      gridEl.appendChild(buildRankChart(/** @type {any} */ (state.reveal), metricData));
+    } else
     for (const code of q.options) {
       if (isReveal && state.reveal) {
         const correct = code === state.reveal.answer;
@@ -1131,13 +1144,112 @@ export function bootFlagParty() {
     }
 
     footEl.innerHTML = '';
-    if (isReveal) renderRevealFoot();
+    // The chart reveal is the WHOLE reveal. The foot's per-player points row
+    // restates what the chart just said -- your avatar is already sitting on a
+    // row that prints its own award -- and a second thing to read inside the
+    // beat is what the ranking was meant to replace. Every other question type
+    // keeps its foot: there, the tiles carry no points at all.
+    if (isReveal && !chartReveal()) renderRevealFoot();
   }
 
   /**
    * @param {string} code
    * @param {{ isMap: boolean, selectable: boolean, selected: boolean, correct: boolean, wrong: boolean, dim: boolean, pickers: string[], pop?: { name: string, value: string } | null, veil?: boolean, named?: boolean }} opts
    */
+  /**
+   * True when the current reveal should draw the ranked chart instead of tiles.
+   * Gated on the server having actually sent a ranking, so a client running
+   * against an older PartyKit build falls back to the tile reveal rather than
+   * rendering an empty chart (see memory `project_party_stale_client_skew`).
+   */
+  function chartReveal() {
+    return !!(state.phase === 'reveal' && state.reveal
+      && Array.isArray(state.reveal.ranking) && state.reveal.ranking.length > 0);
+  }
+
+  /**
+   * The world-facts reveal: the four options as a ranked bar chart, best first,
+   * each row carrying who picked it and what that pick paid.
+   *
+   * This REPLACES the tile grid rather than sitting under it. The question asked
+   * how four countries compare, and four tiles in their dealt order cannot answer
+   * that — the numbers sat in whatever order the options happened to be shuffled
+   * into. Sorted rows are the answer to the question actually asked.
+   *
+   * Nothing highlights the winner: the ranking already says who won by putting it
+   * on top. The only outlined row is YOURS — correct-green if you got it,
+   * wrong-red if you didn't — because how you did is the one thing a ranking
+   * cannot show.
+   *
+   * @param {{ ranking: string[], values?: Record<string, number> | null,
+   *   picks: Record<string, string> }} reveal
+   * @param {{ format?: string } | null} metricData  formatting only. The VALUES come
+   *   from the reveal, so the chart cannot disagree with what the server scored.
+   */
+  function buildRankChart(reveal, metricData) {
+    const chart = el('div', 'rank-chart');
+    const ranking = reveal.ranking;
+    const values = reveal.values || {};
+    // Bars are normalised across the quartet's own range, not value / max. Some
+    // metrics go negative (temperature bottoms out at -49C), where value / max
+    // yields a negative width and the bar silently vanishes. Anchoring `lo` at
+    // min(0, smallest) keeps the natural "share of the biggest" reading for the
+    // all-positive metrics, which is nearly all of them.
+    const nums = ranking.map((c) => (typeof values[c] === 'number' ? values[c] : 0));
+    const hi = Math.max(...nums);
+    const lo = Math.min(0, ...nums);
+    const span = hi - lo || 1;
+    ranking.forEach((code, rank) => {
+      const row = el('div', 'rank-row');
+      row.style.setProperty('--d', String(rank * 110) + 'ms');
+      if (reveal.picks[state.you] === code) {
+        row.classList.add(rank === 0 ? 'you-right' : 'you-wrong');
+      }
+      row.appendChild(el('span', 'rank-pos', '#' + String(rank + 1)));
+      const fl = el('span', 'rank-flag');
+      const img = document.createElement('img');
+      img.src = '../flags/svg/' + code + '.svg';
+      img.alt = '';
+      fl.appendChild(img);
+      row.appendChild(fl);
+      const body = el('span', 'rank-body');
+      const cap = el('span', 'rank-cap');
+      const c = byCode.get(code);
+      cap.appendChild(el('span', 'rank-name', c ? countryName(c) : code));
+      const v = values[code];
+      cap.appendChild(el('span', 'rank-val',
+        typeof v === 'number' && metricData ? formatValue(v, metricData.format) : ''));
+      body.appendChild(cap);
+      const track = el('span', 'rank-track');
+      const fill = document.createElement('i');
+      track.appendChild(fill);
+      body.appendChild(track);
+      row.appendChild(body);
+      const rail = el('span', 'rank-rail');
+      for (const [pid, choice] of Object.entries(reveal.picks)) {
+        if (choice === code) rail.appendChild(buildAvatar(pid));
+      }
+      row.appendChild(rail);
+      // Everyone on a row scores the same, because closeness is rank-based. So the
+      // row states its price once rather than a number per avatar, and the chart
+      // doubles as the scoring key — after two questions nobody needs the rules
+      // explained. This is the one thing that would NOT work under value-based
+      // closeness, where two players on a row could score differently.
+      const pts = CLOSENESS_LADDER[rank] || 0;
+      const ptsEl = el('span', 'rank-pts', pts > 0 ? '+' + String(pts) : '0');
+      if (rail.childElementCount) ptsEl.classList.add('live');
+      row.appendChild(ptsEl);
+      chart.appendChild(row);
+      // Next frame, so the width transition has a 0 -> n to animate instead of
+      // painting its final value immediately.
+      requestAnimationFrame(() => {
+        fill.style.width = String(Math.max(0, Math.min(1, (nums[rank] - lo) / span)) * 100) + '%';
+      });
+    });
+    return chart;
+  }
+
+
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
     node.className = 'opt' + (opts.selected ? ' sel' : '') + (opts.correct ? ' correct' : '') + (opts.wrong ? ' wrong' : '') + (opts.dim ? ' dim' : '') + (opts.pop ? ' pop' : '') + (opts.veil ? ' veil' : '') + (opts.named ? ' named' : '');

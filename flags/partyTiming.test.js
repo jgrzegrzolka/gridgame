@@ -4,6 +4,7 @@ import {
   QUESTION_SECONDS,
   CLEAN_REVEAL_SECONDS,
   MISS_REVEAL_SECONDS,
+  CHART_REVEAL_SECONDS,
   revealSecondsFor,
   secondsLeft,
   remainingFraction,
@@ -297,4 +298,30 @@ test('finalBoardSchedule: the whole reveal is long enough to read but stays unde
   const cascadeMs = s.rows[0].enterAt - s.rows[2].enterAt;
   assert.ok(cascadeMs >= 400, `the walk up the board must be readable, got ${cascadeMs}ms`);
   assert.ok(s.totalMs <= 1500, `the finish must not drag, got ${s.totalMs}ms`);
+});
+
+test('a chart reveal gets its full beat even when everyone got it right', () => {
+  // The ranking IS the payoff of a world-facts question, not a consolation for
+  // missing it. A clean sweep skipping to 0.9s would cut the bars off mid-grow
+  // exactly when the table is looking at them.
+  assert.equal(revealSecondsFor(true, true), CHART_REVEAL_SECONDS);
+  assert.equal(revealSecondsFor(false, true), CHART_REVEAL_SECONDS);
+});
+
+test('non-chart questions keep their old pace, and the default is unchanged', () => {
+  // flag-pick and map-pick have nothing to chart. Calling with one argument, as
+  // every existing caller does, must behave exactly as before.
+  assert.equal(revealSecondsFor(true), CLEAN_REVEAL_SECONDS);
+  assert.equal(revealSecondsFor(false), MISS_REVEAL_SECONDS);
+  assert.equal(revealSecondsFor(true, false), CLEAN_REVEAL_SECONDS);
+});
+
+test('the chart beat outlasts the animation it exists to protect', () => {
+  // 4 rows x 110ms cascade + 700ms bar grow = the point at which the chart has
+  // finished saying anything. If someone shortens the reveal below that, this
+  // fails rather than silently truncating the payoff.
+  const cascadeMs = 3 * 110;
+  const barGrowMs = 700;
+  assert.ok(CHART_REVEAL_SECONDS * 1000 > cascadeMs + barGrowMs,
+    `chart reveal ${CHART_REVEAL_SECONDS}s must outlast ${cascadeMs + barGrowMs}ms of motion`);
 });

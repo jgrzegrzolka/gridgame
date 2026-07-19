@@ -80,3 +80,44 @@ test('isCorrect only accepts the answer', () => {
   assert.ok(other, 'a quartet must contain a non-answer option');
   assert.equal(question.isCorrect(q, other), false);
 });
+
+/** @type {Record<string, number>} */
+const METRIC_VALUES = { a: 1000, b: 500, c: 250, d: 100 };
+const fourPool = Object.keys(METRIC_VALUES).map((code) => ({ code }));
+const fourMetric = {
+  has: (/** @type {string} */ c) => c in METRIC_VALUES,
+  valueOf: (/** @type {string} */ c) => METRIC_VALUES[c],
+};
+
+test('ranking: index 0 is the answer, in both directions', () => {
+  // The scorer treats rank uniformly (0 = answer, 1 = runner-up, ...), so this
+  // has to hold whether the question asked for the most or the least. A 'least'
+  // question ranks ascending; getting that backwards would pay the WORST option
+  // the runner-up's points.
+  for (const direction of /** @type {Array<'most' | 'least'>} */ (['most', 'least'])) {
+    const q = createSuperlativeQuestion(fourMetric, 'x', { direction })
+      .generate(fourPool, new Set(), () => 0.5);
+    assert.equal(q.ranking[0], q.answer, direction + ': ranking[0] must be the answer');
+    assert.equal(q.ranking.length, 4);
+    assert.deepEqual([...q.ranking].sort(), [...q.options].sort(), direction + ': same four codes');
+  }
+});
+
+test('ranking: ordered by value in the question direction', () => {
+  const most = createSuperlativeQuestion(fourMetric, 'x', { direction: 'most' })
+    .generate(fourPool, new Set(), () => 0.5);
+  assert.deepEqual(most.ranking, ['a', 'b', 'c', 'd']);
+  const least = createSuperlativeQuestion(fourMetric, 'x', { direction: 'least' })
+    .generate(fourPool, new Set(), () => 0.5);
+  assert.deepEqual(least.ranking, ['d', 'c', 'b', 'a']);
+});
+
+test('values: every option carries its raw metric value', () => {
+  // The reveal chart draws its bars from these, so a missing one would render a
+  // zero-width bar against a country that is genuinely large.
+  const q = createSuperlativeQuestion(fourMetric, 'x').generate(fourPool, new Set(), () => 0.5);
+  for (const code of q.options) {
+    assert.equal(typeof q.values[code], 'number', code + ' must have a value');
+  }
+  assert.equal(Object.keys(q.values).length, 4);
+});

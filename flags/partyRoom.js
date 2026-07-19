@@ -19,7 +19,13 @@ import { isRoundBoundary, isFinalRound } from './partyPlan.js';
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
  * @typedef {{ nickname: string, score: number }} Seat
- * @typedef {{ prompt: string, options: string[], answer: string, questionId?: string, clearFrac?: number }} Question
+ * `ranking` / `values` are present only on questions that rank their options
+ * (world facts). `ranking` is best-first in the question's own direction, so
+ * `ranking[0]` is the answer whether it asked for the most or the least. Both
+ * are answer-bearing: they go out on the reveal and never on the question.
+ *
+ * @typedef {{ prompt: string, options: string[], answer: string, questionId?: string,
+ *   clearFrac?: number, ranking?: string[], values?: Record<string, number> }} Question
  * @typedef {{ playerId: string, choice: string, correct: boolean }} Buzz
  *
  * @typedef {Object} Room
@@ -586,17 +592,30 @@ function toReveal(room) {
   // `breakdown` so the break's chips can say what earned each point instead of
   // inferring it from the total (undecidable now that the solo bonus and the
   // first speed bonus are both 5).
-  const awards = scoreQuestionDetailed(room.buzzes, {
+  // Questions that rank their options (world facts) pay a near miss. `ranking` is
+  // best-first in the question's own direction, so index 0 is the answer either
+  // way and a plain indexOf gives the scorer the rank it wants. Questions with no
+  // ranking (flag-pick, map-pick) leave `rank` undefined and score as before.
+  const ranking = Array.isArray(q.ranking) ? q.ranking : null;
+  const scored = ranking
+    ? room.buzzes.map((b) => {
+      const rank = ranking.indexOf(b.choice);
+      return rank >= 0 ? { ...b, rank } : b;
+    })
+    : room.buzzes;
+  const awards = scoreQuestionDetailed(scored, {
     applySpeedBonus: room.seats.size > 1,
     multiplier: doubled ? FINAL_ROUND_MULTIPLIER : 1,
   });
   /** @type {Record<string, number>} */
   const points = {};
-  /** @type {Record<string, { base: number, speed: number, solo: number }>} */
+  /** @type {Record<string, { base: number, speed: number, solo: number, closeness: number }>} */
   const breakdown = {};
   for (const [pid, award] of Object.entries(awards)) {
     points[pid] = award.total;
-    breakdown[pid] = { base: award.base, speed: award.speed, solo: award.solo };
+    breakdown[pid] = {
+      base: award.base, speed: award.speed, solo: award.solo, closeness: award.closeness,
+    };
   }
   const seats = new Map();
   for (const [pid, seat] of room.seats) {
@@ -613,6 +632,13 @@ function toReveal(room) {
       message: {
         type: 'reveal',
         answer: q.answer,
+        // The full ranking and the raw values, for the world-facts reveal chart.
+        // These ride the REVEAL and nothing else: they name the answer outright,
+        // so putting them on the question message would hand it to every client
+        // a beat early. `publicQuestion` is an allow-list, so that cannot happen
+        // by accident — but it is the reason they are attached here and not
+        // stamped onto the question when it is generated.
+        ...(Array.isArray(q.ranking) ? { ranking: q.ranking, values: q.values } : {}),
         picks,
         points,
         breakdown,

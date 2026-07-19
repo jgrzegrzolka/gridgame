@@ -8,6 +8,8 @@ import {
   scoreQuestion,
   scoreQuestionDetailed,
   SOLE_SURVIVOR_BONUS,
+  CLOSENESS_LADDER,
+  closenessForRank,
 } from './partyScore.js';
 
 test('speedBonusForRank: follows the curve, then 0 past the end', () => {
@@ -153,7 +155,90 @@ test('sole survivor: doubles on the Decider like every other point', () => {
   assert.equal(awards.a.total, (CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS) * FINAL_ROUND_MULTIPLIER);
 });
 
-test('a wrong answer earns nothing in every bucket', () => {
+test('a wrong answer earns nothing in every bucket when the question has no ranking', () => {
+  // No `rank` on the buzz — flag-pick and map-pick are right-or-wrong, so
+  // closeness must stay 0 and this path must behave exactly as it always has.
   const awards = scoreQuestionDetailed([{ playerId: 'a', correct: false }, { playerId: 'b', correct: true }]);
-  assert.deepEqual(awards.a, { base: 0, speed: 0, solo: 0, total: 0 });
+  assert.deepEqual(awards.a, { base: 0, speed: 0, solo: 0, closeness: 0, total: 0 });
+});
+
+test('closeness: the ladder agrees with CORRECT_POINTS at rank 0', () => {
+  // The ladder is written 10/5/2/0 because that is what a player reads off the
+  // reveal chart. Index 0 is paid as `base`, so if these two ever drift the
+  // chart would print a number the scorer does not award.
+  assert.equal(CLOSENESS_LADDER[0], CORRECT_POINTS);
+});
+
+test('closeness: rank 0 and out-of-range ranks pay nothing', () => {
+  // Rank 0 is the answer and is paid through `base`; paying it here too would
+  // double-count. Non-integers and overshoot are defensive, not expected.
+  assert.equal(closenessForRank(0), 0);
+  assert.equal(closenessForRank(undefined), 0);
+  assert.equal(closenessForRank(4), 0);
+  assert.equal(closenessForRank(-1), 0);
+  assert.equal(closenessForRank(1.5), 0);
+});
+
+test('closeness: a near miss pays, and lands in its own bucket', () => {
+  const awards = scoreQuestionDetailed([
+    { playerId: 'right', correct: true, rank: 0 },
+    { playerId: 'near', correct: false, rank: 1 },
+    { playerId: 'far', correct: false, rank: 2 },
+    { playerId: 'last', correct: false, rank: 3 },
+  ]);
+  assert.deepEqual(awards.near, { base: 0, speed: 0, solo: 0, closeness: 5, total: 5 });
+  assert.deepEqual(awards.far, { base: 0, speed: 0, solo: 0, closeness: 2, total: 2 });
+  assert.deepEqual(awards.last, { base: 0, speed: 0, solo: 0, closeness: 0, total: 0 });
+  // The correct pick is paid as base, never as closeness — that separation is
+  // what lets the break's chips say "right" vs "close" rather than one number.
+  assert.equal(awards.right.base, CORRECT_POINTS);
+  assert.equal(awards.right.closeness, 0);
+});
+
+test('closeness: a near miss earns no speed bonus, however fast it arrived', () => {
+  // Speed ranks among CORRECT answers. Paying it on a near miss would reward
+  // buzzing fast on a question you did not know, which is the opposite of what
+  // the speed bonus is for.
+  const awards = scoreQuestionDetailed([
+    { playerId: 'fastWrong', correct: false, rank: 1 },
+    { playerId: 'slowRight', correct: true, rank: 0 },
+  ]);
+  assert.equal(awards.fastWrong.speed, 0);
+  assert.equal(awards.fastWrong.total, CLOSENESS_LADDER[1]);
+  assert.equal(awards.slowRight.speed, SPEED_BONUS[0]);
+});
+
+test('closeness: a near miss does not block the sole-survivor bonus', () => {
+  // Sole survivor means "the only one who got it RIGHT". Someone scoring
+  // closeness points is still wrong, so the lone correct player keeps the bonus.
+  const awards = scoreQuestionDetailed([
+    { playerId: 'a', correct: false, rank: 1 },
+    { playerId: 'b', correct: true, rank: 0 },
+  ]);
+  assert.equal(awards.b.solo, SOLE_SURVIVOR_BONUS);
+  assert.equal(awards.a.closeness, CLOSENESS_LADDER[1]);
+});
+
+test('closeness: doubles on the Decider, like every other point', () => {
+  const awards = scoreQuestionDetailed(
+    [{ playerId: 'a', correct: false, rank: 1 }, { playerId: 'b', correct: true, rank: 0 }],
+    { multiplier: FINAL_ROUND_MULTIPLIER },
+  );
+  assert.equal(awards.a.closeness, CLOSENESS_LADDER[1] * FINAL_ROUND_MULTIPLIER);
+  assert.equal(awards.a.total, CLOSENESS_LADDER[1] * FINAL_ROUND_MULTIPLIER);
+});
+
+test('closeness: scoreQuestion projects the same totals as the detailed scorer', () => {
+  // scoreQuestion is a projection, not a second implementation. Closeness has to
+  // reach the room's seat arithmetic through it or near misses would show on the
+  // reveal and never touch anyone's score.
+  const buzzes = [
+    { playerId: 'a', correct: false, rank: 1 },
+    { playerId: 'b', correct: true, rank: 0 },
+    { playerId: 'c', correct: false, rank: 3 },
+  ];
+  const flat = scoreQuestion(buzzes);
+  const detailed = scoreQuestionDetailed(buzzes);
+  for (const id of Object.keys(detailed)) assert.equal(flat[id], detailed[id].total);
+  assert.equal(flat.a, CLOSENESS_LADDER[1]);
 });

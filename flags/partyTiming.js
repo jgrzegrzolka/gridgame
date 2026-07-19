@@ -27,14 +27,29 @@ export const CLEAN_REVEAL_SECONDS = 0.9;
  *  on a wrong answer than a right one. */
 export const MISS_REVEAL_SECONDS = 2.5;
 
+/** Seconds a world-facts reveal lingers. That reveal is a ranked bar chart of all
+ *  four countries -- four rows cascading in at 110 ms apart plus a 700 ms bar
+ *  grow -- which needs about 1.6 s before it has finished saying anything. The
+ *  0.9 s clean reveal would cut it off mid-grow, and a clean reveal is exactly
+ *  when everyone is pleased with themselves and looking at it. Applies to the
+ *  chart questions ONLY: flag-pick and map-pick have nothing to chart and keep
+ *  their snappy pace. */
+export const CHART_REVEAL_SECONDS = 3.2;
+
 /**
- * How long the reveal lingers, keyed on whether the question was a clean sweep. A
- * clean question ({@link CLEAN_REVEAL_SECONDS}) moves fast; a missed one
+ * How long the reveal lingers, keyed on whether the question was a clean sweep
+ * and whether it draws a chart. A chart reveal ({@link CHART_REVEAL_SECONDS})
+ * always gets its full beat -- the ranking is the payoff of the question, not a
+ * consolation for getting it wrong, so a clean sweep must not skip it. Otherwise
+ * a clean question ({@link CLEAN_REVEAL_SECONDS}) moves fast and a missed one
  * ({@link MISS_REVEAL_SECONDS}) holds so the answer can be read.
+ *
  * @param {boolean} clean  every present player picked the correct answer
+ * @param {boolean} [chart] the reveal draws the ranked chart (world facts)
  * @returns {number}
  */
-export function revealSecondsFor(clean) {
+export function revealSecondsFor(clean, chart = false) {
+  if (chart) return CHART_REVEAL_SECONDS;
   return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 

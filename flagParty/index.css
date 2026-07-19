@@ -200,6 +200,90 @@
 .prompt.superlative .prompt-target { font-size: 18px; }
 
 .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* The world-facts reveal swaps the 2x2 grid for a ranked chart, so the grid
+   container drops its columns for that one beat. Toggled by `as-chart` in
+   page.js rather than a separate element, so the section swap, the veil loop and
+   everything else that already knows about #flags-grid keeps working. */
+.flags-grid.as-chart { display: block; }
+
+/* ---- the ranked reveal chart (world facts) ----
+   Four rows, best first. Rank, flag, name + value over a bar, whoever picked it,
+   and what that row paid. The winner gets NO highlight: the ranking already says
+   who won by putting it on top. The only outlined row is yours, in the site's
+   correct/wrong pair (common.css), because how you did is the one thing a
+   ranking cannot show. */
+.rank-chart { display: flex; flex-direction: column; gap: 6px; }
+.rank-row {
+  display: grid;
+  grid-template-columns: 18px 34px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px 6px 4px;
+  border-radius: 8px;
+  background: var(--surface-color);
+  box-shadow: inset 0 0 0 1px var(--muted-soft-color);
+}
+/* Your row, and only your row. 2px so it reads over the 1px resting inset. */
+.rank-row.you-right { box-shadow: inset 0 0 0 2px var(--correct-color); }
+.rank-row.you-wrong { box-shadow: inset 0 0 0 2px var(--wrong-color); }
+.rank-pos {
+  font-size: 12px; font-weight: 700; color: var(--muted-color);
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+.rank-flag {
+  display: block; width: 34px; height: 26px; border-radius: 4px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--muted-soft-color);
+}
+.rank-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rank-body { display: block; min-width: 0; }
+.rank-cap { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rank-name {
+  display: block; min-width: 0; font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rank-val {
+  display: block; font-size: 12px; color: var(--muted-color);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rank-track {
+  display: block; height: 6px; margin-top: 4px; border-radius: 3px;
+  background: var(--muted-soft-color); overflow: hidden;
+}
+.rank-track i {
+  display: block; height: 100%; border-radius: 3px; background: var(--muted-color);
+  /* Starts at 0 and is set to its real width next frame, so this animates. A
+     min-width keeps the smallest country a visible nub rather than nothing --
+     on a runaway quartet the fourth bar is ~2% of the first. */
+  width: 0; min-width: 3px;
+  transition: width 700ms cubic-bezier(0.2, 0.75, 0.25, 1);
+  transition-delay: var(--d, 0ms);
+}
+.rank-row.you-right .rank-track i { background: var(--correct-color); }
+.rank-row.you-wrong .rank-track i { background: var(--wrong-color); }
+.rank-rail { display: flex; align-items: center; }
+.rank-rail .avatar {
+  width: 22px; height: 22px; font-size: 9px;
+  box-shadow: 0 0 0 2px var(--surface-color);
+}
+.rank-rail .avatar + .avatar { margin-left: -6px; }
+/* Rank-based scoring means everyone on a row scores the same, so the row states
+   its price once instead of a number per avatar -- the chart doubles as the
+   scoring key. Muted when nobody picked it, so the ladder still reads as a
+   ladder without shouting about rows that paid nobody. */
+.rank-pts {
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--muted-color); min-width: 24px; text-align: right;
+}
+.rank-pts.live { color: var(--primary-color); }
+/* The rows cascade in, top-down, on the same 110ms step the JS stamps as --d. */
+@media (prefers-reduced-motion: no-preference) {
+  .rank-row {
+    opacity: 0; transform: translateY(6px);
+    animation: rank-row-in 340ms cubic-bezier(0.2, 0.75, 0.25, 1) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+}
+@keyframes rank-row-in { to { opacity: 1; transform: none; } }
 .opt {
   position: relative;
   padding: 5px;

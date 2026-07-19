@@ -26,7 +26,9 @@
  * @property {number} buzzedCount
  * @property {number} seatCount
  * @property {string | null} myChoice
- * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>, breakdown?: Record<string, { base: number, speed: number, solo: number }>, doubled?: boolean } | null} reveal
+ * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>,
+ *   breakdown?: Record<string, { base: number, speed: number, solo: number, closeness: number }>,
+ *   doubled?: boolean, ranking?: string[] | null, values?: Record<string, number> | null } | null} reveal
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
  *   seat whose turn it is to choose the next round; null otherwise.
@@ -237,6 +239,14 @@ export function reducePartyMessage(state, message) {
             // chips — the totals it counts up come from `scoreboard` either way.
             breakdown: message.breakdown ?? {},
             doubled: message.doubled === true,
+            // World-facts questions only: the true order of the four options
+            // (best-first in the question's direction, so index 0 is the
+            // answer) and their raw values, for the ranked reveal chart.
+            // Absent on every other question type and on any server older
+            // than this build, in which case the reveal falls back to the
+            // plain tile treatment rather than drawing an empty chart.
+            ranking: Array.isArray(message.ranking) ? message.ranking : null,
+            values: message.values && typeof message.values === 'object' ? message.values : null,
           },
           scoreboard: message.scoreboard ?? state.scoreboard,
           questionIndex: message.questionIndex ?? state.questionIndex,

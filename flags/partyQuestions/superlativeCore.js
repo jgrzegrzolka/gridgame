@@ -37,7 +37,20 @@ import { createMetric } from '../metrics.js';
  */
 
 /** @typedef {{ code: string }} PoolEntry */
-/** @typedef {{ prompt: 'most' | 'least', options: string[], answer: string }} Question */
+/**
+ * `ranking` is the four option codes ordered **best-first in the question's own
+ * direction** — so index 0 is always the answer, whether the question asked for
+ * the most or the least. `values` is each option's raw metric value, for the
+ * reveal's bar chart.
+ *
+ * Both are answer-bearing and must never reach a client before the reveal.
+ * `publicQuestion` in `flags/partyRoom.js` is an allow-list (it names each field
+ * it copies) rather than a deny-list, so they are excluded by construction
+ * rather than by remembering to strip them.
+ *
+ * @typedef {{ prompt: 'most' | 'least', options: string[], answer: string,
+ *   ranking: string[], values: Record<string, number> }} Question
+ */
 
 
 /**
@@ -132,7 +145,7 @@ function generateFor(metric, pool, exclude, rng = Math.random, forcedDirection) 
   // Draw four, sorted by value; the extreme (largest for 'most', smallest for
   // 'least') is the answer. Resample until the extreme clears the runner-up by
   // GAP_RATIO, then accept the first draw regardless so we always return.
-  /** @type {{ codes: string[], answer: string } | null} */
+  /** @type {{ codes: string[], answer: string, ranking: string[] } | null} */
   let fallback = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const four = drawFourDistinct(src, rng);
@@ -142,12 +155,29 @@ function generateFor(metric, pool, exclude, rng = Math.random, forcedDirection) 
     const ev = val(extreme.code);
     const rv = val(runnerUp.code);
     const clear = direction === 'most' ? ev >= rv * GAP_RATIO : rv >= ev * GAP_RATIO;
-    const candidate = { codes: four.map((c) => c.code), answer: extreme.code };
+    // `byValue` is descending. A 'least' question wants the smallest first, so
+    // the ranking is reversed for it — which keeps "index 0 is the answer" true
+    // in both directions and lets the scorer treat rank uniformly.
+    const ordered = direction === 'most' ? byValue : byValue.slice().reverse();
+    const candidate = {
+      codes: four.map((c) => c.code),
+      answer: extreme.code,
+      ranking: ordered.map((c) => c.code),
+    };
     if (clear) { fallback = candidate; break; }
     if (!fallback) fallback = candidate;
   }
-  const chosen = /** @type {{ codes: string[], answer: string }} */ (fallback);
-  return { prompt: direction, options: shuffle(chosen.codes, rng), answer: chosen.answer };
+  const chosen = /** @type {{ codes: string[], answer: string, ranking: string[] }} */ (fallback);
+  /** @type {Record<string, number>} */
+  const values = {};
+  for (const code of chosen.codes) values[code] = val(code);
+  return {
+    prompt: direction,
+    options: shuffle(chosen.codes, rng),
+    answer: chosen.answer,
+    ranking: chosen.ranking,
+    values,
+  };
 }
 
 /**
