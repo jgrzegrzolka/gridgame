@@ -205,8 +205,12 @@ export function bootFindFlag() {
   function flagTile(c) {
     const displayName = countryName(c);
     const li = document.createElement('li');
-    li.className = 'find-tile';
+    // `hover-tip` + `data-tip` is the shared hover-label bubble (common.css).
+    // `data-name` stays: it is the site-wide "this tile's country" attribute
+    // that other rules and the tests read.
+    li.className = 'find-tile hover-tip';
     li.dataset.name = displayName;
+    li.dataset.tip = displayName;
     bindTileCountry(li, c);
     li.addEventListener('click', () => openZoom(c));
     const img = document.createElement('img');

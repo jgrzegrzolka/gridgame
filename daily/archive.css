@@ -27,7 +27,7 @@
   grid-column: 1 / -1;
   padding: 24px;
   background: var(--page-bg-color);
-  border: 1px solid #eee;
+  border: 1px solid var(--muted-soft-color);
   border-radius: 6px;
   text-align: center;
   font-size: 14px;
@@ -124,7 +124,7 @@
   justify-content: center;
   padding: 4px;
   background: rgba(28, 28, 28, 0.92);
-  color: #fff;
+  color: var(--surface-color);
   font-size: 13px;
   font-weight: 500;
   text-align: center;

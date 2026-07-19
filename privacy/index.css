@@ -51,7 +51,7 @@
   font-weight: 600;
 }
 .privacy-request-link[aria-disabled="true"] {
-  color: #999;
+  color: var(--muted-color);
   cursor: default;
   pointer-events: none;
   text-decoration: none;
@@ -63,10 +63,10 @@
   min-height: 1em;
 }
 .privacy-request-status.is-ok {
-  color: #1c7c1c;
+  color: var(--correct-color);
 }
 .privacy-request-status.is-error {
-  color: #b00020;
+  color: var(--wrong-color);
 }
 
 .privacy-main .actions-row {

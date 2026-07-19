@@ -53,7 +53,7 @@ body {
   line-height: 1.4;
 }
 .chooser-pills .pill-count {
-  color: #999;
+  color: var(--muted-color);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -266,26 +266,10 @@ body {
   height: 100%;
   display: block;
 }
-.find-tile::after {
-  content: attr(data-name);
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--primary-color);
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 80ms;
-  z-index: 10;
-}
-.find-tile:hover::after {
-  opacity: 1;
-}
+/* The hover name bubble is the shared `.hover-tip` from common.css: the tile
+ * carries the class and `data-tip` (findFlag/page.js). common.css generalised
+ * this rule FROM `.find-tile::after` and the local copy was never deleted, so
+ * the two drifted apart in nothing but the attribute they read. */
 .find-found .find-tile {
   animation: find-tile-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }

@@ -60,13 +60,13 @@
 .archive-square--approved .review-button--approve,
 .ideas-play-verdict--approved .review-button--approve {
   background: var(--primary-color);
-  color: #fff;
+  color: var(--surface-color);
   border-color: var(--primary-color);
 }
 .archive-square--approved .review-button--approve:hover,
 .ideas-play-verdict--approved .review-button--approve:hover {
   background: var(--primary-color);
-  color: #fff;
+  color: var(--surface-color);
   border-color: var(--primary-color);
 }
 
