@@ -292,7 +292,7 @@ dialog#zoom .country-data {
   left: 0;
   right: 0;
   background: rgba(28, 28, 28, 0.85);
-  color: #fff;
+  color: var(--surface-color);
   padding: 1px 3px;
   font-size: 10px;
   font-variant-numeric: tabular-nums;

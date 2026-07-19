@@ -80,7 +80,7 @@ body {
   border-radius: 3px;
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
+  color: var(--surface-color);
 }
 .pc-mark.x { background: var(--x-color); }
 .pc-mark.o { background: var(--o-color); }
@@ -373,7 +373,7 @@ body.game-over .actions-row {
   padding: 10px 12px;
   font: inherit;
   font-size: 16px;
-  border: 1px solid #999;
+  border: 1px solid var(--muted-color);
   border-radius: 6px;
   margin-bottom: 8px;
 }
