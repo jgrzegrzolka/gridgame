@@ -582,3 +582,41 @@ test('handFor never deals a Nobel member id as its own card', () => {
     }
   }
 });
+
+test('olympicMedals: all four medal metrics share ONE card', () => {
+  // The widest family in the catalog, and the first with more than two members,
+  // so the mechanism is exercised past what economy / nobel prove.
+  const oly = METRIC_FAMILIES.find((f) => f.id === 'olympicMedals');
+  assert.ok(oly, 'an "olympicMedals" family must exist');
+  assert.deepEqual(oly.memberIds, [
+    'superlative-summer-medals',
+    'superlative-summer-medals-pc',
+    'superlative-winter-medals',
+    'superlative-winter-medals-pc',
+  ]);
+  assert.equal(oly.representativeId, 'superlative-summer-medals');
+  // Playing ANY member retires the whole card, all four ways.
+  for (const member of oly.memberIds) {
+    assert.equal(usedIdForMode(member), 'olympicMedals', `${member} maps to the family`);
+    assert.equal(isValidPick('olympicMedals', [usedIdForMode(member)]), false,
+      `${member} did not retire the card`);
+  }
+  // A pick reaches all four members over enough draws, and nothing else.
+  const seen = new Set();
+  for (let i = 0; i < 400; i++) seen.add(resolveFamilyPick('olympicMedals'));
+  assert.deepEqual([...seen].sort(), [...oly.memberIds].sort(),
+    'every member must be reachable from one card');
+});
+
+test('handFor never deals an Olympic member id as its own card', () => {
+  const members = ['superlative-summer-medals', 'superlative-summer-medals-pc',
+    'superlative-winter-medals', 'superlative-winter-medals-pc'];
+  for (let seed = 1; seed <= 30; seed++) {
+    const hand = handFor([], seeded(seed));
+    for (const forbidden of members) {
+      assert.ok(!hand.includes(forbidden), `seed ${seed}: hand offered "${forbidden}"`);
+    }
+    // And the card itself must never appear twice in one hand.
+    assert.ok(hand.filter((c) => c === 'olympicMedals').length <= 1, `seed ${seed}: duplicate card`);
+  }
+});

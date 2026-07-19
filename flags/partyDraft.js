@@ -275,20 +275,26 @@ const GROUPED_FAMILIES = [
     representativeId: 'superlative-nobel',
   },
   {
-    // Summer and Winter are grouped SEPARATELY on purpose. Each season pairs its
-    // total with its own per-person cut, which is one question asked two ways.
-    // Summer vs Winter is not: they have different sports, different countries and
-    // different answers (the United States leads one, Norway the other), so they
-    // are two subjects and get two cards, the same way meat / cattle / sheep stay
-    // apart despite sharing a barn.
-    id: 'summerMedals',
-    memberIds: ['superlative-summer-medals', 'superlative-summer-medals-pc'],
+    // All four Olympic metrics on ONE card, the widest family so far. Jan's call,
+    // and it overrides the first cut of this (Summer and Winter as two cards, on
+    // the reasoning that they are two subjects rather than one question asked
+    // twice). The hand-breadth argument wins: a ten-card hand carrying two Olympic
+    // cards spends a fifth of itself on Olympics, which is precisely the crowding
+    // `economy` was introduced to stop. Collapsing to one frees a slot for a
+    // statistic the hand doesn't have yet, and the four members still deal as four
+    // distinct rounds once picked.
+    //
+    // The `sub` disclosure carries more weight here than on any other family,
+    // because the range is genuinely wide: a player picking this card must be told
+    // they might get Winter per-person, not just "medals".
+    id: 'olympicMedals',
+    memberIds: [
+      'superlative-summer-medals',
+      'superlative-summer-medals-pc',
+      'superlative-winter-medals',
+      'superlative-winter-medals-pc',
+    ],
     representativeId: 'superlative-summer-medals',
-  },
-  {
-    id: 'winterMedals',
-    memberIds: ['superlative-winter-medals', 'superlative-winter-medals-pc'],
-    representativeId: 'superlative-winter-medals',
   },
 ];
 
