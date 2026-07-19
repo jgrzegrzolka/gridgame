@@ -247,10 +247,16 @@ quantitative data, persisted scores / leaderboards (the show is ephemeral), more
 question *type*, spectators.
 
 **Confirmed UI decisions (2026-07-09, from the mockup):** A — flags on the phone in a 2×2
-grid; B — correct = secondary (pink) ring + check, wrong = dimmed, no green/red (on the seven
-palette colours); C — reveal shows everyone's pick (avatar on the chosen flag); D — first
+grid; B — correct = ring + check, wrong = dimmed; C — reveal shows everyone's pick (avatar on the chosen flag); D — first
 correct tagged "⚡ Fastest", full scoreboard only on reveal/final. Name: **Flag Party**
 (folder `flagParty/`; pl tile "Flagowa impreza").
+
+**Superseded 2026-07-19 (decision B).** B originally read "correct = secondary (pink) ring + check,
+wrong = dimmed, no green/red (on the seven palette colours)". That was never true of the code: the
+very first reveal styling shipped `.opt.correct { border-color: #2a9d4a }`, and `flagParty/index.css`
+carried a header comment asserting "no green/red" three lines above that green. Correct / wrong are
+now the site-wide semantic tokens `--correct-color` / `--wrong-color` (see `CLAUDE.md`), which also
+collapsed the four different greens the site had accumulated for one concept.
 
 ## Iteration 2 — sovereign + non-sovereign segments — SHIPPED (branch `feat/party-nonsovereign-mode`)
 

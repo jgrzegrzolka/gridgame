@@ -61,6 +61,10 @@ body {
   color: var(--muted-color);
 }
 .chooser-pills .pill.exclude .pill-count {
+  /* Deliberately NOT var(--wrong-color), despite being the same hex today.
+   * "Exclude this tag from the puzzle" is a filter mode, not a verdict on an
+   * answer, and the correctness pair is reserved for right/wrong. If the site's
+   * wrong-red is ever retuned this must not move with it. */
   color: #c0392b;
 }
 /* The shared metric-hub chips (flags/metricHub.css) ship at the dense
@@ -163,7 +167,7 @@ body {
  * → add) so consecutive matches re-fire both animations. Same class
  * reused on the daily page since this stylesheet is shared. */
 @keyframes find-count-pulse {
-  0% { color: #2e7d32; font-weight: 700; }
+  0% { color: var(--correct-color); font-weight: 700; }
   100% { color: var(--muted-color); font-weight: 400; }
 }
 .find-count--pulse {
@@ -192,13 +196,12 @@ body {
   border-color: var(--primary-color);
 }
 .find-input.wrong {
-  /* Pink border matches the brand secondary — same idiom as
-   * flagQuiz's `.feedback.shake-wrong` and profile's
-   * `.profile-input.shake-wrong` (per CLAUDE.md "same mechanism =
-   * same code" and the palette rule of only --primary / --secondary
-   * / --muted). Used by both findFlag and the daily game — the daily
-   * page loads this stylesheet too. */
-  border-color: var(--secondary-color);
+  /* Red border, the site's one "that was wrong" signal (common.css). Was brand
+   * secondary; the old comment here pointed at `.feedback.shake-wrong` as the
+   * shared idiom, but no such rule has ever existed in the codebase — the real
+   * sibling is profile's `.profile-input.shake-wrong`. Used by both findFlag
+   * and the daily game, which loads this stylesheet too. */
+  border-color: var(--wrong-color);
 }
 .find-input.shake {
   animation: find-shake 200ms ease;

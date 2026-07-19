@@ -279,14 +279,14 @@
   z-index: 5;
 }
 .find-tile.is-user-found::before {
-  background: #2a8a3a;
+  background: var(--correct-color);
 }
 /* Missed a target (ranking row) and clicked a wrong flag (mistake row)
  * are both "you got this flag wrong" — same red, disambiguated by which
  * row the tile sits in. */
 .find-tile.is-user-missed::before,
 .find-tile.is-user-wrong::before {
-  background: #c0392b;
+  background: var(--wrong-color);
 }
 
 /* Turnstile widget container is invisible by design (size: 'invisible'
