@@ -671,26 +671,26 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
 
 // ---- final-round double points (final-round polish) ----
 
-test('final round: the reveal doubles points and flags doubled; earlier rounds do not', () => {
-  // A 10-question (2-round) game. Question 0 is round 1 (single), question 5 is the final round.
+test('the final round scores exactly like every other round', () => {
+  // The Decider used to pay double. Measured over simulated four-player games it
+  // did not do the job it was added for: doubling scales the expected drift and
+  // the variance together, so the leader pulled away as fast as the swing grew,
+  // and last place won 0.0% of games. The multiplier is gone -- the comeback
+  // mechanic is last place CHOOSING the closing round (`deciderPickerFor`). This
+  // pins that no round scores differently, so it cannot quietly come back.
   let room = createRoom(10);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', questionId: 'flagPick', questions: 10 }], 10).room;
 
-  // Question 0 (round 1): a correct solo answer scores the base, not doubled.
   let r = applyBuzz(room, 'alice', 'jp', true);
-  let rev = msg(r, 'reveal');
-  assert.equal(rev.doubled, false);
-  assert.equal(rev.points.alice, CORRECT_POINTS);
+  assert.equal(msg(r, 'reveal').points.alice, CORRECT_POINTS, 'an ordinary round');
 
-  // Fast-forward to a final-round question (index 5) and answer correctly.
+  // Same answer, same seat, but on the closing round.
   const atFinal = { ...r.room, phase: /** @type {any} */ ('question'), questionIndex: 5, question: q('kr'), buzzes: [] };
   r = applyBuzz(atFinal, 'alice', 'kr', true);
-  rev = msg(r, 'reveal');
-  assert.equal(rev.doubled, true, 'the final round is flagged doubled');
-  assert.equal(rev.points.alice, CORRECT_POINTS * 2, 'points are doubled');
-  // and the seat's running total reflects the doubled award
-  assert.equal(r.room.seats.get('alice')?.score, CORRECT_POINTS + CORRECT_POINTS * 2);
+  assert.equal(msg(r, 'reveal').points.alice, CORRECT_POINTS, 'and the final round pays the same');
+  assert.equal(r.room.seats.get('alice')?.score, CORRECT_POINTS * 2, 'two questions, two plain awards');
+  assert.equal('doubled' in msg(r, 'reveal'), false, 'and the wire carries no doubled flag');
 });
 
 test('applyPick: a veiled segment turns the veil on for that round only', () => {

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   CORRECT_POINTS,
   SPEED_BONUS,
-  FINAL_ROUND_MULTIPLIER,
   speedBonusForRank,
   scoreQuestion,
   scoreQuestionDetailed,
@@ -57,27 +56,6 @@ test('scoreQuestion: empty question scores nobody', () => {
   assert.deepEqual(scoreQuestion([]), {});
 });
 
-test('scoreQuestion: the multiplier scales base + speed bonus, wrong stays 0', () => {
-  const buzzes = [
-    { playerId: 'a', correct: true },   // base + speed[0]
-    { playerId: 'b', correct: false },  // 0
-    { playerId: 'c', correct: true },   // base + speed[1]
-  ];
-  const doubled = scoreQuestion(buzzes, { multiplier: FINAL_ROUND_MULTIPLIER });
-  assert.equal(doubled.a, (CORRECT_POINTS + SPEED_BONUS[0]) * FINAL_ROUND_MULTIPLIER);
-  assert.equal(doubled.b, 0, 'a wrong answer is 0 regardless of the multiplier');
-  assert.equal(doubled.c, (CORRECT_POINTS + SPEED_BONUS[1]) * FINAL_ROUND_MULTIPLIER);
-});
-
-test('scoreQuestion: multiplier defaults to 1 (unchanged scoring)', () => {
-  const buzzes = [{ playerId: 'a', correct: true }];
-  assert.deepEqual(scoreQuestion(buzzes), scoreQuestion(buzzes, { multiplier: 1 }));
-});
-
-test('FINAL_ROUND_MULTIPLIER is 2', () => {
-  assert.equal(FINAL_ROUND_MULTIPLIER, 2);
-});
-
 // ---- Iteration 12 phase 5: the itemised award + sole survivor ----
 
 test('scoreQuestionDetailed: total is always base + speed + solo', () => {
@@ -99,7 +77,7 @@ test('scoreQuestionDetailed: scoreQuestion is exactly its totals', () => {
     { playerId: 'b', correct: false },
     { playerId: 'c', correct: true },
   ];
-  for (const opts of [{}, { multiplier: 2 }, { applySpeedBonus: false }]) {
+  for (const opts of [{}, { applySpeedBonus: false }, { applySoloBonus: false }]) {
     const totals = scoreQuestion(buzzes, opts);
     const detailed = scoreQuestionDetailed(buzzes, opts);
     for (const [id, award] of Object.entries(detailed)) assert.equal(totals[id], award.total);
@@ -146,16 +124,6 @@ test('sole survivor: off in solo play, like the speed bonus', () => {
   assert.equal(awards.a.solo, 0);
   assert.equal(awards.a.speed, 0);
   assert.equal(awards.a.total, CORRECT_POINTS);
-});
-
-test('sole survivor: doubles on the Decider like every other point', () => {
-  const awards = scoreQuestionDetailed(
-    [{ playerId: 'a', correct: true }, { playerId: 'b', correct: false }],
-    { multiplier: FINAL_ROUND_MULTIPLIER },
-  );
-  assert.equal(awards.a.solo, SOLE_SURVIVOR_BONUS * FINAL_ROUND_MULTIPLIER);
-  assert.equal(awards.a.speed, 0, 'still no race, even on the Decider');
-  assert.equal(awards.a.total, (CORRECT_POINTS + SOLE_SURVIVOR_BONUS) * FINAL_ROUND_MULTIPLIER);
 });
 
 test('a wrong answer earns nothing in every bucket when the question has no ranking', () => {
@@ -223,15 +191,6 @@ test('closeness: a near miss does not block the sole-survivor bonus', () => {
   ]);
   assert.equal(awards.b.solo, SOLE_SURVIVOR_BONUS);
   assert.equal(awards.a.closeness, CLOSENESS_LADDER[1]);
-});
-
-test('closeness: doubles on the Decider, like every other point', () => {
-  const awards = scoreQuestionDetailed(
-    [{ playerId: 'a', correct: false, rank: 1 }, { playerId: 'b', correct: true, rank: 0 }],
-    { multiplier: FINAL_ROUND_MULTIPLIER },
-  );
-  assert.equal(awards.a.closeness, CLOSENESS_LADDER[1] * FINAL_ROUND_MULTIPLIER);
-  assert.equal(awards.a.total, CLOSENESS_LADDER[1] * FINAL_ROUND_MULTIPLIER);
 });
 
 test('closeness: scoreQuestion projects the same totals as the detailed scorer', () => {

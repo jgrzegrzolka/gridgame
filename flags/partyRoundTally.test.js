@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyTally, addQuestionToTally, chipsFor } from './partyRoundTally.js';
-import { scoreQuestionDetailed, CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS, FINAL_ROUND_MULTIPLIER } from './partyScore.js';
+import { scoreQuestionDetailed, CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS } from './partyScore.js';
 
 /**
  * The reveal's `breakdown` field, built exactly the way the room builds it.
  * @param {Array<{ playerId: string, correct: boolean }>} buzzes
- * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean, multiplier?: number }} [opts]
+ * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean }} [opts]
  */
 function breakdownOf(buzzes, opts) {
   /** @type {Record<string, { base: number, speed: number, solo: number, closeness: number }>} */
@@ -71,19 +71,6 @@ test('the sole survivor bonus keeps its own bucket instead of being read as spee
   // Same total, different story.
   const totalOf = (/** @type {{base:number,speed:number,solo:number,closeness:number}} */ x) => x.base + x.speed + x.solo + x.closeness;
   assert.equal(totalOf(alone.a), totalOf(raced.a));
-});
-
-test('a double round arrives already scaled', () => {
-  const t = addQuestionToTally(emptyTally(), breakdownOf(
-    [{ playerId: 'a', correct: true }, { playerId: 'b', correct: true }],
-    { multiplier: FINAL_ROUND_MULTIPLIER },
-  ));
-  assert.deepEqual(t.a, {
-    base: CORRECT_POINTS * FINAL_ROUND_MULTIPLIER,
-    speed: SPEED_BONUS[0] * FINAL_ROUND_MULTIPLIER,
-    solo: 0,
-    closeness: 0,
-  });
 });
 
 test('a reveal with no breakdown tallies nothing rather than throwing', () => {

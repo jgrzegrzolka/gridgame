@@ -94,22 +94,13 @@ export function closenessForRank(rank) {
  * @typedef {{ base: number, speed: number, solo: number, closeness: number, total: number }} Award
  */
 
-/** Score multiplier for the game's final round — the round that decides it plays
- *  for double, so a trailing player who chose its terrain (draft) or just gets
- *  hot at the end can still swing the result. */
-export const FINAL_ROUND_MULTIPLIER = 2;
-
 /**
  * Points earned this question, keyed by playerId. `buzzesInOrder` must be in
  * server arrival order — that order is what the speed bonus ranks against.
  * Players who never buzzed simply aren't in the input and score nothing.
  *
- * `multiplier` scales every awarded point (base + speed bonus); it's
- * {@link FINAL_ROUND_MULTIPLIER} for final-round questions and 1 everywhere else.
- * A wrong answer scores 0 regardless of the multiplier.
- *
  * @param {ScoredBuzz[]} buzzesInOrder
- * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean, multiplier?: number }} [opts]
+ * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean }} [opts]
  * @returns {Record<string, number>}
  */
 export function scoreQuestion(buzzesInOrder, opts = {}) {
@@ -137,7 +128,7 @@ export function scoreQuestion(buzzesInOrder, opts = {}) {
  * (closeness), never both.
  *
  * @param {ScoredBuzz[]} buzzesInOrder
- * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean, multiplier?: number }} [opts]
+ * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean }} [opts]
  *   `applySoloBonus` defaults to `applySpeedBonus`: both are off in exactly the
  *   same situation (solo play), so a caller that already said "one seat" doesn't
  *   have to say it twice.
@@ -145,7 +136,7 @@ export function scoreQuestion(buzzesInOrder, opts = {}) {
  */
 export function scoreQuestionDetailed(
   buzzesInOrder,
-  { applySpeedBonus = true, applySoloBonus = applySpeedBonus, multiplier = 1 } = {},
+  { applySpeedBonus = true, applySoloBonus = applySpeedBonus } = {},
 ) {
   /** @type {Record<string, Award>} */
   const awards = {};
@@ -174,15 +165,14 @@ export function scoreQuestionDetailed(
       // A wrong pick can still pay, if the question ranked its options and this
       // one landed near the top. Deliberately gets no speed bonus: speed ranks
       // among CORRECT answers, so paying it here would reward buzzing fast on a
-      // question you didn't know. Closeness scales with the multiplier like
-      // every other point, so the Decider doubles it too.
-      const closeness = closenessForRank(buzz.rank) * multiplier;
+      // question you didn't know.
+      const closeness = closenessForRank(buzz.rank);
       awards[buzz.playerId] = { base: 0, speed: 0, solo: 0, closeness, total: closeness };
       continue;
     }
-    const base = CORRECT_POINTS * multiplier;
-    const speed = applySpeedBonus && raced ? speedBonusForRank(correctRank) * multiplier : 0;
-    const solo = soloBonus * multiplier;
+    const base = CORRECT_POINTS;
+    const speed = applySpeedBonus && raced ? speedBonusForRank(correctRank) : 0;
+    const solo = soloBonus;
     awards[buzz.playerId] = {
       base, speed, solo, closeness: 0, total: base + speed + solo,
     };

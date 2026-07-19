@@ -1,4 +1,4 @@
-import { scoreQuestionDetailed, FINAL_ROUND_MULTIPLIER } from './partyScore.js';
+import { scoreQuestionDetailed } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
 import { fnv1a } from './nickname.js';
 
@@ -622,9 +622,6 @@ function pickingBroadcasts(room) {
 function toReveal(room) {
   const q = room.question;
   if (!q) return { room, broadcasts: [] };
-  // The final round (the one that decides the game) scores double, so a trailing
-  // player can still swing it. `doubled` rides the reveal so clients can badge it.
-  const doubled = isFinalRound(room.questionIndex, room.totalQuestions);
   // Score itemised, then project to totals. The reveal carries both: `points`
   // for the seat arithmetic and every client that only wants the number, and
   // `breakdown` so the break's chips can say what earned each point instead of
@@ -643,7 +640,6 @@ function toReveal(room) {
     : room.buzzes;
   const awards = scoreQuestionDetailed(scored, {
     applySpeedBonus: room.seats.size > 1,
-    multiplier: doubled ? FINAL_ROUND_MULTIPLIER : 1,
   });
   /** @type {Record<string, number>} */
   const points = {};
@@ -680,7 +676,6 @@ function toReveal(room) {
         picks,
         points,
         breakdown,
-        doubled,
         scoreboard: scoreboardOf(nextRoom),
         questionIndex: room.questionIndex,
         totalQuestions: room.totalQuestions,

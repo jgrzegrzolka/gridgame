@@ -416,17 +416,14 @@ test('reveal message: the itemised breakdown reaches client state', () => {
     picks: { a: 'pl' },
     points: { a: 20 },
     breakdown: { a: { base: 10, speed: 5, solo: 5 } },
-    doubled: true,
   }).state;
   assert.deepEqual(state.reveal?.breakdown, { a: { base: 10, speed: 5, solo: 5 } });
-  assert.equal(state.reveal?.doubled, true, 'doubled rides the reveal too (it never used to)');
 });
 
 test('reveal message: a server with no breakdown leaves an empty one, not undefined', () => {
   let state = initialPartyClientState();
   state = reducePartyMessage(state, { type: 'reveal', answer: 'pl', picks: {}, points: {} }).state;
   assert.deepEqual(state.reveal?.breakdown, {});
-  assert.equal(state.reveal?.doubled, false);
 });
 
 // ---- kid mode ----

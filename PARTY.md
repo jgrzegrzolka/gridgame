@@ -12,8 +12,9 @@ before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
 
 - **Question** — one prompt: a flag to pick, an outline to name, a "which grows the most
   coffee?". The smallest unit of play.
-- **Round** — five questions of a single mode. The unit a drafter picks, the unit the
-  standings break follows, the unit that doubles at the end.
+- **Round** — five questions of a single mode. The unit a drafter picks and the unit the
+  standings break follows. Every round scores the same; the closing round (the **Decider**)
+  is distinguished by *who chooses it*, not by what it pays.
 - **Game** — a sequence of rounds. Draft length is `players x picksPerPlayer + 1`, where the host
   chooses `picksPerPlayer` from a fixed 1 / 2 / 3 / 4 and the `+1` is the opening Flags round.
 
@@ -200,6 +201,10 @@ card counts the beat down with a draining ring (phase 4). Scoring says where eac
 the wire carries the breakdown (phase 5), and the finish reveals bottom-up at a pace you can follow
 (phase 6). Streaks and the finale awards were both dropped rather than built — see the entry below
 for why.
+
+**Double points is gone (2026-07-19).** The Decider no longer scores double — see
+"Scoring analysis" below. The Decider itself stays: it is still the closing act, still picked by
+last place, and that pick is now the whole comeback mechanic.
 
 Still open:
 
@@ -1627,6 +1632,73 @@ that wants a scoring counterweight is a play-test question, not a design one.
 - Should a kid's points be discounted, or is winning the point of marking them?
 - Should the badge be visible to everyone (it is today) or only to the host? Visible is friendlier
   at a family table and avoids a secret handicap; it also labels a child in front of the room.
+
+## Scoring analysis and the end of double points — SHIPPED (2026-07-19)
+
+Jan asked what points are awarded for and whether the weights are right, assuming a four-player
+game. The answer needed measuring rather than opinion, and two of the findings changed the code.
+
+**Where points come from** (four players, skills 65/55/45/35%, 30 questions):
+
+| source | value | share of all points |
+|---|---|---|
+| base | 10, for a correct answer | 65-67% |
+| speed | 5 / 3 / 1 by arrival order among correct answers | 20-23% |
+| closeness | 5 / 2 / 0 by rank, world-facts questions only | 9% |
+| sole survivor | 5, for being the only one right | 4% |
+
+**Finding 1 — the sole-survivor stack (fixed, #998).** One player correct scored 10 + 5 speed + 5
+solo = 20 against everyone else's 0, and that fires on **24% of four-player questions**. Five of
+that 20 was the speed bonus paid for winning a race nobody else entered. Every other outcome
+already capped at a 15-point swing; this was the only one above it. Removing the phantom speed
+bonus made the maximum swing uniform at 15.
+
+**Finding 2 — double points did the opposite of its job (removed, this entry).** The Decider was
+documented as keeping a trailing player in the game. Measured over 30-40k simulated games:
+
+| Decider shape | comeback from last | leader gets beaten | best player wins |
+|---|---|---|---|
+| 5 questions x2 (as shipped) | **0.0%** | 18.9% | 76.4% |
+| 5 questions x1 | 0.0% | 15.9% | — |
+| 5 questions x3 | 1.4% | 31.9% | — |
+| 1 question x10 (sudden death) | 8.2% | 42.9% | 49.0% |
+| 5 questions x2, standing-scaled | 7.1% | 40.2% | 60.6% |
+
+**A multiplier cannot rubber-band, and that is arithmetic rather than tuning.** Doubling scales the
+expected drift and the variance together, so the leader pulls away exactly as fast as the swing
+grows. In the doubled round the strongest player gained 99 points and the weakest 66 — it *widened*
+the gap by 33. Turning it off entirely moved leader-upsets by 3 points.
+
+So the multiplier was deleted rather than retuned: `FINAL_ROUND_MULTIPLIER`, the `multiplier`
+option on both scorers, `doubled` on the reveal and in client state, the "Double points" badge on
+the question pill, the pick pill and the round card, `party.doublePoints` (en + pl), and the
+`.pill-double` / `.roundcard-double` styles. A test pins that the final round scores exactly like
+every other round, so it cannot creep back.
+
+**What the Decider still is.** The closing round, chosen by whoever is in last place. That pick is
+asymmetric — the trailing player chooses the ground the game ends on — and it is the real comeback
+mechanic. `deciderPickerFor` carries that reasoning.
+
+**What the simulation could NOT see, and it matters here.** Every model above gives a player the
+same skill in every category, which is exactly the assumption that makes choosing your category
+worthless. In a real game one player knows flags and another knows geography, so picking your
+strength is a genuine edge the numbers cannot measure. Trust play over the table on that point
+specifically.
+
+**Rejected alternatives.** *Standing-scaled multipliers* (last place x1.75, leader x1.0) are the
+only thing that produced comebacks-from-last, and were rejected twice over: they visibly tax
+playing well, and they break the reveal chart's property that everyone on a row scores the same, so
+the row can state its price once. *Sudden death* (one question at x10) produced the best comeback
+rate in the table but collapsed "best player wins" to 49% — a coin flip, which is a different game
+rather than a fairer one. **Shortening the Decider** (3 questions at x3.33, same total value) buys
++14 points of leader-upsets for free and remains the cheapest real improvement if the finale ever
+needs more tension; it was not taken now because removing the lie came first.
+
+**A methodology note worth keeping.** The first run of this analysis used
+`sort(() => rng() - 0.5)` to shuffle arrival order. That shuffle is biased *by array index*, and
+index 0 was the strongest player — so it skewed the exact number under test and hid the
+fewer-questions effect entirely (24.3% vs 26.1%, i.e. "no effect"). With Fisher-Yates the same
+comparison reads 33.3% vs 18.9%. Any future scoring simulation should shuffle properly.
 
 ## Out of scope (don't sweep in)
 
