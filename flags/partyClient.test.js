@@ -6,6 +6,7 @@ import {
   withLocalBuzz,
   isDisabledOption,
   visibleOptions,
+  kidChipRole,
   pickPartyCelebration,
   isCleanReveal,
   isBlankReveal,
@@ -518,4 +519,38 @@ test('visibleOptions keeps the question order it was given', () => {
 
 test('visibleOptions is safe with no question at all', () => {
   assert.deepEqual(visibleOptions(initialPartyClientState(), false), []);
+});
+
+// ---- kid chip role ----
+
+/** @param {object} over @returns {any} */
+function stateWith(over) {
+  return { ...initialPartyClientState(), ...over };
+}
+
+/** @param {boolean} kid @returns {any} */
+function entry(kid) {
+  return { playerId: 'bob', nickname: 'Bob', score: 0, present: true, kid };
+}
+
+test('the host gets an operable switch on every row, marked or not', () => {
+  const state = stateWith({ isHost: true, phase: 'lobby' });
+  assert.equal(kidChipRole(state, entry(false)), 'switch');
+  assert.equal(kidChipRole(state, entry(true)), 'switch');
+});
+
+test('a guest never gets a control, only a badge on marked players', () => {
+  const state = stateWith({ isHost: false, phase: 'lobby' });
+  assert.equal(kidChipRole(state, entry(true)), 'badge');
+  assert.equal(kidChipRole(state, entry(false)), 'none');
+});
+
+test('the host loses the control once the game starts', () => {
+  // Matches the server: applySetKid is lobby-only, so showing a switch mid-game
+  // would be a control that silently does nothing.
+  for (const phase of ['question', 'reveal', 'picking', 'final']) {
+    const state = stateWith({ isHost: true, phase });
+    assert.equal(kidChipRole(state, entry(true)), 'badge', `no switch during ${phase}`);
+    assert.equal(kidChipRole(state, entry(false)), 'none');
+  }
 });

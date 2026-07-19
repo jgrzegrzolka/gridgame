@@ -3,6 +3,7 @@ import { mintClaimToken, redeemClaimToken } from '../../flags/syncClaimClient.js
 import { syncPreview, syncMerge } from '../../flags/syncMergeClient.js';
 import { fetchSyncLink } from '../../flags/syncLinkClient.js';
 import { hydrateFromServer } from '../../flags/syncHydrate.js';
+import { buildToggleSwitch } from '../../common.js';
 import { t } from '../../i18n.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from '../../flags/achievementsBaseline.js';
 import { celebrate } from '../../flags/achievementCelebrate.js';
@@ -413,9 +414,9 @@ function paintWizard(dialog, conflicts, onResolve) {
  * active side bolds. Default state = target (matches the
  * conservative-merge default everywhere else in the wizard).
  *
- * Reuses the existing `.scope-toggle-switch / -track / -thumb`
- * chrome from common.css so the visual idiom matches the burger
- * menu's include-territories toggle.
+ * Built with the shared `buildToggleSwitch` (common.js) so the visual
+ * idiom matches the burger menu's include-territories toggle and the
+ * Flag Party lobby's kid switch — one control, one implementation.
  *
  * @param {string} targetLabel
  * @param {string} sourceLabel
@@ -430,31 +431,21 @@ function makeToggleRow(targetLabel, sourceLabel, onChange) {
   left.textContent = targetLabel;
   row.appendChild(left);
 
-  const switchEl = document.createElement('label');
-  switchEl.className = 'scope-toggle-switch';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  const track = document.createElement('span');
-  track.className = 'scope-toggle-track';
-  track.setAttribute('aria-hidden', 'true');
-  const thumb = document.createElement('span');
-  thumb.className = 'scope-toggle-thumb';
-  track.appendChild(thumb);
-  switchEl.appendChild(input);
-  switchEl.appendChild(track);
+  const switchEl = buildToggleSwitch({
+    initial: false,
+    ariaLabel: `${targetLabel} / ${sourceLabel}`,
+    onChange: (useSource) => {
+      left.classList.toggle('is-active', !useSource);
+      right.classList.toggle('is-active', useSource);
+      onChange(useSource ? 'source' : 'target');
+    },
+  });
   row.appendChild(switchEl);
 
   const right = document.createElement('span');
   right.className = 'sync-wizard-toggle-label';
   right.textContent = sourceLabel;
   row.appendChild(right);
-
-  input.addEventListener('change', () => {
-    const useSource = input.checked;
-    left.classList.toggle('is-active', !useSource);
-    right.classList.toggle('is-active', useSource);
-    onChange(useSource ? 'source' : 'target');
-  });
 
   return row;
 }

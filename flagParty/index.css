@@ -129,11 +129,21 @@
 /* The host's row ends with a caption + the shared `.scope-toggle-switch`
    (common.css). The caption is muted, not accented: it labels the control
    rather than reporting a state, and the switch itself carries on/off. */
-.chip-kid-label { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: 600; }
-.chip .scope-toggle-switch { margin-left: 8px; }
+/* The whole caption + switch is one tap target. Negative margins let the padding
+   grow the hit area past the chip's own 8px without changing the row's height:
+   the bare 32x18 switch was far too small for the phone this game is played on. */
+.chip-kid-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -8px -3px -8px auto;
+  padding: 8px;
+  cursor: pointer;
+}
+.chip-kid-label { font-size: 11px; color: var(--muted-color); font-weight: 600; }
 /* What everyone who is NOT the host sees: a read-only badge, no control. */
 .chip-kid { margin-left: auto; font-size: 11px; color: var(--secondary-color); font-weight: 600; }
-.chip-host + .chip-kid, .chip-host + .chip-kid-label { margin-left: 6px; }
+.chip-host + .chip-kid { margin-left: 6px; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
 /* Question: prompt + flags */
@@ -216,10 +226,6 @@
    page.js rather than a separate element, so the section swap, the veil loop and
    everything else that already knows about #flags-grid keeps working. */
 .flags-grid.as-chart { display: block; }
-/* Kid mode hands out two options, not four. One row keeps each tile the size a
-   4-tile grid gives it rather than stretching two across the full board, so the
-   kid's screen still reads as the same game everyone else is playing. */
-.flags-grid.two-up { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
 
 /* ---- the ranked reveal chart (world facts) ----
    Four rows, best first. Rank, flag, name + value over a bar, whoever picked it,

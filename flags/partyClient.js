@@ -307,6 +307,28 @@ export function withLocalBuzz(state, choice) {
 }
 
 /**
+ * What the kid control on a roster chip should be for this viewer.
+ *
+ * `'switch'` — the host, in the lobby: an operable toggle.
+ * `'badge'`  — anyone else looking at a marked player: read-only.
+ * `'none'`   — everyone else.
+ *
+ * A pure function rather than a branch inside `renderLobby`, because the rule
+ * ("only the host gets a control, and only before the game starts") is worth
+ * pinning on its contract. The first version of this was tested by running
+ * regexes over `page.js` source, which asserted the shape of the code rather
+ * than the behaviour and broke on any innocent rename.
+ *
+ * @param {PartyClientState} state
+ * @param {RosterEntry} entry
+ * @returns {'switch' | 'badge' | 'none'}
+ */
+export function kidChipRole(state, entry) {
+  if (state.isHost && state.phase === 'lobby') return 'switch';
+  return entry.kid ? 'badge' : 'none';
+}
+
+/**
  * The options this player's grid should draw.
  *
  * For a grown-up, and for every reveal, that is simply the question's four.
