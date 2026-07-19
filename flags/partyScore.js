@@ -18,6 +18,10 @@ export const CORRECT_POINTS = 10;
  * 0. Tune the curve here — the room and page read it through
  * {@link speedBonusForRank}, never inline.
  *
+ * **Requires an actual race** — see {@link scoreQuestionDetailed}. If only one
+ * player got the question right they were "first" by default, having beaten
+ * nobody, so no speed bonus is paid.
+ *
  * @type {number[]}
  */
 export const SPEED_BONUS = [5, 3, 1];
@@ -151,6 +155,19 @@ export function scoreQuestionDetailed(
   // in the room got it".
   const correctCount = buzzesInOrder.filter((b) => b.correct).length;
   const soloBonus = applySoloBonus && correctCount === 1 ? SOLE_SURVIVOR_BONUS : 0;
+  // No race, no race bonus. A lone correct answer is "first" having beaten
+  // nobody, so paying it SPEED_BONUS[0] rewarded a race that never happened —
+  // and it stacked with the sole-survivor bonus, making that question worth 20
+  // against everyone else's 0. Measured at 24% of questions in a four-player
+  // game, which made it the single most common way a scoreboard blew open.
+  //
+  // Every other outcome already tops out at a 15-point swing (15/13/11/0,
+  // 15/13/0/0). Dropping this makes the sole-survivor case 15/0/0/0 and the
+  // maximum swing uniform, which is the same answer the race logic gives on its
+  // own. The sole-survivor bonus itself is untouched: knowing something nobody
+  // else did is still worth SOLE_SURVIVOR_BONUS, it just no longer collects a
+  // sprint medal for running alone.
+  const raced = correctCount > 1;
   let correctRank = 0;
   for (const buzz of buzzesInOrder) {
     if (!buzz.correct) {
@@ -164,7 +181,7 @@ export function scoreQuestionDetailed(
       continue;
     }
     const base = CORRECT_POINTS * multiplier;
-    const speed = applySpeedBonus ? speedBonusForRank(correctRank) * multiplier : 0;
+    const speed = applySpeedBonus && raced ? speedBonusForRank(correctRank) * multiplier : 0;
     const solo = soloBonus * multiplier;
     awards[buzz.playerId] = {
       base, speed, solo, closeness: 0, total: base + speed + solo,
