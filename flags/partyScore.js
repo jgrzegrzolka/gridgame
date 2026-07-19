@@ -31,7 +31,20 @@ export function speedBonusForRank(rank) {
 }
 
 /**
+ * Bonus for being the **only** player who got a question right. Knowing the
+ * obscure flag alone used to be worth exactly as much as everyone guessing right
+ * together. Off in solo play for the same reason the speed bonus is: with one
+ * seat there is nobody to be the only one *against*.
+ *
+ * Deliberately equal to `SPEED_BONUS[0]` — which is exactly why the breakdown
+ * now travels on the wire instead of being re-derived from the total: `15` no
+ * longer decomposes uniquely. See `flags/partyRoundTally.js`.
+ */
+export const SOLE_SURVIVOR_BONUS = 5;
+
+/**
  * @typedef {{ playerId: string, correct: boolean }} ScoredBuzz
+ * @typedef {{ base: number, speed: number, solo: number, total: number }} Award
  */
 
 /** Score multiplier for the game's final round — the round that decides it plays
@@ -49,22 +62,61 @@ export const FINAL_ROUND_MULTIPLIER = 2;
  * A wrong answer scores 0 regardless of the multiplier.
  *
  * @param {ScoredBuzz[]} buzzesInOrder
- * @param {{ applySpeedBonus?: boolean, multiplier?: number }} [opts]
+ * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean, multiplier?: number }} [opts]
  * @returns {Record<string, number>}
  */
-export function scoreQuestion(buzzesInOrder, { applySpeedBonus = true, multiplier = 1 } = {}) {
+export function scoreQuestion(buzzesInOrder, opts = {}) {
   /** @type {Record<string, number>} */
   const points = {};
+  for (const [id, award] of Object.entries(scoreQuestionDetailed(buzzesInOrder, opts))) {
+    points[id] = award.total;
+  }
+  return points;
+}
+
+/**
+ * The same scoring, itemised: what each player earned and *what earned it*.
+ *
+ * This is the authoritative shape — {@link scoreQuestion} is a projection of it
+ * down to totals, kept because the room's seat arithmetic and a good deal of the
+ * test suite only ever want the number. The reveal carries the itemised version
+ * so the break's chips describe the scoring rules rather than guessing at them
+ * from the total (which stopped being decidable once {@link SOLE_SURVIVOR_BONUS}
+ * matched `SPEED_BONUS[0]`).
+ *
+ * `total` is always `base + speed + solo`, so a caller can trust either half of
+ * the shape without re-deriving the other.
+ *
+ * @param {ScoredBuzz[]} buzzesInOrder
+ * @param {{ applySpeedBonus?: boolean, applySoloBonus?: boolean, multiplier?: number }} [opts]
+ *   `applySoloBonus` defaults to `applySpeedBonus`: both are off in exactly the
+ *   same situation (solo play), so a caller that already said "one seat" doesn't
+ *   have to say it twice.
+ * @returns {Record<string, Award>}
+ */
+export function scoreQuestionDetailed(
+  buzzesInOrder,
+  { applySpeedBonus = true, applySoloBonus = applySpeedBonus, multiplier = 1 } = {},
+) {
+  /** @type {Record<string, Award>} */
+  const awards = {};
+  // Sole survivor is decided across the whole question, not per buzz, so it has
+  // to be counted before any award is handed out. Players who never buzzed
+  // aren't in the input at all, so "one correct buzz" already means "one player
+  // in the room got it".
+  const correctCount = buzzesInOrder.filter((b) => b.correct).length;
+  const soloBonus = applySoloBonus && correctCount === 1 ? SOLE_SURVIVOR_BONUS : 0;
   let correctRank = 0;
   for (const buzz of buzzesInOrder) {
     if (!buzz.correct) {
-      points[buzz.playerId] = 0;
+      awards[buzz.playerId] = { base: 0, speed: 0, solo: 0, total: 0 };
       continue;
     }
-    let earned = CORRECT_POINTS;
-    if (applySpeedBonus) earned += speedBonusForRank(correctRank);
-    points[buzz.playerId] = earned * multiplier;
+    const base = CORRECT_POINTS * multiplier;
+    const speed = applySpeedBonus ? speedBonusForRank(correctRank) * multiplier : 0;
+    const solo = soloBonus * multiplier;
+    awards[buzz.playerId] = { base, speed, solo, total: base + speed + solo };
     correctRank += 1;
   }
-  return points;
+  return awards;
 }

@@ -193,15 +193,15 @@ Iteration 11 below.
 
 Still open:
 
-- **Iteration 12 — the playability + UX pass (IN PROGRESS, 4 of 6 phases shipped).** Written to be
+- **Iteration 12 — the playability + UX pass (IN PROGRESS, 5 of 6 phases shipped).** Written to be
   picked up by a fresh agent one phase at a time. It opened with a measured fairness bug: the
   double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
   because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
   round is now **the Decider**, a separate act outside the rotation picked by last place. Scoring is
   legible (phase 1), screen changes go through one animated primitive (phase 3, #983), and the round
-  card counts the beat down with a draining ring (phase 4). **Phase 5 (deeper scoring: streaks, sole
-  survivor, the "nobody knew" beat) is next** — it was held until phase 1 made scoring visible, which
-  it now is. See the entry below.
+  card counts the beat down with a draining ring (phase 4). Scoring now says where each point came from and the wire carries the breakdown (phase 5, streaks
+  dropped as win-more). **Phase 6 (the finale as an ending: bottom-up reveal, then awards) is the
+  last one.** See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1213,7 +1213,7 @@ information, not decoration.
 - **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
   liked it, so it wasn't built. The hard swap stays.
 
-## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-3 shipped)
+## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-5 shipped)
 
 Goal: the engine, the draft and the rounds all work; what's thin is everything *around* the
 questions. A point means the same thing whoever earned it, the round that decides the game is handed
@@ -1424,19 +1424,75 @@ bolted alongside the round-intro state instead of folded into it:
   test `remainingFraction` a second time. The lifecycle fixes above are the real answer, since
   lifecycle is exactly what a pure module can't reach.
 
-### Phase 5 — deeper scoring (server + client)
+### Phase 5 — deeper scoring (server + client) — SHIPPED (2026-07-19)
 
 Only once Phase 1 makes scoring legible, or these are invisible rules again.
 
-- **Streak** — 3 correct in a row `+5`, 5 in a row `+10`. Gives a trailing player something to chase
-  that isn't the leader's total.
+**Streaks are OUT (Jan, 2026-07-19).** The mock proposed them first (`🔥 +5` at 3 in a row, `+10` at
+5) and this entry used to lead with them. They are a **win-more mechanic**: the player already
+answering everything correctly is the one who collects them, and the gap they open is the hardest
+kind for anyone else to close. The point of every rubber band in this game (loser's-pick, the
+Decider) is to keep the trailing player in it. Don't re-propose this one; the two rules below are
+what's left, and both are comeback-neutral or better.
+
+- **The breakdown goes on the wire — this is the phase's real work.** `scoreQuestion` returns only a
+  flat `Record<playerId, points>` today, and `flags/partyRoundTally.js` recovers the base/speed split
+  by *inverse arithmetic* (subtract the base, match the remainder against `SPEED_BONUS`). That module's
+  own header states the handoff: every reachable total decomposes uniquely **only while speed is the
+  sole bonus**. Add sole survivor and `15` becomes ambiguous — 10 + 5 speed, or 10 + 5 solo? So the
+  server must send `{ base, speed, solo }` on the reveal and `splitPoints` must go. Phase 1 shipped
+  the chips without this (the plan called for it), which is why it has to happen here, before any
+  new rule.
 - **Sole survivor** — the only player correct gets `+5`. Today, knowing the obscure flag alone is
-  worth exactly as much as everyone guessing right together.
+  worth exactly as much as everyone guessing right together. Off in solo play, same reasoning as the
+  speed bonus: with one seat there is nobody to be the only one *against*.
 - **Nobody knew** — all wrong scores nothing, but gets a named beat on the reveal. Purely
   presentational, costs nothing, and a shared groan is a party moment.
+- **Fix the Fastest badge on double rounds.** `renderRevealFoot` infers the badge by comparing a
+  player's points against `CORRECT_POINTS + SPEED_BONUS[0]` and ignores `FINAL_ROUND_MULTIPLIER`, so
+  on the Decider a first-correct scores 30, never matches 15, and **nobody is tagged Fastest on the
+  round that decides the game**. Once the breakdown is on the wire this stops being an inference at
+  all — the badge reads `speed > 0`.
 - **Explicitly NOT time-decay speed scoring.** It is already parked under Open decisions and should
   stay parked: it punishes reading the question, makes a slow phone a scoring disadvantage, and
   can't be shown as a clean chip. Rank-based speed is legible; continuous decay isn't.
+
+**What shipped:**
+- [x] `scoreQuestionDetailed` is the authoritative scorer, returning `{ base, speed, solo, total }` per
+      player; `scoreQuestion` is now a **projection** of it down to totals rather than a second
+      implementation, so the room's seat arithmetic and the reveal's chips cannot disagree. A test
+      pins the two against each other across plain / doubled / solo-play options.
+- [x] `breakdown` rides the reveal beside `points`. `splitPoints` and its inverse arithmetic are
+      **deleted**; `addQuestionToTally` now adds up numbers the server already attributed, and drops
+      its `multiplier` argument entirely (the award arrives scaled).
+- [x] **Sole survivor `+5`** for the only correct answer. Decided across the whole question rather
+      than per buzz, so the lone correct answer arriving *last* still counts. Off in solo play, and it
+      doubles on the Decider like every other point.
+- [x] **"Nobody knew that one"** on the reveal, via `isBlankReveal` — the mirror of `isCleanReveal`,
+      derived from the picks rather than the points so it keeps meaning "nobody got it right". A
+      timeout counts as not knowing. Never fires in solo, where it would just be the game being smug
+      at one player.
+- [x] **The Fastest badge is fixed**, and stopped being an inference: it reads `award.speed > 0`
+      instead of comparing the total against `CORRECT_POINTS + SPEED_BONUS[0]`, which ignored the
+      multiplier and so **never fired on the Decider**.
+- [x] **`doubled` never actually reached client state** — the reveal reducer dropped it, so
+      `state.reveal.doubled` was permanently `undefined` and the old tally silently used a 1x
+      multiplier on double rounds. Threaded properly; the server breakdown makes the tally independent
+      of it either way.
+- [x] The solo chip takes `--primary-color` and the badge `--secondary-color`. The mock drew this chip
+      **green**, which is not one of the eight and would have been a new palette colour on a gameplay
+      surface; the weight is carried by contrast instead.
+- [x] `npm run validate` green (2982 tests) + **verified in-browser on a real two-seat game** (two
+      device ids, each seat always taking a different tile so the picks diverge): reveals showed
+      `⚡ Fastest ★ Only one +20` on a lone correct answer, "Nobody knew that one" when both missed,
+      and the break board carried three chips (`+30 / +15 / +15`) that summed to the round gain.
+      0 console errors.
+
+**Where a point's origin is visible, decided (2026-07-19).** Checked against the mock: it never put a
+breakdown on the **final** board either. §02's chips are drawn on the standings break ("After round
+3") and the mock **fades them out after the count-up** exactly as shipped, so the transience is the
+design, not a shortcut. The final board stays a total per player; the ending's answer to "where did
+my points come from" is **phase 6's awards**, not chips.
 
 ### Phase 6 — the finale as an ending (client + per-game stats)
 

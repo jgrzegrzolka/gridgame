@@ -4,77 +4,63 @@
  * The break shows what a player gained over the round's five questions. Until now
  * that was one merged number, so the speed bonus — the only mechanic that rewards
  * racing the table — was invisible three seconds after it happened. This module
- * accumulates each question's points into a per-player `{ base, speed }` tally the
- * break renders as chips.
+ * accumulates each question's award into a per-player `{ base, speed, solo }` tally
+ * the break renders as chips.
  *
- * **Why the split is derived rather than sent.** A question awards
- * `CORRECT_POINTS` plus a speed bonus from `SPEED_BONUS`, the whole thing scaled by
- * the round multiplier. Every reachable total (0, 10, 11, 13, 15, and their doubles)
- * decomposes into exactly one base/speed pair, so the client can recover the split
- * from the `points` the reveal already carries. That keeps this phase free of a wire
- * change — client and PartyKit deploy independently, so not needing a server deploy
- * is worth real money.
+ * **The split arrives from the server; it is no longer inferred.** This module used
+ * to recover base/speed from the total by inverse arithmetic (subtract the base,
+ * match the remainder against `SPEED_BONUS`), which worked only while every
+ * reachable total decomposed uniquely. `SOLE_SURVIVOR_BONUS` equals `SPEED_BONUS[0]`,
+ * so `15` became "10 + 5 speed" or "10 + 5 solo" with no way to tell — exactly the
+ * handoff the old header here promised. `scoreQuestionDetailed` now itemises the
+ * award server-side and the reveal carries it, so this module only ever adds up
+ * numbers somebody else already attributed.
  *
- * **This stops being true the moment scoring grows.** Adding a streak or
- * sole-survivor bonus (both +5) makes `15` ambiguous: 10 + 5 speed, or 10 + 5
- * streak? At that point the server must send the breakdown on the reveal and
- * {@link splitPoints} must go. That is a known, deliberate handoff — see
- * "Phase 5" in `PARTY.md`'s Iteration 12. Do not add a bonus without doing it.
- *
- * @typedef {{ base: number, speed: number }} Split
+ * @typedef {{ base: number, speed: number, solo: number }} Split
  * @typedef {Record<string, Split>} Tally
  */
-
-import { CORRECT_POINTS, SPEED_BONUS } from './partyScore.js';
-
-/**
- * Split one question's award into the flat correctness points and the speed bonus.
- *
- * A total that doesn't correspond to any reachable award (a stale client reading a
- * newer server's scoring, say) is reported as all-base rather than throwing: the
- * chips are decoration, and showing a slightly wrong label beats breaking the break.
- *
- * @param {number} points  points awarded for one question, multiplier already applied
- * @param {number} [multiplier]  the round's multiplier (2 on a double round)
- * @returns {Split}
- */
-export function splitPoints(points, multiplier = 1) {
-  const m = multiplier > 0 ? multiplier : 1;
-  if (!Number.isFinite(points) || points <= 0) return { base: 0, speed: 0 };
-  const base = CORRECT_POINTS * m;
-  const speed = points - base;
-  // Only a real speed-bonus value counts as speed; anything else is left as base so
-  // the chips still add up to the total the player actually sees.
-  const known = SPEED_BONUS.some((b) => b * m === speed);
-  if (speed > 0 && known) return { base, speed };
-  return { base: points, speed: 0 };
-}
 
 /** An empty tally — a fresh round with nothing scored yet. @returns {Tally} */
 export function emptyTally() {
   return {};
 }
 
+/** A split with nothing in it. @returns {Split} */
+function zeroSplit() {
+  return { base: 0, speed: 0, solo: 0 };
+}
+
 /**
- * Fold one question's points into the round's running tally, returning a new tally
+ * Fold one question's awards into the round's running tally, returning a new tally
  * (the caller holds it across renders, so mutating in place would make a re-render
  * double-count).
  *
+ * A missing or malformed award contributes nothing rather than throwing: a stale
+ * client reading a newer server's reveal should show a thin breakdown, not break
+ * the whole standings screen.
+ *
  * @param {Tally} tally
- * @param {Record<string, number>} pointsByPlayer  the reveal's `points`
- * @param {number} [multiplier]
+ * @param {Record<string, Partial<Split>> | undefined} awardsByPlayer  the reveal's `breakdown`
  * @returns {Tally}
  */
-export function addQuestionToTally(tally, pointsByPlayer, multiplier = 1) {
+export function addQuestionToTally(tally, awardsByPlayer) {
   /** @type {Tally} */
   const next = {};
   for (const [id, split] of Object.entries(tally || {})) next[id] = { ...split };
-  for (const [id, points] of Object.entries(pointsByPlayer || {})) {
-    const { base, speed } = splitPoints(points, multiplier);
-    const prev = next[id] || { base: 0, speed: 0 };
-    next[id] = { base: prev.base + base, speed: prev.speed + speed };
+  for (const [id, award] of Object.entries(awardsByPlayer || {})) {
+    const prev = next[id] || zeroSplit();
+    next[id] = {
+      base: prev.base + num(award?.base),
+      speed: prev.speed + num(award?.speed),
+      solo: prev.solo + num(award?.solo),
+    };
   }
   return next;
+}
+
+/** @param {unknown} v @returns {number} */
+function num(v) {
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
 }
 
 /**
@@ -85,13 +71,14 @@ export function addQuestionToTally(tally, pointsByPlayer, multiplier = 1) {
  * number alone, so this stays free of i18n (a `+5` reads the same in every locale).
  *
  * @param {Split | undefined} split
- * @returns {Array<{ kind: 'base' | 'speed', value: number }>}
+ * @returns {Array<{ kind: 'base' | 'speed' | 'solo', value: number }>}
  */
 export function chipsFor(split) {
   if (!split) return [];
-  /** @type {Array<{ kind: 'base' | 'speed', value: number }>} */
+  /** @type {Array<{ kind: 'base' | 'speed' | 'solo', value: number }>} */
   const chips = [];
   if (split.base > 0) chips.push({ kind: 'base', value: split.base });
   if (split.speed > 0) chips.push({ kind: 'speed', value: split.speed });
+  if (split.solo > 0) chips.push({ kind: 'solo', value: split.solo });
   return chips;
 }

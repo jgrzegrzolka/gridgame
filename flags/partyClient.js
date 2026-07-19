@@ -26,7 +26,7 @@
  * @property {number} buzzedCount
  * @property {number} seatCount
  * @property {string | null} myChoice
- * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>, doubled?: boolean } | null} reveal
+ * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>, breakdown?: Record<string, { base: number, speed: number, solo: number }>, doubled?: boolean } | null} reveal
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
  *   seat whose turn it is to choose the next round; null otherwise.
@@ -232,6 +232,11 @@ export function reducePartyMessage(state, message) {
             answer: message.answer,
             picks: message.picks ?? {},
             points: message.points ?? {},
+            // What earned each point, itemised server-side. Absent from a server
+            // older than this build, in which case the break simply shows no
+            // chips — the totals it counts up come from `scoreboard` either way.
+            breakdown: message.breakdown ?? {},
+            doubled: message.doubled === true,
           },
           scoreboard: message.scoreboard ?? state.scoreboard,
           questionIndex: message.questionIndex ?? state.questionIndex,
@@ -294,6 +299,33 @@ export function isCleanReveal(roster, reveal) {
   const present = roster.filter((r) => r.present);
   if (present.length === 0) return false;
   return present.every((r) => reveal.picks[r.playerId] === reveal.answer);
+}
+
+/**
+ * The mirror of {@link isCleanReveal}: did the question beat the whole room?
+ *
+ * Drives the reveal's "Nobody knew" beat — no points change hands, but a shared
+ * groan is a party moment and it costs nothing to name. A timeout counts: a seat
+ * that never buzzed didn't know it either, so a question nobody even answered is
+ * the loudest version of this.
+ *
+ * Deliberately derived from the picks rather than the points, so it means "nobody
+ * got it right" and not "nobody scored" — those are the same today, and would
+ * quietly stop being the same if a question ever paid out on a wrong answer.
+ *
+ * Solo play is excluded: with one seat "nobody knew" is just "you were wrong",
+ * which the reveal already says plainly, and naming it would read as the game
+ * being smug at a lone player.
+ *
+ * @param {RosterEntry[]} roster
+ * @param {{ answer: string, picks: Record<string, string> } | null} reveal
+ * @returns {boolean}
+ */
+export function isBlankReveal(roster, reveal) {
+  if (!reveal) return false;
+  const present = roster.filter((r) => r.present);
+  if (present.length < 2) return false;
+  return present.every((r) => reveal.picks[r.playerId] !== reveal.answer);
 }
 
 /**

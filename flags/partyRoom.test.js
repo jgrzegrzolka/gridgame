@@ -20,7 +20,7 @@ import {
   DEFAULT_QUESTIONS,
   MAX_SEATS,
 } from './partyRoom.js';
-import { CORRECT_POINTS } from './partyScore.js';
+import { CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS } from './partyScore.js';
 
 /** @param {string} answer @returns {{prompt:string,options:string[],answer:string}} */
 function q(answer, options = ['jp', 'kr', 'cn', 'th']) {
@@ -268,9 +268,17 @@ test('applyBuzz: when all present seats have buzzed, the question reveals and sc
   const rev = msg(r, 'reveal');
   assert.equal(rev.answer, 'jp', 'answer revealed');
   assert.deepEqual(rev.picks, { alice: 'jp', bob: 'kr' }, 'everyone\'s pick is shown');
-  assert.equal(rev.points.alice, CORRECT_POINTS + 5, 'first correct gets the speed bonus');
+  // Alice is first correct AND the only one correct, so she takes both bonuses.
+  const aliceAward = CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS;
+  assert.equal(rev.points.alice, aliceAward, 'first correct, and the only one');
+  assert.deepEqual(
+    rev.breakdown.alice,
+    { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: SOLE_SURVIVOR_BONUS },
+    'the reveal itemises what earned it, so the break need not guess',
+  );
+  assert.deepEqual(rev.breakdown.bob, { base: 0, speed: 0, solo: 0 });
   assert.equal(rev.points.bob, 0);
-  assert.equal(r.room.seats.get('alice')?.score, CORRECT_POINTS + 5);
+  assert.equal(r.room.seats.get('alice')?.score, aliceAward);
   assert.equal(rev.isFinalRound, false);
 });
 
@@ -290,8 +298,9 @@ test('applyForceReveal: host can end the question early (timeout)', () => {
   room = applyBuzz(room, 'alice', 'jp', true).room; // Bob never answers
   const r = applyForceReveal(room, 'alice');
   assert.equal(r.room.phase, 'reveal');
-  // Two seats, so the race bonus applies: Alice is the only (and first) correct.
-  assert.equal(msg(r, 'reveal').points.alice, CORRECT_POINTS + 5);
+  // Two seats, so the race bonus applies: Alice is the only (and first) correct,
+  // and a seat that never buzzed still counts as not having got it.
+  assert.equal(msg(r, 'reveal').points.alice, CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS);
   assert.equal(msg(r, 'reveal').points.bob, undefined, 'Bob never buzzed, no entry');
 });
 
