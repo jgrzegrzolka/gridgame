@@ -1400,6 +1400,30 @@ every round. Revisit only if the ring tests too subtle in a noisy room.
       `ROUND_INTRO_SECONDS` temporarily stretched to 12 s; the constant was reverted before commit and
       the timing numbers above are from the real 2 s beat. 0 console errors.
 
+**Follow-ups from review (same PR).** All four were lifecycle, not logic — the ring's state had been
+bolted alongside the round-intro state instead of folded into it:
+- [x] **`armRoundIntro` now stops the ring first**, so each round arms from a stopped loop and a full
+      circle. The `if (roundIntroRaf) return` guard was keying on a handle left over from the
+      *previous* round: rAF doesn't fire in a hidden tab but `setTimeout` does, so backgrounding the
+      tab across a beat stranded a non-zero handle and the next round's ring never armed.
+- [x] **The loop paints its terminal frame.** rAF stops a frame or two shy of the deadline, so the
+      ring quit at ~99% drained and the card cut away before the circle ever closed. Frame 0 is now
+      painted synchronously too, so the card mounts full rather than one frame late.
+- [x] **`resetRoundIntro` is on every exit**, not just the lobby one: a kick (`!activeRoom`), the
+      final screen, and the version-skew block all left the loop animating a hidden element. Bounded
+      (the timeout always fires) but the wrong shape, and it was what made the state above stale.
+- [x] **`stroke-linecap: butt` on the fill.** At empty the dash has zero length, and a round cap
+      paints that as a stray dot at 12 o'clock — the ring would never actually read as empty, which
+      is the one thing it has to say. It was masked by the missing terminal frame.
+- [x] Re-verified in-browser across **two consecutive round cards**: both drain to exactly 100 (was
+      ~99) and hold it after the card leaves, and round 2's ring arms — the cross-round case.
+- Review also checked the two things worth stating: no duplicated mechanism (the ring and the bar
+  share `remainingFraction` and the palette pair; only the paint differs, which is one mechanism with
+  two renderings), and **no new test is warranted** — what's new is one expression over an
+  already-tested helper plus irreducible rAF/DOM glue, so extracting a `drainPercent` wrapper would
+  test `remainingFraction` a second time. The lifecycle fixes above are the real answer, since
+  lifecycle is exactly what a pure module can't reach.
+
 ### Phase 5 — deeper scoring (server + client)
 
 Only once Phase 1 makes scoring legible, or these are invisible rules again.
