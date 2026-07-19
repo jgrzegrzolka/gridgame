@@ -292,9 +292,9 @@ test('expandAll shows every chip with no more button, even on a narrow row', () 
 });
 
 test('an optional label leads the chip row with a data-i18n hook', () => {
-  const { hub } = makeHub({ label: { key: 'metricHub.title', fallback: 'World facts' } });
+  const { hub } = makeHub({ label: { key: 'metricHub.title', fallback: 'Statistics' } });
   const labelEl = byClass(hub.el, 'mhub-label')[0];
-  assert.equal(labelEl.textContent, 'World facts');
+  assert.equal(labelEl.textContent, 'Statistics');
   assert.equal(labelEl.getAttribute('data-i18n'), 'metricHub.title');
 });
 

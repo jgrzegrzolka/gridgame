@@ -12,7 +12,7 @@ import { pillLabel } from '../flags/findFlag.js';
  * The metric surfaces (chips, panel lead, tier pills) are NOT handled
  * here: the metric hub (flags/metricHub.js) owns that DOM and re-labels
  * it via its own `refreshI18n()`, which the page calls right after this
- * helper. Only the "World facts" section heading flows through
+ * helper. Only the "Statistics" section heading flows through
  * `sectionHeaders` like every other heading.
  *
  * Why a helper rather than a method on the chooser handle: the
