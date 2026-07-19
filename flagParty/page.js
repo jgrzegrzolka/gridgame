@@ -17,6 +17,7 @@ import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
 import { roundCountFor, validatePicksPerPlayer, canVeilMode, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion } from './staleGuard.js';
+import { createSectionSwapper } from './sectionSwap.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -377,11 +378,27 @@ export function bootFlagParty() {
   }
   function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
 
+  /** The one screen-change primitive — every `showSection` call goes through it,
+   *  so a screen change looks the same wherever it comes from. The sequencing
+   *  (and its edge cases: the same screen asked for on every clock tick, a beat
+   *  interrupting a swap mid-flight) lives in `sectionSwap.js` where it is
+   *  unit-tested; this is only the DOM half. */
+  const swapper = createSectionSwapper({
+    show: (which) => { for (const [k, node] of Object.entries(sections)) node.hidden = k !== which; },
+    mark: (name, cls, on) => { sections[name].classList.toggle(cls, on); },
+    schedule: (fn, ms) => window.setTimeout(fn, ms),
+    cancel: (handle) => { window.clearTimeout(handle); },
+    reduced: prefersReducedMotion,
+  });
+
   function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'|null} */ which) {
     // Leaving the break ends the ledger's claim on the board, so the next break
-    // builds and animates from scratch. See `breakBuilt`.
+    // builds and animates from scratch. See `breakBuilt`. Stays outside the
+    // swapper and keyed on the request (not on the swap completing): it is a
+    // logical fact about where the show is, and delaying it by the out phase
+    // would let a re-render rebuild the ledger during the fade.
     if (which !== 'break') breakBuilt = false;
-    for (const [k, node] of Object.entries(sections)) node.hidden = k !== which;
+    swapper.to(which);
   }
 
   function send(/** @type {object} */ msg) {
