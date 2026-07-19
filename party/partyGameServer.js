@@ -19,7 +19,6 @@ import {
   applyEnterPicking,
   applyRepick,
   applyPick,
-  applySetKid,
   serializeRoom,
   deserializeRoom,
 } from '../flags/partyRoom.js';
@@ -276,12 +275,6 @@ export default class PartyGameServer {
       /** @type {import('../flags/partyRoom.js').ApplyResult | null} */
       let result = null;
       switch (parsed.type) {
-        case 'setKid': {
-          // Lobby-only, host-only, both re-checked in the reducer — the client's
-          // toggle is advisory, same as every other host control here.
-          result = applySetKid(this.room, playerId, String(parsed.playerId ?? ''), parsed.kid === true);
-          break;
-        }
         case 'start': {
           // Ask before touching anything. Clearing the no-repeat sets and
           // generating question 0 are real side effects, and applyStart's refusal

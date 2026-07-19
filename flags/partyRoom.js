@@ -1,6 +1,5 @@
 import { scoreQuestionDetailed } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
-import { fnv1a } from './nickname.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -19,14 +18,7 @@ import { fnv1a } from './nickname.js';
  * and `final` → `lobby` on Play again.
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
- * `kid` is the host's "this one is little" handicap: the seat still receives the
- * same four options as everyone else, but two wrong ones ride along named in
- * `easy` so their client disables them, leaving a 50/50. It is deliberately a
- * per-seat render aid and nothing more — scoring, the plan, and the question
- * contract are identical for a kid and a grown-up, so nobody's points mean
- * something different depending on who was marked.
- *
- * @typedef {{ nickname: string, score: number, kid: boolean }} Seat
+ * @typedef {{ nickname: string, score: number }} Seat
  * `ranking` / `values` are present only on questions that rank their options
  * (world facts). `ranking` is best-first in the question's own direction, so
  * `ranking[0]` is the answer whether it asked for the most or the least. Both
@@ -169,7 +161,7 @@ export function applyHello(room, playerId, nickname) {
   const name = cleanName(nickname);
 
   if (!isReconnect) {
-    seats.set(playerId, { nickname: name, score: 0, kid: false });
+    seats.set(playerId, { nickname: name, score: 0 });
     if (hostId === null) hostId = playerId;
   } else if (name) {
     const existing = /** @type {Seat} */ (seats.get(playerId));
@@ -185,34 +177,6 @@ export function applyHello(room, playerId, nickname) {
     if (pid !== playerId) broadcasts.push({ to: pid, message: roster });
   }
   return { room: nextRoom, broadcasts };
-}
-
-/**
- * Host marks (or unmarks) a seat as a kid. Lobby-only and host-only: the
- * handicap is part of setting the game up, so it cannot be flipped once
- * questions are being scored — a seat that answered four options for three
- * rounds and two for the rest would make the scoreboard mean two things.
- *
- * A seat may mark itself only by being the host; there is no self-serve kid
- * toggle, because the whole point is that a grown-up sets the little one's
- * phone up.
- *
- * @param {Room} room
- * @param {string} playerId  the sender; must be the host
- * @param {string} targetId  the seat to mark
- * @param {boolean} kid
- * @returns {ApplyResult}
- */
-export function applySetKid(room, playerId, targetId, kid) {
-  if (room.phase !== 'lobby') return { room, broadcasts: [] };
-  if (room.hostId !== playerId) return { room, broadcasts: [] };
-  const seat = room.seats.get(targetId);
-  if (!seat) return { room, broadcasts: [] };
-
-  const seats = new Map(room.seats);
-  seats.set(targetId, { ...seat, kid: kid === true });
-  const nextRoom = { ...room, seats };
-  return { room: nextRoom, broadcasts: [{ to: 'all', message: rosterMessage(nextRoom) }] };
 }
 
 /**
@@ -457,8 +421,6 @@ export function applyPick(room, pickerId, modeId, segment, question) {
     decider: false,
   };
   const bcs = questionBroadcasts(nextRoom);
-  // Every recipient's copy is stamped, kid or not: the attribution line is not
-  // part of the handicap.
   for (const bc of bcs) /** @type {any} */ (bc.message).draftPick = { picker: pickerId, modeId };
   return { room: nextRoom, broadcasts: bcs };
 }
@@ -723,12 +685,12 @@ function cleanName(nickname) {
 
 /**
  * @param {Room} room
- * @returns {Array<{ playerId: string, nickname: string, score: number, present: boolean, kid: boolean }>}
+ * @returns {Array<{ playerId: string, nickname: string, score: number, present: boolean }>}
  */
 function rosterList(room) {
   const out = [];
   for (const [playerId, seat] of room.seats) {
-    out.push({ playerId, nickname: seat.nickname, score: seat.score, present: room.present.has(playerId), kid: seat.kid === true });
+    out.push({ playerId, nickname: seat.nickname, score: seat.score, present: room.present.has(playerId) });
   }
   return out;
 }
@@ -769,71 +731,8 @@ function publicQuestion(q) {
 }
 
 /**
- * The two wrong options a kid's client removes, leaving a genuine 50/50.
- *
- * **This must not be positional.** The first version took the first two
- * non-answer options in the question's own order, on the reasoning that the
- * options array is shuffled per question so position carries nothing. That
- * reasoning was wrong, and the bug shipped in #999: shuffling randomises which
- * *country* sits at each index, but `easy` was still selected by index, so the
- * surviving pair encoded where the answer was. With the answer at index 0 or 1
- * the live tiles were {0,3} or {1,3} and the answer was always the first one
- * left. Measured end to end, always picking the first live tile won 75% of the
- * time and the answer was fully determined on half of all questions.
- *
- * So the pair is chosen by a hash of the question itself. Still perfectly
- * deterministic, which is the real requirement (a kid reconnecting mid-question
- * re-derives the identical pair via `welcome`, instead of losing two more
- * tiles), but now uncorrelated with the answer's position.
- *
- * Returns `[]` when the question cannot spare two wrongs. With three options a
- * two-option handicap would leave the kid exactly one tile, which is the answer
- * handed over outright. No generator produces that today, but the failure mode
- * is silent and total, so it is refused here rather than assumed away.
- *
- * @param {Question} q
- * @returns {string[]}
- */
-function easyFor(q) {
-  const wrongs = q.options.filter((o) => o !== q.answer);
-  // Fewer than three wrongs means removing two would leave one tile (or none).
-  if (wrongs.length < 3) return [];
-
-  // Seeded off the question's own identity, so the same question always yields
-  // the same pair on every client, every reconnect, and after an eviction.
-  let h = fnv1a(`${q.questionId ?? ''}|${q.prompt}|${q.answer}|${q.options.join(',')}`);
-  const pool = wrongs.slice();
-  /** @type {string[]} */
-  const picked = [];
-  for (let i = 0; i < 2; i++) {
-    // xorshift32 between draws: fnv1a alone is one value, and consecutive
-    // reductions of it would correlate the two picks.
-    h ^= h << 13; h >>>= 0;
-    h ^= h >>> 17;
-    h ^= h << 5; h >>>= 0;
-    picked.push(pool.splice(h % pool.length, 1)[0]);
-  }
-  // Returned in the question's own order so the wire never hints at draw order.
-  return q.options.filter((o) => picked.includes(o));
-}
-
-/**
- * @param {Room} room
- * @returns {boolean}
- */
-function hasKids(room) {
-  for (const seat of room.seats.values()) if (seat.kid) return true;
-  return false;
-}
-
-/**
- * The `question` message(s) for the room's live question.
- *
- * One `to: 'all'` broadcast in an ordinary room — the cheap path every game
- * took before kid mode, kept intact. Only when some seat is marked a kid does
- * this fan out per recipient, so the kid's copy can carry `easy` and nobody
- * else's does. Same shape of decision as {@link pickingBroadcasts}: what a
- * client may know is resolved server-side, never re-derived from its own id.
+ * The `question` message for the room's live question — one `to: 'all'`
+ * broadcast, since every player sees the identical board.
  *
  * @param {Room} room
  * @returns {Broadcast[]}
@@ -841,17 +740,7 @@ function hasKids(room) {
 function questionBroadcasts(room) {
   const q = room.question;
   const pub = q ? publicQuestion(q) : { prompt: '', options: [] };
-  const base = { type: 'question', ...pub, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, tricky: room.tricky };
-  if (!q || !hasKids(room)) return [{ to: 'all', message: base }];
-
-  const easy = easyFor(q);
-  /** @type {Broadcast[]} */
-  const broadcasts = [];
-  for (const pid of room.present) {
-    const seat = room.seats.get(pid);
-    broadcasts.push({ to: pid, message: seat && seat.kid ? { ...base, easy: easy.slice() } : { ...base } });
-  }
-  return broadcasts;
+  return [{ to: 'all', message: { type: 'question', ...pub, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, tricky: room.tricky } }];
 }
 
 /**
@@ -862,12 +751,6 @@ function questionBroadcasts(room) {
  * @returns {Broadcast}
  */
 function welcomeBroadcast(room, playerId) {
-  const seat = room.seats.get(playerId);
-  // A kid rejoining mid-question needs the same two tiles greyed out as before
-  // they dropped, which is why `easyFor` is deterministic rather than random.
-  // Nested inside the question (not alongside it) so a client reads `easy` off
-  // `state.question` no matter which message delivered it.
-  const kidEasy = (room.question && seat && seat.kid) ? { easy: easyFor(room.question) } : {};
   return {
     to: playerId,
     message: {
@@ -879,7 +762,7 @@ function welcomeBroadcast(room, playerId) {
       totalQuestions: room.totalQuestions,
       tricky: room.tricky,
       roster: rosterList(room),
-      question: room.question ? { ...publicQuestion(room.question), ...kidEasy } : null,
+      question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
       // Draft: a reconnect mid-pick needs the current picker to paint the pick
       // screen. `youPick` is server-authoritative (this seat vs the picker), and
@@ -930,9 +813,9 @@ export function deserializeRoom(snapshot) {
   return {
     phase: snapshot.phase ?? 'lobby',
     hostId: snapshot.hostId ?? null,
-    // Seats predating kid mode carry no `kid`; normalise on the way in so the
-    // rest of the module can read it as a plain boolean.
-    seats: new Map((snapshot.seats ?? []).map((/** @type {[string, any]} */ entry) => [entry[0], { kid: false, ...entry[1] }])),
+    // Older snapshots carry extra per-seat fields from retired features. They
+    // are simply ignored — nothing reads them, so no migration is needed.
+    seats: new Map(snapshot.seats ?? []),
     present: new Set(),
     totalQuestions: snapshot.totalQuestions ?? DEFAULT_QUESTIONS,
     plan: snapshot.plan ?? null,

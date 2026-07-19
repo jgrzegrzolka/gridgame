@@ -415,8 +415,8 @@ function paintWizard(dialog, conflicts, onResolve) {
  * conservative-merge default everywhere else in the wizard).
  *
  * Built with the shared `buildToggleSwitch` (common.js) so the visual
- * idiom matches the burger menu's include-territories toggle and the
- * Flag Party lobby's kid switch — one control, one implementation.
+ * idiom matches the burger menu's include-territories toggle — one
+ * control, one implementation.
  *
  * @param {string} targetLabel
  * @param {string} sourceLabel

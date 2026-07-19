@@ -4,7 +4,7 @@ import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, visibleOptions, kidChipRole, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -19,7 +19,7 @@ import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../
 import { roundCountFor, validatePicksPerPlayer, canVeilMode, representativeModeFor, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
-import { buildAvatar, shareUrl, buildToggleSwitch } from '../common.js';
+import { buildAvatar, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
@@ -1038,45 +1038,12 @@ export function bootFlagParty() {
     playersEl.appendChild(label);
     const inLobby = state.phase === 'lobby';
     const hostSetup = state.isHost && inLobby;
-    // The roster is rebuilt wholesale on every echo, which throws away focus and
-    // replaces the switch already-checked so its slide never plays. Remember who
-    // held focus, restore it after — a host toggling several players with the
-    // keyboard would otherwise be dropped back to the top of the page each time.
-    const activeEl = document.activeElement;
-    const focusedKidPid = (activeEl instanceof HTMLElement && activeEl.dataset.kidToggleFor)
-      ? activeEl.dataset.kidToggleFor
-      : null;
     for (const r of state.roster) {
-      const chip = el('div', 'chip' + (r.present ? '' : ' away') + (r.kid ? ' kid' : ''));
+      const chip = el('div', 'chip' + (r.present ? '' : ' away'));
       chip.appendChild(buildAvatar(r.playerId));
       chip.appendChild(el('span', 'chip-name', r.nickname));
       if (r.playerId === roomHostId) chip.appendChild(el('span', 'chip-host', t('party.host', 'host')));
-      const role = kidChipRole(state, r);
-      if (role === 'switch') {
-        // A <label> wrapping caption + switch: it gives the control a far larger
-        // tap target than the bare 32x18 checkbox (this is a phone game), and the
-        // caption stops being an unassociated sibling span.
-        const wrap = el('label', 'chip-kid-toggle');
-        wrap.appendChild(el('span', 'chip-kid-label', t('party.kid', 'kid')));
-        const sw = buildToggleSwitch({
-          initial: r.kid === true,
-          // The label text alone would say "kid" on every row; the name is what
-          // tells a screen-reader user whose switch this is.
-          ariaLabel: `${r.nickname}: ${t('party.kid', 'kid')}`,
-          onChange: (checked) => send({ type: 'setKid', playerId: r.playerId, kid: checked }),
-        });
-        const input = sw.querySelector('input');
-        if (input instanceof HTMLElement) input.dataset.kidToggleFor = r.playerId;
-        wrap.appendChild(sw);
-        chip.appendChild(wrap);
-      } else if (role === 'badge') {
-        chip.appendChild(el('span', 'chip-kid', t('party.kid', 'kid')));
-      }
       playersEl.appendChild(chip);
-    }
-    if (focusedKidPid) {
-      const again = playersEl.querySelector(`[data-kid-toggle-for="${CSS.escape(focusedKidPid)}"]`);
-      if (again instanceof HTMLElement) again.focus();
     }
     startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
@@ -1175,10 +1142,7 @@ export function bootFlagParty() {
     if (isReveal && state.reveal && chartReveal()) {
       gridEl.appendChild(buildRankChart(/** @type {any} */ (state.reveal), metricData));
     } else
-    // A kid draws only their live options (`visibleOptions`); everyone else, and
-    // every reveal, draws all four. Two tiles rather than four greyed ones: see
-    // the note on `visibleOptions` for why dimming lost to tricky mode.
-    for (const code of visibleOptions(state, !!isReveal)) {
+    for (const code of (state.question ? state.question.options : [])) {
       if (isReveal && state.reveal) {
         const correct = code === state.reveal.answer;
         // Your own wrong pick pulses pink (flagQuiz's "bad" marker); it isn't

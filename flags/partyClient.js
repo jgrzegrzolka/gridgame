@@ -9,16 +9,8 @@
  * tapped, which is local until reveal (the server never echoes picks early).
  *
  * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
- * @typedef {{ playerId: string, nickname: string, score: number, present: boolean, kid?: boolean }} RosterEntry
- *
- * `easy` is kid mode: the two wrong options this device must disable, leaving a
- * 50/50. Server-chosen (only it knows the answer) and sent only to a seat the
- * host marked as a kid, so its absence is the normal case. It rides inside the
- * question on both the `question` and `welcome` messages, so there is one place
- * to read it from regardless of which one arrived.
- *
- * @typedef {{ prompt: string, options: string[], questionId?: string, clearFrac?: number,
- *   easy?: string[] | null }} PublicQuestion
+ * @typedef {{ playerId: string, nickname: string, score: number, present: boolean }} RosterEntry
+ * @typedef {{ prompt: string, options: string[], questionId?: string, clearFrac?: number }} PublicQuestion
  * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
  *
  * @typedef {Object} PartyClientState
@@ -209,7 +201,6 @@ export function reducePartyMessage(state, message) {
             options: message.options ?? [],
             questionId: message.questionId,
             clearFrac: message.clearFrac,
-            easy: Array.isArray(message.easy) ? message.easy : null,
           },
           questionIndex: message.questionIndex ?? state.questionIndex,
           totalQuestions: message.totalQuestions ?? state.totalQuestions,
@@ -299,74 +290,7 @@ export function withLocalBuzz(state, choice) {
   if (state.phase !== 'question') return state;
   if (state.myChoice !== null) return state;
   if (!state.question || !state.question.options.includes(choice)) return state;
-  // Kid mode: the two options the server disabled are not pickable. Enforced
-  // here rather than only by rendering them as un-clickable divs, so a stray
-  // keyboard / assistive-tech activation can't buzz a tile that is visibly out.
-  if (isDisabledOption(state, choice)) return state;
   return { ...state, myChoice: choice };
-}
-
-/**
- * What the kid control on a roster chip should be for this viewer.
- *
- * `'switch'` — the host, in the lobby: an operable toggle.
- * `'badge'`  — anyone else looking at a marked player: read-only.
- * `'none'`   — everyone else.
- *
- * A pure function rather than a branch inside `renderLobby`, because the rule
- * ("only the host gets a control, and only before the game starts") is worth
- * pinning on its contract. The first version of this was tested by running
- * regexes over `page.js` source, which asserted the shape of the code rather
- * than the behaviour and broke on any innocent rename.
- *
- * @param {PartyClientState} state
- * @param {RosterEntry} entry
- * @returns {'switch' | 'badge' | 'none'}
- */
-export function kidChipRole(state, entry) {
-  if (state.isHost && state.phase === 'lobby') return 'switch';
-  return entry.kid ? 'badge' : 'none';
-}
-
-/**
- * The options this player's grid should draw.
- *
- * For a grown-up, and for every reveal, that is simply the question's four.
- * For a kid mid-question it is the two live ones: their dead pair is **removed**
- * rather than greyed out.
- *
- * Removal, not dimming, because dimming did not survive tricky mode. `.opt.dim`
- * is `opacity: .42`, and a veiled tile is already greyed, blurred and covered by
- * the reveal panels, so a disabled tile read as "slightly fainter mush" and the
- * handicap was invisible exactly when the round was hardest. Rendering two tiles
- * is also the literal 50/50 instead of one the player has to infer, which is the
- * point for the small child this exists for.
- *
- * The reveal deliberately shows all four again, so a kid sees the whole board
- * they were shielded from, including the two they never had.
- *
- * @param {PartyClientState} state
- * @param {boolean} isReveal
- * @returns {string[]}
- */
-export function visibleOptions(state, isReveal) {
-  const options = state.question ? state.question.options : [];
-  if (isReveal) return options.slice();
-  return options.filter((code) => !isDisabledOption(state, code));
-}
-
-/**
- * Whether an option is greyed out for this player — kid mode's half of the
- * board. Always false for a grown-up (no `easy` on their question) and for
- * every option once the question is over.
- *
- * @param {PartyClientState} state
- * @param {string} code
- * @returns {boolean}
- */
-export function isDisabledOption(state, code) {
-  const easy = state.question ? state.question.easy : null;
-  return Array.isArray(easy) && easy.includes(code);
 }
 
 /**

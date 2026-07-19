@@ -1565,7 +1565,25 @@ already at 85 of 140 while the winner's row was still at opacity 0 — the numbe
 - Should the Decider's pick be **hidden until the card flips**, so the table doesn't know the terrain
   until it starts? More theatre, but it removes the "oh no, not coffee" groan that is half the fun.
 
-## Iteration 13 — Kid mode: a per-seat 50/50 — BUILT (2026-07-19)
+## Iteration 13 — Kid mode: a per-seat 50/50 — BUILT (2026-07-19), REMOVED (2026-07-20)
+
+> **Removed the day after it shipped.** Jan's call: *"it's just unnecessary complication and the game
+> is already too hard for kids."* Two rounds of trying to make the lobby control less obtrusive (a
+> rename to "easy mode", an icon-only board glyph, then the caption moved inside the switch) kept
+> running into the same thing — the control had to label a player to work, and no amount of styling
+> fixed that. The handicap also never addressed the actual problem, which is that the *question pool*
+> is hard, not that there are four tiles.
+>
+> What the removal deleted: `applySetKid` / `easyFor` / `hasKids` and the per-recipient question
+> fan-out (`flags/partyRoom.js`), `kidChipRole` / `visibleOptions` / `isDisabledOption`
+> (`flags/partyClient.js`), the lobby switch and `.chip.kid` styling, the `setKid` wire message, and
+> `party.kid` in both locales. The question broadcast is back to a single `to: 'all'`. Persisted
+> snapshots may still carry `kid` on a seat; it is ignored, so no migration was needed.
+>
+> **Worth keeping from this:** the #999 bias below is a live lesson about distributional testing, not
+> a historical curiosity — every structural assertion the original tests made was equally true of the
+> broken version. If a difficulty aid is ever revisited, the lever is a gentler question pool, not
+> hiding two of four tiles.
 
 The host taps a player's lobby chip to mark them a kid. That seat plays the same four options as
 everyone else, but two wrong ones arrive named so their client greys them out — a 50/50, so a small
@@ -1627,11 +1645,13 @@ simple version and it is deliberate — the handicap is a render aid, so nobody'
 different things depending on who was marked. It does mean a marked player has a real edge; whether
 that wants a scoring counterweight is a play-test question, not a design one.
 
-### Open questions for Jan
+### Open questions — closed by the removal
 
 - Should a kid's points be discounted, or is winning the point of marking them?
-- Should the badge be visible to everyone (it is today) or only to the host? Visible is friendlier
-  at a family table and avoids a secret handicap; it also labels a child in front of the room.
+- Should the badge be visible to everyone, or only to the host?
+
+Both moot. The second one was the tell: there was no good answer, because either choice made the
+control label a player.
 
 ## Scoring analysis and the end of double points — SHIPPED (2026-07-19)
 
