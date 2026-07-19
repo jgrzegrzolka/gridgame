@@ -20,7 +20,7 @@ import {
   DEFAULT_QUESTIONS,
   MAX_SEATS,
 } from './partyRoom.js';
-import { CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS } from './partyScore.js';
+import { CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS, CLOSENESS_LADDER } from './partyScore.js';
 
 /** @param {string} answer @returns {{prompt:string,options:string[],answer:string}} */
 function q(answer, options = ['jp', 'kr', 'cn', 'th']) {
@@ -273,10 +273,11 @@ test('applyBuzz: when all present seats have buzzed, the question reveals and sc
   assert.equal(rev.points.alice, aliceAward, 'first correct, and the only one');
   assert.deepEqual(
     rev.breakdown.alice,
-    { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: SOLE_SURVIVOR_BONUS },
+    { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: SOLE_SURVIVOR_BONUS, closeness: 0 },
     'the reveal itemises what earned it, so the break need not guess',
   );
-  assert.deepEqual(rev.breakdown.bob, { base: 0, speed: 0, solo: 0 });
+  assert.deepEqual(rev.breakdown.bob, { base: 0, speed: 0, solo: 0, closeness: 0 },
+    'a flag-pick question ranks nothing, so a wrong pick earns no closeness');
   assert.equal(rev.points.bob, 0);
   assert.equal(r.room.seats.get('alice')?.score, aliceAward);
   assert.equal(rev.isFinalRound, false);
@@ -714,3 +715,70 @@ test('applyPick: an unveiled pick clears a veil left on by the previous round', 
   assert.equal(r.room.tricky, false, 'no veil on the segment -> no veil on the round');
   assert.equal(msg(r, 'question').tricky, false);
 });
+
+// ---- ranked (world-facts) questions: closeness ----
+
+/** A world-facts question: same shape, plus the true order and the raw values. */
+function rankedQ() {
+  return {
+    prompt: 'most',
+    options: ['jp', 'kr', 'cn', 'th'],
+    answer: 'cn',
+    ranking: ['cn', 'jp', 'kr', 'th'],
+    values: { cn: 1000, jp: 500, kr: 250, th: 100 },
+  };
+}
+
+test('a ranked question pays a near miss, by how near it was', () => {
+  let room = startedTwoPlayer(rankedQ());
+  room = applyBuzz(room, 'alice', 'jp', false).room;   // the runner-up
+  const r = applyBuzz(room, 'bob', 'th', false);       // dead last
+  const rev = msg(r, 'reveal');
+  assert.equal(rev.points.alice, CLOSENESS_LADDER[1], 'runner-up scores');
+  assert.equal(rev.points.bob, CLOSENESS_LADDER[3], 'last scores nothing');
+  assert.equal(rev.breakdown.alice.closeness, CLOSENESS_LADDER[1]);
+  assert.equal(rev.breakdown.alice.base, 0, 'a near miss is not a correct answer');
+});
+
+test('closeness reaches the seat scores, not just the reveal', () => {
+  // scoreQuestion is what the room adds to seats. If closeness only landed in
+  // the breakdown, the chart would promise points nobody ever banked.
+  let room = startedTwoPlayer(rankedQ());
+  room = applyBuzz(room, 'alice', 'jp', false).room;
+  const r = applyBuzz(room, 'bob', 'th', false);
+  const alice = r.room.seats.get('alice');
+  assert.ok(alice, 'alice still has a seat');
+  assert.equal(alice.score, CLOSENESS_LADDER[1], 'the near miss is banked');
+});
+
+test('the ranking and values ride the reveal, never the question', () => {
+  // They name the answer outright. `publicQuestion` is an allow-list, so this
+  // pins the property that makes that safe rather than trusting the allow-list
+  // to stay one.
+  const room = startedTwoPlayer(rankedQ());
+  const start = applyStart(createRoomWith2(), 'alice', rankedQ());
+  const qMsg = msg(start, 'question');
+  assert.ok(qMsg, 'a question is broadcast');
+  assert.equal(qMsg.answer, undefined, 'the answer never rides the question');
+  assert.equal(qMsg.ranking, undefined, 'nor does the ranking, which names it');
+  assert.equal(qMsg.values, undefined, 'nor the values, which reveal the order');
+  const rev = msg(applyBuzz(applyBuzz(room, 'alice', 'jp', false).room, 'bob', 'th', false), 'reveal');
+  assert.deepEqual(rev.ranking, ['cn', 'jp', 'kr', 'th'], 'but the reveal carries them');
+  assert.equal(rev.values.cn, 1000);
+});
+
+test('an unranked question sends no ranking at all', () => {
+  // flag-pick and map-pick must be untouched by this: no ranking key on the
+  // wire, and the client falls back to the plain tile reveal.
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  const rev = msg(applyBuzz(room, 'bob', 'kr', false), 'reveal');
+  assert.equal('ranking' in rev, false, 'no ranking key for an unranked question');
+  assert.equal('values' in rev, false);
+});
+
+function createRoomWith2() {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  return applyHello(room, 'bob', 'Bob').room;
+}

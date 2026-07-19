@@ -16,7 +16,12 @@
  * award server-side and the reveal carries it, so this module only ever adds up
  * numbers somebody else already attributed.
  *
- * @typedef {{ base: number, speed: number, solo: number }} Split
+ * `closeness` is the world-facts question's near-miss award: you named the
+ * second- or third-biggest rather than the biggest. A separate bucket from
+ * `base` on purpose -- "you were right" and "you were close" are different
+ * things to tell a player, and the break's chips say which.
+ *
+ * @typedef {{ base: number, speed: number, solo: number, closeness: number }} Split
  * @typedef {Record<string, Split>} Tally
  */
 
@@ -27,7 +32,7 @@ export function emptyTally() {
 
 /** A split with nothing in it. @returns {Split} */
 function zeroSplit() {
-  return { base: 0, speed: 0, solo: 0 };
+  return { base: 0, speed: 0, solo: 0, closeness: 0 };
 }
 
 /**
@@ -53,6 +58,7 @@ export function addQuestionToTally(tally, awardsByPlayer) {
       base: prev.base + num(award?.base),
       speed: prev.speed + num(award?.speed),
       solo: prev.solo + num(award?.solo),
+      closeness: prev.closeness + num(award?.closeness),
     };
   }
   return next;
@@ -71,14 +77,18 @@ function num(v) {
  * number alone, so this stays free of i18n (a `+5` reads the same in every locale).
  *
  * @param {Split | undefined} split
- * @returns {Array<{ kind: 'base' | 'speed' | 'solo', value: number }>}
+ * @returns {Array<{ kind: 'base' | 'speed' | 'solo' | 'closeness', value: number }>}
  */
 export function chipsFor(split) {
   if (!split) return [];
-  /** @type {Array<{ kind: 'base' | 'speed' | 'solo', value: number }>} */
+  /** @type {Array<{ kind: 'base' | 'speed' | 'solo' | 'closeness', value: number }>} */
   const chips = [];
   if (split.base > 0) chips.push({ kind: 'base', value: split.base });
   if (split.speed > 0) chips.push({ kind: 'speed', value: split.speed });
   if (split.solo > 0) chips.push({ kind: 'solo', value: split.solo });
+  // Last: closeness is the quietest of the four, and it is mutually exclusive
+  // with base per question -- a row showing both earned them on different
+  // questions of the round.
+  if (split.closeness > 0) chips.push({ kind: 'closeness', value: split.closeness });
   return chips;
 }
