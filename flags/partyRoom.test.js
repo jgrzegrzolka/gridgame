@@ -899,3 +899,85 @@ test('play again keeps the kid flag — scores reset, handicaps do not', () => {
   assert.equal(seatOf(after, 'bob').kid, true);
   assert.equal(seatOf(after, 'bob').score, 0);
 });
+
+/**
+ * The regression guard for the #999 bias.
+ *
+ * `easy` used to be the first two non-answer options in the question's own
+ * order, so the surviving pair encoded the answer's index. Every assertion the
+ * original tests made (`easy.length === 2`, answer not in `easy`) held for that
+ * broken version, which is exactly why it shipped. The property that matters is
+ * distributional, so it is measured rather than asserted structurally.
+ *
+ * What is measured is the **exploitable strategy**: an adult who notices the
+ * pattern and tells the kid "just tap the left one". Its win rate is aggregated
+ * across answer positions, because that is what a player at the table
+ * experiences over a game. Per-position it is legitimately lopsided (an answer
+ * at index 0 always sorts first among the survivors) and that leaks nothing,
+ * since nobody can see the answer's index.
+ *
+ * Old implementation: 75%. Fixed: ~50%.
+ *
+ * @param {number} trials  per answer position
+ * @returns {number} share of questions where tapping the first live tile wins
+ */
+function firstLiveTileWinRate(trials) {
+  const options = ['aa', 'bb', 'cc', 'dd'];
+  let wins = 0;
+  let total = 0;
+  for (let answerIdx = 0; answerIdx < options.length; answerIdx++) {
+    const answer = options[answerIdx];
+    for (let k = 0; k < trials; k++) {
+      const question = { prompt: answer, options, answer, questionId: `q-${answerIdx}-${k}` };
+      const easy = msgTo(applyStart(lobbyWithKidBob(), 'alice', question), 'bob').easy;
+      const live = options.filter((o) => !easy.includes(o));
+      assert.equal(live.length, 2, 'a kid is always left exactly two tiles');
+      assert.equal(live.includes(answer), true, 'one of which is always the answer');
+      if (live[0] === answer) wins += 1;
+      total += 1;
+    }
+  }
+  return wins / total;
+}
+
+test('tapping the first surviving tile is no better than a coin flip', () => {
+  // The #999 bug made this 75%: `easy` was chosen positionally, so the pair that
+  // survived encoded where the answer was.
+  const rate = firstLiveTileWinRate(300);
+  assert.ok(
+    rate > 0.42 && rate < 0.58,
+    `tapping the first live tile wins ${(rate * 100).toFixed(1)}% of the time, want roughly 50%`,
+  );
+});
+
+test('a question that cannot spare two wrongs gets no handicap at all', () => {
+  // Three options minus two wrongs leaves exactly the answer. Refused, because
+  // the failure mode is silent and total: the kid would simply always be right.
+  const three = { prompt: 'jp', options: ['jp', 'kr', 'cn'], answer: 'jp' };
+  const msg3 = msgTo(applyStart(lobbyWithKidBob(), 'alice', three), 'bob');
+  assert.deepEqual(msg3.easy, [], 'no options are taken away');
+
+  const two = { prompt: 'jp', options: ['jp', 'kr'], answer: 'jp' };
+  assert.deepEqual(msgTo(applyStart(lobbyWithKidBob(), 'alice', two), 'bob').easy, []);
+});
+
+test('easy is still perfectly deterministic for a given question', () => {
+  // Reconnect stability was the reason the original was positional; the fix
+  // keeps that property while dropping the positional tell.
+  const question = { prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'], answer: 'jp', questionId: 'fixed' };
+  const first = msgTo(applyStart(lobbyWithKidBob(), 'alice', question), 'bob').easy;
+  for (let i = 0; i < 5; i++) {
+    assert.deepEqual(msgTo(applyStart(lobbyWithKidBob(), 'alice', question), 'bob').easy, first);
+  }
+});
+
+test('different questions get different pairs', () => {
+  // A hash that collapsed to one pair would be deterministic and still biased.
+  const options = ['aa', 'bb', 'cc', 'dd'];
+  const seen = new Set();
+  for (let k = 0; k < 60; k++) {
+    const q2 = { prompt: 'aa', options, answer: 'aa', questionId: `vary-${k}` };
+    seen.add(msgTo(applyStart(lobbyWithKidBob(), 'alice', q2), 'bob').easy.join(','));
+  }
+  assert.equal(seen.size, 3, 'all three possible wrong-pairs occur');
+});

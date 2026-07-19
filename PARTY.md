@@ -1575,11 +1575,25 @@ facts most of a typical game, the client-only version would have left the handic
 majority of the show without ever erroring. So the server picks the pair — it is the only side that
 knows the answer — and sends it only to the marked seat.
 
-**The pair is deterministic** (`easyFor` — the first two non-answer options in the question's own
-order), not random. A kid reconnecting mid-question re-derives it from the same question via
-`welcome`; a random pick would grey out two *different* tiles on the way back and eat the rest of
-the board. The options array is already shuffled per question, so "the first two" is not a
-positional tell.
+**The pair is chosen by a hash of the question**, not by position, and this is where the first
+version was wrong. It took the first two non-answer options in the question's own order, justified
+as "the options array is already shuffled, so the first two is not a positional tell". That is
+false: shuffling randomises which *country* sits at each index, but the selection was still by
+index, so the surviving pair encoded where the answer was. With the answer at index 0 or 1 the live
+tiles were {0,3} or {1,3} and the answer was always the first one left. Aggregated over answer
+positions, "just tap the left one" won **75%** of the time, and the answer was fully determined on
+half of all questions. Shipped in #999, caught in review, fixed in #1001.
+
+Determinism was a real requirement (a kid reconnecting mid-question must re-derive the identical
+pair via `welcome` rather than lose two more tiles) but it never required *positional* selection.
+The pair now comes from `fnv1a` over the question's identity plus an xorshift between the two draws:
+same stability, no tell. `flags/partyRoom.test.js` pins the exploit rate distributionally, because
+every structural assertion the original tests made was equally true of the broken version. That is
+why it shipped.
+
+`easyFor` also refuses to act when the question cannot spare two wrongs. Three options minus two
+leaves the kid exactly one tile, which is the answer handed over. No generator produces that today;
+it is refused rather than assumed away because the failure is silent and total.
 
 **Shape of the wire change.** `Seat` gains `kid`. `question` fans out per recipient *only* when the
 room contains a kid — an ordinary game keeps the single `to: 'all'` broadcast it always had — and
