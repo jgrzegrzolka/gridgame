@@ -78,6 +78,7 @@ const MODE_LABELS = {
   'superlative-corruption': { key: 'party.mode.superlativeCorruption', full: 'Government integrity: most & least corrupt' },
   'superlative-tourism': { key: 'party.mode.superlativeTourism', full: 'Tourist arrivals per capita: most' },
   'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita: most' },
+  'superlative-mcdonalds': { key: 'party.mode.superlativeMcdonalds', full: "McDonald's per million people: most" },
 };
 
 

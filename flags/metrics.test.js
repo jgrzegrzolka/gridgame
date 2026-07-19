@@ -45,6 +45,7 @@ const TEMPERATURE = /** @type {import('./metrics.js').MetricData} */ (load('metr
 const HAPPINESS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/happiness.json'));
 const TOURISM_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/tourismPerCapita.json'));
 const ELECTRICITY_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/electricityPerCapita.json'));
+const MCDONALDS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/mcdonaldsPerMillion.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -2021,4 +2022,92 @@ test('attachElectricityPerCapitas fills covered real places, leaves the unknown 
   assert.equal(/** @type {any} */ (byCode.get('ad')).electricityPerCapita, undefined);
   const anOrg = COUNTRIES.find((c) => c.category === 'other');
   assert.equal(/** @type {any} */ (byCode.get(/** @type {any} */ (anOrg).code)).electricityPerCapita, undefined);
+});
+
+// ---- real mcdonaldsPerMillion.json: the three-state absence contract --------
+//
+// This metric is the only one with THREE absence states rather than two, so its
+// tests are about telling them apart. A place either (1) has a count, (2) has
+// no McDonald's at all and carries an explicit 0, or (3) is folded into another
+// market's row and is genuinely unknown. State 2 is the metric's whole point
+// (Iceland and Bolivia lost theirs, and that is the trivia); state 3 must never
+// be confused with it, because calling Monaco "no McDonald's" is just wrong.
+
+test('mcdonaldsPerMillion is a valid, self-describing metric file with absence:unknown', () => {
+  assert.equal(MCDONALDS.key, 'mcdonaldsPerMillion');
+  assert.equal(typeof MCDONALDS.label, 'string');
+  assert.equal(typeof MCDONALDS.unit, 'string');
+  // A small rate (0..~70 restaurants per million), so one decimal.
+  assert.equal(MCDONALDS.format, 'decimal1');
+  assert.equal(typeof MCDONALDS.source, 'string');
+  assert.equal(typeof MCDONALDS.year, 'number');
+  assert.equal(typeof MCDONALDS.values, 'object');
+  // NOT absence:'zero', even though real zeros are abundant. The folded markets
+  // (state 3) have restaurants with no published count, so a blanket zero-fill
+  // would assert something false about them.
+  assert.equal(MCDONALDS.absence, 'unknown');
+});
+
+test('every mcdonaldsPerMillion value is a non-negative finite number', () => {
+  for (const [code, v] of Object.entries(MCDONALDS.values)) {
+    assert.equal(Number.isFinite(v), true, `${code} not finite: ${v}`);
+    assert.ok(v >= 0, `${code} negative: ${v}`);
+  }
+});
+
+test('mcdonaldsPerMillion covers only real places, never orgs', () => {
+  const realCodes = new Set(COUNTRIES.filter((c) => c.category !== 'other').map((c) => c.code));
+  for (const code of Object.keys(MCDONALDS.values)) {
+    assert.ok(realCodes.has(code), `mcdonalds value for non-real place ${code}`);
+  }
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') {
+      assert.ok(!(c.code in MCDONALDS.values), `org ${c.code} should have no value`);
+    }
+  }
+  // Near-total coverage: only the folded markets are missing, so this sits far
+  // above a survey metric like beer (~189) and just below dense.
+  const covered = COUNTRIES.filter((c) => c.category !== 'other' && c.code in MCDONALDS.values).length;
+  assert.ok(covered >= 240, `expected ~248 covered real places, got ${covered}`);
+  assert.ok(covered < realCodes.size, 'must NOT be dense: the folded markets are the gap');
+});
+
+test('absence state 2: a country with no McDonald\'s carries an explicit 0, not a gap', () => {
+  // The withdrawals, which are the best trivia in the metric. If any of these
+  // ever reads undefined, the "which countries have none" answer silently loses
+  // its most interesting entries and the guard starts blocking them instead.
+  for (const code of ['is', 'bo', 'ru', 'by', 'kz', 'lk', 'jm', 'mk', 'me', 'sm']) {
+    assert.equal(MCDONALDS.values[code], 0, `${code} withdrew, must be an explicit 0`);
+  }
+  // Never-present countries are zeros too, not gaps.
+  for (const code of ['ir', 'kp', 'ng', 'ke', 'bd', 'np', 'mn']) {
+    assert.equal(MCDONALDS.values[code], 0, `${code} has none, must be an explicit 0`);
+  }
+});
+
+test('absence state 3: a market folded into another row is absent, NOT zero', () => {
+  // These places DO have McDonald's; the source publishes no standalone count
+  // for them. Encoding them as 0 would be a factual error, so they must read
+  // "no data" instead. This is the reason the metric is absence:'unknown'.
+  for (const code of ['mc', 'ad', 'li', 'cu', 'gi', 'im', 'je', 'fj', 'gu']) {
+    assert.ok(!(code in MCDONALDS.values), `${code} is folded into a parent market, must be absent`);
+  }
+});
+
+test('createMetric over mcdonaldsPerMillion: the #1 is not the country with the most outlets', () => {
+  const mcd = createMetric(MCDONALDS, COUNTRIES);
+  // The whole point of making this intensive. The US has by far the most
+  // restaurants (13,706) and China is second by count, yet neither leads here.
+  const topSovereign = mcd.topN('un_member', 3).map((c) => c.code);
+  assert.ok(topSovereign.includes('au'), `expected Australia near the top, got ${topSovereign}`);
+  assert.ok(topSovereign.includes('us'), `expected the US near the top, got ${topSovereign}`);
+  // The populous giants sit far down despite huge absolute counts.
+  assert.ok(/** @type {number} */ (mcd.valueOf('cn')) < 10, 'China must rank low per head');
+  assert.ok(/** @type {number} */ (mcd.valueOf('in')) < 5, 'India must rank low per head');
+  // Australia and the US are within ~1% of each other, so their ORDER is not
+  // pinned here on purpose: the counts drift 2-7% a year and the lead can flip
+  // between annual releases. Pinning it would make a refresh fail spuriously.
+  const au = /** @type {number} */ (mcd.valueOf('au'));
+  const us = /** @type {number} */ (mcd.valueOf('us'));
+  assert.ok(Math.abs(au - us) / us < 0.05, 'AU and US are expected to be near-tied at the top');
 });

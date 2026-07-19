@@ -60,6 +60,7 @@ import {
   CORRUPTION_BREAKS_FOR_RANDOM,
   TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM,
   ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM,
+  MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -878,7 +879,8 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + HAPPINESS_BREAKS_FOR_RANDOM.length
     + CORRUPTION_BREAKS_FOR_RANDOM.length
     + TOURISM_PER_CAPITA_BREAKS_FOR_RANDOM.length
-    + ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.length;
+    + ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.length
+    + MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -1123,7 +1125,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'electricityPerCapita', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'temperature', 'tourismPerCapita', 'wine'],
+    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'electricityPerCapita', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'mcdonaldsPerMillion', 'meatPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'temperature', 'tourismPerCapita', 'wine'],
   );
 });
 

@@ -162,6 +162,14 @@ import { METRIC_KEYS } from './engine.js';
  *   metrics: a place the World Bank does not meter matches neither direction
  *   (unknown, not zero).
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} McdonaldsPerMillionConstraint
+ *   McDonald's-density threshold (restaurants per million people); reads
+ *   `country.mcdonaldsPerMillion`. `absence: 'unknown'`, but unusually the 0s and
+ *   the gaps mean opposite things: a country with no McDonald's carries a real 0
+ *   and correctly fails a `>=`, while a market folded into another's reported row
+ *   (Monaco, Andorra, Liechtenstein) has restaurants but no count and matches
+ *   neither direction.
+ *
  * @typedef {{ op: '>=' | '<=', n: number }} BordersConstraint
  *   Bordering-countries threshold (land borders); reads `country.borders`. Dense
  *   metric: every real place has a value (an island carries 0), so only non-place
@@ -206,6 +214,7 @@ import { METRIC_KEYS } from './engine.js';
  *   honey: HoneyConstraint | null,
  *   tourismPerCapita: TourismPerCapitaConstraint | null,
  *   electricityPerCapita: ElectricityPerCapitaConstraint | null,
+ *   mcdonaldsPerMillion: McdonaldsPerMillionConstraint | null,
  * }} Filters
  */
 
@@ -273,6 +282,7 @@ export function emptyFilters() {
     honey: null,
     tourismPerCapita: null,
     electricityPerCapita: null,
+    mcdonaldsPerMillion: null,
   };
 }
 
@@ -439,7 +449,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'temperature' | 'happiness' | 'corruption' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders' | 'oliveOil' | 'honey' | 'tourismPerCapita' | 'electricityPerCapita'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'temperature' | 'happiness' | 'corruption' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders' | 'oliveOil' | 'honey' | 'tourismPerCapita' | 'electricityPerCapita' | 'mcdonaldsPerMillion'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip

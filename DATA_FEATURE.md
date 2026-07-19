@@ -21,7 +21,39 @@ A fresh agent picking this up should:
 
 ## Now
 
-_No metric is mid-flight. The whole social batch (temperature EH, happiness EI, corruption EJ) is now full across surfaces 1-5; every world metric that has shipped is complete or its remaining surface is the deferred daily one. Per-metric daily-puzzle authoring lives in `METRIC_DAILY_PUZZLES.md`, not here._
+### Feature EM: McDonald's per million people as a world metric, the first brand-footprint metric (in flight, started 2026-07-19)
+
+Thirty-third world metric, and a deliberate break from the catalog's shape. The metric trail had drifted heavy on agricultural / commodity output (9 crops plus oil, coal, gold), which all answer the same underlying question ("which tropical or resource-rich country produces the most X") and so play as one repeated Flag Party round. This one is picked purely for **party legibility**: everybody has an intuition about McDonald's, nobody has one about terawatt-hours of coal. Jan's pick.
+
+**Unit: restaurants per million people, not literally per capita.** True per-capita gives values like 0.00004, unreadable on a round card. Per million lands the scale where it reads: US ~40, Japan ~23. Intensive / size-independent, so the #1 is non-obvious (the answer is not the United States), which is the property Jan wants from a metric (see memory `feedback_prefer_intensive_metrics`).
+
+**Data contract:** **sparse, `absence: 'zero'`.** A country with no McDonald's has genuinely zero, not "unknown", so absence-means-zero is the correct policy here and unusually well-founded: presence is a directly observable fact rather than an unmeasured survey. The withdrawals are the best trivia in the metric (Iceland closed all outlets in 2009, Russia exited in 2022, Bolivia pulled out) and they must come through as real zeros, not gaps.
+
+**Source: McDonald's Corporation's own "Restaurants by Market" disclosure**, not the Wikipedia table. Sourcing was verified before any code (agent report, 2026-07-19) and this dataset turns out to be **structurally cross-checkable in a way almost no world metric is**: several of the largest international markets are run by separately listed franchisees who file their own audited store counts. McDonald's Holdings Japan (TSE:2702) files 2,988 against a corporate 2,989, one store apart. Westlife Foodworld (NSE, West+South India) files 458, which plus the ~299 North/East outlets is corporate's 757 exactly. Golden Arches Development Corp (PSE) files 792 for the Philippines, plus 59 is 851 exactly. Two disjoint Indian operators summing to the corporate total is not agreement you get by accident. Contrast the content farms (retailgators: Germany 8% high, Japan 4% low), which is the failure mode that killed cheese and coffee-consumption.
+
+**Three sourcing caveats carried into implementation:**
+- The public UK FAQ figure (~1,450) is **UK and Ireland combined**. Any number near it is the combined row, not the UK alone; split or annotate it.
+- India reads 458 as often as 757 in search results, because Westlife is only the listed half of the country. Note it if the number is ever surfaced.
+- Counts drift 2-7% a year (Poland +6.6%, Philippines +7.4%, Italy +6.6%). Avoid framings that hinge on separating two countries within a few percent, since annual drift exceeds that gap. Magnitude framings age better than rank framings.
+
+**Direction: most-only.** "Most McDonald's per million people" is the question; "fewest" among non-zero countries is not a real one.
+
+**Zero-filtered: yes.** Real zeros are abundant here (every McDonald's-free country), so an unfiltered quartet could deal four countries tied at 0 with no answer. This is exactly the case the `zeroFiltered` flag exists for, and the per-metric `superlative.test.js` test is where that judgement gets recorded.
+
+**Breaks:** `>=10 / >=25` restaurants per million (53 / 14 covered places), "the chain is genuinely everywhere here" and the elite. `>=`-only: the low end is 151 explicit zeros, so a `<=` break would deal a cell matching half the world and ask "which countries are poor or closed to Western chains", not a fun question.
+
+**Ranking sanity check (sovereign pool):** Australia 41.0, United States 40.7, Canada 38.0, New Zealand 33.9, Qatar 29.4, Japan 24.3, while China sits at 5.5, Brazil 5.8 and India 0.5. The countries with the MOST restaurants rank near the bottom, which is the whole point of making it intensive. Australia and the US are within ~0.6% of each other, so `superlative.test.js` deliberately does NOT pin their order: annual drift exceeds that gap and pinning it would fail spuriously on the next refresh.
+
+- [x] 1. Data + visuals: `flags/metrics/mcdonaldsPerMillion.json` + `build-mcdonalds-per-million.mjs` + `METRIC_FILES` line + `metrics.test.js` (6 tests, pinning the three-state absence contract: withdrawals are explicit 0s, folded markets are absent); golden-arches icon + brand red `#da291c` + short label "McDonald's" in `metricVisuals.js`.
+- [x] 2. flagsdata lens: lit from step 1.
+- [x] 3 + 4 (driven by `THRESHOLD_METRICS`): `mcdonaldsPerMillion(op, n)` factory + `MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM` (`>=10/25`) + registry entry. Filters: `McdonaldsPerMillionConstraint` + field + `emptyFilters` + `ScalarGroup`; `mcdonaldsPerMillionProbability` (0.06) modifier + `findFlag/page.js` + reachability row in `findFlag.test.js` + `findflag-random-coverage` skill note. `attachMcdonaldsPerMillions` + `METRIC_ATTACHERS` + `party/server.js`. i18n `mcdonaldsPerMillion.atLeast.{10,25}` + `metric.mcdonaldsPerMillion` (en+pl).
+- [x] 5. Flag Party round: `mcdonaldsPerMillionQuestion` (id `superlative-mcdonalds`) across the six spots + en/pl i18n. **Most-only**, zero-filtered; three pinning tests in `superlative.test.js`, one per absence state.
+
+**Not yet verified in a browser.** Surfaces 3-5 are pinned by tests but the no-data guard and the party chip have not been eyeballed. `npm run dev` + the `verify-in-browser` recipe when convenient.
+
+Surface 6 (daily puzzles): deferred to `METRIC_DAILY_PUZZLES.md` as usual; the Feature closes on surfaces 1-5.
+
+---
 
 ---
 

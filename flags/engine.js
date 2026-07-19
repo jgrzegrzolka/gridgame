@@ -634,6 +634,25 @@ export const ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * McDonald's-density break tiers (restaurants per million people). `>=10` is "the
+ * chain is genuinely everywhere here" (~53 real places, the developed world plus
+ * the Gulf and the richer Caribbean / Latin American markets), `>=25` the elite
+ * (~14: Australia, the US, Canada, New Zealand, Qatar, Singapore, Japan and a
+ * handful of small high-density territories).
+ *
+ * `>=`-only, for the same reason the production metrics are. The low end here is
+ * dominated by the 151 places with an explicit 0, so a `<=` break would deal a cell
+ * matching half the world, most of which never had a McDonald's at all. That is a
+ * "which countries are poor or closed to Western chains" question, not a fun one.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10 },
+  { op: '>=', n: 25 },
+];
+
+/**
  * Bordering-countries break tiers (number of countries sharing a land border).
  * `>=5` is a well-connected country (~59 real places), `>=8` the elite (~11:
  * Russia & China at 14, Brazil 10, DR Congo & Germany 9, plus the 8-border club:
@@ -1621,6 +1640,42 @@ export function electricityPerCapita(op, n) {
 }
 
 /**
+ * McDonald's-density-threshold Category factory (restaurants per million people).
+ * Reads the denormalized `country.mcdonaldsPerMillion` field
+ * (`attachMcdonaldsPerMillions`, an `absence: 'unknown'` metric, so the predicate
+ * must guard on the field being a number). `exclusiveGroup: 'mcdonaldsPerMillion'`.
+ * The break list is `>=`-only (see MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM); the
+ * `<=` branch is kept for symmetry.
+ *
+ * Note the guard is doing real work here and is NOT the same as a zero check. A
+ * place with an explicit 0 (Iceland, Bolivia, Russia: no McDonald's) correctly
+ * fails a `>=` predicate, while a folded market (Monaco, Andorra, Liechtenstein:
+ * has McDonald's, count unpublished) has no value at all and must not match
+ * either. Both read false, for different and both-correct reasons.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function mcdonaldsPerMillion(op, n) {
+  const label =
+    op === '>=' ? `over ${n} McDonald's per million` : `under ${n} McDonald's per million`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.mcdonaldsPerMillion === 'number' && c.mcdonaldsPerMillion >= n
+      : (c) => typeof c.mcdonaldsPerMillion === 'number' && c.mcdonaldsPerMillion <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `mcdonaldsPerMillion:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'mcdonaldsPerMillion',
+  };
+  return cat;
+}
+
+/**
  * Bordering-countries-threshold Category factory (number of countries sharing a
  * land border). Reads the denormalized `country.borders` field (`attachBorders`, a
  * dense metric that fills a true 0 for every island, so the predicate guards on the
@@ -2261,6 +2316,18 @@ export const THRESHOLD_METRICS = {
       const human = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       if (op === '>=') return translate(`electricityPerCapita.atLeast.${n}`, `over ${human} kWh per capita`);
       return translate(`electricityPerCapita.atMost.${n}`, `under ${human} kWh per capita`);
+    },
+  },
+  mcdonaldsPerMillion: {
+    breaks: MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM,
+    factory: mcdonaldsPerMillion,
+    prefixFallback: "McDonald's per million people",
+    field: 'mcdonaldsPerMillion',
+    family: 'mcdonaldsPerMillion',
+    has: (c) => typeof c.mcdonaldsPerMillion === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`mcdonaldsPerMillion.atLeast.${n}`, `over ${n} McDonald's per million`);
+      return translate(`mcdonaldsPerMillion.atMost.${n}`, `under ${n} McDonald's per million`);
     },
   },
   borders: {

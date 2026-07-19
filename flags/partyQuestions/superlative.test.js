@@ -1124,3 +1124,51 @@ test('electricityPerCapitaQuestion: unknown-gap places are excluded from selecti
     }
   }
 });
+
+test('mcdonaldsPerMillionQuestion: most-only, correct most-per-person answer', async () => {
+  const { mcdonaldsPerMillionQuestion } = await import('./superlative.js');
+  const mcdJson = (await import('../metrics/mcdonaldsPerMillion.json', { with: { type: 'json' } })).default;
+  const MCD = /** @type {Record<string, number>} */ (mcdJson.values);
+  assert.equal(mcdonaldsPerMillionQuestion.id, 'superlative-mcdonalds');
+  // Sovereigns spanning the range (Australia ~41 ... India ~0.5). All > 0.
+  const pool = ['au', 'us', 'ca', 'nz', 'jp', 'fr', 'de', 'br', 'cn', 'in'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = mcdonaldsPerMillionQuestion.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most', `seed ${i}: McDonald's density is most-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const answerVal = MCD[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= MCD[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+test('mcdonaldsPerMillionQuestion: zeroFiltered keeps McDonald\'s-free countries out', async () => {
+  const { mcdonaldsPerMillionQuestion } = await import('./superlative.js');
+  // THE test for this metric. Real zeros are the majority of values here (151 of
+  // 248), so without zeroFiltered a quartet would routinely be four countries
+  // tied at 0 with no answer. These all carry an explicit 0, not a gap, so
+  // `metric.has` is true for them and only the zero filter can exclude them.
+  const excluded = new Set(['is', 'bo', 'ru', 'ir', 'kp', 'ng', 'bd']);
+  const pool = ['au', 'us', 'ca', 'nz', 'is', 'bo', 'ru', 'ir', 'kp', 'ng', 'bd'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = mcdonaldsPerMillionQuestion.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: zero-valued ${opt} must not be an option`);
+    }
+  }
+});
+
+test('mcdonaldsPerMillionQuestion: folded markets are excluded as unknown, not ranked at zero', async () => {
+  const { mcdonaldsPerMillionQuestion } = await import('./superlative.js');
+  // Monaco / Andorra / Liechtenstein DO have McDonald's, folded into France /
+  // Spain / Switzerland's reported rows. They carry no value, so they must never
+  // surface. Distinct from the zero case above: these are excluded by `has`.
+  const excluded = new Set(['mc', 'ad', 'li']);
+  const pool = ['au', 'us', 'ca', 'nz', 'jp', 'mc', 'ad', 'li'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = mcdonaldsPerMillionQuestion.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: folded market ${opt} must not be an option`);
+    }
+  }
+});

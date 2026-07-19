@@ -354,6 +354,20 @@ export const SUPERLATIVE_METRICS = [
     hintMost: { key: 'party.hintMostElectricity', fallback: 'Most electricity use per person' },
     hintLeast: null,
   },
+  {
+    // Most-only. "Fewest McDonald's per million" would deal from the 151 places
+    // carrying an explicit 0, so the answer would be a tie among countries that
+    // simply never had one: not a question.
+    key: 'mcdonaldsPerMillion',
+    questionId: 'superlative-mcdonalds',
+    direction: 'most',
+    // Essential here, more than on any other metric. Real zeros are the MAJORITY
+    // of values (151 of 248), so an unfiltered quartet would very often be four
+    // countries tied at 0 with no answer at all.
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostMcdonalds', fallback: "Most McDonald's per person" },
+    hintLeast: null,
+  },
 ];
 
 /** @type {Record<string, SuperlativeMetric>} */

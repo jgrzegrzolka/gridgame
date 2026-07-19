@@ -45,6 +45,7 @@
  * @property {number} [borders]  Denormalized from `flags/metrics/borders.json` by `attachBorders` (number of countries sharing a land border). Dense, same pattern as `area`: every real place has a value (an island carries a true 0), absent only for non-places (orgs).
  * @property {number} [tourismPerCapita]  Denormalized from `flags/metrics/tourismPerCapita.json` by `attachTourismPerCapitas` (international tourist arrivals per resident per year). `absence: 'unknown'` metric like the drink metrics: a real place the World Bank has no arrivals figure for carries no value (read "no data"), NOT 0. Absent for those and non-places (orgs).
  * @property {number} [electricityPerCapita]  Denormalized from `flags/metrics/electricityPerCapita.json` by `attachElectricityPerCapitas` (electric power consumption, kWh per person per year). `absence: 'unknown'` metric like the drink metrics: a real place the World Bank does not meter carries no value (read "no data"), NOT 0. Absent for those and non-places (orgs).
+ * @property {number} [mcdonaldsPerMillion]  Denormalized from `flags/metrics/mcdonaldsPerMillion.json` by `attachMcdonaldsPerMillions` (McDonald's restaurants per million people). `absence: 'unknown'`, but with a twist the other unknown metrics do not have: a place with NO McDonald's carries an explicit 0 (that absence is a known fact, and the good trivia), while a market folded into another's reported row (Monaco, Andorra, Liechtenstein, Cuba) has restaurants but no published count and is left without the field. So 0 and missing mean opposite things here. Absent for the folded markets and non-places (orgs).
  * @property {number[]} [ambiguousColorCount]  Plausible counts a careful player could give when the count is contested (shade splits, disputed palette colours). Consumed by the TTT colorCount predicate to accept any plausible read, and by `ambiguityAudit.js` to veto daily puzzles that straddle the ambiguity.
  * @property {string[]} [ambiguousColors]  Colours whose presence on the flag is itself disputed. Palette entries drive `ambiguityAudit.js`'s membership veto; non-palette tokens (e.g. "gold") are documentation-only and trigger no veto.
  * @property {string[]} [motifs]
@@ -317,6 +318,30 @@ export function attachElectricityPerCapitas(countries, values) {
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v === 'number') c.electricityPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/mcdonaldsPerMillion.json` values onto each Country as
+ * `.mcdonaldsPerMillion` (McDonald's restaurants per million people).
+ * `absence: 'unknown'`, so a plain set-if-present.
+ *
+ * The set-if-present matters more here than on the other unknown metrics, because
+ * this metric has real 0s AND real gaps and they mean opposite things. A country
+ * with no McDonald's carries an explicit 0 in the data and gets the field set to 0;
+ * a market folded into a parent's row (Monaco into France, Andorra into Spain) has
+ * no published count and must stay bare so it reads "no data". Do not "simplify"
+ * this to a `?? 0` fill: that would assert Monaco has no McDonald's, which is false.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachMcdonaldsPerMillions(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.mcdonaldsPerMillion = v;
   }
   return countries;
 }
@@ -725,6 +750,7 @@ const METRIC_ATTACHERS = {
   corruption: attachCorruptions,
   tourismPerCapita: attachTourismPerCapitas,
   electricityPerCapita: attachElectricityPerCapitas,
+  mcdonaldsPerMillion: attachMcdonaldsPerMillions,
 };
 
 /**

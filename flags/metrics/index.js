@@ -48,4 +48,5 @@ export const METRIC_FILES = [
   { key: 'happiness', file: 'happiness.json', label: 'Happiness score' },
   { key: 'tourismPerCapita', file: 'tourismPerCapita.json', label: 'Tourist arrivals per capita' },
   { key: 'electricityPerCapita', file: 'electricityPerCapita.json', label: 'Electricity use per capita' },
+  { key: 'mcdonaldsPerMillion', file: 'mcdonaldsPerMillion.json', label: "McDonald's per million people" },
 ];

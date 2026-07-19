@@ -118,6 +118,7 @@ export const METRIC_ICONS = {
   // Electricity use per capita: a lightning bolt. Reads as electric power,
   // unmistakable against the drink / food / economic icons.
   electricityPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-2 8 9-12h-7z"/></svg>',
+  mcdonaldsPerMillion: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10a4 4 0 0 1 8 0v10M12 10a4 4 0 0 1 8 0v10"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -154,6 +155,10 @@ export const METRIC_HUES = {
   happiness: '#ec407a',
   tourismPerCapita: '#1183c7',
   electricityPerCapita: '#f4b400',
+  // Brand red. The golden-arches yellow would be the more literal pick, but the
+  // yellow region already carries electricity / beer / gold / honey; red only has
+  // temperature and meat, so the chip stays tellable apart.
+  mcdonaldsPerMillion: '#da291c',
 };
 
 /**
@@ -198,6 +203,7 @@ export const METRIC_SHORT = {
   happiness: { key: 'party.modeShort.superlativeHappiness', fallback: 'Happiness' },
   tourismPerCapita: { key: 'party.modeShort.superlativeTourism', fallback: 'Tourism' },
   electricityPerCapita: { key: 'party.modeShort.superlativeElectricity', fallback: 'Electricity' },
+  mcdonaldsPerMillion: { key: 'party.modeShort.superlativeMcdonalds', fallback: "McDonald's" },
 };
 
 /**
