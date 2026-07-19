@@ -96,6 +96,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   honeyProbability: 0.06,
   tourismPerCapitaProbability: 0.06,
   electricityPerCapitaProbability: 0.06,
+  mcdonaldsPerMillionProbability: 0.06,
 });
 
 /**

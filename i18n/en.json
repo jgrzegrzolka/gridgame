@@ -582,7 +582,8 @@
       "superlativeHappiness": "Happiness score: happiest & least happy",
       "superlativeCorruption": "Government integrity: most & least corrupt",
       "superlativeTourism": "Tourist arrivals per capita: most",
-      "superlativeElectricity": "Electricity use per capita: most"
+      "superlativeElectricity": "Electricity use per capita: most",
+      "superlativeMcdonalds": "McDonald's per million people: most"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -619,7 +620,8 @@
       "superlativeTemperature": "Temperature",
       "superlativeHappiness": "Happiness",
       "superlativeTourism": "Tourism",
-      "superlativeElectricity": "Electricity"
+      "superlativeElectricity": "Electricity",
+      "superlativeMcdonalds": "McDonald's"
     },
     "roundQuestion": "Round {b}/{rounds} · Question {n}/{total}",
     "afterRound": "After round {n} of {total}",
@@ -686,6 +688,7 @@
     "hintLeastCorruption": "Most corrupt",
     "hintMostTourism": "Most tourist arrivals per resident",
     "hintMostElectricity": "Most electricity use per person",
+    "hintMostMcdonalds": "Most McDonald's per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "fastest": "Fastest",
     "soleSurvivor": "Only one",
@@ -987,6 +990,12 @@
       "10000": "over 10,000 kWh per capita"
     }
   },
+  "mcdonaldsPerMillion": {
+    "atLeast": {
+      "10": "over 10 McDonald's per million people",
+      "25": "over 25 McDonald's per million people"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 or more",
@@ -1082,7 +1091,8 @@
     "oliveOil": "Olive oil production",
     "honey": "Honey production",
     "tourismPerCapita": "Tourist arrivals per capita",
-    "electricityPerCapita": "Electricity use per capita"
+    "electricityPerCapita": "Electricity use per capita",
+    "mcdonaldsPerMillion": "McDonald's per million people"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

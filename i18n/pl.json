@@ -582,7 +582,8 @@
       "superlativeHappiness": "Wskaźnik szczęścia: najszczęśliwsi i najmniej szczęśliwi",
       "superlativeCorruption": "Uczciwość władz: najbardziej i najmniej skorumpowane",
       "superlativeTourism": "Przyjazdy turystów na mieszkańca: najwięcej",
-      "superlativeElectricity": "Zużycie prądu na osobę: najwięcej"
+      "superlativeElectricity": "Zużycie prądu na osobę: najwięcej",
+      "superlativeMcdonalds": "McDonald's na milion mieszkańców: najwięcej"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -619,7 +620,8 @@
       "superlativeTemperature": "Temperatura",
       "superlativeHappiness": "Szczęście",
       "superlativeTourism": "Turystyka",
-      "superlativeElectricity": "Prąd"
+      "superlativeElectricity": "Prąd",
+      "superlativeMcdonalds": "McDonald's"
     },
     "roundQuestion": "Runda {b}/{rounds} · Pytanie {n}/{total}",
     "afterRound": "Po rundzie {n} z {total}",
@@ -686,6 +688,7 @@
     "hintLeastCorruption": "Najbardziej skorumpowany",
     "hintMostTourism": "Najwięcej przyjazdów turystów na mieszkańca",
     "hintMostElectricity": "Największe zużycie prądu na osobę",
+    "hintMostMcdonalds": "Najwięcej McDonald's na mieszkańca",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "fastest": "Najszybszy",
     "soleSurvivor": "Tylko jeden",
@@ -987,6 +990,12 @@
       "10000": "ponad 10 000 kWh na osobę"
     }
   },
+  "mcdonaldsPerMillion": {
+    "atLeast": {
+      "10": "ponad 10 McDonald's na milion mieszkańców",
+      "25": "ponad 25 McDonald's na milion mieszkańców"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 lub więcej",
@@ -1082,7 +1091,8 @@
     "oliveOil": "Produkcja oliwy z oliwek",
     "honey": "Produkcja miodu",
     "tourismPerCapita": "Przyjazdy turystów na mieszkańca",
-    "electricityPerCapita": "Zużycie prądu na osobę"
+    "electricityPerCapita": "Zużycie prądu na osobę",
+    "mcdonaldsPerMillion": "McDonald's na milion mieszkańców"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

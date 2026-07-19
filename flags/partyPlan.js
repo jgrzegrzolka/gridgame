@@ -217,6 +217,7 @@ export const PARTY_MODES = [
   { id: 'superlative-corruption', questionId: 'superlative-corruption', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-tourism', questionId: 'superlative-tourism', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-electricity', questionId: 'superlative-electricity', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-mcdonalds', questionId: 'superlative-mcdonalds', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */
