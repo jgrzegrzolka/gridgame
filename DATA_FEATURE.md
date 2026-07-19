@@ -27,7 +27,11 @@ Metrics 36-39, and the largest single metric addition so far. Jan's pick, and Ja
 
 **Summer and Winter are split, because combined is not a real metric.** Summer has roughly five times the medals of Winter, so an all-Games total is the Summer ranking with noise on top. Split, they are two genuinely different questions with different answers: the United States leads Summer, Norway leads Winter on its own and Germany leads it after the East/West merge. A test pins that the Summer and Winter leaders differ, so if the split ever stops earning its keep we find out.
 
-**But they are grouped as TWO party families, not one.** Jan's instinct to use the family mechanism was right; the grouping axis is the other one. The bar in `partyDraft.js` is "two ways of asking one question", not "related subjects" (which is why meat / cattle / sheep stay separate cards). Total vs per-million IS one question asked twice, so each season groups its own pair: `summerMedals` and `winterMedals`, joining `economy` and `nobel`. Summer vs Winter is two subjects, so it stays two cards.
+**All four are grouped as ONE party family, `olympicMedals`.** This landed in two steps and the correction is the interesting part. The first cut made them two families, one per season, on the reasoning that the `partyDraft.js` bar is "two ways of asking one question" and Summer vs Winter is two subjects. Jan overrode it, and he was right: the stronger argument is hand breadth, not subject purity. A ten-card draft hand carrying two Olympic cards spends a fifth of itself on Olympics, which is precisely the crowding `economy` was introduced to stop. One card frees a slot for a statistic the hand doesn't have yet, and the four members still deal as four distinct rounds once picked.
+
+At four members it is the widest family in the catalog and the first with more than two, so `resolveFamilyPick` is now exercised past what `economy` and `nobel` prove; a test pins that all four members are reachable from the one card and that any one of them retires it. The `sub` disclosure line matters more here than anywhere else, because the range is genuinely wide: "Summer or Winter, total or per person" tells a picker they might get Winter per-person rather than just "medals".
+
+Note this is the PARTY family only. The TTT families stay split by season (`family: 'summerMedals'` / `'winterMedals'` in `THRESHOLD_METRICS`), because there a puzzle carrying a Summer axis and a Winter axis is perfectly good; what must not co-occur is a season's total with its own per-million cut.
 
 **Data contract:** **dense, `absence: 'zero'`.** Every real place has an answer and most have 0, written out explicitly so the TTT no-data guard blocks only org flags. The source also names 64 NOCs that have competed and never medalled, so these zeros are attested rather than assumed.
 
@@ -49,7 +53,7 @@ Metrics 36-39, and the largest single metric addition so far. Jan's pick, and Ja
 - [x] 2. flagsdata lens (free once step 1 landed)
 - [x] 3. Filters: registry lines + `flagsFilter.js` scalars + `findFlag.js` URL tokens + four `Probability` modifiers + `findflag-random-coverage` skill note
 - [x] 4. TTT: four factories + breaks + registry; four attachers; `atLeast` i18n en+pl; synthetic ladders so the generator does not starve
-- [x] 5. Flag Party: four rounds + two grouped draft families (`summerMedals`, `winterMedals`)
+- [x] 5. Flag Party: four rounds + ONE grouped draft family (`olympicMedals`, all four members)
 
 Surface 6 (daily puzzles) tracked in `METRIC_DAILY_PUZZLES.md`.
 
