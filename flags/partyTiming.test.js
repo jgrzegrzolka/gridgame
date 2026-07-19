@@ -316,12 +316,27 @@ test('non-chart questions keep their old pace, and the default is unchanged', ()
   assert.equal(revealSecondsFor(true, false), CLEAN_REVEAL_SECONDS);
 });
 
-test('the chart beat outlasts the animation it exists to protect', () => {
-  // 4 rows x 110ms cascade + 700ms bar grow = the point at which the chart has
-  // finished saying anything. If someone shortens the reveal below that, this
-  // fails rather than silently truncating the payoff.
-  const cascadeMs = 3 * 110;
-  const barGrowMs = 700;
-  assert.ok(CHART_REVEAL_SECONDS * 1000 > cascadeMs + barGrowMs,
-    `chart reveal ${CHART_REVEAL_SECONDS}s must outlast ${cascadeMs + barGrowMs}ms of motion`);
+test('the chart beat leaves real reading time after the motion stops', () => {
+  // The first version of this test only checked the beat outlasted the
+  // ANIMATION, which 3.2s satisfied comfortably -- and 3.2s was still too short
+  // in play, because a chart that has finished moving is not a chart that has
+  // been read. Four countries, four numbers and a scoreboard need stillness, so
+  // that is what this pins. Same shape as the ledger's test against
+  // ROUND_BREAK_SECONDS.
+  const cascadeMs = 3 * 110;   // last row's entrance delay
+  const barGrowMs = 700;       // and its bar still has to grow
+  const motionMs = cascadeMs + barGrowMs;
+  const stillMs = CHART_REVEAL_SECONDS * 1000 - motionMs;
+  assert.ok(stillMs >= 3000,
+    `chart reveal leaves only ${stillMs}ms of stillness after ${motionMs}ms of motion; need >= 3000ms to read it`);
+});
+
+test('the chart beat is not so long the round drags', () => {
+  // The other side of the same judgement: five of these in a round, so an
+  // over-generous beat is a minute of dead air. If a future change wants more
+  // than this, it should be because the chart got denser, not by accident.
+  assert.ok(CHART_REVEAL_SECONDS <= 7,
+    `chart reveal ${CHART_REVEAL_SECONDS}s x5 questions would stall the round`);
+  assert.ok(CHART_REVEAL_SECONDS > MISS_REVEAL_SECONDS,
+    'a chart reveal must outlast an ordinary missed reveal');
 });

@@ -27,14 +27,18 @@ export const CLEAN_REVEAL_SECONDS = 0.9;
  *  on a wrong answer than a right one. */
 export const MISS_REVEAL_SECONDS = 2.5;
 
-/** Seconds a world-facts reveal lingers. That reveal is a ranked bar chart of all
- *  four countries -- four rows cascading in at 110 ms apart plus a 700 ms bar
- *  grow -- which needs about 1.6 s before it has finished saying anything. The
- *  0.9 s clean reveal would cut it off mid-grow, and a clean reveal is exactly
- *  when everyone is pleased with themselves and looking at it. Applies to the
- *  chart questions ONLY: flag-pick and map-pick have nothing to chart and keep
- *  their snappy pace. */
-export const CHART_REVEAL_SECONDS = 3.2;
+/** Seconds a world-facts reveal lingers. Two things have to fit: the motion
+ *  (four rows cascading 110 ms apart plus a 700 ms bar grow, ~1.0 s in total)
+ *  and then enough STILLNESS to actually read four countries, four numbers and
+ *  a scoreboard. The motion finishing is not the same as the chart having been
+ *  read, which is what 3.2 s got wrong in play: it looked finished while nobody
+ *  had taken it in yet. Same reasoning as ROUND_BREAK_SECONDS -- if it ever
+ *  feels rushed, raise this rather than compressing the animation, because
+ *  reading time is the scarce thing. Pinned by a test.
+ *
+ *  Applies to chart questions ONLY: flag-pick and map-pick have nothing to
+ *  chart and keep their snappy pace. */
+export const CHART_REVEAL_SECONDS = 5.5;
 
 /**
  * How long the reveal lingers, keyed on whether the question was a clean sweep
