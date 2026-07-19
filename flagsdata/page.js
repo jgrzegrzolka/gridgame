@@ -1187,7 +1187,7 @@ export function bootFlagsData() {
     metrics: chipMetrics(METRIC_FILES),
     // A chip stands for its subject; this is the metric it currently reads.
     resolveKey: (key) => resolveCut(key, lensCutByKey[key] ?? 'total') ?? key,
-    label: { key: 'metricHub.title', fallback: 'World facts' },
+    label: { key: 'metricHub.title', fallback: 'Statistics' },
     // Tiers count against the full loaded set (same as the old filter
     // groups); empty until countries.json resolves, which only matters if a
     // panel is opened during the initial load.

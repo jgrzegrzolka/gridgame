@@ -672,7 +672,7 @@ changed.
       the shared count holds while metrics are added, the group toggle drops the
       total, the "needs questions" guard snaps the last mode back on, `buildPartyPlan`
       deals a 2/1/1 split across three facts, the tricky reveal category reads
-      "World facts", and the setup persists + re-translates to PL.
+      "Statistics", and the setup persists + re-translates to PL.
 
 **Mockup history (artifacts, for reference):**
 - Question 1 (four monochrome layouts): https://claude.ai/code/artifact/577817c4-642f-4132-a4e8-ec1ba15bd949
@@ -902,7 +902,7 @@ partial plan, so a pick is an append.
   (Written as "a hand of 5"; the shipped `HAND_SIZE` is **10** — `flags/partyDraft.js` is the source
   of truth. The principle is "a hand you can read", not the specific number.)
 - **Draft deals per-metric rounds** (one 5-question segment), where Setlist deals mixed. "I pick Coffee"
-  is a moment; "I pick World facts" is a menu. Both shapes are valid `Segment[]`, so this needs no
+  is a moment; "I pick Statistics" is a menu. Both shapes are valid `Segment[]`, so this needs no
   model, no fork, and no server knowledge.
 - **No mode twice in a game — except Flags and Weird flags** (`REPEATABLE_MODE_IDS`). The rule keeps
   coverage honest, but applied to Flags it was actively wrong: Flags is the game everyone came to

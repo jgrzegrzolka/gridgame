@@ -481,8 +481,8 @@ export function bootFindFlag() {
       const secEl = document.createElement('section');
       secEl.className = 'chooser-section';
       const h = document.createElement('h2');
-      h.textContent = t('metricHub.title', 'World facts');
-      sectionHeaders.push({ h, key: 'metricHub.title', fallback: 'World facts' });
+      h.textContent = t('metricHub.title', 'Statistics');
+      sectionHeaders.push({ h, key: 'metricHub.title', fallback: 'Statistics' });
       secEl.appendChild(h);
       metricHub = createMetricHub({
         t,

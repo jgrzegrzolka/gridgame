@@ -1,4 +1,4 @@
-/* Metric hub: the shared "world facts" control (flags/metricHub.js), mounted
+/* Metric hub: the shared "Statistics" control (flags/metricHub.js), mounted
  * by the flagsdata filter bar and the findFlag chooser. One stylesheet so the
  * two pages can't drift (CLAUDE.md: same mechanism = same code).
  *
@@ -24,7 +24,7 @@
   align-items: center;
   gap: 6px;
 }
-/* Optional row label ("World facts"), same micro-label idiom as
+/* Optional row label ("Statistics"), same micro-label idiom as
  * .filter-label / the chooser section headings. */
 .mhub-label {
   font-size: 12px;

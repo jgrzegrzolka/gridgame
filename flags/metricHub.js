@@ -1,5 +1,5 @@
 /**
- * Metric hub, the shared "world facts" control: one icon chip per metric
+ * Metric hub, the shared "Statistics" control: one icon chip per metric
  * (a primary handful visible, the rest behind "+ N more"), and a single
  * inline panel that opens under the row when a chip is tapped, holding that
  * metric's threshold tier pills (plus any consumer-supplied extras, e.g.
@@ -71,7 +71,7 @@ const GAP_FALLBACK = 6;
  *   row width to fill, `measure` an element's width. Defaults read the live
  *   DOM; tests inject synthetic widths.
  * @property {{ key: string, fallback: string }} [label] optional row label
- *   leading the chips ("World facts"); flagsdata's filter bar uses it,
+ *   leading the chips ("Statistics"); flagsdata's filter bar uses it,
  *   findFlag brings its own section heading instead. Carries data-i18n so
  *   the upstream applyStringsToDocument re-translates it.
  * @property {Document} [doc]
