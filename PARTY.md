@@ -193,10 +193,12 @@ Iteration 11 below.
 
 Still open:
 
-- **Iteration 12 — the playability + UX pass (PLANNED, 6 phases).** The next substantial piece of
-  work, written to be picked up by a fresh agent one phase at a time. Starts with a measured fairness
-  bug: the double-points round that decides the game is chosen by whoever is *leading* 85% of the
-  time, because loser's-pick pushes the leader to the back of the rotation. See the entry below.
+- **Iteration 12 — the playability + UX pass (IN PROGRESS, 2 of 6 phases shipped).** Written to be
+  picked up by a fresh agent one phase at a time. It opened with a measured fairness bug: the
+  double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
+  because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
+  round is now **the Decider**, a separate act outside the rotation picked by last place. Phase 3
+  (one shared screen transition) is next. See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1208,7 +1210,7 @@ information, not decoration.
 - **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
   liked it, so it wasn't built. The hard swap stays.
 
-## Iteration 12 — playability + UX pass — PLANNED (2026-07-19)
+## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-2 shipped)
 
 Goal: the engine, the draft and the rounds all work; what's thin is everything *around* the
 questions. A point means the same thing whoever earned it, the round that decides the game is handed
@@ -1242,7 +1244,7 @@ So loser's-pick inverts itself at exactly the moment the stakes double. Jan spot
 item in this iteration a player could reasonably call *unfair*, which is why it outranks everything
 else here even though it costs the most.
 
-### Phase 1 — score breakdown chips (client only)
+### Phase 1 — score breakdown chips (client only) — SHIPPED (#981)
 
 Make the rules that already exist visible, before adding more of them.
 
@@ -1253,7 +1255,7 @@ Make the rules that already exist visible, before adding more of them.
   `scoreQuestion`'s current return shape working — the room and tests depend on it.
 - Why first: it costs nothing server-side, and every later scoring idea is invisible without it.
 
-### Phase 2 — The Decider (server + client)
+### Phase 2 — The Decider (server + client) — SHIPPED (2026-07-19)
 
 The double-points round stops being "the last slot in the rotation" and becomes a **separate closing
 act, outside the rotation, picked by whoever is in last place when it starts.**
@@ -1271,6 +1273,37 @@ act, outside the rotation, picked by whoever is in last place when it starts.**
   than reusing the round card's numbering, since it is explicitly not round N of N.
 - `isFinalRound` / `FINAL_ROUND_MULTIPLIER` already exist; this changes *who picks it* and *where it
   sits in the plan*, not how it scores.
+
+**What shipped:**
+- [x] `roundCountFor` is `seats × picks + 2`. The lobby hint moves with it for free (it already
+      called the same helper), so a solo one-pick game now reads "3 rounds, 15 questions".
+- [x] **Two picker rules, not one.** `pickerFor` is untouched — it is right for the rotation.
+      `deciderPickerFor` is a separate export that reads last place off the board and ignores pick
+      history entirely, because the Decider spends no rotation slot.
+- [x] **One definition of which round is the Decider.** `isDeciderPick(questionIndex, total)` is
+      `isFinalRound(questionIndex + 1, total)` — the same rule that doubles the points, asked one
+      question ahead. A test walks every question of 2/3/5/8-round games and pins the two to each
+      other, so the screen that says "double points" can never name a round that pays single.
+- [x] **The rotation promise is kept by construction.** `applyPick` skips `pickedBy` when
+      `room.decider`, so choosing the closing act does not count as one of your picks. The server
+      test plays a full duo game where one seat wins every round and asserts both halves: the
+      rotation still hands out exactly one pick each, and the Decider still goes to last place.
+- [x] `decider` rides the room (surviving an eviction mid-pick), both `picking` messages, and
+      `welcome`. Unlike the hand it is **not** picker-only — the watcher screen names the closing act
+      too. The round card doesn't consume it: once the round is playing it is simply the final round,
+      which the client already derives from the question alone.
+- [x] Copy: the pick pill becomes "The Decider · Double points" (composed from the existing
+      `party.doublePoints` key rather than a near-duplicate string), the picker reads "Your pick, and
+      it decides the game", watchers read "{name} chooses The Decider", and the title card's count
+      line becomes `🏁 The Decider` instead of "Round N of N". en + pl.
+- [x] `npm run validate` green (2948 tests) + **verified in-browser** on a real solo draft: the
+      round-2 boundary opened an ordinary "Choosing round 2 of 3" pick, the last boundary opened
+      "The Decider · Double points", and taking it dealt a title card reading `🏁 The Decider` /
+      "Marek's pick" / "Double points". 0 console errors.
+
+**Needs a PartyKit deploy** — unlike phase 1, this changes the wire (`decider` on `picking`) and the
+server's picker selection. See `project_party_stale_client_skew`: a long-open tab predating this
+build would still render the Decider pick as an ordinary one.
 
 ### Phase 3 — one shared screen transition (client only)
 

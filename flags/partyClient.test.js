@@ -305,10 +305,49 @@ test('welcome mid-pick as a watcher: youPick false, no hand', () => {
 
 test('lobby (play again) clears any draft state', () => {
   /** @type {import('./partyClient.js').PartyClientState} */
-  let s = { ...initialPartyClientState(), phase: 'picking', picker: 'bob', hand: ['x'], lastPick: { picker: 'bob', modeId: 'x' } };
+  let s = { ...initialPartyClientState(), phase: 'picking', picker: 'bob', hand: ['x'], lastPick: { picker: 'bob', modeId: 'x' }, decider: true };
   s = reduce(s, { type: 'lobby', hostId: you, roster: [] });
   assert.equal(s.phase, 'lobby');
   assert.equal(s.picker, null);
   assert.equal(s.hand, null);
   assert.equal(s.lastPick, null);
+  assert.equal(s.decider, false);
+});
+
+// ---- the Decider (Iteration 12) ----
+
+test('picking: the Decider flag reaches the picker AND the watcher', () => {
+  // Unlike the hand, this is not picker-only: the closing act is announced to
+  // the whole table, so the watch screen can name what is being chosen.
+  for (const youPick of [true, false]) {
+    const s = reduce({ ...initialPartyClientState(), you, phase: 'reveal' }, {
+      type: 'picking', youPick, picker: 'bob', questionIndex: 14, totalQuestions: 20, decider: true,
+    });
+    assert.equal(s.decider, true, `youPick=${youPick}`);
+  }
+});
+
+test('picking: an ordinary rotation pick is not the Decider', () => {
+  const s = reduce({ ...initialPartyClientState(), you, phase: 'reveal' }, {
+    type: 'picking', youPick: false, picker: 'bob', questionIndex: 4, totalQuestions: 20,
+  });
+  assert.equal(s.decider, false, 'and an older server that omits the field reads as false');
+});
+
+test('the Decider flag is dropped the moment its round starts', () => {
+  // Once the round is playing it is simply the final round, which the round card
+  // derives from the question itself — a stale `decider` would be a second,
+  // divergent source of truth for the same fact.
+  /** @type {import('./partyClient.js').PartyClientState} */
+  let s = { ...initialPartyClientState(), you, phase: 'picking', picker: 'bob', decider: true };
+  s = reduce(s, { type: 'question', prompt: 'pa', options: ['pa'], questionIndex: 15, totalQuestions: 20, draftPick: { picker: 'bob', modeId: 'superlative-coffee' } });
+  assert.equal(s.decider, false);
+});
+
+test('welcome mid-Decider-pick resumes knowing it is the Decider', () => {
+  const s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, isHost: false, phase: 'picking', roster: [], totalQuestions: 20,
+    questionIndex: 14, picker: 'bob', youPick: false, hand: null, decider: true,
+  });
+  assert.equal(s.decider, true);
 });

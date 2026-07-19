@@ -391,9 +391,10 @@ export function bootFlagParty() {
   // ---- draft length (host-only): how many rounds each player picks ----
   // Length is expressed as picks-per-player, not a total: "each of you picks 2
   // rounds" is something a host can reason about, where a bare "5" left them to
-  // work out what it bought. The total (`seats x picks + 1`, the +1 being the
-  // opening Flags round) is shown underneath and moves as players join. Persisted
-  // per device; the server re-validates whatever we send.
+  // work out what it bought. The total (`seats x picks + 2`, the bookends being
+  // the opening Flags round and the closing Decider) is shown underneath and
+  // moves as players join. Persisted per device; the server re-validates
+  // whatever we send.
   let picksPerPlayer = loadPicks();
 
   function loadPicks() {
@@ -1056,7 +1057,14 @@ export function bootFlagParty() {
   function renderPick() {
     const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
     const nextRound = roundIndexAt(state.questionIndex) + 2; // 1-based: the round being chosen
-    pickPill.textContent = fmt(t('party.choosingRound', 'Choosing round {n} of {total}'), { n: nextRound, total: totalRounds });
+    // The Decider is announced as its own act rather than as "round N of N": it
+    // sits outside the rotation, and the whole table is told (the flag rides the
+    // watcher message too, unlike the hand) so everyone knows the stakes just
+    // changed. `state.decider` is server-set — never re-derived here, so the pick
+    // screen and the server's choice of picker can't disagree.
+    pickPill.textContent = state.decider
+      ? `${t('party.decider', 'The Decider')} · ${t('party.doublePoints', 'Double points')}`
+      : fmt(t('party.choosingRound', 'Choosing round {n} of {total}'), { n: nextRound, total: totalRounds });
 
     // Server-authoritative: the server told us whether we're the picker (never
     // re-derived from `you === picker`, which a stale identity could get wrong).
@@ -1066,7 +1074,9 @@ export function bootFlagParty() {
 
     if (youPick) {
       pickLead.hidden = false;
-      pickLead.textContent = t('party.yourPick', 'Your pick, choose the next round');
+      pickLead.textContent = state.decider
+        ? t('party.yourPickDecider', 'Your pick, and it decides the game')
+        : t('party.yourPick', 'Your pick, choose the next round');
       pickWatch.hidden = true;
       pickHand.hidden = false;
       pickHand.innerHTML = '';
@@ -1129,7 +1139,9 @@ export function bootFlagParty() {
       pickWatch.hidden = false;
       pickWatch.innerHTML = '';
       pickWatch.appendChild(buildAvatar(state.picker || ''));
-      pickWatch.appendChild(el('p', 'pick-watch-name', fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
+      pickWatch.appendChild(el('p', 'pick-watch-name', state.decider
+        ? fmt(t('party.isChoosingDecider', '{name} chooses The Decider'), { name: pickerName })
+        : fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
     }
 
     renderPickBoard();
@@ -1183,7 +1195,14 @@ export function bootFlagParty() {
   function renderRoundCard() {
     const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
     const roundNum = roundIndexAt(state.questionIndex) + 1;
-    roundCardCount.textContent = fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds });
+    // The closing round is named, not numbered: it is explicitly not "round N of
+    // N" but a separate act, chosen from outside the rotation by whoever was
+    // last. Derived from the question alone (the same rule that doubles its
+    // points), so a client that joined mid-game still announces it correctly.
+    const isFinal = isFinalRound(state.questionIndex, state.totalQuestions);
+    roundCardCount.textContent = isFinal
+      ? `🏁 ${t('party.decider', 'The Decider')}`
+      : fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds });
 
     const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined);
     if (modeId) {
@@ -1211,8 +1230,7 @@ export function bootFlagParty() {
       roundCardPick.appendChild(el('span', 'roundcard-pick-name', fmt(t('party.roundPick', "{name}'s pick"), { name: pickSeat.nickname })));
     }
 
-    // The final round scores double and plays veiled — announce the stakes.
-    const isFinal = isFinalRound(state.questionIndex, state.totalQuestions);
+    // The Decider scores double — announce the stakes under the picker's name.
     roundCardDouble.hidden = !isFinal;
     if (isFinal) roundCardDouble.textContent = t('party.doublePoints', 'Double points');
   }

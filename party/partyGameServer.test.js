@@ -73,7 +73,7 @@ async function playBlock(srv, conn) {
 test('draft start: opens a Flags round, sizes the game from the seat count', async () => {
   const { srv, conn } = await startSoloDraft();
   assert.equal(srv.room.draft, true);
-  assert.equal(srv.room.targetRounds, roundCountFor(1)); // solo -> 3
+  assert.equal(srv.room.targetRounds, roundCountFor(1)); // solo -> 4
   assert.equal(srv.room.totalQuestions, roundCountFor(1) * ROUND_QUESTIONS);
   const q = conn.last('question');
   assert.equal(q.questionId, 'flagPick', 'round 1 is Flags');
@@ -87,9 +87,9 @@ test('draft start: the host picks-per-player choice sets the length', async () =
   await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
   await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
   await srv.onMessage(JSON.stringify({ type: 'start', picks: 3 }), a);
-  // 2 seats x 3 picks + the opening Flags round.
-  assert.equal(srv.room.targetRounds, 7);
-  assert.equal(srv.room.totalQuestions, 7 * ROUND_QUESTIONS);
+  // 2 seats x 3 picks + the opening Flags round + the closing Decider.
+  assert.equal(srv.room.targetRounds, 8);
+  assert.equal(srv.room.totalQuestions, 8 * ROUND_QUESTIONS);
 });
 
 test('draft start: a picks value outside the offered set falls back to one each', async () => {
@@ -248,6 +248,97 @@ test('draft: a boundary where everyone has picked wraps the rotation, never free
   assert.notEqual(srv.room.phase, 'reveal', 'the room did not freeze at the boundary');
   assert.equal(srv.room.phase, 'picking', 'the rotation wrapped to a fresh pick');
   assert.equal(srv.room.picker, 'alice');
+});
+
+// ---- the Decider ----
+
+/** Two seats, one pick each: opener, alice's round, bob's round, the Decider. */
+async function startDuoDraft() {
+  const a = mockConn('a'), b = mockConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+  await srv.onMessage(JSON.stringify({ type: 'start', picks: 1 }), a);
+  return { srv, a, b };
+}
+
+/** Play a round where `winner` answers correctly and the other seat does not, so
+ *  the standings actually move. Buzzing the real answer needs it, so read it off
+ *  the room (the server holds it; it never leaves in a broadcast). */
+async function playRoundWon(srv, conns, winner) {
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
+    const answer = srv.room.question.answer;
+    for (const [pid, conn] of conns) {
+      await srv.onMessage(JSON.stringify({ type: 'buzz', choice: pid === winner ? answer : 'zz' }), conn);
+    }
+    if (srv.room.phase === 'reveal') await srv.onMessage(JSON.stringify({ type: 'next' }), conns[0][1]);
+  }
+}
+
+test('the Decider: the closing pick goes to last place, not to the rotation', async () => {
+  // The finding this phase exists for. Alice wins every round, so the rotation's
+  // tie-break pushes her to the back and would hand her the double-points round.
+  const { srv, a, b } = await startDuoDraft();
+  const conns = [['alice', a], ['bob', b]];
+
+  await playRoundWon(srv, conns, 'alice');          // opener -> pick 1
+  assert.equal(srv.room.phase, 'picking');
+  assert.equal(srv.room.decider, false, 'a rotation pick, not the Decider');
+  assert.equal(srv.room.picker, 'bob', 'bob is last, and has not picked');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), b);
+
+  await playRoundWon(srv, conns, 'alice');          // bob's round -> pick 2
+  assert.equal(srv.room.picker, 'alice', 'the rotation reaches alice, its last unspent seat');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-weird' }), a);
+
+  await playRoundWon(srv, conns, 'alice');          // alice's round -> the Decider
+  assert.equal(srv.room.phase, 'picking');
+  assert.equal(srv.room.decider, true, 'the last boundary opens the Decider');
+  assert.equal(srv.room.picker, 'bob', 'last place picks it, though the rotation is spent');
+  assert.equal(b.last('picking').decider, true, 'and the picker is told what they are choosing');
+  assert.equal(a.last('picking').decider, true, 'as is the watcher');
+});
+
+test('the Decider: everyone still picks exactly picksPerPlayer rotation rounds', async () => {
+  const { srv, a, b } = await startDuoDraft();
+  const conns = [['alice', a], ['bob', b]];
+  for (const modeId of ['map-outlines', 'flags-weird']) {
+    await playRoundWon(srv, conns, 'alice');
+    await srv.onMessage(JSON.stringify({ type: 'pick', modeId }), srv.room.picker === 'alice' ? a : b);
+  }
+  await playRoundWon(srv, conns, 'alice');
+  assert.equal(srv.room.decider, true);
+  const before = [...srv.room.pickedBy];
+  assert.deepEqual(before.slice().sort(), ['alice', 'bob'], 'one rotation pick each');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), b);
+  assert.deepEqual(srv.room.pickedBy, before, 'the Decider spent no rotation slot');
+});
+
+test('the Decider: it is the round that actually scores double, and it ends the game', async () => {
+  const { srv, a, b } = await startDuoDraft();
+  const conns = [['alice', a], ['bob', b]];
+  for (const modeId of ['map-outlines', 'flags-weird']) {
+    await playRoundWon(srv, conns, 'alice');
+    await srv.onMessage(JSON.stringify({ type: 'pick', modeId }), srv.room.picker === 'alice' ? a : b);
+  }
+  await playRoundWon(srv, conns, 'alice');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), b);
+
+  assert.equal(srv.room.questionIndex, 3 * ROUND_QUESTIONS, 'the Decider is the 4th round');
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: srv.room.question.answer }), b);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
+  assert.equal(b.last('reveal').doubled, true, 'the closing act pays double');
+
+  // ...and playing it out ends the show rather than opening another pick.
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
+    if (srv.room.phase === 'reveal') await srv.onMessage(JSON.stringify({ type: 'next' }), a);
+    if (srv.room.phase !== 'question') break;
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), b);
+  }
+  await srv.onMessage(JSON.stringify({ type: 'next' }), a);
+  assert.equal(srv.room.phase, 'final', 'the Decider is the last round of the game');
 });
 
 test('draft: the last round ends in the final board, no pick', async () => {
