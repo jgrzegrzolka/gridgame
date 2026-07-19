@@ -129,6 +129,12 @@ const MODE_LABELS = {
     subKey: 'party.modeSub.olympicMedals',
     sub: 'Summer or Winter, total or per person',
   },
+  population: {
+    key: 'party.mode.population',
+    full: 'Population',
+    subKey: 'party.modeSub.population',
+    sub: 'Total or per square kilometre',
+  },
 };
 
 

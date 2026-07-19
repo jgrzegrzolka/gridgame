@@ -593,10 +593,12 @@
       "superlativeWinterMedalsPc": "Medale zimowe na mieszkańca",
       "olympicMedals": "Medale olimpijskie",
       "economy": "Gospodarka",
-      "nobel": "Nobliści"
+      "nobel": "Nobliści",
+      "population": "Populacja"
     },
     "modeSub": {
       "economy": "PKB, całkowite lub na mieszkańca",
+      "population": "Łącznie lub na kilometr kwadratowy",
       "nobel": "Łącznie lub na mieszkańca",
       "olympicMedals": "Letnie lub zimowe, łącznie lub na mieszkańca"
     },

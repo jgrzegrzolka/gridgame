@@ -593,10 +593,12 @@
       "superlativeWinterMedalsPc": "Winter Olympic medals per million people",
       "olympicMedals": "Olympic medals",
       "economy": "Economy",
-      "nobel": "Nobel laureates"
+      "nobel": "Nobel laureates",
+      "population": "Population"
     },
     "modeSub": {
       "economy": "GDP, total or per person",
+      "population": "Total or per square kilometre",
       "nobel": "Total or per person",
       "olympicMedals": "Summer or Winter, total or per person"
     },

@@ -296,6 +296,19 @@ const GROUPED_FAMILIES = [
     ],
     representativeId: 'superlative-summer-medals',
   },
+  {
+    // Population and density are the same count read two ways: how many people,
+    // and how many people per square kilometre. Same source column, and density
+    // exists precisely to answer the "yes but it's a big country" objection the
+    // raw total raises, which is the economy / nobel test exactly.
+    //
+    // Population is the representative even though it is the flagship metric of
+    // the whole catalog, for that same reason: it is the subject a player
+    // recognises, and density then lands as the twist rather than the header.
+    id: 'population',
+    memberIds: ['superlative-pop', 'superlative-density'],
+    representativeId: 'superlative-pop',
+  },
 ];
 
 /**
