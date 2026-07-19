@@ -4,7 +4,7 @@ import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, visibleOptions, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, visibleOptions, kidChipRole, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -1014,27 +1014,45 @@ export function bootFlagParty() {
     playersEl.appendChild(label);
     const inLobby = state.phase === 'lobby';
     const hostSetup = state.isHost && inLobby;
+    // The roster is rebuilt wholesale on every echo, which throws away focus and
+    // replaces the switch already-checked so its slide never plays. Remember who
+    // held focus, restore it after — a host toggling several players with the
+    // keyboard would otherwise be dropped back to the top of the page each time.
+    const activeEl = document.activeElement;
+    const focusedKidPid = (activeEl instanceof HTMLElement && activeEl.dataset.kidToggleFor)
+      ? activeEl.dataset.kidToggleFor
+      : null;
     for (const r of state.roster) {
       const chip = el('div', 'chip' + (r.present ? '' : ' away') + (r.kid ? ' kid' : ''));
       chip.appendChild(buildAvatar(r.playerId));
       chip.appendChild(el('span', 'chip-name', r.nickname));
       if (r.playerId === roomHostId) chip.appendChild(el('span', 'chip-host', t('party.host', 'host')));
-      if (hostSetup) {
-        // The host gets the site's standard on/off switch (`buildToggleSwitch`,
-        // the same control the burger menus use) rather than a bespoke chip
-        // affordance. The row is not the tap target: the switch is, which is why
-        // the chip stays a <div> — nesting a checkbox inside a <button> is
-        // invalid and would give the row two competing hit areas.
-        chip.appendChild(el('span', 'chip-kid-label', t('party.kid', 'kid')));
-        chip.appendChild(buildToggleSwitch({
+      const role = kidChipRole(state, r);
+      if (role === 'switch') {
+        // A <label> wrapping caption + switch: it gives the control a far larger
+        // tap target than the bare 32x18 checkbox (this is a phone game), and the
+        // caption stops being an unassociated sibling span.
+        const wrap = el('label', 'chip-kid-toggle');
+        wrap.appendChild(el('span', 'chip-kid-label', t('party.kid', 'kid')));
+        const sw = buildToggleSwitch({
           initial: r.kid === true,
+          // The label text alone would say "kid" on every row; the name is what
+          // tells a screen-reader user whose switch this is.
+          ariaLabel: `${r.nickname}: ${t('party.kid', 'kid')}`,
           onChange: (checked) => send({ type: 'setKid', playerId: r.playerId, kid: checked }),
-        }));
-      } else if (r.kid) {
-        // Everyone else just sees who is marked, with no control to operate.
+        });
+        const input = sw.querySelector('input');
+        if (input instanceof HTMLElement) input.dataset.kidToggleFor = r.playerId;
+        wrap.appendChild(sw);
+        chip.appendChild(wrap);
+      } else if (role === 'badge') {
         chip.appendChild(el('span', 'chip-kid', t('party.kid', 'kid')));
       }
       playersEl.appendChild(chip);
+    }
+    if (focusedKidPid) {
+      const again = playersEl.querySelector(`[data-kid-toggle-for="${CSS.escape(focusedKidPid)}"]`);
+      if (again instanceof HTMLElement) again.focus();
     }
     startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
@@ -1130,8 +1148,6 @@ export function bootFlagParty() {
     // The world-facts REVEAL is a ranking, not four tiles. Every other reveal,
     // and the world-facts question phase itself, still draws the grid.
     gridEl.classList.toggle('as-chart', isReveal && chartReveal());
-    // Two tiles want one row, not a 2x2 with two holes in it.
-    gridEl.classList.toggle('two-up', !isReveal && visibleOptions(state, !!isReveal).length === 2);
     if (isReveal && state.reveal && chartReveal()) {
       gridEl.appendChild(buildRankChart(/** @type {any} */ (state.reveal), metricData));
     } else

@@ -629,15 +629,22 @@ export function buildToggleLi({ label, labelKey, initial, onChange, reload = tru
  * had already hand-assembled these four elements for the same reason, which is
  * the second copy that made this worth extracting rather than repeating.
  *
- * @param {{ initial: boolean, onChange: (checked: boolean) => void }} opts
+ * `ariaLabel` names the control for assistive tech. Optional because a switch
+ * inside a `<label>` (the burger menu) already takes its name from the label
+ * text — but a switch dropped next to a *sibling* span has no name at all, which
+ * is what the Flag Party lobby was shipping: "checkbox, unchecked" repeated once
+ * per player, with no way to tell whose row you were on.
+ *
+ * @param {{ initial: boolean, onChange: (checked: boolean) => void, ariaLabel?: string }} opts
  * @returns {HTMLSpanElement}
  */
-export function buildToggleSwitch({ initial, onChange }) {
+export function buildToggleSwitch({ initial, onChange, ariaLabel }) {
   const switchSpan = document.createElement('span');
   switchSpan.className = 'scope-toggle-switch';
   const toggleInput = document.createElement('input');
   toggleInput.type = 'checkbox';
   toggleInput.checked = initial;
+  if (ariaLabel) toggleInput.setAttribute('aria-label', ariaLabel);
   toggleInput.addEventListener('change', () => onChange(toggleInput.checked));
   const trackSpan = document.createElement('span');
   trackSpan.className = 'scope-toggle-track';
