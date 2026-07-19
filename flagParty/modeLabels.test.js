@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
@@ -78,3 +79,64 @@ test('roundModeId: an unknown / missing question id is generic', () => {
   // a stale pick whose mode id isn't in the catalog falls through to the question id
   assert.equal(roundModeId({ picker: 'p1', modeId: 'gone' }, 'mapPick'), 'map-outlines');
 });
+
+/**
+ * The pick card names the SUBJECT, never the direction.
+ *
+ * The direction a superlative is dealt in ('most' / 'least') is chosen by the
+ * server when the round starts, and the player is told which via the round title
+ * and the in-question criterion label (`hintFor`). Repeating it on the pick card
+ * is noise at best — "Olive oil production: most", "Happiness score: happiest &
+ * least happy" — and on the two-directional metrics it is not even information,
+ * since "most & least" describes every one of them.
+ *
+ * These guards exist because the suffix is easy to reintroduce: the natural
+ * instinct when adding a metric is to copy a neighbouring label, and every
+ * neighbour carried the suffix until this change. The check runs over the
+ * English fallbacks in MODE_LABELS AND over both shipped locales, because the
+ * label a player actually reads comes from i18n — the fallback only shows up if
+ * a key is missing, so pinning it alone would let pl.json drift back silently
+ * (and pl is where this was first spotted, on a real screen).
+ */
+const DIRECTION_WORDS = {
+  en: ['most', 'least', 'largest', 'smallest', 'highest', 'lowest', 'longest',
+    'shortest', 'hottest', 'coldest', 'happiest', 'corrupt', 'forested'],
+  // Polish inflects, so match on stems: "najwięcej" / "największe" / "najwyższy"
+  // all start "naj-", which is the superlative prefix and the only marker needed.
+  pl: ['naj', 'skorumpowane'],
+};
+
+/** Metric mode ids only: the picture trio's labels ("Flags: countries", "Map:
+ *  outlines") name a POOL, not a direction, and are deliberately left alone. */
+const METRIC_MODE_IDS = METRIC_MODES.map((m) => m.id);
+
+test('no metric mode fallback label states a direction', () => {
+  for (const id of METRIC_MODE_IDS) {
+    const { fallback } = modeFullLabel(id);
+    const label = /** @type {string} */ (fallback);
+    for (const word of DIRECTION_WORDS.en) {
+      assert.ok(
+        !new RegExp(`\\b${word}`, 'i').test(label),
+        `mode "${id}" label "${label}" states a direction ("${word}") — the pick card names the subject only`,
+      );
+    }
+  }
+});
+
+for (const lang of /** @type {const} */ (['en', 'pl'])) {
+  test(`no metric mode label in ${lang}.json states a direction`, async () => {
+    const strings = JSON.parse(await readFile(new URL(`../i18n/${lang}.json`, import.meta.url), 'utf8'));
+    for (const id of METRIC_MODE_IDS) {
+      const { key } = modeFullLabel(id);
+      // 'party.mode.superlativeCoffee' → strings.party.mode.superlativeCoffee
+      const label = /** @type {string} */ (key).split('.').reduce((o, k) => (o == null ? o : o[k]), strings);
+      assert.equal(typeof label, 'string', `mode "${id}" has no ${lang}.json entry at ${key}`);
+      for (const word of DIRECTION_WORDS[lang]) {
+        assert.ok(
+          !label.toLowerCase().includes(word),
+          `mode "${id}" ${lang} label "${label}" states a direction ("${word}") — the pick card names the subject only`,
+        );
+      }
+    }
+  });
+}
