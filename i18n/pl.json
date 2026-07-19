@@ -644,7 +644,6 @@
     "roundPick": "wybór: {name}",
     "roundCardCount": "Runda {n} z {total}",
     "roundCardQuestions": "Pytań: {n}",
-    "doublePoints": "Podwójne punkty",
     "decider": "Runda decydująca",
     "yourPickDecider": "Twój wybór, i to on rozstrzyga grę",
     "isChoosingDecider": "{name} wybiera rundę decydującą",

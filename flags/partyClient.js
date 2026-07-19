@@ -36,7 +36,7 @@
  * @property {string | null} myChoice
  * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>,
  *   breakdown?: Record<string, { base: number, speed: number, solo: number, closeness: number }>,
- *   doubled?: boolean, ranking?: string[] | null, values?: Record<string, number> | null } | null} reveal
+ *   ranking?: string[] | null, values?: Record<string, number> | null } | null} reveal
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
  *   seat whose turn it is to choose the next round; null otherwise.
@@ -252,7 +252,6 @@ export function reducePartyMessage(state, message) {
             // older than this build, in which case the break simply shows no
             // chips — the totals it counts up come from `scoreboard` either way.
             breakdown: message.breakdown ?? {},
-            doubled: message.doubled === true,
             // World-facts questions only: the true order of the four options
             // (best-first in the question's direction, so index 0 is the
             // answer) and their raw values, for the ranked reveal chart.

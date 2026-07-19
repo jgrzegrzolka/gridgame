@@ -214,10 +214,10 @@ test('isDeciderPick: the round it opens is exactly the round that pays double', 
   // The claim worth pinning is NOT `isDeciderPick(i, t) === isFinalRound(i + 1, t)`
   // — that is this function's own body restated, so it catches drift but cannot
   // catch a wrong shared premise. What actually has to hold is a statement about
-  // two different questions: the round a Decider pick OPENS is the round the
-  // multiplier later doubles, and the multiplier asks `isFinalRound` about the
-  // round's own questions, never about the boundary that opened it. If those ever
-  // part company, a player is promised double points on a round that pays single.
+  // two different questions: the round a Decider pick OPENS is the game's last
+  // round, and `isFinalRound` is asked about the round's own questions, never
+  // about the boundary that opened it. If those ever part company, the screen
+  // announcing the closing act would name a round that is not the closing act.
   for (const rounds of [2, 3, 5, 8]) {
     const total = rounds * ROUND_QUESTIONS;
     let deciderPicks = 0;

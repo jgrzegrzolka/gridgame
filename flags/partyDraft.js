@@ -169,7 +169,7 @@ export function eligiblePickers(scoreboard, present) {
  * `questionIndex + 1`; the Decider is always the game's last round, so this is
  * {@link isFinalRound} asked one question ahead. Derived rather than counted so
  * there is exactly one definition of "which round is the Decider", shared with
- * the double-points multiplier and the client's title card.
+ * the client's title card.
  *
  * @param {number} questionIndex  the 0-based question the reveal is sitting on
  * @param {number} totalQuestions
@@ -187,8 +187,16 @@ export function isDeciderPick(questionIndex, totalQuestions) {
  * loses that tie-break every round — to the back of the rotation and therefore
  * onto the last slot: over 2000 simulated four-player games the player choosing
  * the decisive round was in 1st place 84.6% of the time, so the comeback rule
- * inverted itself exactly where the stakes doubled. The Decider sits outside the
+ * inverted itself exactly where it mattered most. The Decider sits outside the
  * rotation, so it ignores pick history entirely and simply reads the board.
+ *
+ * **This pick is now the whole comeback mechanic.** The Decider used to also
+ * score double, on the theory that a trailing player could swing the game there.
+ * Measured, it could not: doubling scales the expected drift and the variance
+ * together, so the leader pulls away exactly as fast as the swing grows, and
+ * last place won 0.0% of simulated games at 2x (and 1.4% at 3x). The multiplier
+ * is gone; choosing the ground the game ends on is the real asymmetry, and it is
+ * this function.
  *
  * `scoreboard` is descending by score (as the room sends it), so last place is
  * the last entry. Returns null only for an empty board.

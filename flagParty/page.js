@@ -349,7 +349,6 @@ export function bootFlagParty() {
   const roundCardName = $('roundcard-name');
   const roundCardQuestions = $('roundcard-questions');
   const roundCardPick = $('roundcard-pick');
-  const roundCardDouble = $('roundcard-double');
   const draftLengthEl = $('draft-length');
   const draftLengthHint = $('draft-length-hint');
   const draftPickBtns = /** @type {HTMLButtonElement[]} */ (
@@ -949,8 +948,8 @@ export function bootFlagParty() {
         const t = String(state.questionIndex);
         if (tallyQuestionToken !== t) {
           tallyQuestionToken = t;
-          // The award arrives itemised, multiplier already applied, so the tally
-          // only adds up numbers the server already attributed.
+          // The award arrives itemised, so the tally only adds up numbers the
+          // server already attributed.
           roundTally = addQuestionToTally(roundTally, state.reveal.breakdown);
         }
       }
@@ -1072,7 +1071,6 @@ export function bootFlagParty() {
     }
     // The final round scores double and plays veiled — badge it so the stakes read.
     if (isFinalRound(state.questionIndex, state.totalQuestions)) {
-      questionPill.appendChild(el('span', 'pill-double', t('party.doublePoints', 'Double points')));
     }
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.questionId === 'mapPick';
@@ -1341,7 +1339,7 @@ export function bootFlagParty() {
     // changed. `state.decider` is server-set — never re-derived here, so the pick
     // screen and the server's choice of picker can't disagree.
     pickPill.textContent = state.decider
-      ? `${t('party.decider', 'The Decider')} · ${t('party.doublePoints', 'Double points')}`
+      ? t('party.decider', 'The Decider')
       : fmt(t('party.choosingRound', 'Choosing round {n} of {total}'), { n: nextRound, total: totalRounds });
 
     // Server-authoritative: the server told us whether we're the picker (never
@@ -1514,8 +1512,6 @@ export function bootFlagParty() {
     }
 
     // The Decider scores double — announce the stakes under the picker's name.
-    roundCardDouble.hidden = !isFinal;
-    if (isFinal) roundCardDouble.textContent = t('party.doublePoints', 'Double points');
   }
 
   /** The between-rounds standings break: the round's MVP, then the full board
@@ -1721,10 +1717,9 @@ export function bootFlagParty() {
       const toast = el('div', 'toast');
       toast.appendChild(buildAvatar(entry.playerId));
       toast.appendChild(el('span', 'toast-name', entry.nickname));
-      // Badges read straight off the itemised award. This used to compare the
-      // total against `CORRECT_POINTS + SPEED_BONUS[0]`, which ignored the
-      // multiplier — so on the Decider a first-correct scored 30, never matched
-      // 15, and nobody was ever tagged Fastest on the round that decides it.
+      // Badges read straight off the itemised award rather than inferring them
+      // from the total, which is why a sole survivor now correctly shows "Only
+      // one" without "Fastest": with nobody to race, `speed` is 0.
       const award = breakdown[entry.playerId];
       if (award && award.speed > 0) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
       if (award && award.solo > 0) toast.appendChild(el('span', 'solo', `★ ${t('party.soleSurvivor', 'Only one')}`));

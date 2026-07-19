@@ -644,7 +644,6 @@
     "roundPick": "{name}'s pick",
     "roundCardCount": "Round {n} of {total}",
     "roundCardQuestions": "{n} questions",
-    "doublePoints": "Double points",
     "decider": "The Decider",
     "yourPickDecider": "Your pick, and it decides the game",
     "isChoosingDecider": "{name} chooses The Decider",

@@ -315,7 +315,7 @@ test('the Decider: everyone still picks exactly picksPerPlayer rotation rounds',
   assert.deepEqual(srv.room.pickedBy, before, 'the Decider spent no rotation slot');
 });
 
-test('the Decider: it is the round that actually scores double, and it ends the game', async () => {
+test('the Decider: it is the last round, and playing it out ends the game', async () => {
   const { srv, a, b } = await startDuoDraft();
   const conns = [['alice', a], ['bob', b]];
   for (const modeId of ['map-outlines', 'flags-weird']) {
@@ -328,7 +328,6 @@ test('the Decider: it is the round that actually scores double, and it ends the 
   assert.equal(srv.room.questionIndex, 3 * ROUND_QUESTIONS, 'the Decider is the 4th round');
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: srv.room.question.answer }), b);
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
-  assert.equal(b.last('reveal').doubled, true, 'the closing act pays double');
 
   // ...and playing it out ends the show rather than opening another pick.
   for (let i = 0; i < ROUND_QUESTIONS; i++) {
@@ -354,7 +353,7 @@ async function playToDeciderPick(winner = 'alice') {
   return { srv, a, b, conns };
 }
 
-test('the Decider: a forced pick still spends no rotation slot and still pays double', async () => {
+test('the Decider: a forced pick still spends no rotation slot', async () => {
   // The anti-stall path routes through `applyPick` like a real pick, so it
   // inherits the Decider's rules for free — but "for free" is exactly the kind of
   // thing that stops being true silently, so it is pinned rather than reasoned.
@@ -370,14 +369,12 @@ test('the Decider: a forced pick still spends no rotation slot and still pays do
   assert.equal(a.last('question').draftPick.picker, 'bob', 'attributed to the seat that timed out');
 
   // Both seats must buzz before the reveal fires, or `last('reveal')` is still
-  // the PREVIOUS round's — which is single-scored, and would fail this for the
-  // wrong reason.
+  // the PREVIOUS round's, and this would read the wrong beat.
   const answer = srv.room.question.answer;
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: answer }), a);
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), b);
   const reveal = a.last('reveal');
   assert.equal(reveal.questionIndex, 3 * ROUND_QUESTIONS, 'reading the closing round\'s own reveal');
-  assert.equal(reveal.doubled, true, 'and it still pays double');
 });
 
 // A seat outlives its socket (sticky score, for reconnect), so a player who quits
