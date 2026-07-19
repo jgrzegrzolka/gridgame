@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderableQuestionIds, questionRenderAction, canRenderQuestion } from './staleGuard.js';
+import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { SUPERLATIVE_METRICS } from '../flags/partyQuestions/superlativeCatalog.js';
 
 /** This build's known set, as page.js builds it. */
@@ -99,4 +99,42 @@ test('a skewed direction routes to reload, then blocked — like any stale quest
   const q = { questionId: 'superlative-coffee', prompt: 'least' };
   assert.equal(questionRenderAction(canRenderQuestion(q, KNOWN), false), 'reload');
   assert.equal(questionRenderAction(canRenderQuestion(q, KNOWN), true), 'blocked');
+});
+
+// ---- canRenderHand ----
+//
+// The draft hand is the second surface a newer server reaches an old tab
+// through, and it bypasses the question guard entirely: a metric family deals its
+// members' own question ids, which an old build already knows, so every question
+// renders fine and only the pick screen breaks.
+
+test('canRenderHand: a hand of known cards renders', () => {
+  const known = new Set(['flags-all', 'superlative-coffee', 'economy']);
+  assert.equal(canRenderHand(['flags-all', 'economy'], known), true);
+});
+
+test('canRenderHand: one unknown card id is enough to be stale', () => {
+  // The whole hand is refused on a single unknown id rather than the card being
+  // skipped: a picker choosing from a silently shortened hand doesn't know what
+  // they weren't offered, and the round they pick shapes the game.
+  const known = new Set(['flags-all', 'superlative-coffee']);
+  assert.equal(canRenderHand(['flags-all', 'economy'], known), false);
+});
+
+test('canRenderHand: no hand is not a skew signal', () => {
+  // Every non-picking phase, and every player who isn't the picker.
+  const known = new Set(['flags-all']);
+  assert.equal(canRenderHand(null, known), true);
+  assert.equal(canRenderHand(undefined, known), true);
+  assert.equal(canRenderHand([], known), true);
+});
+
+test('canRenderHand routes an unknown card to the same one-shot reload as a question', () => {
+  // The composition the page actually performs. First encounter reloads onto the
+  // new build; if that comes back still stale (cached HTML, offline), the notice
+  // replaces a reload loop.
+  const known = new Set(['flags-all']);
+  assert.equal(questionRenderAction(canRenderHand(['economy'], known), false), 'reload');
+  assert.equal(questionRenderAction(canRenderHand(['economy'], known), true), 'blocked');
+  assert.equal(questionRenderAction(canRenderHand(['flags-all'], known), false), 'render');
 });

@@ -219,9 +219,146 @@ function shuffle(arr, rng) {
 }
 
 /**
- * The hand a picker chooses from: up to {@link HAND_SIZE} mode ids drawn from the
- * modes **not yet played this game** (`usedModeIds`) — no mode twice, except the
+ * Metric modes that share a card, because they ask the same question twice.
+ *
+ * A player picking a round is choosing a SUBJECT, not a formula. Offering "GDP"
+ * and "GDP per capita" as two of the ten cards spends a fifth of the hand on one
+ * subject and asks the picker to arbitrate a distinction they did not come to the
+ * party to think about. Collapsing them frees a slot for a statistic the hand
+ * doesn't have yet, which is the real win — the hand gets wider, not just tidier.
+ *
+ * **Only genuinely-redundant pairs belong here.** The bar is "two ways of asking
+ * one question", not "related subjects". Meat / cattle / sheep per person stay
+ * separate: "most sheep per person" and "most meat eaten per person" are
+ * different questions that happen to share a barn. Beer / alcohol per person is
+ * the closest remaining candidate and is deliberately NOT grouped yet — one
+ * family is enough to prove the mechanism, and each grouping is a judgement call
+ * worth making on its own.
+ *
+ * `representativeId` is the member whose icon, hue and metric identity the card
+ * wears. It must be a member. Nothing else about the members changes: each keeps
+ * its own question id, data file, hints and per-metric visuals, and a round that
+ * resolves to one is indistinguishable from one picked directly.
+ *
+ * @typedef {{ id: string, memberIds: string[], representativeId: string }} MetricFamily
+ * @type {MetricFamily[]}
+ */
+const GROUPED_FAMILIES = [
+  {
+    id: 'economy',
+    memberIds: ['superlative-gdp', 'superlative-gdppc'],
+    // The coin stack rather than the $ coin: it reads as "an economy" at 24px,
+    // where the per-capita coin reads as "money" and would make the total-GDP
+    // round feel like the substitution.
+    representativeId: 'superlative-gdp',
+  },
+];
+
+/**
+ * Every metric family, in catalog order: the grouped ones above plus a
+ * single-member family for each metric that has no sibling.
+ *
+ * **A singleton family's id IS its mode id.** That is what keeps this change
+ * small: the hand, the no-repeat set and the pick wire message all speak family
+ * ids, and for 32 of the 34 metrics that is the string they always were. Only
+ * `economy` is a genuinely new id, and only it needs the resolve step to mean
+ * anything.
+ *
+ * @type {MetricFamily[]}
+ */
+export const METRIC_FAMILIES = (() => {
+  const grouped = new Set(GROUPED_FAMILIES.flatMap((f) => f.memberIds));
+  /** @type {MetricFamily[]} */
+  const singles = METRIC_MODES
+    .filter((m) => !grouped.has(m.id))
+    .map((m) => ({ id: m.id, memberIds: [m.id], representativeId: m.id }));
+  return [...GROUPED_FAMILIES, ...singles];
+})();
+
+/** @type {Record<string, MetricFamily>} */
+const FAMILY_BY_ID = Object.fromEntries(METRIC_FAMILIES.map((f) => [f.id, f]));
+
+/** @type {Record<string, MetricFamily>} */
+const FAMILY_BY_MEMBER = Object.fromEntries(
+  METRIC_FAMILIES.flatMap((f) => f.memberIds.map((id) => [id, f])),
+);
+
+/**
+ * The family a mode belongs to, or null for a mode outside the metric catalog
+ * (the picture trio, or an id from a newer build).
+ *
+ * @param {string} modeId
+ * @returns {MetricFamily | null}
+ */
+export function familyForMode(modeId) {
+  return FAMILY_BY_MEMBER[modeId] ?? null;
+}
+
+/**
+ * The id to record as played when `modeId` is dealt: its family, so a family
+ * plays once per game however many members it has. For a picture mode (no
+ * family) that is the mode id itself.
+ *
+ * Used both when a pick lands and when `usedModes` is rebuilt from the plan after
+ * a durable-object eviction — the two must agree, or a rebuilt room re-offers a
+ * family it already played.
+ *
+ * @param {string} modeId
+ * @returns {string}
+ */
+export function usedIdForMode(modeId) {
+  return FAMILY_BY_MEMBER[modeId]?.id ?? modeId;
+}
+
+/**
+ * The mode whose visuals a card wears: a family's `representativeId`, or the id
+ * itself for a picture mode / bare mode id.
+ *
+ * The client's icon, hue and metric-identity lookups are all keyed on catalog
+ * modes, and a family id is not one. Rather than teach each of them about
+ * families, they resolve through here first — so a family card needs no visual
+ * data of its own and can never drift from the metric it stands for.
+ *
+ * This is presentation only. It is NOT how a round's variant is chosen: that is
+ * {@link resolveFamilyPick}, which is random and server-side. A card showing the
+ * coin stack does not mean the round will be total GDP.
+ *
+ * @param {string} cardId
+ * @returns {string}
+ */
+export function representativeModeFor(cardId) {
+  return FAMILY_BY_ID[cardId]?.representativeId ?? cardId;
+}
+
+/**
+ * Resolve a picked family to the concrete mode its round plays.
+ *
+ * The variant is chosen HERE, at deal time, rather than by the picker — the same
+ * shape the direction ('most' / 'least') has always had, one level up. The player
+ * chose the subject; which cut of it they get is the round's reveal.
+ *
+ * Members are drawn uniformly and none are filtered as "already used": the whole
+ * family is marked played the moment any member is dealt, so no member can come
+ * back later wearing the family's label.
+ *
+ * @param {string} familyOrModeId  a family id (from the hand) or a bare mode id
+ * @param {() => number} [rng]
+ * @returns {string | null}  a catalog mode id, or null if the id is unknown
+ */
+export function resolveFamilyPick(familyOrModeId, rng = Math.random) {
+  const family = FAMILY_BY_ID[familyOrModeId];
+  if (!family) return MODE_IDS.has(familyOrModeId) ? familyOrModeId : null;
+  const { memberIds } = family;
+  return memberIds[Math.min(memberIds.length - 1, Math.floor(rng() * memberIds.length))];
+}
+
+/**
+ * The hand a picker chooses from: up to {@link HAND_SIZE} ids drawn from the
+ * cards **not yet played this game** (`usedModeIds`) — nothing twice, except the
  * {@link REPEATABLE_MODE_IDS}, which are always on offer.
+ *
+ * Metric cards are FAMILIES ({@link METRIC_FAMILIES}), not modes, so the two
+ * economy metrics occupy one slot rather than two.
  *
  * **The picture modes always lead, in catalog order** (Flags, Weird flags,
  * Outlines), with a random draw of unused statistics filling the rest. They are
@@ -233,36 +370,45 @@ function shuffle(arr, rng) {
  * The statistics below them stay shuffled: there are 30-odd and no reason to
  * privilege any, so a fixed order there would just favour whatever sorts first.
  *
- * @param {Iterable<string>} usedModeIds  modes already played (excluded)
+ * @param {Iterable<string>} usedModeIds  families / modes already played (excluded)
  * @param {() => number} [rng]
- * @returns {string[]}  up to HAND_SIZE mode ids, in display order
+ * @returns {string[]}  up to HAND_SIZE card ids, in display order
  */
 export function handFor(usedModeIds, rng = Math.random) {
   const used = new Set(usedModeIds);
   const pics = PICTURE_MODES
     .filter((m) => REPEATABLE_MODE_IDS.includes(m.id) || !used.has(m.id))
     .map((m) => m.id);
-  const mets = shuffle(METRIC_MODES.filter((m) => !used.has(m.id)).map((m) => m.id), rng);
+  const mets = shuffle(METRIC_FAMILIES.filter((f) => !used.has(f.id)).map((f) => f.id), rng);
   return [...pics, ...mets].slice(0, HAND_SIZE);
 }
 
 /** The set of all catalog mode ids, for validating a pick came from the catalog. */
 const MODE_IDS = new Set(PARTY_MODES.map((m) => m.id));
 
+/** Every id a hand can legally contain: the picture modes plus the metric
+ *  FAMILIES. Deliberately excludes the grouped members' own ids — a client that
+ *  sends `superlative-gdppc` instead of `economy` is pinning the variant that the
+ *  server is supposed to choose, which is exactly what validation is for. */
+const PICKABLE_IDS = new Set([
+  ...PICTURE_MODES.map((m) => m.id),
+  ...METRIC_FAMILIES.map((f) => f.id),
+]);
+
 /**
- * Whether `modeId` is a legal pick right now: a real catalog mode that hasn't
- * already been played. The hand the client shows is advisory; the room validates
- * the pick against this so a malformed / stale choice can't inject a repeat or an
- * unknown mode.
+ * Whether `cardId` is a legal pick right now: a real pickable card (a picture
+ * mode or a metric family) that hasn't already been played. The hand the client
+ * shows is advisory; the room validates the pick against this so a malformed /
+ * stale choice can't inject a repeat, an unknown card, or a pinned variant.
  *
- * @param {string} modeId
+ * @param {string} cardId
  * @param {Iterable<string>} usedModeIds
  * @returns {boolean}
  */
-export function isValidPick(modeId, usedModeIds) {
-  if (typeof modeId !== 'string' || !MODE_IDS.has(modeId)) return false;
-  if (REPEATABLE_MODE_IDS.includes(modeId)) return true;
-  return !new Set(usedModeIds).has(modeId);
+export function isValidPick(cardId, usedModeIds) {
+  if (typeof cardId !== 'string' || !PICKABLE_IDS.has(cardId)) return false;
+  if (REPEATABLE_MODE_IDS.includes(cardId)) return true;
+  return !new Set(usedModeIds).has(cardId);
 }
 
 /**

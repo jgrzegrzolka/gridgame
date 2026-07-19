@@ -16,6 +16,11 @@ import {
   isDeciderPick,
   deciderPickerFor,
   eligiblePickers,
+  METRIC_FAMILIES,
+  familyForMode,
+  usedIdForMode,
+  representativeModeFor,
+  resolveFamilyPick,
 } from './partyDraft.js';
 import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound, ROUND_QUESTIONS } from './partyPlan.js';
 import { veilActive } from './partyTiming.js';
@@ -319,16 +324,25 @@ test('handFor: fills the rest with statistics', () => {
   // repeatables plus the unplayed outlines), so statistics fill the remaining
   // seven of ten.
   const hand = handFor([OPENING_MODE_ID], seeded(3));
-  const metricIds = new Set(METRIC_MODES.map((m) => m.id));
-  const metricsInHand = hand.filter((id) => metricIds.has(id));
+  // Metric cards are FAMILIES, not modes — for the 32 metrics without a sibling
+  // those ids are identical, but `economy` is a card no mode id matches, so
+  // counting mode ids here would undercount a hand that happened to contain it.
+  const familyIds = new Set(METRIC_FAMILIES.map((f) => f.id));
+  const metricsInHand = hand.filter((id) => familyIds.has(id));
   assert.equal(metricsInHand.length, HAND_SIZE - PICTURE_MODES.length);
 });
+
+/** Everything a hand can deal, in the units it deals them: picture MODES and
+ *  metric FAMILIES. Building "all played" out of mode ids would leave every
+ *  grouped family unplayed (no mode id equals `economy`) and quietly weaken both
+ *  exhaustion tests below into non-tests. */
+const ALL_CARD_IDS = [...PICTURE_MODES.map((m) => m.id), ...METRIC_FAMILIES.map((f) => f.id)];
 
 test('handFor: shrinks gracefully when few modes remain', () => {
   // Everything played except the last two statistics. The hand is those two plus
   // the repeatable pair, which never runs out — so a late-game picker always has
   // a real choice rather than a single forced card.
-  const allButTwo = [...PICTURE_MODES, ...METRIC_MODES].map((m) => m.id).slice(0, -2);
+  const allButTwo = ALL_CARD_IDS.slice(0, -2);
   const hand = handFor(allButTwo, seeded(9));
   assert.equal(hand.length, 2 + REPEATABLE_MODE_IDS.length);
   for (const id of REPEATABLE_MODE_IDS) assert.ok(hand.includes(id), `${id} always available`);
@@ -337,8 +351,7 @@ test('handFor: shrinks gracefully when few modes remain', () => {
 test('handFor: never empties, even with the whole catalog played', () => {
   // The old rule could deal an empty hand once everything was used; the picker
   // then had nothing to choose and the server picked at random for them.
-  const everything = [...PICTURE_MODES, ...METRIC_MODES].map((m) => m.id);
-  assert.deepEqual(handFor(everything, seeded(4)), REPEATABLE_MODE_IDS);
+  assert.deepEqual(handFor(ALL_CARD_IDS, seeded(4)), REPEATABLE_MODE_IDS);
 });
 
 test('handFor: deterministic under a seeded rng', () => {
@@ -379,5 +392,164 @@ test('canVeilMode: only the picture trio can be veiled', () => {
 test('canVeilMode agrees with veilActive for every catalog mode', () => {
   for (const m of PARTY_MODES) {
     assert.equal(canVeilMode(m.id), veilActive(true, m.questionId), `${m.id} disagrees`);
+  }
+});
+
+// ---- metric families ----
+//
+// A family is one CARD standing for one or more metric modes. The point is that
+// a picker chooses a subject, not a formula: "GDP" and "GDP per capita" were two
+// of ten cards asking one question, and the variant is now resolved server-side
+// at deal time, exactly as the 'most' / 'least' direction always has been.
+
+test('every metric mode belongs to exactly one family', () => {
+  const seen = new Map();
+  for (const f of METRIC_FAMILIES) {
+    for (const id of f.memberIds) {
+      assert.ok(!seen.has(id), `mode "${id}" is in both "${seen.get(id)}" and "${f.id}"`);
+      seen.set(id, f.id);
+    }
+  }
+  for (const m of METRIC_MODES) {
+    assert.ok(seen.has(m.id), `mode "${m.id}" is in no family — it would never be dealt`);
+  }
+  assert.equal(seen.size, METRIC_MODES.length);
+});
+
+test('a family representative is one of its own members', () => {
+  for (const f of METRIC_FAMILIES) {
+    assert.ok(
+      f.memberIds.includes(f.representativeId),
+      `family "${f.id}" wears the visuals of "${f.representativeId}", which is not a member`,
+    );
+  }
+});
+
+test('a grouped family id never collides with a catalog mode id', () => {
+  // Singleton families reuse their mode's id on purpose (that is what keeps the
+  // hand, the no-repeat set and the wire format unchanged for 32 of 34 metrics).
+  // A GROUPED family must not: `economy` colliding with a real mode id would make
+  // isValidPick / resolveFamilyPick ambiguous.
+  const modeIds = new Set(PARTY_MODES.map((m) => m.id));
+  for (const f of METRIC_FAMILIES) {
+    if (f.memberIds.length === 1) continue;
+    assert.ok(!modeIds.has(f.id), `grouped family "${f.id}" collides with a catalog mode id`);
+  }
+});
+
+test('the economy family groups the two GDP metrics and nothing else', () => {
+  const economy = METRIC_FAMILIES.find((f) => f.id === 'economy');
+  assert.ok(economy, 'economy family is missing');
+  assert.deepEqual([...economy.memberIds].sort(), ['superlative-gdp', 'superlative-gdppc']);
+});
+
+test('every metric except the grouped ones is its own single-member family', () => {
+  // The invariant that keeps this change small. If it ever fails, some metric
+  // silently stopped being pickable on its own.
+  const grouped = new Set(['superlative-gdp', 'superlative-gdppc']);
+  for (const m of METRIC_MODES) {
+    if (grouped.has(m.id)) continue;
+    assert.deepEqual(familyForMode(m.id), { id: m.id, memberIds: [m.id], representativeId: m.id }, `${m.id}`);
+  }
+});
+
+test('handFor deals family ids, never a grouped member id', () => {
+  // The whole point: the two GDP metrics must never appear as separate cards.
+  const hand = handFor([], seeded(7));
+  for (const forbidden of ['superlative-gdp', 'superlative-gdppc']) {
+    assert.ok(!hand.includes(forbidden), `hand offered "${forbidden}" instead of "economy"`);
+  }
+});
+
+test('handFor: a full hand is HAND_SIZE distinct cards', () => {
+  // The user-visible payoff: the slot that used to hold a duplicate GDP question
+  // now holds a different subject, so the hand is one statistic wider.
+  const hand = handFor([], seeded(11));
+  assert.equal(hand.length, HAND_SIZE);
+  assert.equal(new Set(hand).size, HAND_SIZE, 'a card was dealt twice');
+});
+
+test('resolveFamilyPick returns a member of the picked family', () => {
+  const members = ['superlative-gdp', 'superlative-gdppc'];
+  for (const seed of [1, 2, 3, 4, 5]) {
+    const resolved = resolveFamilyPick('economy', seeded(seed));
+    assert.ok(resolved !== null, `seed ${seed} resolved to null`);
+    assert.ok(members.includes(resolved), `seed ${seed} resolved to "${resolved}"`);
+  }
+});
+
+test('resolveFamilyPick can reach BOTH economy members', () => {
+  // A resolver pinned to one member would be indistinguishable from having
+  // deleted the other, and the pick card promises both.
+  const seen = new Set();
+  for (let i = 0; i < 200; i++) seen.add(resolveFamilyPick('economy'));
+  assert.deepEqual([...seen].sort(), ['superlative-gdp', 'superlative-gdppc']);
+});
+
+test('resolveFamilyPick is the identity for a singleton family / picture mode', () => {
+  assert.equal(resolveFamilyPick('superlative-coffee'), 'superlative-coffee');
+  assert.equal(resolveFamilyPick('flags-all'), 'flags-all');
+  assert.equal(resolveFamilyPick('map-outlines'), 'map-outlines');
+});
+
+test('resolveFamilyPick returns null for an unknown card', () => {
+  // A pick off the wire from a newer / malformed client must not resolve to a
+  // real round — the server returns rather than dealing something arbitrary.
+  assert.equal(resolveFamilyPick('superlative-unicorns'), null);
+  assert.equal(resolveFamilyPick(''), null);
+});
+
+test('resolveFamilyPick stays in range for an rng returning exactly 1', () => {
+  // Math.random() is [0,1) so this cannot happen in production, but a test double
+  // or a future seeded rng that returns 1 would index past the end and deal
+  // `undefined` as a mode id — a crash three layers later, at question generation.
+  assert.equal(resolveFamilyPick('economy', () => 1), 'superlative-gdppc');
+});
+
+test('usedIdForMode records the FAMILY, so a family plays once per game', () => {
+  // Both members map to the same used-id: dealing either one retires the card.
+  assert.equal(usedIdForMode('superlative-gdp'), 'economy');
+  assert.equal(usedIdForMode('superlative-gdppc'), 'economy');
+  // Singletons and picture modes are their own used-id, unchanged.
+  assert.equal(usedIdForMode('superlative-coffee'), 'superlative-coffee');
+  assert.equal(usedIdForMode('flags-all'), 'flags-all');
+});
+
+test('playing either GDP member retires the whole economy card', () => {
+  // The end-to-end no-repeat guarantee, in the two units that touch it: the
+  // server records usedIdForMode(resolved) and the next hand is dealt from it.
+  for (const member of ['superlative-gdp', 'superlative-gdppc']) {
+    const used = [usedIdForMode(member)];
+    assert.equal(isValidPick('economy', used), false, `${member} did not retire the card`);
+    assert.ok(!handFor(used, seeded(5)).includes('economy'));
+  }
+});
+
+test('isValidPick rejects a grouped member id sent instead of its family', () => {
+  // A client sending `superlative-gdppc` is pinning the variant the server is
+  // supposed to choose. It is in no hand, so this is either a stale build or a
+  // spoof; either way it must not deal a round.
+  assert.equal(isValidPick('superlative-gdp', []), false);
+  assert.equal(isValidPick('superlative-gdppc', []), false);
+  // ...while the family itself, and every ungrouped metric, stay valid.
+  assert.equal(isValidPick('economy', []), true);
+  assert.equal(isValidPick('superlative-coffee', []), true);
+});
+
+test('representativeModeFor resolves a family to the mode whose visuals it wears', () => {
+  assert.equal(representativeModeFor('economy'), 'superlative-gdp');
+  // Identity for everything else, which is what lets the client's icon / hue
+  // lookups stay keyed on catalog modes.
+  assert.equal(representativeModeFor('superlative-coffee'), 'superlative-coffee');
+  assert.equal(representativeModeFor('flags-all'), 'flags-all');
+  assert.equal(representativeModeFor('nonsense'), 'nonsense');
+});
+
+test('no family card can be veiled', () => {
+  // canVeilMode is asked with a HAND id, which may be a family. Families are all
+  // metric, and the veil is picture-only, so every family answers false — the
+  // pick card must not offer a chip that would do nothing.
+  for (const f of METRIC_FAMILIES) {
+    assert.equal(canVeilMode(f.id), false, `family "${f.id}" offered a veil chip`);
   }
 });

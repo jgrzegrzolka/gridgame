@@ -583,7 +583,11 @@
       "superlativeCorruption": "Government integrity",
       "superlativeTourism": "Tourist arrivals per capita",
       "superlativeElectricity": "Electricity use per capita",
-      "superlativeMcdonalds": "McDonald's per million people"
+      "superlativeMcdonalds": "McDonald's per million people",
+      "economy": "Economy"
+    },
+    "modeSub": {
+      "economy": "GDP, total or per person"
     },
     "modeShort": {
       "flagsAll": "Flags",

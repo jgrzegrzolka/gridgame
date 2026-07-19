@@ -605,6 +605,11 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .pick-card-ic svg { width: 24px; height: 24px; display: block; }
 .pick-card-ic img { width: 28px; height: 22px; object-fit: contain; }
 .pick-card-label { font-size: 15px; font-weight: 600; }
+/* The second line on a metric-family card ("GDP, total or per person"): states
+   the range the family can resolve to. Quieter than the name — it's context for
+   the choice, not part of it — using the same --muted-color the pick board's
+   secondary text and every other site caption use. */
+.pick-card-sub { display: block; font-size: 12px; font-weight: 500; color: var(--muted-color); margin-top: 1px; }
 .pick-watch { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
 .pick-watch .avatar { width: 44px; height: 44px; border-radius: 8px; }
 .pick-watch-name { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary-color); text-align: center; }

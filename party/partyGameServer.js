@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
-import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -155,7 +155,12 @@ export default class PartyGameServer {
       if (this.room.draft && Array.isArray(this.room.plan)) {
         for (const seg of this.room.plan) {
           const id = modeIdForSegment(seg);
-          if (id) this.usedModes.add(id);
+          // Through `usedIdForMode`, exactly as the live pick path records it: the
+          // plan stores the RESOLVED member ('superlative-gdppc'), but what was
+          // consumed is its family ('economy'). Recording the member here would
+          // re-offer the Economy card after an eviction and let one game ask about
+          // GDP twice.
+          if (id) this.usedModes.add(usedIdForMode(id));
         }
       }
     }
@@ -339,8 +344,14 @@ export default class PartyGameServer {
           // here so a stale / spoofed pick never generates a question, then
           // validate the mode against the no-repeat set before building its round.
           if (this.room.phase !== 'picking' || this.room.picker !== playerId) return;
-          const modeId = String(parsed.modeId ?? '');
-          if (!isValidPick(modeId, this.usedModes)) return;
+          const cardId = String(parsed.modeId ?? '');
+          if (!isValidPick(cardId, this.usedModes)) return;
+          // A card is a metric FAMILY, and a family with more than one member
+          // (today: `economy`) resolves to one of them here, at deal time. The
+          // player chose the subject; which cut of it they get is the round's
+          // reveal, the same way the 'most' / 'least' direction already is.
+          const modeId = resolveFamilyPick(cardId);
+          if (!modeId) return;
           const mode = MODE_BY_ID[modeId];
           // The picker may veil their own round, but only on a mode where the
           // veil does anything — `canVeilMode` is the same rule the pick card
@@ -350,8 +361,11 @@ export default class PartyGameServer {
           const veil = parsed.veil === true && canVeilMode(modeId);
           const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS, ...(veil ? { veil: true } : {}) };
           const question = this.generateForQuestion(mode.questionId, mode.poolId);
+          // Attribution carries the RESOLVED mode, so the round title card and the
+          // "Zosia's pick" pill name the statistic actually being played rather
+          // than the family the picker tapped.
           result = applyPick(this.room, playerId, modeId, segment, question);
-          if (result.broadcasts.length > 0) this.usedModes.add(modeId);
+          if (result.broadcasts.length > 0) this.usedModes.add(usedIdForMode(modeId));
           break;
         }
         case 'forcePick': {
@@ -362,14 +376,16 @@ export default class PartyGameServer {
           const picker = this.room.picker;
           const hand = (this.room.hand ?? []).filter((id) => isValidPick(id, this.usedModes));
           if (!picker || hand.length === 0) return;
-          const modeId = hand[Math.floor(Math.random() * hand.length)];
+          const cardId = hand[Math.floor(Math.random() * hand.length)];
+          const modeId = resolveFamilyPick(cardId);
+          if (!modeId) return;
           const mode = MODE_BY_ID[modeId];
           // No veil on a forced pick: the veil is a deliberate bet by the picker,
           // and an idle picker never placed it.
           const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
           const question = this.generateForQuestion(mode.questionId, mode.poolId);
           result = applyPick(this.room, picker, modeId, segment, question);
-          if (result.broadcasts.length > 0) this.usedModes.add(modeId);
+          if (result.broadcasts.length > 0) this.usedModes.add(usedIdForMode(modeId));
           break;
         }
         case 'playAgain':

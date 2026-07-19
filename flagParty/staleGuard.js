@@ -77,6 +77,38 @@ export function canRenderQuestion(question, knownQuestionIds) {
 }
 
 /**
+ * Can this build render the hand the server dealt?
+ *
+ * **The second skew surface, and it does not go through questions at all.** The
+ * draft's pick hand is a list of CARD ids, and the set of cards is not fixed:
+ * metric families (`flags/partyDraft.js` METRIC_FAMILIES) let one card stand for
+ * several metrics, so a newer server can deal a card id — `economy` was the first
+ * — that an older tab has no label, icon or hue for.
+ *
+ * {@link canRenderQuestion} cannot catch this. A family deals its members' own
+ * question ids, which an old build already knows, so every question in the round
+ * renders fine; the tab only breaks one step earlier, on the pick screen, where
+ * an unknown id resolves to an undefined i18n key and `t(undefined)` takes the
+ * whole render down (the `undefined.split` crash `modeLabels.test.js` pins).
+ *
+ * Only the PICKER renders a hand, so without this guard the failure is also
+ * unfair as well as ugly: one player's screen goes blank precisely when the game
+ * is waiting on them.
+ *
+ * An empty / absent hand is not a skew signal — that is simply a room that is not
+ * picking right now.
+ *
+ * @param {Iterable<string> | null | undefined} hand  the dealt card ids
+ * @param {Set<string>} knownCardIds  every id this build can label
+ * @returns {boolean}
+ */
+export function canRenderHand(hand, knownCardIds) {
+  if (!hand) return true;
+  for (const id of hand) if (!knownCardIds.has(id)) return false;
+  return true;
+}
+
+/**
  * What a client should do when a question arrives.
  *
  * @param {boolean} canRender  does this build have a renderer for the `questionId`
