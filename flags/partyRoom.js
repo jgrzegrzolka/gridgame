@@ -1,5 +1,6 @@
 import { scoreQuestionDetailed, FINAL_ROUND_MULTIPLIER } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
+import { fnv1a } from './nickname.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -773,24 +774,52 @@ function publicQuestion(q) {
 }
 
 /**
- * The two wrong options a kid's client greys out, leaving a 50/50.
+ * The two wrong options a kid's client removes, leaving a genuine 50/50.
  *
- * Deliberately **deterministic** — the first two non-answer options in the
- * question's own order — rather than randomised per player. The list has to be
- * regenerated identically when a kid reconnects mid-question ({@link
- * welcomeBroadcast} recomputes it from the same question), and a random pick
- * would hand them a different pair on the way back, wiping two more tiles
- * mid-round. The options array is already shuffled per question, so "the first
- * two" is not a positional tell.
+ * **This must not be positional.** The first version took the first two
+ * non-answer options in the question's own order, on the reasoning that the
+ * options array is shuffled per question so position carries nothing. That
+ * reasoning was wrong, and the bug shipped in #999: shuffling randomises which
+ * *country* sits at each index, but `easy` was still selected by index, so the
+ * surviving pair encoded where the answer was. With the answer at index 0 or 1
+ * the live tiles were {0,3} or {1,3} and the answer was always the first one
+ * left. Measured end to end, always picking the first live tile won 75% of the
+ * time and the answer was fully determined on half of all questions.
  *
- * This is the one place the answer is *used* to shape a client message, and it
- * still never leaves: only the wrong codes go out.
+ * So the pair is chosen by a hash of the question itself. Still perfectly
+ * deterministic, which is the real requirement (a kid reconnecting mid-question
+ * re-derives the identical pair via `welcome`, instead of losing two more
+ * tiles), but now uncorrelated with the answer's position.
+ *
+ * Returns `[]` when the question cannot spare two wrongs. With three options a
+ * two-option handicap would leave the kid exactly one tile, which is the answer
+ * handed over outright. No generator produces that today, but the failure mode
+ * is silent and total, so it is refused here rather than assumed away.
  *
  * @param {Question} q
  * @returns {string[]}
  */
 function easyFor(q) {
-  return q.options.filter((o) => o !== q.answer).slice(0, 2);
+  const wrongs = q.options.filter((o) => o !== q.answer);
+  // Fewer than three wrongs means removing two would leave one tile (or none).
+  if (wrongs.length < 3) return [];
+
+  // Seeded off the question's own identity, so the same question always yields
+  // the same pair on every client, every reconnect, and after an eviction.
+  let h = fnv1a(`${q.questionId ?? ''}|${q.prompt}|${q.answer}|${q.options.join(',')}`);
+  const pool = wrongs.slice();
+  /** @type {string[]} */
+  const picked = [];
+  for (let i = 0; i < 2; i++) {
+    // xorshift32 between draws: fnv1a alone is one value, and consecutive
+    // reductions of it would correlate the two picks.
+    h ^= h << 13; h >>>= 0;
+    h ^= h >>> 17;
+    h ^= h << 5; h >>>= 0;
+    picked.push(pool.splice(h % pool.length, 1)[0]);
+  }
+  // Returned in the question's own order so the wire never hints at draw order.
+  return q.options.filter((o) => picked.includes(o));
 }
 
 /**
