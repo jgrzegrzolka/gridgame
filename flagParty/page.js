@@ -12,6 +12,7 @@ import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
+import { barFractions } from '../flags/partyChart.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -1209,15 +1210,10 @@ export function bootFlagParty() {
     const chart = el('div', 'rank-chart');
     const ranking = reveal.ranking;
     const values = reveal.values || {};
-    // Bars are normalised across the quartet's own range, not value / max. Some
-    // metrics go negative (temperature bottoms out at -49C), where value / max
-    // yields a negative width and the bar silently vanishes. Anchoring `lo` at
-    // min(0, smallest) keeps the natural "share of the biggest" reading for the
-    // all-positive metrics, which is nearly all of them.
-    const nums = ranking.map((c) => (typeof values[c] === 'number' ? values[c] : 0));
-    const hi = Math.max(...nums);
-    const lo = Math.min(0, ...nums);
-    const span = hi - lo || 1;
+    // Bar geometry lives in `flags/partyChart.js` — pure, and tested for the
+    // cases that fail silently here (a negative metric, identical values, a
+    // missing value). See barFractions.
+    const fracs = barFractions(ranking, values);
     ranking.forEach((code, rank) => {
       const row = el('div', 'rank-row');
       row.style.setProperty('--d', String(rank * 110) + 'ms');
@@ -1262,7 +1258,7 @@ export function bootFlagParty() {
       // Next frame, so the width transition has a 0 -> n to animate instead of
       // painting its final value immediately.
       requestAnimationFrame(() => {
-        fill.style.width = String(Math.max(0, Math.min(1, (nums[rank] - lo) / span)) * 100) + '%';
+        fill.style.width = String(fracs[rank] * 100) + '%';
       });
     });
     return chart;
