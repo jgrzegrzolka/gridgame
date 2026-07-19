@@ -4,7 +4,7 @@ import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, isDisabledOption, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, visibleOptions, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -1131,10 +1131,15 @@ export function bootFlagParty() {
     // The world-facts REVEAL is a ranking, not four tiles. Every other reveal,
     // and the world-facts question phase itself, still draws the grid.
     gridEl.classList.toggle('as-chart', isReveal && chartReveal());
+    // Two tiles want one row, not a 2x2 with two holes in it.
+    gridEl.classList.toggle('two-up', !isReveal && visibleOptions(state, !!isReveal).length === 2);
     if (isReveal && state.reveal && chartReveal()) {
       gridEl.appendChild(buildRankChart(/** @type {any} */ (state.reveal), metricData));
     } else
-    for (const code of q.options) {
+    // A kid draws only their live options (`visibleOptions`); everyone else, and
+    // every reveal, draws all four. Two tiles rather than four greyed ones: see
+    // the note on `visibleOptions` for why dimming lost to tricky mode.
+    for (const code of visibleOptions(state, !!isReveal)) {
       if (isReveal && state.reveal) {
         const correct = code === state.reveal.answer;
         // Your own wrong pick pulses pink (flagQuiz's "bad" marker); it isn't
@@ -1148,17 +1153,13 @@ export function bootFlagParty() {
         gridEl.appendChild(flagOpt(code, { isMap, selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers, pop: popStrip(code) }));
       } else {
         const selected = state.myChoice === code;
-        // Kid mode: the server named two wrong options for this device to take
-        // off the board. They reuse `.dim` (the same "not yours to pick" wash the
-        // reveal uses) and render as divs, not buttons, so they can't be tapped.
-        const out = isDisabledOption(state, code);
-        const dim = out || (state.myChoice != null && !selected);
+        const dim = state.myChoice != null && !selected;
         // World-facts questions fade the country name onto each tile once the clock
         // passes the host's name-reveal point (the grid's `names-shown` class,
         // toggled by the veil loop). The strip is pre-rendered here; CSS keeps it
         // hidden until then. Name only, no value — the value would leak the answer.
         const named = isSuperlative;
-        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null && !out, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: veilActive(), named }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: veilActive(), named }));
       }
     }
 

@@ -216,6 +216,10 @@
    page.js rather than a separate element, so the section swap, the veil loop and
    everything else that already knows about #flags-grid keeps working. */
 .flags-grid.as-chart { display: block; }
+/* Kid mode hands out two options, not four. One row keeps each tile the size a
+   4-tile grid gives it rather than stretching two across the full board, so the
+   kid's screen still reads as the same game everyone else is playing. */
+.flags-grid.two-up { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
 
 /* ---- the ranked reveal chart (world facts) ----
    Four rows, best first. Rank, flag, name + value over a bar, whoever picked it,
