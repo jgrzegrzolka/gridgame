@@ -9,7 +9,7 @@ import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
 import { createMetricHub } from '../flags/metricHub.js';
-import { chipMetrics, cutsFor, resolveCut } from '../flags/metricCuts.js';
+import { chipMetrics, cutsFor, resolveCut, planCutSwitch } from '../flags/metricCuts.js';
 import { fitChipRow, rowGap } from '../flags/chipRowFit.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
@@ -1150,32 +1150,33 @@ export function bootFlagsData() {
   }
 
   /**
-   * Switch which cut a chip reads. A tier applied to the cut we're leaving is
-   * cleared: a threshold is a statement about one metric ("over $1T"), and
-   * carrying it onto the per-person view would filter the grid by a number the
-   * reader can no longer see or reach.
+   * Switch which cut a chip reads. Every decision here (which tier to drop,
+   * which sort to keep, what the chip remembers) is made by `planCutSwitch` in
+   * `flags/metricCuts.js`, where it is unit-tested; this is the wiring that
+   * applies the plan to the DOM.
    * @param {string} chipKey @param {'total' | 'per'} cut
    */
   function setCut(chipKey, cut) {
-    const from = resolveCut(chipKey, lensCutByKey[chipKey] ?? 'total');
+    const plan = planCutSwitch({
+      chipKey,
+      cut,
+      cutByKey: lensCutByKey,
+      tieredKeys: Object.keys(filters).filter((k) => /** @type {any} */ (filters)[k] != null),
+      sort: lensSort,
+    });
     lensCutByKey[chipKey] = cut;
-    const to = resolveCut(chipKey, cut);
-    if (from !== to && from && /** @type {any} */ (filters)[from] != null) {
-      /** @type {any} */ (filters)[from] = null;
+    if (plan.clearTierKey) {
+      /** @type {any} */ (filters)[plan.clearTierKey] = null;
       applyFilter();
     }
     // Rebuild the lens on the new metric, then let the hub re-read the panel:
-    // its title, hue and tier pills all describe the resolved metric. The sort
-    // survives the switch — opening a metric picks Highest, but flipping to the
-    // per-person view of the SAME subject is a comparison, and silently
-    // throwing the reader back to Highest would undo the question they asked.
-    const keepSort = lensSort;
+    // its title, hue and tier pills all describe the resolved metric.
     setLens(chipKey);
-    if (keepSort !== 'default') {
-      lensSort = keepSort;
+    if (lensSort !== plan.sort) {
+      lensSort = plan.sort;
       syncSortPressed();
-      renderLens();
     }
+    renderLens();
     hub.refreshPanel();
   }
 

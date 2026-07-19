@@ -154,3 +154,44 @@ export function isSecondaryCut(metricKey) {
 export function chipMetrics(metrics) {
   return metrics.filter((m) => !isSecondaryCut(m.key));
 }
+
+/**
+ * What switching a chip's cut should do, as data. The three rules below are the
+ * whole behaviour of the cut control, and they used to live inside
+ * `flagsdata/page.js` where nothing could reach them:
+ *
+ * 1. **A tier belongs to a metric, not to a chip.** A threshold applied to the
+ *    cut being left is cleared. Carrying "over $1T" onto the per-person view
+ *    would filter the grid by a number the reader can no longer see or reach.
+ * 2. **The sort survives the switch.** Opening a metric picks Highest, but
+ *    flipping to the per-person view of the SAME subject is a comparison, and
+ *    resetting would undo the question just asked. Only a lens that was off
+ *    (`'default'`) starts at Highest.
+ * 3. **A chip remembers its cut**, so the tier applied to a per-person view
+ *    stays interpretable once the panel closes and the chip is reopened.
+ *
+ * Pure: the caller owns the DOM, the filter object and the lens. It reads
+ * `clearTierKey` to know which threshold to drop, `metricKey` to rebuild the
+ * lens, and `sort` / `cutByKey` as the next state.
+ *
+ * @param {object} args
+ * @param {string} args.chipKey the chip being switched
+ * @param {'total' | 'per'} args.cut the cut chosen
+ * @param {Record<string, 'total' | 'per'>} [args.cutByKey] remembered cuts
+ * @param {string[]} [args.tieredKeys] metric keys that currently carry a tier
+ * @param {'default' | 'desc' | 'asc'} [args.sort] the sort in force
+ * @returns {{ cutByKey: Record<string, 'total' | 'per'>, metricKey: string | null, clearTierKey: string | null, sort: 'desc' | 'asc' }}
+ */
+export function planCutSwitch({ chipKey, cut, cutByKey = {}, tieredKeys = [], sort = 'desc' }) {
+  const from = resolveCut(chipKey, cutByKey[chipKey] ?? 'total');
+  const metricKey = resolveCut(chipKey, cut);
+  return {
+    cutByKey: { ...cutByKey, [chipKey]: cut },
+    metricKey,
+    // Only a tier on the metric we are LEAVING goes. A tier already sitting on
+    // the metric we are moving TO is the reader's own filter on the view they
+    // asked for, and stays.
+    clearTierKey: from !== metricKey && from !== null && tieredKeys.includes(from) ? from : null,
+    sort: sort === 'default' ? 'desc' : sort,
+  };
+}

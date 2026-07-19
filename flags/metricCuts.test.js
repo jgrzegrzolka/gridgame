@@ -8,6 +8,7 @@ import {
   subjectFor,
   isSecondaryCut,
   chipMetrics,
+  planCutSwitch,
 } from './metricCuts.js';
 import { METRIC_FILES } from './metrics/index.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from './metricVisuals.js';
@@ -196,4 +197,98 @@ test('a secondary cut keeps its own visuals for the panel lead', () => {
       assert.ok(METRIC_HUES[c.key], `no hue for "${c.key}"`);
     }
   }
+});
+
+// ---- planCutSwitch: the three rules the cut control runs on ---------------
+// These lived inside flagsdata/page.js, which has no test file, so #1012's
+// stated behaviour was pinned nowhere. Each rule below is user-visible when it
+// breaks.
+
+test('planCutSwitch resolves the metric the new cut reads', () => {
+  const plan = planCutSwitch({ chipKey: 'gdp', cut: 'per' });
+  assert.equal(plan.metricKey, 'gdpPerCapita');
+  assert.equal(planCutSwitch({ chipKey: 'gdp', cut: 'total' }).metricKey, 'gdp');
+});
+
+test('planCutSwitch clears a tier applied to the cut being left', () => {
+  // Rule 1. Otherwise "over $1T" keeps filtering the grid while the reader
+  // looks at GDP per capita, where no visible number explains the gaps.
+  const plan = planCutSwitch({ chipKey: 'gdp', cut: 'per', tieredKeys: ['gdp'] });
+  assert.equal(plan.clearTierKey, 'gdp');
+});
+
+test('planCutSwitch keeps a tier that belongs to the cut being entered', () => {
+  // The reader's own filter on the view they asked for must survive.
+  const plan = planCutSwitch({
+    chipKey: 'gdp',
+    cut: 'per',
+    tieredKeys: ['gdpPerCapita'],
+  });
+  assert.equal(plan.clearTierKey, null);
+});
+
+test('planCutSwitch clears nothing when no tier is applied', () => {
+  assert.equal(planCutSwitch({ chipKey: 'population', cut: 'per' }).clearTierKey, null);
+});
+
+test('planCutSwitch clears nothing when the cut did not actually change', () => {
+  // Re-tapping the pressed segment resolves to the same metric, so there is no
+  // "metric being left" and the tier on it is still the one on screen.
+  const plan = planCutSwitch({
+    chipKey: 'gdp',
+    cut: 'total',
+    cutByKey: { gdp: 'total' },
+    tieredKeys: ['gdp'],
+  });
+  assert.equal(plan.metricKey, 'gdp');
+  assert.equal(plan.clearTierKey, null);
+});
+
+test('planCutSwitch clears the tier when switching BACK to the total cut', () => {
+  // The rule is symmetric: leaving density drops density's threshold.
+  const plan = planCutSwitch({
+    chipKey: 'population',
+    cut: 'total',
+    cutByKey: { population: 'per' },
+    tieredKeys: ['density'],
+  });
+  assert.equal(plan.metricKey, 'population');
+  assert.equal(plan.clearTierKey, 'density');
+});
+
+test('planCutSwitch carries the sort across the switch', () => {
+  // Rule 2. setLens resets to 'desc' on every open, so without this the reader
+  // asking "which countries have the FEWEST medals per person" would be thrown
+  // back to Highest the moment they flipped the cut.
+  assert.equal(planCutSwitch({ chipKey: 'nobel', cut: 'per', sort: 'asc' }).sort, 'asc');
+  assert.equal(planCutSwitch({ chipKey: 'nobel', cut: 'per', sort: 'desc' }).sort, 'desc');
+});
+
+test('planCutSwitch starts a lens that was off at Highest', () => {
+  // 'default' is the resting A-Z wall, which is not a direction to preserve.
+  assert.equal(planCutSwitch({ chipKey: 'nobel', cut: 'per', sort: 'default' }).sort, 'desc');
+});
+
+test('planCutSwitch remembers the cut per chip, leaving the others alone', () => {
+  // Rule 3, and the reason the memory is per chip: two subjects can sit on
+  // different cuts at once.
+  const first = planCutSwitch({ chipKey: 'gdp', cut: 'per' });
+  const second = planCutSwitch({ chipKey: 'population', cut: 'per', cutByKey: first.cutByKey });
+  assert.deepEqual(second.cutByKey, { gdp: 'per', population: 'per' });
+});
+
+test('planCutSwitch does not mutate the state it is given', () => {
+  // The page holds cutByKey across renders; a reducer that mutated it would
+  // make the "remembered cut" impossible to reason about.
+  const cutByKey = /** @type {Record<string, 'total' | 'per'>} */ ({ gdp: 'total' });
+  planCutSwitch({ chipKey: 'gdp', cut: 'per', cutByKey });
+  assert.deepEqual(cutByKey, { gdp: 'total' });
+});
+
+test('planCutSwitch is harmless on an ungrouped metric', () => {
+  // Nothing renders a cut control for coffee, but the reducer must not invent
+  // a metric key or a clear if one is somehow asked for.
+  const plan = planCutSwitch({ chipKey: 'coffee', cut: 'per', tieredKeys: ['coffee'] });
+  assert.equal(plan.metricKey, 'coffee');
+  assert.equal(plan.clearTierKey, null);
 });

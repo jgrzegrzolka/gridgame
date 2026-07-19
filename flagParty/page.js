@@ -199,7 +199,7 @@ const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
  *  A hand card can be a metric FAMILY id (`economy`), which is not a catalog
  *  mode, so it resolves to the family's representative first —
  *  `representativeModeFor` is the identity for every other id. */
-function modeIconHtml(/** @type {string} */ cardId) {
+export function modeIconHtml(/** @type {string} */ cardId) {
   if (MODE_ICONS[cardId]) return MODE_ICONS[cardId];
   const mode = MODE_BY_ID[representativeModeFor(cardId)];
   if (!mode) return '';
@@ -209,7 +209,7 @@ function modeIconHtml(/** @type {string} */ cardId) {
 
 /** The per-metric hue for a statistic card (for the draft card accent), or null.
  *  Family-aware, same as {@link modeIconHtml}. */
-function modeHue(/** @type {string} */ cardId) {
+export function modeHue(/** @type {string} */ cardId) {
   const mode = MODE_BY_ID[representativeModeFor(cardId)];
   if (!mode) return null;
   const key = metricKeyForQuestion(mode.questionId);
@@ -220,7 +220,7 @@ function modeHue(/** @type {string} */ cardId) {
  *  modeIconHtml} but at the card's hero size (its own classes rather than the
  *  setup row's tiny slot). Empty string for an unknown mode (the caller shows a
  *  generic Flags card instead). */
-function roundCardIconHtml(/** @type {string} */ modeId) {
+export function roundCardIconHtml(/** @type {string} */ modeId) {
   if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'roundcard-thumb' });
   if (modeId === 'flags-weird') return deckIconHtml('weird', { className: 'roundcard-thumb' });
   if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'roundcard-contour' });
