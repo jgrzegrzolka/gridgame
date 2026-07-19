@@ -239,9 +239,15 @@ function shuffle(arr, rng) {
  * one question", not "related subjects". Meat / cattle / sheep per person stay
  * separate: "most sheep per person" and "most meat eaten per person" are
  * different questions that happen to share a barn. Beer / alcohol per person is
- * the closest remaining candidate and is deliberately NOT grouped yet — one
- * family is enough to prove the mechanism, and each grouping is a judgement call
- * worth making on its own.
+ * the closest remaining candidate and is deliberately NOT grouped yet: each
+ * grouping is a judgement call worth making on its own.
+ *
+ * Nobel laureates / Nobel laureates per million clears the bar for the same
+ * reason economy does. They are one subject counted two ways, off one data
+ * source, and the per-million cut exists precisely to answer the objection the
+ * absolute count raises. Two cards would spend a fifth of the hand asking the
+ * picker to arbitrate "total or per head", which is the distinction the round
+ * itself is there to reveal.
  *
  * `representativeId` is the member whose icon, hue and metric identity the card
  * wears. It must be a member. Nothing else about the members changes: each keeps
@@ -260,6 +266,14 @@ const GROUPED_FAMILIES = [
     // round feel like the substitution.
     representativeId: 'superlative-gdp',
   },
+  {
+    id: 'nobel',
+    memberIds: ['superlative-nobel', 'superlative-nobel-pc'],
+    // The medal rather than the laurel wreath, matching economy's choice of the
+    // total over the per-head cut: the absolute count is the subject a player
+    // recognises, and the per-million round then lands as the twist.
+    representativeId: 'superlative-nobel',
+  },
 ];
 
 /**
@@ -268,9 +282,9 @@ const GROUPED_FAMILIES = [
  *
  * **A singleton family's id IS its mode id.** That is what keeps this change
  * small: the hand, the no-repeat set and the pick wire message all speak family
- * ids, and for 32 of the 34 metrics that is the string they always were. Only
- * `economy` is a genuinely new id, and only it needs the resolve step to mean
- * anything.
+ * ids, and for all but the grouped metrics that is the string they always were.
+ * Only `economy` and `nobel` are genuinely new ids, and only they need the
+ * resolve step to mean anything.
  *
  * @type {MetricFamily[]}
  */

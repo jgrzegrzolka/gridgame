@@ -218,6 +218,8 @@ export const PARTY_MODES = [
   { id: 'superlative-tourism', questionId: 'superlative-tourism', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-electricity', questionId: 'superlative-electricity', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-mcdonalds', questionId: 'superlative-mcdonalds', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-nobel', questionId: 'superlative-nobel', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-nobel-pc', questionId: 'superlative-nobel-pc', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

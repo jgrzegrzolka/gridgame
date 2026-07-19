@@ -97,6 +97,8 @@ const MODE_LABELS = {
   'superlative-tourism': { key: 'party.mode.superlativeTourism', full: 'Tourist arrivals per capita' },
   'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita' },
   'superlative-mcdonalds': { key: 'party.mode.superlativeMcdonalds', full: "McDonald's per million people" },
+  'superlative-nobel': { key: 'party.mode.superlativeNobel', full: 'Nobel laureates' },
+  'superlative-nobel-pc': { key: 'party.mode.superlativeNobelPc', full: 'Nobel laureates per million people' },
   // Metric families (`flags/partyDraft.js` METRIC_FAMILIES) label the CARD, not a
   // mode — the members keep their own labels above for the round title, which
   // names the statistic that was actually dealt.
@@ -110,6 +112,12 @@ const MODE_LABELS = {
     full: 'Economy',
     subKey: 'party.modeSub.economy',
     sub: 'GDP, total or per person',
+  },
+  nobel: {
+    key: 'party.mode.nobel',
+    full: 'Nobel laureates',
+    subKey: 'party.modeSub.nobel',
+    sub: 'Total or per person',
   },
 };
 

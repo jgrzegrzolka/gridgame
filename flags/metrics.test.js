@@ -46,6 +46,8 @@ const HAPPINESS = /** @type {import('./metrics.js').MetricData} */ (load('metric
 const TOURISM_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/tourismPerCapita.json'));
 const ELECTRICITY_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/electricityPerCapita.json'));
 const MCDONALDS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/mcdonaldsPerMillion.json'));
+const NOBEL = /** @type {import('./metrics.js').MetricData} */ (load('metrics/nobel.json'));
+const NOBEL_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/nobelPerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -2110,4 +2112,48 @@ test('createMetric over mcdonaldsPerMillion: the #1 is not the country with the 
   const au = /** @type {number} */ (mcd.valueOf('au'));
   const us = /** @type {number} */ (mcd.valueOf('us'));
   assert.ok(Math.abs(au - us) / us < 0.05, 'AU and US are expected to be near-tied at the top');
+});
+
+// ---- real nobel.json / nobelPerCapita.json: dense contract + the UK rollup ----
+
+test('nobel: dense absence:zero, every real place carries a value', () => {
+  // The Antarctica bug class. 172 of 262 real places have a true 0, and a true 0
+  // must be WRITTEN, not omitted: an omitted place reads "no data" and the TTT
+  // picker would wrongly block it on a Nobel threshold cell.
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') continue;
+    assert.equal(typeof NOBEL.values[c.code], 'number', `${c.code} must carry a nobel value`);
+    assert.equal(typeof NOBEL_PC.values[c.code], 'number', `${c.code} must carry a nobelPerCapita value`);
+  }
+  // ...and only non-places may be absent.
+  for (const c of COUNTRIES) {
+    if (c.category !== 'other') continue;
+    assert.ok(!(c.code in NOBEL.values), `org flag ${c.code} must have no nobel value`);
+  }
+});
+
+test('nobel: UK and Spanish sub-national places roll up into their parent', () => {
+  // The invariant a refresh could silently break. countries.json carries the four
+  // UK nations AND the UK itself, and population.json/gdp.json nest them the same
+  // way, so `gb` must equal the sum of its parts or the per-capita cut is wrong at
+  // one of the two levels.
+  const uk = ['gb-eng', 'gb-sct', 'gb-wls', 'gb-nir'].reduce((n, c) => n + NOBEL.values[c], 0);
+  assert.equal(NOBEL.values.gb, uk, 'gb must equal the sum of its constituent nations');
+  // Wales must not be zero: the source API never says "Wales", so a zero here means
+  // the city-to-nation mapping in build-nobel.mjs stopped working.
+  assert.ok(NOBEL.values['gb-wls'] > 0, 'Wales must carry its own laureates, not fall through to gb');
+  assert.ok(NOBEL.values['gb-sct'] > 11, 'Scotland must include the cities the API files under "United Kingdom"');
+  // Spain contains its communities, so es >= the one Galician laureate.
+  assert.ok(NOBEL.values.es >= NOBEL.values['es-ga'], 'es must contain its communities');
+});
+
+test('createMetric over nobelPerCapita: the #1 is not the country with the most laureates', () => {
+  const pc = createMetric(NOBEL_PC, COUNTRIES);
+  const abs = createMetric(NOBEL, COUNTRIES);
+  // The whole point of the intensive cut. The US leads the absolute count by a
+  // wide margin and must NOT lead per head.
+  assert.equal(abs.topN('un_member', 1)[0].code, 'us');
+  assert.ok(pc.topN('un_member', 5).every((c) => c.code !== 'us'), 'the US must not lead per capita');
+  assert.ok(/** @type {number} */ (pc.valueOf('se')) > /** @type {number} */ (pc.valueOf('us')),
+    'Sweden must out-rank the US per capita');
 });

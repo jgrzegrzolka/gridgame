@@ -1172,3 +1172,65 @@ test('mcdonaldsPerMillionQuestion: folded markets are excluded as unknown, not r
     }
   }
 });
+
+test('nobelQuestion: most-only, correct most-laureates answer', async () => {
+  const { nobelQuestion } = await import('./superlative.js');
+  const nobelJson = (await import('../metrics/nobel.json', { with: { type: 'json' } })).default;
+  const N = /** @type {Record<string, number>} */ (nobelJson.values);
+  assert.equal(nobelQuestion.id, 'superlative-nobel');
+  // Sovereigns spanning the range (US 297 ... Iceland 1). All > 0.
+  const pool = ['us', 'gb', 'de', 'fr', 'jp', 'se', 'pl', 'in', 'eg', 'is'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = nobelQuestion.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.options.length, 4);
+    assert.equal(q.prompt, 'most', `seed ${i}: Nobel count is most-only, never 'least'`);
+    assert.ok(q.options.includes(q.answer), 'answer among options');
+    const answerVal = N[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= N[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+test('nobelQuestion: zeroFiltered keeps laureate-free countries out', async () => {
+  const { nobelQuestion } = await import('./superlative.js');
+  // THE test for this metric. True zeros are the MAJORITY (172 of 262 real
+  // places), so without zeroFiltered a quartet would routinely be four countries
+  // tied at 0 with no answer. These carry an explicit 0, not a gap, so `has` is
+  // true for them and only the zero filter can exclude them.
+  const excluded = new Set(['mn', 'kh', 'bo', 'pg', 'tm', 'fj']);
+  const pool = ['us', 'gb', 'de', 'se', 'mn', 'kh', 'bo', 'pg', 'tm', 'fj'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = nobelQuestion.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: zero-valued ${opt} must not be an option`);
+    }
+  }
+});
+
+test('nobelPerCapitaQuestion: the #1 is not the country with the most laureates', async () => {
+  const { nobelPerCapitaQuestion } = await import('./superlative.js');
+  const pcJson = (await import('../metrics/nobelPerCapita.json', { with: { type: 'json' } })).default;
+  const PC = /** @type {Record<string, number>} */ (pcJson.values);
+  assert.equal(nobelPerCapitaQuestion.id, 'superlative-nobel-pc');
+  // The whole point of the intensive cut: against the US, Sweden wins on rate
+  // despite the US having ten times as many laureates.
+  assert.ok(PC.se > PC.us, 'Sweden must out-rank the US per capita');
+  const pool = ['us', 'gb', 'de', 'fr', 'jp', 'se', 'ch', 'no', 'dk', 'at'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = nobelPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
+    assert.equal(q.prompt, 'most', `seed ${i}: per-capita Nobel is most-only`);
+    const answerVal = PC[q.answer];
+    for (const opt of q.options) assert.ok(answerVal >= PC[opt], `seed ${i}: ${q.answer} not the biggest`);
+  }
+});
+
+test('nobelPerCapitaQuestion: zeroFiltered, same true-zero majority as the count', async () => {
+  const { nobelPerCapitaQuestion } = await import('./superlative.js');
+  const excluded = new Set(['mn', 'kh', 'bo', 'pg', 'tm', 'fj']);
+  const pool = ['se', 'ch', 'no', 'dk', 'mn', 'kh', 'bo', 'pg', 'tm', 'fj'].map((code) => ({ code }));
+  for (let i = 0; i < 100; i++) {
+    const q = nobelPerCapitaQuestion.generate(pool, undefined, seeded(i + 1));
+    for (const opt of q.options) {
+      assert.ok(!excluded.has(opt), `seed ${i}: zero-valued ${opt} must not be an option`);
+    }
+  }
+});

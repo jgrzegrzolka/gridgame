@@ -585,10 +585,14 @@
       "superlativeTourism": "Tourist arrivals per capita",
       "superlativeElectricity": "Electricity use per capita",
       "superlativeMcdonalds": "McDonald's per million people",
-      "economy": "Economy"
+      "superlativeNobel": "Nobel laureates",
+      "superlativeNobelPc": "Nobel laureates per million people",
+      "economy": "Economy",
+      "nobel": "Nobel laureates"
     },
     "modeSub": {
-      "economy": "GDP, total or per person"
+      "economy": "GDP, total or per person",
+      "nobel": "Total or per person"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -626,7 +630,9 @@
       "superlativeHappiness": "Happiness",
       "superlativeTourism": "Tourism",
       "superlativeElectricity": "Electricity",
-      "superlativeMcdonalds": "McDonald's"
+      "superlativeMcdonalds": "McDonald's",
+      "superlativeNobel": "Nobel laureates",
+      "superlativeNobelPc": "Nobels per million"
     },
     "roundQuestion": "Round {b}/{rounds} · Question {n}/{total}",
     "afterRound": "After round {n} of {total}",
@@ -693,6 +699,8 @@
     "hintMostTourism": "Most tourist arrivals per resident",
     "hintMostElectricity": "Most electricity use per person",
     "hintMostMcdonalds": "Most McDonald's per person",
+    "hintMostNobel": "Most Nobel laureates",
+    "hintMostNobelPc": "Most Nobel laureates per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "fastest": "Fastest",
     "speedBonus": "Speed bonus",
@@ -1001,6 +1009,19 @@
       "25": "over 25 McDonald's per million people"
     }
   },
+  "nobel": {
+    "atLeast": {
+      "1": "at least 1 Nobel laureate",
+      "5": "at least 5 Nobel laureates",
+      "20": "at least 20 Nobel laureates"
+    }
+  },
+  "nobelPerCapita": {
+    "atLeast": {
+      "0.5": "over 0.5 Nobel laureates per million",
+      "2": "over 2 Nobel laureates per million"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 or more",
@@ -1097,7 +1118,9 @@
     "honey": "Honey production",
     "tourismPerCapita": "Tourist arrivals per capita",
     "electricityPerCapita": "Electricity use per capita",
-    "mcdonaldsPerMillion": "McDonald's per million people"
+    "mcdonaldsPerMillion": "McDonald's per million people",
+    "nobel": "Nobel laureates",
+    "nobelPerCapita": "Nobel laureates per million people"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

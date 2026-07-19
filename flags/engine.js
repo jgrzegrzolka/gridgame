@@ -653,6 +653,44 @@ export const MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Nobel-laureate break tiers (people born there who went on to win, all six
+ * prizes). Three tiers because the distribution is unusually long-tailed and each
+ * one asks a different question. `>=1` is "has ever produced a laureate" (~82
+ * sovereigns), the most legible cell of the three and the one a player can reason
+ * about from general knowledge. `>=5` is a country with a real scientific or
+ * literary tradition (~28). `>=20` is the elite (~11: the US, UK, Germany, France,
+ * Japan, Sweden, Russia, Poland, Canada, Italy, the Netherlands).
+ *
+ * `>=`-only. 172 of 262 real places have an explicit 0, so a `<=` break would deal
+ * a cell matching two thirds of the world and ask "which countries are small or
+ * poor", which is neither selective nor fun. The `>=1` tier covers the "has any"
+ * question from the interesting side instead.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const NOBEL_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1 },
+  { op: '>=', n: 5 },
+  { op: '>=', n: 20 },
+];
+
+/**
+ * Nobel-laureates-per-million break tiers. `>=0.5` is "punches above its weight"
+ * (~29 sovereigns), `>=2` the elite (~8: the Faroes, Saint Lucia, Luxembourg,
+ * Sweden, Iceland, Norway, Switzerland, Austria, Denmark). Deliberately different
+ * tiers from the absolute metric so the two never deal near-identical cells.
+ *
+ * `>=`-only, same reason as the absolute metric: the low end is the same pile of
+ * true zeros.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const NOBEL_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 0.5 },
+  { op: '>=', n: 2 },
+];
+
+/**
  * Bordering-countries break tiers (number of countries sharing a land border).
  * `>=5` is a well-connected country (~59 real places), `>=8` the elite (~11:
  * Russia & China at 14, Brazil 10, DR Congo & Germany 9, plus the 8-border club:
@@ -1676,6 +1714,64 @@ export function mcdonaldsPerMillion(op, n) {
 }
 
 /**
+ * Nobel-laureate-threshold Category factory (laureates born in the place, all six
+ * prizes, organisations excluded). Reads the denormalized `country.nobel` field
+ * (`attachNobels`, a dense `absence: 'zero'` metric: every real place carries a
+ * value and most carry a true 0, so the number guard only excludes the org flags).
+ * `exclusiveGroup: 'nobel'`. The break list is `>=`-only (see
+ * NOBEL_BREAKS_FOR_RANDOM); the `<=` branch is kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function nobel(op, n) {
+  const label = op === '>=' ? `${n}+ Nobel laureates` : `under ${n} Nobel laureates`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.nobel === 'number' && c.nobel >= n
+      : (c) => typeof c.nobel === 'number' && c.nobel <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `nobel:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'nobel',
+  };
+  return cat;
+}
+
+/**
+ * Nobel-laureates-per-million-threshold Category factory. Reads the denormalized
+ * `country.nobelPerCapita` field (`attachNobelPerCapitas`, dense like its absolute
+ * sibling). `exclusiveGroup: 'nobelPerCapita'`, which is what keeps a random puzzle
+ * from pairing this axis with the absolute one: they measure the same underlying
+ * fact and a "20+ laureates" x "2+ per million" cell would be near-degenerate.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function nobelPerCapita(op, n) {
+  const label =
+    op === '>=' ? `over ${n} Nobel laureates per million` : `under ${n} Nobel laureates per million`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.nobelPerCapita === 'number' && c.nobelPerCapita >= n
+      : (c) => typeof c.nobelPerCapita === 'number' && c.nobelPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `nobelPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'nobelPerCapita',
+  };
+  return cat;
+}
+
+/**
  * Bordering-countries-threshold Category factory (number of countries sharing a
  * land border). Reads the denormalized `country.borders` field (`attachBorders`, a
  * dense metric that fills a true 0 for every island, so the predicate guards on the
@@ -2328,6 +2424,30 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`mcdonaldsPerMillion.atLeast.${n}`, `over ${n} McDonald's per million`);
       return translate(`mcdonaldsPerMillion.atMost.${n}`, `under ${n} McDonald's per million`);
+    },
+  },
+  nobel: {
+    breaks: NOBEL_BREAKS_FOR_RANDOM,
+    factory: nobel,
+    prefixFallback: 'Nobel laureates',
+    field: 'nobel',
+    family: 'nobel',
+    has: (c) => typeof c.nobel === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`nobel.atLeast.${n}`, `${n}+ Nobel laureates`);
+      return translate(`nobel.atMost.${n}`, `under ${n} Nobel laureates`);
+    },
+  },
+  nobelPerCapita: {
+    breaks: NOBEL_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: nobelPerCapita,
+    prefixFallback: 'Nobel laureates per million people',
+    field: 'nobelPerCapita',
+    family: 'nobel', // shares the "nobel" family with the absolute count: never both in one TTT puzzle
+    has: (c) => typeof c.nobelPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`nobelPerCapita.atLeast.${n}`, `over ${n} Nobel laureates per million`);
+      return translate(`nobelPerCapita.atMost.${n}`, `under ${n} Nobel laureates per million`);
     },
   },
   borders: {
