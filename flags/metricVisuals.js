@@ -123,6 +123,13 @@ export const METRIC_ICONS = {
   // silhouettes rather than one icon twice, so the chips read apart at 24px.
   nobel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="6"/><path d="M8.6 9.6 6 2l6 3 6-3-2.6 7.6"/></svg>',
   nobelPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-4.5-1.7-7-5.5-7-9.7 0-3.4 1.6-6.3 3.4-8.3 1.2 3.2 1.2 5.6 0 7.6"/><path d="M12 21c4.5-1.7 7-5.5 7-9.7 0-3.4-1.6-6.3-3.4-8.3-1.2 3.2-1.2 5.6 0 7.6"/></svg>',
+  // Four distinct silhouettes at 24px: torch and podium for the Summer pair,
+  // snowflake and peak for the Winter pair. Deliberately NOT four medals, which
+  // would collide with the Nobel medal and with each other.
+  summerMedals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.8 2.4 2.6 4.3 2.6 5.8 0 1.6-1.2 2.6-2.6 2.6s-2.6-1-2.6-2.6C9.4 6.3 10.2 4.4 12 2Z"/><path d="M9 11h6l-1 10h-4L9 11Z"/></svg>',
+  summerMedalsPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10h6v11H9zM3 14h6v7H3zM15 13h6v8h-6z"/></svg>',
+  winterMedals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.5 7l17 10M20.5 7l-17 10"/></svg>',
+  winterMedalsPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 20 6.5-12L13 16l2.5-4L22 20H2Z"/><path d="m6.4 12.2 2.1 1.4 2-1.4"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -170,6 +177,14 @@ export const METRIC_HUES = {
   // player must be able to tell the two Nobel rounds apart from the chip alone.
   nobel: '#6a1b9a',
   nobelPerCapita: '#ad1457',
+  // The palette is genuinely crowded at 39 metrics, so these four were picked for
+  // maximum separation from their NEAREST neighbour rather than for literalism:
+  // torch orange sits clear of temperature's red, the two per-million cuts take a
+  // dark teal and a violet that no metric occupies at that depth.
+  summerMedals: '#e65100',
+  summerMedalsPerCapita: '#00695c',
+  winterMedals: '#0277bd',
+  winterMedalsPerCapita: '#7e57c2',
 };
 
 /**
@@ -217,6 +232,10 @@ export const METRIC_SHORT = {
   mcdonaldsPerMillion: { key: 'party.modeShort.superlativeMcdonalds', fallback: "McDonald's" },
   nobel: { key: 'party.modeShort.superlativeNobel', fallback: 'Nobel laureates' },
   nobelPerCapita: { key: 'party.modeShort.superlativeNobelPc', fallback: 'Nobels per million' },
+  summerMedals: { key: 'party.modeShort.superlativeSummerMedals', fallback: 'Summer medals' },
+  summerMedalsPerCapita: { key: 'party.modeShort.superlativeSummerMedalsPc', fallback: 'Summer per person' },
+  winterMedals: { key: 'party.modeShort.superlativeWinterMedals', fallback: 'Winter medals' },
+  winterMedalsPerCapita: { key: 'party.modeShort.superlativeWinterMedalsPc', fallback: 'Winter per person' },
 };
 
 /**

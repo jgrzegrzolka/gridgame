@@ -51,4 +51,8 @@ export const METRIC_FILES = [
   { key: 'mcdonaldsPerMillion', file: 'mcdonaldsPerMillion.json', label: "McDonald's per million people" },
   { key: 'nobel', file: 'nobel.json', label: 'Nobel laureates' },
   { key: 'nobelPerCapita', file: 'nobelPerCapita.json', label: 'Nobel laureates per million people' },
+  { key: 'summerMedals', file: 'summerMedals.json', label: 'Summer Olympic medals' },
+  { key: 'summerMedalsPerCapita', file: 'summerMedalsPerCapita.json', label: 'Summer Olympic medals per million people' },
+  { key: 'winterMedals', file: 'winterMedals.json', label: 'Winter Olympic medals' },
+  { key: 'winterMedalsPerCapita', file: 'winterMedalsPerCapita.json', label: 'Winter Olympic medals per million people' },
 ];

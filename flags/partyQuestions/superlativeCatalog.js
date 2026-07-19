@@ -391,6 +391,44 @@ export const SUPERLATIVE_METRICS = [
     hintMost: { key: 'party.hintMostNobelPc', fallback: 'Most Nobel laureates per person' },
     hintLeast: null,
   },
+  {
+    // Most-only. "Fewest Summer medals" is a tie among the 121 places that have
+    // never won one, which is not a question.
+    key: 'summerMedals',
+    questionId: 'superlative-summer-medals',
+    direction: 'most',
+    // Essential: true zeros are ~46% of real places, so an unfiltered quartet
+    // could easily be four countries tied at 0.
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostSummerMedals', fallback: 'Most Summer Olympic medals' },
+    hintLeast: null,
+  },
+  {
+    key: 'summerMedalsPerCapita',
+    questionId: 'superlative-summer-medals-pc',
+    direction: 'most',
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostSummerMedalsPc', fallback: 'Most Summer medals per person' },
+    hintLeast: null,
+  },
+  {
+    // Most-only, and the zero pile is far bigger here: only 40 places have ever
+    // won a Winter medal, most of the world having no winter to speak of.
+    key: 'winterMedals',
+    questionId: 'superlative-winter-medals',
+    direction: 'most',
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostWinterMedals', fallback: 'Most Winter Olympic medals' },
+    hintLeast: null,
+  },
+  {
+    key: 'winterMedalsPerCapita',
+    questionId: 'superlative-winter-medals-pc',
+    direction: 'most',
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostWinterMedalsPc', fallback: 'Most Winter medals per person' },
+    hintLeast: null,
+  },
 ];
 
 /** @type {Record<string, SuperlativeMetric>} */

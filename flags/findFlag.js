@@ -485,6 +485,10 @@ const SCALAR_GROUPS = new Set(/** @type {Array<keyof Filters>} */ (['continent',
  *   mcdonaldsPerMillionProbability?: number,
  *   nobelProbability?: number,
  *   nobelPerCapitaProbability?: number,
+ *   summerMedalsProbability?: number,
+ *   summerMedalsPerCapitaProbability?: number,
+ *   winterMedalsProbability?: number,
+ *   winterMedalsPerCapitaProbability?: number,
  * }} [options]
  * @returns {Filters}
  */
@@ -531,6 +535,10 @@ export function pickRandomMix(pillPool, all, options = {}) {
     mcdonaldsPerMillionProbability = 0,
     nobelProbability = 0,
     nobelPerCapitaProbability = 0,
+    summerMedalsProbability = 0,
+    summerMedalsPerCapitaProbability = 0,
+    winterMedalsProbability = 0,
+    winterMedalsPerCapitaProbability = 0,
   } = options;
 
   // A 2+ pill mix needs at least 2 pills to draw from; degenerate
@@ -601,6 +609,10 @@ export function pickRandomMix(pillPool, all, options = {}) {
       mcdonaldsPerMillion: mcdonaldsPerMillionProbability,
       nobel: nobelProbability,
       nobelPerCapita: nobelPerCapitaProbability,
+      summerMedals: summerMedalsProbability,
+      summerMedalsPerCapita: summerMedalsPerCapitaProbability,
+      winterMedals: winterMedalsProbability,
+      winterMedalsPerCapita: winterMedalsPerCapitaProbability,
     };
     for (const key of METRIC_KEYS) maybeAttachMetric(f, rng, key, metricProbabilities[key] ?? 0);
     lastAttempt = f;

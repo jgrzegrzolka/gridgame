@@ -45,6 +45,10 @@
  * @property {number} [borders]  Denormalized from `flags/metrics/borders.json` by `attachBorders` (number of countries sharing a land border). Dense, same pattern as `area`: every real place has a value (an island carries a true 0), absent only for non-places (orgs).
  * @property {number} [tourismPerCapita]  Denormalized from `flags/metrics/tourismPerCapita.json` by `attachTourismPerCapitas` (international tourist arrivals per resident per year). `absence: 'unknown'` metric like the drink metrics: a real place the World Bank has no arrivals figure for carries no value (read "no data"), NOT 0. Absent for those and non-places (orgs).
  * @property {number} [electricityPerCapita]  Denormalized from `flags/metrics/electricityPerCapita.json` by `attachElectricityPerCapitas` (electric power consumption, kWh per person per year). `absence: 'unknown'` metric like the drink metrics: a real place the World Bank does not meter carries no value (read "no data"), NOT 0. Absent for those and non-places (orgs).
+ * @property {number} [summerMedals]  Denormalized from `flags/metrics/summerMedals.json` by `attachSummerMedalss` (Summer Olympic medals won all-time (Summer Games only)). Dense `absence: 'zero'`: every real place carries a value and most carry a true 0, so an absent field means a non-place (org flag) only. East/West Germany fold into Germany; multi-successor NOCs (USSR, Czechoslovakia, Yugoslavia) are excluded rather than reassigned.
+ * @property {number} [summerMedalsPerCapita]  Denormalized from `flags/metrics/summerMedalsPerCapita.json` by `attachSummerMedalsPerCapitas` (Summer Olympic medals per million people). Dense `absence: 'zero'`: every real place carries a value and most carry a true 0, so an absent field means a non-place (org flag) only. East/West Germany fold into Germany; multi-successor NOCs (USSR, Czechoslovakia, Yugoslavia) are excluded rather than reassigned.
+ * @property {number} [winterMedals]  Denormalized from `flags/metrics/winterMedals.json` by `attachWinterMedalss` (Winter Olympic medals won all-time (Winter Games only)). Dense `absence: 'zero'`: every real place carries a value and most carry a true 0, so an absent field means a non-place (org flag) only. East/West Germany fold into Germany; multi-successor NOCs (USSR, Czechoslovakia, Yugoslavia) are excluded rather than reassigned.
+ * @property {number} [winterMedalsPerCapita]  Denormalized from `flags/metrics/winterMedalsPerCapita.json` by `attachWinterMedalsPerCapitas` (Winter Olympic medals per million people). Dense `absence: 'zero'`: every real place carries a value and most carry a true 0, so an absent field means a non-place (org flag) only. East/West Germany fold into Germany; multi-successor NOCs (USSR, Czechoslovakia, Yugoslavia) are excluded rather than reassigned.
  * @property {number} [nobel]  Denormalized from `flags/metrics/nobel.json` by `attachNobels` (Nobel laureates born there, all six prizes, organisations excluded, attributed by country of birth on modern borders). `absence: 'zero'`: every real place carries a value and most carry a true 0, so an absent field means a non-place (org flag) only. UK and Spanish sub-national places carry their own share AND also roll up into the `gb` / `es` totals, matching population.json.
  * @property {number} [nobelPerCapita]  Denormalized from `flags/metrics/nobelPerCapita.json` by `attachNobelPerCapitas` (Nobel laureates per million people). Same dense `absence: 'zero'` contract as `.nobel`; uninhabited places carry an explicit 0 rather than an undefined 0/0.
  * @property {number} [mcdonaldsPerMillion]  Denormalized from `flags/metrics/mcdonaldsPerMillion.json` by `attachMcdonaldsPerMillions` (McDonald's restaurants per million people). `absence: 'unknown'`, but with a twist the other unknown metrics do not have: a place with NO McDonald's carries an explicit 0 (that absence is a known fact, and the good trivia), while a market folded into another's reported row (Monaco, Andorra, Liechtenstein, Cuba) has restaurants but no published count and is left without the field. So 0 and missing mean opposite things here. Absent for the folded markets and non-places (orgs).
@@ -382,6 +386,79 @@ export function attachNobelPerCapitas(countries, values) {
   }
   return countries;
 }
+
+/**
+ * Denormalize `flags/metrics/summerMedals.json` values onto each Country as
+ * `.summerMedals` (Summer Olympic medals won all-time (Summer Games only)). `absence: 'zero'`, and the data file writes an
+ * explicit 0 for every real place, so a plain set-if-present leaves only the org
+ * flags bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachSummerMedalss(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.summerMedals = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/summerMedalsPerCapita.json` values onto each Country as
+ * `.summerMedalsPerCapita` (Summer Olympic medals per million people). `absence: 'zero'`, and the data file writes an
+ * explicit 0 for every real place, so a plain set-if-present leaves only the org
+ * flags bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachSummerMedalsPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.summerMedalsPerCapita = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/winterMedals.json` values onto each Country as
+ * `.winterMedals` (Winter Olympic medals won all-time (Winter Games only)). `absence: 'zero'`, and the data file writes an
+ * explicit 0 for every real place, so a plain set-if-present leaves only the org
+ * flags bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachWinterMedalss(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.winterMedals = v;
+  }
+  return countries;
+}
+
+/**
+ * Denormalize `flags/metrics/winterMedalsPerCapita.json` values onto each Country as
+ * `.winterMedalsPerCapita` (Winter Olympic medals per million people). `absence: 'zero'`, and the data file writes an
+ * explicit 0 for every real place, so a plain set-if-present leaves only the org
+ * flags bare.
+ *
+ * @param {Country[]} countries
+ * @param {Record<string, number>} values
+ * @returns {Country[]}
+ */
+export function attachWinterMedalsPerCapitas(countries, values) {
+  for (const c of countries) {
+    const v = values[c.code];
+    if (typeof v === 'number') c.winterMedalsPerCapita = v;
+  }
+  return countries;
+}
+
 
 /**
  * Denormalize `flags/metrics/borders.json` values onto each Country as `.borders`
@@ -790,6 +867,10 @@ const METRIC_ATTACHERS = {
   mcdonaldsPerMillion: attachMcdonaldsPerMillions,
   nobel: attachNobels,
   nobelPerCapita: attachNobelPerCapitas,
+  summerMedals: attachSummerMedalss,
+  summerMedalsPerCapita: attachSummerMedalsPerCapitas,
+  winterMedals: attachWinterMedalss,
+  winterMedalsPerCapita: attachWinterMedalsPerCapitas,
 };
 
 /**

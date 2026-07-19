@@ -220,6 +220,10 @@ export const PARTY_MODES = [
   { id: 'superlative-mcdonalds', questionId: 'superlative-mcdonalds', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-nobel', questionId: 'superlative-nobel', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-nobel-pc', questionId: 'superlative-nobel-pc', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-summer-medals', questionId: 'superlative-summer-medals', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-summer-medals-pc', questionId: 'superlative-summer-medals-pc', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-winter-medals', questionId: 'superlative-winter-medals', poolId: 'sovereign', group: 'metric' },
+  { id: 'superlative-winter-medals-pc', questionId: 'superlative-winter-medals-pc', poolId: 'sovereign', group: 'metric' },
 ];
 
 /** The fixed picture trio (flags / territories / map), in catalog order. */

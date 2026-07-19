@@ -34,6 +34,10 @@ import electricityPerCapita from '../flags/metrics/electricityPerCapita.json' wi
 import mcdonaldsPerMillion from '../flags/metrics/mcdonaldsPerMillion.json' with { type: 'json' };
 import nobel from '../flags/metrics/nobel.json' with { type: 'json' };
 import nobelPerCapita from '../flags/metrics/nobelPerCapita.json' with { type: 'json' };
+import summerMedals from '../flags/metrics/summerMedals.json' with { type: 'json' };
+import summerMedalsPerCapita from '../flags/metrics/summerMedalsPerCapita.json' with { type: 'json' };
+import winterMedals from '../flags/metrics/winterMedals.json' with { type: 'json' };
+import winterMedalsPerCapita from '../flags/metrics/winterMedalsPerCapita.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -80,6 +84,10 @@ attachMetrics(countries, {
   mcdonaldsPerMillion: mcdonaldsPerMillion.values,
   nobel: nobel.values,
   nobelPerCapita: nobelPerCapita.values,
+  summerMedals: summerMedals.values,
+  summerMedalsPerCapita: summerMedalsPerCapita.values,
+  winterMedals: winterMedals.values,
+  winterMedalsPerCapita: winterMedalsPerCapita.values,
 });
 
 export default class GameServer extends TicTacToeServer {

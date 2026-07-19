@@ -587,12 +587,20 @@
       "superlativeMcdonalds": "McDonald's na milion mieszkańców",
       "superlativeNobel": "Nobliści",
       "superlativeNobelPc": "Nobliści na mieszkańca",
+      "superlativeSummerMedals": "Medale letnich igrzysk",
+      "superlativeSummerMedalsPc": "Medale letnie na mieszkańca",
+      "superlativeWinterMedals": "Medale zimowych igrzysk",
+      "superlativeWinterMedalsPc": "Medale zimowe na mieszkańca",
+      "summerMedals": "Medale letnich igrzysk",
+      "winterMedals": "Medale zimowych igrzysk",
       "economy": "Gospodarka",
       "nobel": "Nobliści"
     },
     "modeSub": {
       "economy": "PKB, całkowite lub na mieszkańca",
-      "nobel": "Łącznie lub na mieszkańca"
+      "nobel": "Łącznie lub na mieszkańca",
+      "summerMedals": "Łącznie lub na mieszkańca",
+      "winterMedals": "Łącznie lub na mieszkańca"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -632,7 +640,11 @@
       "superlativeElectricity": "Prąd",
       "superlativeMcdonalds": "McDonald's",
       "superlativeNobel": "Nobliści",
-      "superlativeNobelPc": "Nobliści na mieszkańca"
+      "superlativeNobelPc": "Nobliści na mieszkańca",
+      "superlativeSummerMedals": "Medale letnie",
+      "superlativeSummerMedalsPc": "Letnie na mieszkańca",
+      "superlativeWinterMedals": "Medale zimowe",
+      "superlativeWinterMedalsPc": "Zimowe na mieszkańca"
     },
     "roundQuestion": "Runda {b}/{rounds} · Pytanie {n}/{total}",
     "afterRound": "Po rundzie {n} z {total}",
@@ -701,6 +713,10 @@
     "hintMostMcdonalds": "Najwięcej McDonald's na mieszkańca",
     "hintMostNobel": "Najwięcej noblistów",
     "hintMostNobelPc": "Najwięcej noblistów na mieszkańca",
+    "hintMostSummerMedals": "Najwięcej medali letnich igrzysk",
+    "hintMostSummerMedalsPc": "Najwięcej medali letnich na mieszkańca",
+    "hintMostWinterMedals": "Najwięcej medali zimowych igrzysk",
+    "hintMostWinterMedalsPc": "Najwięcej medali zimowych na mieszkańca",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "fastest": "Najszybszy",
     "speedBonus": "Bonus za szybkość",
@@ -1022,6 +1038,32 @@
       "2": "ponad 2 noblistów na milion mieszkańców"
     }
   },
+  "summerMedals": {
+    "atLeast": {
+      "10": "co najmniej 10 medali letnich igrzysk",
+      "100": "co najmniej 100 medali letnich igrzysk",
+      "500": "co najmniej 500 medali letnich igrzysk"
+    }
+  },
+  "summerMedalsPerCapita": {
+    "atLeast": {
+      "5": "ponad 5 medali letnich na milion mieszkańców",
+      "20": "ponad 20 medali letnich na milion mieszkańców"
+    }
+  },
+  "winterMedals": {
+    "atLeast": {
+      "1": "co najmniej 1 medal zimowych igrzysk",
+      "10": "co najmniej 10 medali zimowych igrzysk",
+      "50": "co najmniej 50 medali zimowych igrzysk"
+    }
+  },
+  "winterMedalsPerCapita": {
+    "atLeast": {
+      "1": "ponad 1 medal zimowy na milion mieszkańców",
+      "10": "ponad 10 medali zimowych na milion mieszkańców"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 lub więcej",
@@ -1120,7 +1162,11 @@
     "electricityPerCapita": "Zużycie prądu na osobę",
     "mcdonaldsPerMillion": "McDonald's na milion mieszkańców",
     "nobel": "Nobliści",
-    "nobelPerCapita": "Nobliści na milion mieszkańców"
+    "nobelPerCapita": "Nobliści na milion mieszkańców",
+    "summerMedals": "Medale letnich igrzysk",
+    "summerMedalsPerCapita": "Medale letnie na milion mieszkańców",
+    "winterMedals": "Medale zimowych igrzysk",
+    "winterMedalsPerCapita": "Medale zimowe na milion mieszkańców"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

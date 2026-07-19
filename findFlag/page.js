@@ -99,6 +99,10 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
   mcdonaldsPerMillionProbability: 0.06,
   nobelProbability: 0.06,
   nobelPerCapitaProbability: 0.06,
+  summerMedalsProbability: 0.06,
+  summerMedalsPerCapitaProbability: 0.06,
+  winterMedalsProbability: 0.06,
+  winterMedalsPerCapitaProbability: 0.06,
 });
 
 /**

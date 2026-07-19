@@ -274,6 +274,22 @@ const GROUPED_FAMILIES = [
     // recognises, and the per-million round then lands as the twist.
     representativeId: 'superlative-nobel',
   },
+  {
+    // Summer and Winter are grouped SEPARATELY on purpose. Each season pairs its
+    // total with its own per-person cut, which is one question asked two ways.
+    // Summer vs Winter is not: they have different sports, different countries and
+    // different answers (the United States leads one, Norway the other), so they
+    // are two subjects and get two cards, the same way meat / cattle / sheep stay
+    // apart despite sharing a barn.
+    id: 'summerMedals',
+    memberIds: ['superlative-summer-medals', 'superlative-summer-medals-pc'],
+    representativeId: 'superlative-summer-medals',
+  },
+  {
+    id: 'winterMedals',
+    memberIds: ['superlative-winter-medals', 'superlative-winter-medals-pc'],
+    representativeId: 'superlative-winter-medals',
+  },
 ];
 
 /**

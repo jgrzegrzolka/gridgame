@@ -170,6 +170,22 @@ import { METRIC_KEYS } from './engine.js';
  *   (Monaco, Andorra, Liechtenstein) has restaurants but no count and matches
  *   neither direction.
  *
+ * @typedef {{ op: '>=' | '<=', n: number }} SummerMedalsConstraint
+ *   Summer Olympic medals won all-time (Summer Games only); reads `country.summerMedals`. Dense `absence: 'zero'`: every real place has
+ *   a value and most have a true 0, so only non-place org flags match neither.
+ *
+ * @typedef {{ op: '>=' | '<=', n: number }} SummerMedalsPerCapitaConstraint
+ *   Summer Olympic medals per million people; reads `country.summerMedalsPerCapita`. Dense `absence: 'zero'`: every real place has
+ *   a value and most have a true 0, so only non-place org flags match neither.
+ *
+ * @typedef {{ op: '>=' | '<=', n: number }} WinterMedalsConstraint
+ *   Winter Olympic medals won all-time (Winter Games only); reads `country.winterMedals`. Dense `absence: 'zero'`: every real place has
+ *   a value and most have a true 0, so only non-place org flags match neither.
+ *
+ * @typedef {{ op: '>=' | '<=', n: number }} WinterMedalsPerCapitaConstraint
+ *   Winter Olympic medals per million people; reads `country.winterMedalsPerCapita`. Dense `absence: 'zero'`: every real place has
+ *   a value and most have a true 0, so only non-place org flags match neither.
+ *
  * @typedef {{ op: '>=' | '<=', n: number }} NobelConstraint
  *   Nobel-laureate threshold (people born there who won, all six prizes); reads
  *   `country.nobel`. Dense `absence: 'zero'` metric: every real place has a value
@@ -226,6 +242,10 @@ import { METRIC_KEYS } from './engine.js';
  *   mcdonaldsPerMillion: McdonaldsPerMillionConstraint | null,
  *   nobel: NobelConstraint | null,
  *   nobelPerCapita: NobelPerCapitaConstraint | null,
+ *   summerMedals: SummerMedalsConstraint | null,
+ *   summerMedalsPerCapita: SummerMedalsPerCapitaConstraint | null,
+ *   winterMedals: WinterMedalsConstraint | null,
+ *   winterMedalsPerCapita: WinterMedalsPerCapitaConstraint | null,
  * }} Filters
  */
 
@@ -296,6 +316,10 @@ export function emptyFilters() {
     mcdonaldsPerMillion: null,
     nobel: null,
     nobelPerCapita: null,
+    summerMedals: null,
+    summerMedalsPerCapita: null,
+    winterMedals: null,
+    winterMedalsPerCapita: null,
   };
 }
 
@@ -462,7 +486,7 @@ export function matchesFilters(country, filters, options = {}) {
 
 /**
  * @typedef {'status' | 'continent' | 'color' | 'motif' | 'stripesOnly'} PillGroup
- * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'temperature' | 'happiness' | 'corruption' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders' | 'oliveOil' | 'honey' | 'tourismPerCapita' | 'electricityPerCapita' | 'mcdonaldsPerMillion' | 'nobel' | 'nobelPerCapita'} ScalarGroup
+ * @typedef {'colorCount' | 'population' | 'area' | 'density' | 'temperature' | 'happiness' | 'corruption' | 'gdp' | 'gdpPerCapita' | 'coffee' | 'wine' | 'cocoa' | 'banana' | 'apple' | 'elevation' | 'coastline' | 'forest' | 'oil' | 'rice' | 'coal' | 'sheepPerCapita' | 'cattlePerCapita' | 'beerPerCapita' | 'tea' | 'sugarcane' | 'gold' | 'alcoholPerCapita' | 'meatPerCapita' | 'borders' | 'oliveOil' | 'honey' | 'tourismPerCapita' | 'electricityPerCapita' | 'mcdonaldsPerMillion' | 'nobel' | 'nobelPerCapita' | 'summerMedals' | 'summerMedalsPerCapita' | 'winterMedals' | 'winterMedalsPerCapita'} ScalarGroup
  *
  * @typedef {{ kind: 'pill', group: PillGroup, value: string, exclude: boolean }
  *   | { kind: 'scalar', group: ScalarGroup }} FilterChip
