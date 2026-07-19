@@ -128,7 +128,7 @@ export function bootProfile() {
     const offensive = isOffensiveNickname(input.value);
     if (offensive) {
       saveBtn.disabled = true;
-      setStatus(status, t('nickname.errorOffensive', 'Please choose a different nickname'), 'is-error', 'nickname.errorOffensive');
+      setStatus(status, t('nickname.errorOffensive', 'That’s an offensive word, please choose another'), 'is-error', 'nickname.errorOffensive');
       if (!wasOffensive) {
         // Transition into offensive — shake the status line once via
         // the reflow-restart trick so the user notices the message
@@ -431,7 +431,7 @@ function wireAchievementInfoDismiss() {
  */
 function errorMessageFor(code) {
   if (code === 'offensive_nickname') {
-    return { i18nKey: 'nickname.errorOffensive', fallback: 'Please choose a different nickname' };
+    return { i18nKey: 'nickname.errorOffensive', fallback: 'That’s an offensive word, please choose another' };
   }
   if (code === 'invalid_nickname') {
     return { i18nKey: 'nickname.errorInvalid', fallback: 'That nickname contains characters that aren’t allowed' };

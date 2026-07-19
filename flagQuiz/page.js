@@ -1026,7 +1026,7 @@ export function bootFlagQuiz() {
       btn.appendChild(iconEl);
       btn.onclick = async () => {
         const title = buildQuizShareTitle({
-          template: t('quiz.share.title', 'Yet Another Quiz — {variant} {mode} — {score}'),
+          template: t('quiz.share.title', 'Yet Another Quiz: {variant} {mode}, {score}'),
           variant: t(`variant.${key}`, VARIANTS[key].label),
           mode: t(`quiz.mode.${mode}`, mode),
           timed,

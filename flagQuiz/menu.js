@@ -145,7 +145,7 @@ export function buildQuizMenu(menuEl, all, opts) {
   coffeeA.href = 'https://suppi.pl/jgrzegrzolka';
   coffeeA.target = '_blank';
   coffeeA.rel = 'noopener noreferrer';
-  coffeeA.textContent = t('coffee', 'Buy me a coffee');
+  coffeeA.textContent = t('menu.coffee', 'Buy me a coffee');
   coffeeLi.appendChild(coffeeA);
   menuEl.appendChild(coffeeLi);
 }

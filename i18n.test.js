@@ -847,3 +847,87 @@ test('the reveal badge and the break chip do not share one label', async () => {
       `${name}: the chip label must not be the same string as the badge`);
   }
 });
+
+test('every t() fallback matches en.json, and every key it names is a string', async () => {
+  // Why this test exists: the fallback is what a user sees before i18n loads,
+  // and forever if the key is wrong. Two failures shipped that way. `t('coffee',
+  // 'Buy me a coffee')` named a key that resolves to an OBJECT (the
+  // coffee-production tier namespace), so lookupString returned null and the
+  // burger item was hard-English in Polish permanently. And four share strings
+  // kept an em dash in the fallback after the JSON had been de-em-dashed, so a
+  // pre-i18n share emitted the one character the project bans.
+  //
+  // The sibling placeholder test deliberately skips a key whose value is not a
+  // string ("a separate test's job"). This is that test.
+  const root = resolve(dirname(fileURLToPath(import.meta.url)));
+  const en = JSON.parse(await readFile(join(root, 'i18n', 'en.json'), 'utf8'));
+  /** @param {any} obj @param {string} key */
+  const lookup = (obj, key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
+
+  /** @type {string[]} */
+  const files = [];
+  await collectSourceFiles(root, files);
+
+  /** @type {string[]} */
+  const problems = [];
+  let checked = 0;
+  for (const file of files) {
+    if (file.endsWith('.test.js')) continue;
+    const src = await readFile(file, 'utf8');
+    const rel = relative(root, file).split(sep).join('/');
+    for (const m of src.matchAll(/\bt\(\s*'([\w.]+)'\s*,\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g)) {
+      const [, key, single, double] = m;
+      // The source carries escapes ("don\'t"); compare against what JS actually
+      // produces, or every apostrophe reads as a drift.
+      const fallback = (single ?? double ?? '').replace(/\\(['"\\])/g, '$1');
+      const value = lookup(en, key);
+      checked++;
+      if (typeof value !== 'string') {
+        problems.push(`${rel}: t('${key}') names ${value === undefined ? 'a missing key' : `a ${typeof value}`}, so the fallback is permanent`);
+      } else if (value !== fallback) {
+        problems.push(`${rel}: t('${key}') falls back to ${JSON.stringify(fallback)} but en.json says ${JSON.stringify(value)}`);
+      }
+    }
+  }
+  assert.deepEqual(problems, [], problems.join('\n'));
+  // A scanner that matches nothing reads as coverage while asserting on an
+  // empty set. Trip loudly if the call-site style changes instead.
+  assert.ok(checked >= 100, `expected 100+ t() call sites with a fallback, saw ${checked}`);
+});
+
+test('no user-facing string uses the em dash, in either locale or any fallback', async () => {
+  // Jan's standing rule: the long dash reads as AI-generated, so it never
+  // appears in copy a player can see (repo docs are exempt and use it freely).
+  // The de-em-dash pass that cleaned the JSON missed the call-site fallbacks,
+  // which is exactly the half-swept state this pins shut.
+  const root = resolve(dirname(fileURLToPath(import.meta.url)));
+  /** @type {string[]} */
+  const offenders = [];
+  for (const lang of ['en', 'pl']) {
+    const dict = JSON.parse(await readFile(join(root, 'i18n', `${lang}.json`), 'utf8'));
+    /** @param {any} node @param {string} path */
+    const walk = (node, path) => {
+      if (node && typeof node === 'object') {
+        for (const [k, v] of Object.entries(node)) walk(v, path ? `${path}.${k}` : k);
+      } else if (typeof node === 'string' && node.includes('—')) {
+        offenders.push(`${lang}.json ${path} = ${JSON.stringify(node)}`);
+      }
+    };
+    walk(dict, '');
+  }
+
+  /** @type {string[]} */
+  const files = [];
+  await collectSourceFiles(root, files);
+  for (const file of files) {
+    if (file.endsWith('.test.js')) continue;
+    const src = await readFile(file, 'utf8');
+    const rel = relative(root, file).split(sep).join('/');
+    for (const m of src.matchAll(/\bt\(\s*'([\w.]+)'\s*,\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g)) {
+      const [, key, single, double] = m;
+      const fallback = single ?? double ?? '';
+      if (fallback.includes('—')) offenders.push(`${rel}: t('${key}') fallback = ${JSON.stringify(fallback)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], offenders.join('\n'));
+});

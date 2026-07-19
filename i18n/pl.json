@@ -59,7 +59,8 @@
     "fullscreen": "Pełny ekran",
     "sync": "Synchronizuj urządzenia",
     "deck": "Talia",
-    "partOfWorld": "Część świata"
+    "partOfWorld": "Część świata",
+    "coffee": "Postaw mi kawę"
   },
   "nickname": {
     "label": "Pseudonim",
@@ -473,7 +474,7 @@
     },
     "share": {
       "aria": "Udostępnij wynik",
-      "title": "Yet Another Quiz: Daily Flag Puzzle #{n}, {score}/{total}",
+      "title": "Yet Another Quiz: codzienna łamigłówka flag #{n}, {score}/{total}",
       "streakLine": "🔥 Seria {n} dni"
     },
     "streak": {

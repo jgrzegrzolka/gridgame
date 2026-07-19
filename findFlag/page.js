@@ -127,7 +127,7 @@ const RANDOM_MIX_OPTIONS = /** @type {const} */ ({
 function attachShareHandler(el) {
   el.addEventListener('click', async () => {
     const result = await shareUrl(window.location.href, {
-      title: t('findFlag.shareTitle', 'Yet Another Quiz — flag puzzle'),
+      title: t('findFlag.shareTitle', 'Yet Another Quiz: flag puzzle'),
       text: t('findFlag.shareText', "I built a flag puzzle. Can you find them all?"),
     });
     if (result === 'copied') {
