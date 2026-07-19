@@ -1560,6 +1560,52 @@ already at 85 of 140 while the winner's row was still at opacity 0 — the numbe
 - Should the Decider's pick be **hidden until the card flips**, so the table doesn't know the terrain
   until it starts? More theatre, but it removes the "oh no, not coffee" groan that is half the fun.
 
+## Iteration 13 — Kid mode: a per-seat 50/50 — BUILT (2026-07-19)
+
+The host taps a player's lobby chip to mark them a kid. That seat plays the same four options as
+everyone else, but two wrong ones arrive named so their client greys them out — a 50/50, so a small
+child can keep up at the same table as adults.
+
+**Why it is server-side, despite looking like a pure client tweak.** The obvious cheap version is
+"the client already knows the prompt, let it grey out two tiles itself". That works for flag-pick
+and map-pick, where `prompt` *is* the answer's country code — and fails silently for every
+superlative round, where `prompt` is only `most` / `least` and `publicQuestion` withholds the
+ranking until reveal (deliberately, see the comment in `toReveal`). Since the draft makes world
+facts most of a typical game, the client-only version would have left the handicap absent from the
+majority of the show without ever erroring. So the server picks the pair — it is the only side that
+knows the answer — and sends it only to the marked seat.
+
+**The pair is deterministic** (`easyFor` — the first two non-answer options in the question's own
+order), not random. A kid reconnecting mid-question re-derives it from the same question via
+`welcome`; a random pick would grey out two *different* tiles on the way back and eat the rest of
+the board. The options array is already shuffled per question, so "the first two" is not a
+positional tell.
+
+**Shape of the wire change.** `Seat` gains `kid`. `question` fans out per recipient *only* when the
+room contains a kid — an ordinary game keeps the single `to: 'all'` broadcast it always had — and
+the kid's copy carries `easy`. `easy` rides *inside* the question on both `question` and `welcome`
+so the client reads it from one place. The answer still never leaves before reveal; `easy` names
+only wrong codes.
+
+**The control is the site's standard switch.** The first build made the whole chip the tap target,
+which shipped an invisible affordance: the lobby looked identical to before the feature existed, and
+a hint line was a patch over that rather than a fix. It is now the shared `.scope-toggle-switch`
+(`buildToggleSwitch`, extracted from `buildToggleLi` in `common.js` — the burger menus and
+`profile/sync` were already two copies of the same four elements). The chip stays a `<div>`: a
+checkbox inside a `<button>` is invalid and would give the row two competing hit targets. Non-hosts
+see a read-only badge, never a dead control.
+
+**Scoring is untouched.** A kid's correct answer is worth exactly what anyone else's is. That is the
+simple version and it is deliberate — the handicap is a render aid, so nobody's points mean two
+different things depending on who was marked. It does mean a marked player has a real edge; whether
+that wants a scoring counterweight is a play-test question, not a design one.
+
+### Open questions for Jan
+
+- Should a kid's points be discounted, or is winning the point of marking them?
+- Should the badge be visible to everyone (it is today) or only to the host? Visible is friendlier
+  at a family table and avoids a secret handicap; it also labels a child in front of the room.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).

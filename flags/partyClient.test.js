@@ -4,6 +4,7 @@ import {
   initialPartyClientState,
   reducePartyMessage,
   withLocalBuzz,
+  isDisabledOption,
   pickPartyCelebration,
   isCleanReveal,
   isBlankReveal,
@@ -425,4 +426,65 @@ test('reveal message: a server with no breakdown leaves an empty one, not undefi
   state = reducePartyMessage(state, { type: 'reveal', answer: 'pl', picks: {}, points: {} }).state;
   assert.deepEqual(state.reveal?.breakdown, {});
   assert.equal(state.reveal?.doubled, false);
+});
+
+// ---- kid mode ----
+
+/**
+ * The question on a state, asserted present.
+ * @param {any} state
+ * @returns {any}
+ */
+function questionOf(state) {
+  assert.ok(state.question, 'expected a live question');
+  return state.question;
+}
+
+/** A kid mid-question: four options, two of them disabled. */
+function kidMidQuestion() {
+  const { state } = reducePartyMessage(initialPartyClientState(), {
+    type: 'question', prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'], easy: ['kr', 'cn'],
+  });
+  return state;
+}
+
+test('a kid learns which two options are out', () => {
+  const state = kidMidQuestion();
+  assert.deepEqual(questionOf(state).easy, ['kr', 'cn']);
+  assert.equal(isDisabledOption(state, 'kr'), true);
+  assert.equal(isDisabledOption(state, 'jp'), false, 'the answer is still live');
+  assert.equal(isDisabledOption(state, 'th'), false, 'and so is the one wrong option left');
+});
+
+test('a grown-up has no disabled options at all', () => {
+  const { state } = reducePartyMessage(initialPartyClientState(), {
+    type: 'question', prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'],
+  });
+  assert.equal(questionOf(state).easy, null);
+  for (const code of questionOf(state).options) assert.equal(isDisabledOption(state, code), false);
+});
+
+test('a kid cannot buzz a disabled option', () => {
+  // The tiles render as un-clickable divs, but the guard lives here too: a
+  // keyboard or assistive-tech activation must not lock in a tile that is out.
+  const state = kidMidQuestion();
+  assert.equal(withLocalBuzz(state, 'kr').myChoice, null);
+  assert.equal(withLocalBuzz(state, 'jp').myChoice, 'jp', 'a live option still buzzes');
+});
+
+test('the disabled pair arrives on a mid-question reconnect too', () => {
+  const { state } = reducePartyMessage(initialPartyClientState(), {
+    type: 'welcome', you: 'bob', phase: 'question', roster: [],
+    question: { prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'], easy: ['kr', 'cn'] },
+  });
+  assert.equal(isDisabledOption(state, 'kr'), true);
+});
+
+test('the next question clears the previous one\'s disabled pair', () => {
+  // `easy` is per question. A kid whose second question came from a server that
+  // sent none must get four live tiles, not the stale two.
+  let state = kidMidQuestion();
+  state = reducePartyMessage(state, { type: 'question', prompt: 'us', options: ['us', 'ca', 'mx', 'br'] }).state;
+  assert.equal(questionOf(state).easy, null);
+  assert.equal(isDisabledOption(state, 'ca'), false);
 });

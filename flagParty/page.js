@@ -4,7 +4,7 @@ import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, isDisabledOption, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -18,7 +18,7 @@ import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../
 import { roundCountFor, validatePicksPerPlayer, canVeilMode, representativeModeFor, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
-import { buildAvatar, shareUrl } from '../common.js';
+import { buildAvatar, shareUrl, buildToggleSwitch } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
@@ -1012,15 +1012,30 @@ export function bootFlagParty() {
     playersEl.innerHTML = '';
     const label = el('p', 'plabel', `${t('party.players', 'Players')} · ${state.roster.length}`);
     playersEl.appendChild(label);
+    const inLobby = state.phase === 'lobby';
+    const hostSetup = state.isHost && inLobby;
     for (const r of state.roster) {
-      const chip = el('div', 'chip' + (r.present ? '' : ' away'));
+      const chip = el('div', 'chip' + (r.present ? '' : ' away') + (r.kid ? ' kid' : ''));
       chip.appendChild(buildAvatar(r.playerId));
       chip.appendChild(el('span', 'chip-name', r.nickname));
       if (r.playerId === roomHostId) chip.appendChild(el('span', 'chip-host', t('party.host', 'host')));
+      if (hostSetup) {
+        // The host gets the site's standard on/off switch (`buildToggleSwitch`,
+        // the same control the burger menus use) rather than a bespoke chip
+        // affordance. The row is not the tap target: the switch is, which is why
+        // the chip stays a <div> — nesting a checkbox inside a <button> is
+        // invalid and would give the row two competing hit areas.
+        chip.appendChild(el('span', 'chip-kid-label', t('party.kid', 'kid')));
+        chip.appendChild(buildToggleSwitch({
+          initial: r.kid === true,
+          onChange: (checked) => send({ type: 'setKid', playerId: r.playerId, kid: checked }),
+        }));
+      } else if (r.kid) {
+        // Everyone else just sees who is marked, with no control to operate.
+        chip.appendChild(el('span', 'chip-kid', t('party.kid', 'kid')));
+      }
       playersEl.appendChild(chip);
     }
-    const inLobby = state.phase === 'lobby';
-    const hostSetup = state.isHost && inLobby;
     startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
     // (play alone), and more players can join before the tap. The guard only
@@ -1133,13 +1148,17 @@ export function bootFlagParty() {
         gridEl.appendChild(flagOpt(code, { isMap, selectable: false, selected: false, correct, wrong: myWrong, dim: !correct && !myWrong, pickers, pop: popStrip(code) }));
       } else {
         const selected = state.myChoice === code;
-        const dim = state.myChoice != null && !selected;
+        // Kid mode: the server named two wrong options for this device to take
+        // off the board. They reuse `.dim` (the same "not yours to pick" wash the
+        // reveal uses) and render as divs, not buttons, so they can't be tapped.
+        const out = isDisabledOption(state, code);
+        const dim = out || (state.myChoice != null && !selected);
         // World-facts questions fade the country name onto each tile once the clock
         // passes the host's name-reveal point (the grid's `names-shown` class,
         // toggled by the veil loop). The strip is pre-rendered here; CSS keeps it
         // hidden until then. Name only, no value — the value would leak the answer.
         const named = isSuperlative;
-        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: veilActive(), named }));
+        gridEl.appendChild(flagOpt(code, { isMap, selectable: state.myChoice == null && !out, selected, correct: false, wrong: false, dim, pickers: [], pop: null, veil: veilActive(), named }));
       }
     }
 
