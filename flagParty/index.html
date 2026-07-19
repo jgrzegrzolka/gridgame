@@ -136,7 +136,13 @@
       <section class="pt-roundcard" id="pt-roundcard" hidden>
         <div class="roundcard">
           <span class="roundcard-count" id="roundcard-count"></span>
-          <span class="roundcard-ic" id="roundcard-ic" aria-hidden="true"></span>
+          <span class="roundcard-ring" aria-hidden="true">
+            <svg class="roundcard-ring-svg" viewBox="0 0 80 80">
+              <circle class="roundcard-ring-track" cx="40" cy="40" r="37" pathLength="100"></circle>
+              <circle class="roundcard-ring-fill" id="roundcard-ring-fill" cx="40" cy="40" r="37" pathLength="100"></circle>
+            </svg>
+            <span class="roundcard-ic" id="roundcard-ic"></span>
+          </span>
           <span class="roundcard-name" id="roundcard-name"></span>
           <span class="roundcard-questions" id="roundcard-questions"></span>
           <span class="roundcard-pick" id="roundcard-pick" hidden></span>

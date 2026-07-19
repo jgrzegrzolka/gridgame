@@ -193,14 +193,15 @@ Iteration 11 below.
 
 Still open:
 
-- **Iteration 12 — the playability + UX pass (IN PROGRESS, 3 of 6 phases shipped).** Written to be
+- **Iteration 12 — the playability + UX pass (IN PROGRESS, 4 of 6 phases shipped).** Written to be
   picked up by a fresh agent one phase at a time. It opened with a measured fairness bug: the
   double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
   because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
   round is now **the Decider**, a separate act outside the rotation picked by last place. Scoring is
-  legible (phase 1) and screen changes go through one animated primitive (phase 3). **Phase 4
-  (round-start ring) is next** — it was deliberately left until transitions were smooth, which they
-  now are. See the entry below.
+  legible (phase 1), screen changes go through one animated primitive (phase 3, #983), and the round
+  card counts the beat down with a draining ring (phase 4). **Phase 5 (deeper scoring: streaks, sole
+  survivor, the "nobody knew" beat) is next** — it was held until phase 1 made scoring visible, which
+  it now is. See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1368,18 +1369,36 @@ cautionary tale: two implementations of one mechanism, and the wrong one silentl
       change** across ~10 s of question phase. Reduced motion re-checked by flipping `matchMedia`
       live: `SHOW pt-final` with zero class events and no out-phase delay. 0 console errors.
 
-**Not verified:** a clean screenshot of the round card itself. The 2 s beat kept outrunning the
-screenshot round-trip, twice. The mutation trace proves the card's section enters through the shared
-swap, but nobody has *looked* at the card since its own animation was removed.
+### Phase 4 — round-start countdown (client only) — SHIPPED (2026-07-19)
 
-### Phase 4 — round-start countdown (client only)
-
-After a break and a pick the table has scattered; the first question currently arrives with its clock
-already running. The round card grows a **draining ring** over its existing `ROUND_INTRO_SECONDS`,
+After a break and a pick the table has scattered; the first question used to arrive with its clock
+already running. The round card now grows a **draining ring** over its existing `ROUND_INTRO_SECONDS`,
 reusing the question clock's visual language ("ring empty = go") rather than adding a 3-2-1 screen.
 
 A literal 3-2-1 countdown was mocked and rejected as the default: it is loud, and it costs 3 s of
 every round. Revisit only if the ring tests too subtle in a noisy room.
+
+**What shipped:**
+- [x] The ring curls around the mode icon on `.roundcard`, in the question bar's exact language:
+      `--secondary-color` over a `--muted-soft-color` track, drained off `remainingFraction` — the
+      same tested helper the bar uses, so there is one definition of "how much time is left".
+- [x] **Deliberately not a CSS animation keyed on the card becoming visible.** The shared section
+      swap (phase 3) holds the card back ~120 ms while this beat's `setTimeout` is already counting,
+      so a display-triggered animation would finish that much *after* the question arrives — a ring
+      that lies about when play starts. Driving it from the same deadline the timeout uses keeps the
+      two honest: measured in-browser, the ring is already 8.9% spent on the card's first painted
+      frame and reaches 99.65% as the card leaves.
+- [x] `pathLength="100"` on the circle, so the JS sets one number (percent spent) as
+      `stroke-dashoffset` and never has to know the circumference. Verified the attribute is honoured:
+      offset 50 draws exactly half the ring.
+- [x] Not gated on reduced motion, for the same reason the question bar isn't: it is a timer, not
+      decoration. The rAF loop is only alive for the ~2 s beat and self-terminates with it.
+- [x] `npm run validate` green (2969 tests) + **verified in-browser** on a real solo game: sampled the
+      live ring across the beat (8.9 → 58.85 → 99.65 over 2.1 s), and **looked at the card** — which
+      closes phase 3's "nobody has looked at the card since its own animation was removed" note. The
+      2 s beat outran the screenshot round-trip a third time, so the visual pass was taken with
+      `ROUND_INTRO_SECONDS` temporarily stretched to 12 s; the constant was reverted before commit and
+      the timing numbers above are from the real 2 s beat. 0 console errors.
 
 ### Phase 5 — deeper scoring (server + client)
 
