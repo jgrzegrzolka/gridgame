@@ -1029,6 +1029,10 @@ export function bootFlagParty() {
       }
       playersEl.appendChild(chip);
     }
+    // The chip IS the toggle, which is invisible until you know it. One line of
+    // instruction, host + lobby only, so the affordance is discoverable without
+    // adding a control to every row.
+    if (hostSetup) playersEl.appendChild(el('p', 'kid-hint', t('party.kidHint', 'Tap a player to mark them as a kid')));
     startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
     // (play alone), and more players can join before the tap. The guard only
