@@ -13,6 +13,7 @@ import {
   applyDisconnect,
   pendingPickAfterReveal,
   applyEnterPicking,
+  applyRepick,
   applyPick,
   serializeRoom,
   deserializeRoom,
@@ -558,6 +559,27 @@ test('applyPick: only the designated picker can pick, and only in the picking ph
   assert.equal(applyPick(notPicking, 'bob', 'map-outlines', seg, q('pa')).broadcasts.length, 0, 'wrong phase ignored');
 });
 
+test('the scoreboard keeps join order when scores tie', () => {
+  // The ordering guarantee `deciderPickerFor` rests on: it takes the bottom row,
+  // so "who picks the round that decides the game" when two players are level is
+  // decided entirely by this sort being stable over insertion-ordered seats.
+  // Pinned here as well as in partyDraft.test.js because the two halves can break
+  // independently — this is the half that could change under a sort swap.
+  let room = createRoom(15);
+  for (const id of ['early', 'leader', 'late']) room = applyHello(room, id, id).room;
+  const seats = new Map(room.seats);
+  seats.set('early', { nickname: 'early', score: 10 });   // joined 1st
+  seats.set('leader', { nickname: 'leader', score: 30 });
+  seats.set('late', { nickname: 'late', score: 10 });     // joined 3rd, same score
+  room = { ...room, seats, phase: /** @type {any} */ ('question'), question: q('pa', ['pa', 'us']), buzzes: [] };
+
+  // Read the board the way the server does — off a broadcast, not a private helper.
+  const board = msg(applyForceReveal(room, 'early'), 'reveal').scoreboard
+    .map((/** @type {any} */ r) => r.playerId);
+  assert.deepEqual(board, ['leader', 'early', 'late']);
+  assert.equal(board[board.length - 1], 'late', 'a tie for last puts the LAST-JOINED seat on the bottom row');
+});
+
 test('applyEnterPicking: the Decider flag rides both the picker and the watcher message', () => {
   // Every seat has to know the closing act has started — the watcher screen names
   // it just as the picker's does, so `decider` is not picker-only like the hand.
@@ -570,6 +592,33 @@ test('applyEnterPicking: the Decider flag rides both the picker and the watcher 
   const ordinary = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']);
   assert.equal(ordinary.room.decider, false);
   assert.equal(/** @type {any} */ (ordinary.broadcasts.find((b) => b.to === 'bob')?.message).decider, false);
+});
+
+test('applyRepick: the turn moves, the pick keeps its identity', () => {
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee'], true).room;
+  const r = applyRepick(room, 'alice');
+  assert.equal(r.room.picker, 'alice');
+  assert.equal(r.room.phase, 'picking', 'still picking, not re-entered from reveal');
+  assert.equal(r.room.decider, true, 'still the Decider');
+  assert.deepEqual(r.room.hand, ['map-outlines', 'superlative-coffee'], 'and the same dealt hand');
+  // The new picker is told it is theirs, with the hand; the watcher is not.
+  const toAlice = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'alice')?.message);
+  assert.equal(toAlice.youPick, true);
+  assert.deepEqual(toAlice.hand, ['map-outlines', 'superlative-coffee']);
+  assert.equal(toAlice.decider, true);
+  const toBob = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'bob')?.message);
+  assert.equal(toBob.youPick, false);
+  assert.equal(toBob.hand, undefined, 'the hand is not leaked to a watcher');
+});
+
+test('applyRepick: refuses outside picking, and no-ops with nobody to promote', () => {
+  const reveal = draftRevealAtBoundary(4);
+  assert.equal(applyRepick(reveal, 'alice').broadcasts.length, 0, 'not in the picking phase');
+  const picking = applyEnterPicking(reveal, 'alice', 'bob', ['map-outlines']).room;
+  assert.equal(applyRepick(picking, null).broadcasts.length, 0, 'nobody eligible: hold the turn');
+  assert.equal(applyRepick(picking, 'bob').broadcasts.length, 0, 'already the picker: nothing to do');
+  assert.equal(applyRepick(picking, null).room.picker, 'bob', 'and the room is left alone');
 });
 
 test('applyPick: the Decider does not spend a rotation slot', () => {

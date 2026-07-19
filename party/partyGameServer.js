@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
-import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -17,6 +17,7 @@ import {
   applyDisconnect,
   pendingPickAfterReveal,
   applyEnterPicking,
+  applyRepick,
   applyPick,
   serializeRoom,
   deserializeRoom,
@@ -170,6 +171,25 @@ export default class PartyGameServer {
       .sort((a, b) => b.score - a.score);
   }
 
+  /**
+   * Who should be holding the pick right now. Both picker rules run over the
+   * seats actually in the room (`eligiblePickers`), so a player who has left is
+   * never handed a turn they cannot take — see that helper for why absent seats
+   * are exactly the ones both rules would otherwise aim at.
+   *
+   * One method, used both when the pick opens and when the picker leaves
+   * mid-pick, so the rule that chose the original seat is the rule that chooses
+   * the replacement.
+   *
+   * @param {boolean} decider  whether this pick is for the closing Decider round
+   * @returns {string | null}
+   */
+  choosePicker(decider) {
+    if (!this.room) return null;
+    const board = eligiblePickers(this.scoreboard(), this.room.present);
+    return decider ? deciderPickerFor(board) : pickerFor(board, this.room.pickedBy);
+  }
+
   async saveRoom() {
     if (!this.room) return;
     await this.party.storage.put(STORAGE_KEY, serializeRoom(this.room));
@@ -263,7 +283,8 @@ export default class PartyGameServer {
           // Draft is the only way a game starts. The plan grows one round per
           // pick: open with a single Flags round, then run one round per pick —
           // every seated player picks `picks` times, so the length is
-          // `seats x picks + 1`. Question 0 comes from the opening round.
+          // `seats x picks + 2`, the bookends being that opening Flags round and
+          // the closing Decider. Question 0 comes from the opening round.
           //
           // The host's "Custom setup" door (a plan + a tricky toggle + per-category
           // reveal timing riding on this message) was retired. Tricky is now a
@@ -302,9 +323,7 @@ export default class PartyGameServer {
           // player could call unfair.
           const pending = pendingPickAfterReveal(this.room);
           const decider = pending && isDeciderPick(this.room.questionIndex, this.room.totalQuestions);
-          const board = this.scoreboard();
-          const picker = !pending ? null
-            : (decider ? deciderPickerFor(board) : pickerFor(board, this.room.pickedBy));
+          const picker = pending ? this.choosePicker(decider) : null;
           if (picker) {
             result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes), decider);
           } else {
@@ -394,8 +413,20 @@ export default class PartyGameServer {
       }
       const result = applyDisconnect(this.room, playerId);
       this.room = result.room;
+      /** @type {Array<{ to: string | 'all', message: object }>} */
+      const broadcasts = [...result.broadcasts];
+      // If the seat that just left was the one holding a pick, hand the turn to
+      // whoever is still here rather than waiting out the host's anti-stall
+      // timer. Re-run the SAME rule that opened this pick — `room.decider` says
+      // which one that was — so the replacement is chosen the way the original
+      // was.
+      if (this.room.phase === 'picking' && this.room.picker === playerId) {
+        const repick = applyRepick(this.room, this.choosePicker(this.room.decider === true));
+        this.room = repick.room;
+        broadcasts.push(...repick.broadcasts);
+      }
       await this.saveRoom();
-      this.dispatch(result.broadcasts);
+      this.dispatch(broadcasts);
     } catch (err) {
       console.error('[partyGameServer] onClose failed:', err);
     }

@@ -1305,6 +1305,31 @@ act, outside the rotation, picked by whoever is in last place when it starts.**
 server's picker selection. See `project_party_stale_client_skew`: a long-open tab predating this
 build would still render the Decider pick as an ordinary one.
 
+**Follow-ups from review (shipped separately):**
+- [x] **A pick is only ever handed to someone who is in the room.** A seat outlives its socket (the
+      score is sticky for reconnect), so a player who quits stops scoring and *sinks toward last
+      place* — which is exactly where both picker rules look. The room would then wait on someone who
+      had gone until the host's 45 s anti-stall fired. Pre-existing and shared with the rotation, but
+      the Decider made it structural and moved it to the moment the game is decided.
+      `eligiblePickers` filters selection to present seats (the scoreboard players *see* is
+      untouched — a departed player keeps their row and score, they just stop being dealt turns), and
+      `applyRepick` hands the turn on if the picker leaves once the pick is already open. Both kinds
+      of pick go through one `choosePicker` method, so they cannot drift apart.
+- [x] **Decided: a skipped player does not get the pick back on reconnect.** The game's length is
+      fixed at start and the lobby already promised it; restoring a turn would have to take someone
+      else's or grow the game.
+- [x] The last-place **tie** rule is now pinned at both levels: `scoreboardOf`'s sort is stable over
+      insertion-ordered seats, so seats level on points keep join order and the bottom row is the
+      last of them to have joined. Deterministic, and it survives an eviction and a reconnect — but
+      nothing stated it, so it was one refactor away from changing silently.
+- [x] Covered the three branches review had to check by hand: `forcePick` on the Decider (it routes
+      through `applyPick`, so it inherits the no-rotation-slot rule for free — pinned rather than
+      reasoned), a disconnect during the pick, and a tied board.
+- [x] Replaced the `isDeciderPick` / `isFinalRound` agreement test, which was the implementation
+      restated and could not catch a wrong shared premise. It now asserts the real claim: the round a
+      Decider pick *opens* is the round the multiplier later *doubles*, across 2/3/5/8-round games,
+      plus exactly one closing act per game.
+
 ### Phase 3 — one shared screen transition (client only)
 
 `showSection` flips a `hidden` attribute, so question → reveal → break → pick → round card → question

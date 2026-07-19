@@ -341,6 +341,103 @@ test('the Decider: it is the round that actually scores double, and it ends the 
   assert.equal(srv.room.phase, 'final', 'the Decider is the last round of the game');
 });
 
+/** Play a duo game up to the moment the Decider pick opens. `winner` takes every
+ *  round, so the standings are unambiguous and last place is the other seat. */
+async function playToDeciderPick(winner = 'alice') {
+  const { srv, a, b } = await startDuoDraft();
+  const conns = [['alice', a], ['bob', b]];
+  for (const modeId of ['map-outlines', 'flags-weird']) {
+    await playRoundWon(srv, conns, winner);
+    await srv.onMessage(JSON.stringify({ type: 'pick', modeId }), srv.room.picker === 'alice' ? a : b);
+  }
+  await playRoundWon(srv, conns, winner);
+  return { srv, a, b, conns };
+}
+
+test('the Decider: a forced pick still spends no rotation slot and still pays double', async () => {
+  // The anti-stall path routes through `applyPick` like a real pick, so it
+  // inherits the Decider's rules for free — but "for free" is exactly the kind of
+  // thing that stops being true silently, so it is pinned rather than reasoned.
+  const { srv, a, b } = await playToDeciderPick();
+  assert.equal(srv.room.decider, true);
+  const before = [...srv.room.pickedBy];
+
+  await srv.onMessage(JSON.stringify({ type: 'forcePick' }), a); // host's clock ran out
+  assert.equal(srv.room.phase, 'question', 'the closing round was dealt on timeout');
+  assert.deepEqual(srv.room.pickedBy, before, 'a forced Decider spends no rotation slot either');
+  assert.equal(srv.room.decider, false, 'and the flag is cleared');
+  assert.equal(srv.room.questionIndex, 3 * ROUND_QUESTIONS, 'it is still the last round');
+  assert.equal(a.last('question').draftPick.picker, 'bob', 'attributed to the seat that timed out');
+
+  // Both seats must buzz before the reveal fires, or `last('reveal')` is still
+  // the PREVIOUS round's — which is single-scored, and would fail this for the
+  // wrong reason.
+  const answer = srv.room.question.answer;
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: answer }), a);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), b);
+  const reveal = a.last('reveal');
+  assert.equal(reveal.questionIndex, 3 * ROUND_QUESTIONS, 'reading the closing round\'s own reveal');
+  assert.equal(reveal.doubled, true, 'and it still pays double');
+});
+
+// A seat outlives its socket (sticky score, for reconnect), so a player who quits
+// stops scoring and sinks toward last place — which is precisely who both picker
+// rules aim at, the Decider hardest and at the worst possible moment. Left alone,
+// the room waits on someone who is gone until the host's 45 s anti-stall fires.
+test('the Decider: a picker who leaves mid-pick hands the turn on, no waiting', async () => {
+  const { srv, a, b } = await playToDeciderPick();
+  assert.equal(srv.room.picker, 'bob');
+
+  await srv.onClose(b); // bob quits as the closing act opens
+
+  assert.equal(srv.room.present.has('bob'), false, 'presence dropped');
+  assert.ok(srv.room.seats.has('bob'), 'but the seat and its score stay, for reconnect');
+  assert.equal(srv.room.phase, 'picking', 'still the closing pick');
+  assert.equal(srv.room.decider, true, 'still the Decider — only the seat changed');
+  assert.equal(srv.room.picker, 'alice', 'handed to whoever is still here');
+
+  const picking = a.last('picking');
+  assert.equal(picking.youPick, true, 'and she is told it is hers, with a hand');
+  assert.ok(Array.isArray(picking.hand) && picking.hand.length > 0);
+  assert.equal(picking.decider, true);
+});
+
+test('a picker who leaves mid-ROTATION-pick is replaced the same way', async () => {
+  // The fix is not Decider-specific: the rotation had the identical stall, and
+  // both go through one picker-selection method so they cannot drift apart.
+  const { srv, a, b } = await startDuoDraft();
+  await playRoundWon(srv, [['alice', a], ['bob', b]], 'alice');
+  assert.equal(srv.room.phase, 'picking');
+  assert.equal(srv.room.decider, false, 'an ordinary rotation pick');
+  assert.equal(srv.room.picker, 'bob');
+
+  await srv.onClose(b);
+  assert.equal(srv.room.picker, 'alice', 'the rotation hands the turn on too');
+  assert.equal(a.last('picking').youPick, true);
+});
+
+test('an absent seat is never handed a pick in the first place', async () => {
+  // The other half: `eligiblePickers` keeps a player who left BEFORE the boundary
+  // from being chosen at all, so the re-election path is a backstop rather than
+  // the normal route.
+  const { srv, a, b } = await startDuoDraft();
+  await srv.onClose(b);                    // bob leaves mid-round
+  await playRoundWon(srv, [['alice', a]], 'alice');
+  assert.equal(srv.room.phase, 'picking');
+  assert.equal(srv.room.picker, 'alice', 'the departed seat was skipped, not picked');
+});
+
+test('the last player standing still holds the pick — nobody left to hand it to', async () => {
+  // Degenerate case: with no eligible replacement, `applyRepick` is a no-op and
+  // the turn stays put rather than the room dropping into a null-picker state it
+  // has no way out of.
+  const { srv, a, b } = await playToDeciderPick();
+  assert.equal(srv.room.picker, 'bob');
+  await srv.onClose(a);   // the host leaves; bob (the picker) is all that's left
+  assert.equal(srv.room.picker, 'bob', 'unchanged — there was no one to promote');
+  assert.equal(srv.room.phase, 'picking');
+});
+
 test('draft: the last round ends in the final board, no pick', async () => {
   // Play every round the game was sized for; the boundary after the last one is
   // the final board, not another pick.
