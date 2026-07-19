@@ -558,6 +558,35 @@ test('applyPick: only the designated picker can pick, and only in the picking ph
   assert.equal(applyPick(notPicking, 'bob', 'map-outlines', seg, q('pa')).broadcasts.length, 0, 'wrong phase ignored');
 });
 
+test('applyEnterPicking: the Decider flag rides both the picker and the watcher message', () => {
+  // Every seat has to know the closing act has started — the watcher screen names
+  // it just as the picker's does, so `decider` is not picker-only like the hand.
+  const room = draftRevealAtBoundary(4);
+  const r = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true);
+  assert.equal(r.room.decider, true);
+  assert.equal(/** @type {any} */ (r.broadcasts.find((b) => b.to === 'bob')?.message).decider, true);
+  assert.equal(/** @type {any} */ (r.broadcasts.find((b) => b.to === 'alice')?.message).decider, true);
+  // ...and an ordinary rotation pick says so explicitly rather than omitting it.
+  const ordinary = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']);
+  assert.equal(ordinary.room.decider, false);
+  assert.equal(/** @type {any} */ (ordinary.broadcasts.find((b) => b.to === 'bob')?.message).decider, false);
+});
+
+test('applyPick: the Decider does not spend a rotation slot', () => {
+  // The promise the Decider was moved outside the rotation to keep: choosing it
+  // must not count as one of your `picksPerPlayer` picks.
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true).room;
+  const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
+  const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
+  assert.deepEqual(r.room.pickedBy, [], 'the pick history is untouched');
+  assert.equal(r.room.decider, false, 'and the flag is cleared with the rest of the pick state');
+  // The round itself is dealt exactly like any other pick.
+  assert.equal(r.room.phase, 'question');
+  assert.deepEqual(r.room.plan?.[r.room.plan.length - 1], segment);
+  assert.deepEqual(msg(r, 'question').draftPick, { picker: 'bob', modeId: 'map-outlines' });
+});
+
 test('serialize/deserialize: draft state survives an eviction; a legacy snapshot defaults to non-draft', () => {
   let room = draftRevealAtBoundary(4);
   room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
@@ -566,7 +595,13 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
   assert.equal(restored.targetRounds, 3);
   assert.equal(restored.picker, 'bob');
   assert.deepEqual(restored.hand, ['map-outlines', 'superlative-coffee']);
+  assert.equal(restored.decider, false);
+  const midDecider = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(
+    applyEnterPicking(draftRevealAtBoundary(4), 'alice', 'bob', ['map-outlines'], true).room,
+  ))));
+  assert.equal(midDecider.decider, true, 'an eviction mid-Decider-pick still knows what it is');
   const legacy = deserializeRoom({ phase: 'lobby' });
+  assert.equal(legacy.decider, false);
   assert.equal(legacy.draft, false);
   assert.equal(legacy.targetRounds, 0);
   assert.deepEqual(legacy.pickedBy, []);

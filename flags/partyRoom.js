@@ -66,6 +66,12 @@ import { isRoundBoundary, isFinalRound } from './partyPlan.js';
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from (server-dealt); null otherwise. Stored so a reconnect mid-pick
  *   sees the same hand.
+ * @property {boolean} decider  during `picking`, whether this pick is for **the
+ *   Decider** — the closing double-points round, which sits outside the rotation
+ *   and is picked by whoever is in last place (see `deciderPickerFor`). Held on
+ *   the room rather than re-derived so a reconnect mid-pick paints the right
+ *   screen, and so {@link applyPick} knows not to spend a rotation slot on it.
+ *   False outside `picking`.
  *
  * @typedef {{ to: string | 'all', message: object }} Broadcast
  * @typedef {{ room: Room, broadcasts: Broadcast[], rejectConnection?: boolean }} ApplyResult
@@ -109,6 +115,7 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     pickedBy: [],
     picker: null,
     hand: null,
+    decider: false,
   };
 }
 
@@ -228,6 +235,7 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
     pickedBy: [],
     picker: null,
     hand: null,
+    decider: false,
   };
   return { room: nextRoom, broadcasts: [questionBroadcast(nextRoom)] };
 }
@@ -345,13 +353,16 @@ export function pendingPickAfterReveal(room) {
  * @param {string} playerId  must be the host
  * @param {string | null} picker  the seat whose turn it is
  * @param {string[]} hand  the mode ids the picker may choose from
+ * @param {boolean} [decider]  whether this pick is for the closing Decider round
+ *   (the caller decides via `isDeciderPick`, and chose the picker accordingly).
  * @returns {ApplyResult}
  */
-export function applyEnterPicking(room, playerId, picker, hand) {
+export function applyEnterPicking(room, playerId, picker, hand, decider = false) {
   if (room.phase !== 'reveal') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (!picker) return { room, broadcasts: [] };
-  const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice() };
+  const isDecider = decider === true;
+  const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice(), decider: isDecider };
   // Per-recipient, so "am I the picker" is **server-authoritative**: the picker's
   // own connection is told `youPick: true` and given the hand, and everyone else
   // gets `youPick: false` (and no hand — no need to leak it). The client never
@@ -361,13 +372,13 @@ export function applyEnterPicking(room, playerId, picker, hand) {
   /** @type {Broadcast[]} */
   const broadcasts = [{
     to: picker,
-    message: { type: 'picking', youPick: true, picker, hand: hand.slice(), questionIndex: room.questionIndex, totalQuestions: room.totalQuestions },
+    message: { type: 'picking', youPick: true, picker, hand: hand.slice(), questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, decider: isDecider },
   }];
   for (const pid of room.present) {
     if (pid === picker) continue;
     broadcasts.push({
       to: pid,
-      message: { type: 'picking', youPick: false, picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions },
+      message: { type: 'picking', youPick: false, picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, decider: isDecider },
     });
   }
   return { room: nextRoom, broadcasts };
@@ -407,9 +418,14 @@ export function applyPick(room, pickerId, modeId, segment, question) {
     // than carried over. Assigning unconditionally is the point — a veiled round
     // must not latch the veil on for every round after it.
     tricky: segment.veil === true,
-    pickedBy: [...room.pickedBy, pickerId],
+    // The Decider is outside the rotation, so choosing it does NOT spend a
+    // rotation slot: recording it would say this seat has picked one more time
+    // than everyone else, which is the exact promise ("everyone picks the same
+    // number of times") the closing round was moved out of the rotation to keep.
+    pickedBy: room.decider ? room.pickedBy : [...room.pickedBy, pickerId],
     picker: null,
     hand: null,
+    decider: false,
   };
   const bc = questionBroadcast(nextRoom);
   /** @type {any} */ (bc.message).draftPick = { picker: pickerId, modeId };
@@ -443,6 +459,7 @@ function resetToLobby(room) {
     pickedBy: [],
     picker: null,
     hand: null,
+    decider: false,
   };
   return {
     room: nextRoom,
@@ -675,6 +692,7 @@ function welcomeBroadcast(room, playerId) {
       picker: room.picker,
       youPick: room.phase === 'picking' && room.picker === playerId,
       hand: (room.phase === 'picking' && room.picker === playerId) ? room.hand : null,
+      decider: room.phase === 'picking' && room.decider === true,
     },
   };
 }
@@ -704,6 +722,7 @@ export function serializeRoom(room) {
     pickedBy: room.pickedBy,
     picker: room.picker,
     hand: room.hand,
+    decider: room.decider,
   };
 }
 
@@ -729,5 +748,6 @@ export function deserializeRoom(snapshot) {
     pickedBy: snapshot.pickedBy ?? [],
     picker: snapshot.picker ?? null,
     hand: snapshot.hand ?? null,
+    decider: snapshot.decider ?? false,
   };
 }

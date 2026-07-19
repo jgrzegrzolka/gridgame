@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
-import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID } from '../flags/partyDraft.js';
+import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -293,10 +293,20 @@ export default class PartyGameServer {
           // instead of dealing the next question: the lowest-ranked seat that
           // hasn't picked chooses the next round from a dealt hand. Otherwise
           // it advances the question or ends the game.
-          const picker = pendingPickAfterReveal(this.room)
-            ? pickerFor(this.scoreboard(), this.room.pickedBy) : null;
+          //
+          // The LAST boundary is different: it opens **the Decider**, the closing
+          // double-points act, which sits outside the rotation and goes to
+          // whoever is in last place right now — pick history and all. The
+          // rotation's tie-break would hand this exact round to the leader 85% of
+          // the time (see PARTY.md Iteration 12), which is the one thing here a
+          // player could call unfair.
+          const pending = pendingPickAfterReveal(this.room);
+          const decider = pending && isDeciderPick(this.room.questionIndex, this.room.totalQuestions);
+          const board = this.scoreboard();
+          const picker = !pending ? null
+            : (decider ? deciderPickerFor(board) : pickerFor(board, this.room.pickedBy));
           if (picker) {
-            result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes));
+            result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes), decider);
           } else {
             // Not a pick boundary, or (defensively) no eligible picker — the
             // round-count formula guarantees one, but never freeze the room on a

@@ -35,6 +35,12 @@
  *   identity can't make the picker miss their own hand. False off the pick phase.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from; null otherwise (and never sent to a watcher).
+ * @property {boolean} decider  during `picking`, whether the round being chosen is
+ *   **the Decider** — the closing double-points act, picked by last place from
+ *   outside the rotation. Server-set and sent to watchers too (unlike the hand):
+ *   naming the closing act is the point of it. False off the pick phase. The
+ *   round card doesn't need this — once the round is playing it is simply the
+ *   final round, which `isFinalRound` already answers from the question alone.
  * @property {{ picker: string, modeId: string } | null} lastPick  who picked the
  *   current round and which mode, for the "Zosia's pick" attribution; null in a
  *   non-drafted round.
@@ -63,6 +69,7 @@ export function initialPartyClientState() {
     youPick: false,
     hand: null,
     lastPick: null,
+    decider: false,
     statusOverride: null,
   };
 }
@@ -118,6 +125,7 @@ export function reducePartyMessage(state, message) {
             ? message.youPick === true
             : (message.you != null && message.you === message.picker),
           hand: message.hand ?? null,
+          decider: message.decider === true,
           // A reconnect can't recover whether we already buzzed this question;
           // treat as fresh — the server ignores a duplicate buzz anyway.
           myChoice: null,
@@ -152,6 +160,7 @@ export function reducePartyMessage(state, message) {
           youPick: false,
           hand: null,
           lastPick: null,
+          decider: false,
         },
         effects: [],
       };
@@ -172,6 +181,7 @@ export function reducePartyMessage(state, message) {
             ? message.youPick === true
             : (state.you != null && state.you === message.picker),
           hand: Array.isArray(message.hand) ? message.hand : null,
+          decider: message.decider === true,
           questionIndex: message.questionIndex ?? state.questionIndex,
           totalQuestions: message.totalQuestions ?? state.totalQuestions,
           reveal: null,
@@ -197,6 +207,7 @@ export function reducePartyMessage(state, message) {
           picker: null,
           youPick: false,
           hand: null,
+          decider: false,
           lastPick: message.draftPick ?? null,
         },
         effects: [],

@@ -9,7 +9,7 @@
  * unit-tested. No DOM, no I/O.
  */
 
-import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
+import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound } from './partyPlan.js';
 import { veilActive } from './partyTiming.js';
 
 /** The round every draft opens with — establishes the loop before anyone picks,
@@ -35,14 +35,14 @@ export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird'];
 export const MAX_DRAFT_ROUNDS = 25;
 
 /** The fixed set of picks-per-player the host chooses from. Each player picks
- *  this many rounds, so the game is `players x picks + 1` rounds — the `+1` being
- *  the opening Flags round. Expressing length as "how many rounds each of you
- *  picks" is what makes it legible: the old dial said "3" and left the player to
- *  work out what that bought them. */
+ *  this many rounds, so the game is `players x picks + 2` rounds — the fixed
+ *  Flags opener and {@link isDeciderPick the Decider} bookending the draft.
+ *  Expressing length as "how many rounds each of you picks" is what makes it
+ *  legible: the old dial said "3" and left the player to work out what that
+ *  bought them. */
 export const PICKS_PER_PLAYER_OPTIONS = [1, 2, 3, 4];
 
-/** What a fresh host gets: one pick each. Reproduces the original `players + 1`
- *  sizing, which is the right length for a first game. */
+/** What a fresh host gets: one pick each — a short game everyone shapes once. */
 export const DEFAULT_PICKS_PER_PLAYER = 1;
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
@@ -50,10 +50,15 @@ export const DEFAULT_PICKS_PER_PLAYER = 1;
 export const HAND_SIZE = 10;
 
 /**
- * How many rounds a draft runs: `players x picksPerPlayer + 1`. The `+1` is the
- * fixed opening Flags round, which closes the cold-start hole (no scores yet
+ * How many rounds a draft runs: `players x picksPerPlayer + 2` — the rotation
+ * plus the two fixed bookends.
+ *
+ * The **opener** is a Flags round that closes the cold-start hole (no scores yet
  * means no last place means no picker) and gives everyone a warm-up before the
- * first choice. Every seat then picks exactly `picksPerPlayer` times.
+ * first choice. The **Decider** is the closing act (see {@link isDeciderPick}),
+ * which sits outside the rotation so that "everyone picks exactly
+ * `picksPerPlayer` times" stays true by construction rather than by a rule the
+ * final round quietly breaks.
  *
  * Capped at {@link MAX_DRAFT_ROUNDS} as a backstop only; at the offered pick
  * counts a normal room never reaches it.
@@ -65,7 +70,7 @@ export const HAND_SIZE = 10;
 export function roundCountFor(playerCount, picksPerPlayer = DEFAULT_PICKS_PER_PLAYER) {
   const seats = Number.isFinite(playerCount) ? Math.max(0, Math.floor(playerCount)) : 0;
   const picks = validatePicksPerPlayer(picksPerPlayer);
-  return Math.max(1, Math.min(seats * picks + 1, MAX_DRAFT_ROUNDS));
+  return Math.max(1, Math.min(seats * picks + 2, MAX_DRAFT_ROUNDS));
 }
 
 /**
@@ -123,6 +128,46 @@ export function pickerFor(scoreboard, alreadyPicked) {
     if (counts.get(board[i].playerId) === fewest) return board[i].playerId;
   }
   return null;
+}
+
+/**
+ * Whether the pick opening at this reveal is for **the Decider** — the closing
+ * double-points round — rather than an ordinary rotation slot.
+ *
+ * Asked at a round boundary, where the round about to be chosen starts at
+ * `questionIndex + 1`; the Decider is always the game's last round, so this is
+ * {@link isFinalRound} asked one question ahead. Derived rather than counted so
+ * there is exactly one definition of "which round is the Decider", shared with
+ * the double-points multiplier and the client's title card.
+ *
+ * @param {number} questionIndex  the 0-based question the reveal is sitting on
+ * @param {number} totalQuestions
+ * @returns {boolean}
+ */
+export function isDeciderPick(questionIndex, totalQuestions) {
+  return isFinalRound(questionIndex + 1, totalQuestions);
+}
+
+/**
+ * Who picks the Decider: **whoever is in last place when it starts**, full stop.
+ *
+ * Deliberately NOT {@link pickerFor}. The rotation's "lowest-ranked player who
+ * hasn't picked yet" is right round by round, but it pushes the leader — who
+ * loses that tie-break every round — to the back of the rotation and therefore
+ * onto the last slot: over 2000 simulated four-player games the player choosing
+ * the decisive round was in 1st place 84.6% of the time, so the comeback rule
+ * inverted itself exactly where the stakes doubled. The Decider sits outside the
+ * rotation, so it ignores pick history entirely and simply reads the board.
+ *
+ * `scoreboard` is descending by score (as the room sends it), so last place is
+ * the last entry. Returns null only for an empty board.
+ *
+ * @param {Array<{ playerId: string }>} scoreboard  descending by score
+ * @returns {string | null}
+ */
+export function deciderPickerFor(scoreboard) {
+  const board = Array.isArray(scoreboard) ? scoreboard : [];
+  return board.length === 0 ? null : board[board.length - 1].playerId;
 }
 
 /**

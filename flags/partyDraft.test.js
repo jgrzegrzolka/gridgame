@@ -13,8 +13,10 @@ import {
   DEFAULT_PICKS_PER_PLAYER,
   HAND_SIZE,
   canVeilMode,
+  isDeciderPick,
+  deciderPickerFor,
 } from './partyDraft.js';
-import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
+import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound } from './partyPlan.js';
 import { veilActive } from './partyTiming.js';
 
 /** Small seeded LCG so the shuffle-based helpers are deterministic in tests.
@@ -32,37 +34,40 @@ const board = (...ids) => ids.map((playerId) => ({ playerId }));
 
 // ---- roundCountFor ----
 
-test('roundCountFor: players x picks + 1', () => {
-  assert.equal(roundCountFor(3, 2), 7);   // 3 seats x 2 picks + the opener
-  assert.equal(roundCountFor(2, 1), 3);
-  assert.equal(roundCountFor(4, 4), 17);
-  assert.equal(roundCountFor(1, 3), 4);
+test('roundCountFor: players x picks + 2', () => {
+  assert.equal(roundCountFor(3, 2), 8);   // 3 seats x 2 picks + opener + Decider
+  assert.equal(roundCountFor(2, 1), 4);
+  assert.equal(roundCountFor(4, 4), 18);
+  assert.equal(roundCountFor(1, 3), 5);
 });
 
 test('roundCountFor: every seat picks exactly picksPerPlayer times', () => {
-  // rounds - 1 (the fixed opener) is the number of picks, split evenly.
+  // rounds - 2 (the fixed opener and the Decider, neither of which spends a
+  // rotation slot) is the number of rotation picks, split evenly. This is the
+  // promise the Decider was kept OUTSIDE the rotation to preserve.
   for (const players of [1, 2, 3, 4]) {
     for (const picks of PICKS_PER_PLAYER_OPTIONS) {
-      assert.equal(roundCountFor(players, picks) - 1, players * picks, `${players}p x ${picks}`);
+      assert.equal(roundCountFor(players, picks) - 2, players * picks, `${players}p x ${picks}`);
     }
   }
 });
 
 test('roundCountFor: defaults to one pick each', () => {
   assert.equal(roundCountFor(3), roundCountFor(3, DEFAULT_PICKS_PER_PLAYER));
-  assert.equal(roundCountFor(3), 4);
+  assert.equal(roundCountFor(3), 5);
 });
 
 test('roundCountFor: a bad picks value falls back rather than throwing', () => {
-  assert.equal(roundCountFor(3, 99), 4);
-  assert.equal(roundCountFor(3, 0), 4);
-  assert.equal(roundCountFor(3, NaN), 4);
+  assert.equal(roundCountFor(3, 99), 5);
+  assert.equal(roundCountFor(3, 0), 5);
+  assert.equal(roundCountFor(3, NaN), 5);
 });
 
-test('roundCountFor: at least one round, junk seat count coerces to the opener alone', () => {
-  assert.equal(roundCountFor(0, 2), 1);
-  assert.equal(roundCountFor(-5, 2), 1);
-  assert.equal(roundCountFor(NaN, 2), 1);
+test('roundCountFor: junk seat count coerces to the two bookends alone', () => {
+  // Unreachable in play (`canStart` needs a seat); this is the input guard.
+  assert.equal(roundCountFor(0, 2), 2);
+  assert.equal(roundCountFor(-5, 2), 2);
+  assert.equal(roundCountFor(NaN, 2), 2);
 });
 
 test('roundCountFor: the ceiling is a backstop a normal room never reaches', () => {
@@ -138,6 +143,61 @@ test('pickerFor: a departed seat does not stall the rotation', () => {
   // c picked and then left. a and b have one pick each, so the rotation must
   // wrap to them rather than waiting on a seat that will never pick again.
   assert.equal(pickerFor(board('a', 'b'), ['c', 'a', 'b']), 'b');
+});
+
+// ---- the Decider ----
+
+test('deciderPickerFor: last place picks, whatever their pick history', () => {
+  // The rotation's "hasn't picked yet" clause is deliberately ignored here: the
+  // Decider is outside the rotation, so it reads the board and nothing else.
+  assert.equal(deciderPickerFor(board('ola', 'jan', 'marek', 'zosia')), 'zosia');
+  assert.equal(deciderPickerFor(board('a', 'b')), 'b');
+  assert.equal(deciderPickerFor(board('solo')), 'solo');
+  assert.equal(deciderPickerFor([]), null);
+  assert.equal(deciderPickerFor(/** @type {any} */ (null)), null);
+});
+
+test('deciderPickerFor: the leader never picks the Decider, where pickerFor would hand it to them', () => {
+  // The finding this phase exists for. Every seat has picked once, so the
+  // rotation wraps and hands the decisive round to whoever the tie-break favours
+  // — the leader, who lost that tie-break every round and sits last in line.
+  const seats = board('leader', 'second', 'last');
+  assert.equal(pickerFor(seats, ['last', 'second', 'leader']), 'last');
+  assert.equal(deciderPickerFor(seats), 'last');
+  // ...and where the histories diverge, the Decider still ignores them.
+  assert.equal(pickerFor(seats, ['last', 'last', 'second']), 'leader');
+  assert.equal(deciderPickerFor(seats), 'last');
+});
+
+test('isDeciderPick: true only at the boundary into the game\'s last round', () => {
+  // A 4-round draft: 20 questions, boundaries after questions 4, 9 and 14.
+  const total = 4 * 5;
+  assert.equal(isDeciderPick(4, total), false, 'boundary into round 2');
+  assert.equal(isDeciderPick(9, total), false, 'boundary into round 3');
+  assert.equal(isDeciderPick(14, total), true, 'boundary into round 4 — the Decider');
+});
+
+test('isDeciderPick: agrees with the round that actually scores double', () => {
+  // One definition of "which round is the Decider": the pick that opens it and
+  // the multiplier that doubles it must never disagree, or a player is told the
+  // stakes are double on a round that pays single.
+  for (const rounds of [2, 3, 5, 8]) {
+    const total = rounds * 5;
+    for (let i = 0; i < total - 1; i++) {
+      assert.equal(
+        isDeciderPick(i, total), isFinalRound(i + 1, total),
+        `q${i} of ${rounds} rounds`,
+      );
+    }
+  }
+});
+
+test('isDeciderPick: the shortest real draft still has one', () => {
+  // Solo, one pick: opener + the seat's pick + the Decider.
+  const total = roundCountFor(1, 1) * 5;
+  assert.equal(total, 15);
+  assert.equal(isDeciderPick(4, total), false);
+  assert.equal(isDeciderPick(9, total), true);
 });
 
 // ---- handFor ----
