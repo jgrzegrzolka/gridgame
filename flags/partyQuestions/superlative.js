@@ -33,6 +33,10 @@ import electricityPerCapita from '../metrics/electricityPerCapita.json' with { t
 import mcdonaldsPerMillion from '../metrics/mcdonaldsPerMillion.json' with { type: 'json' };
 import nobel from '../metrics/nobel.json' with { type: 'json' };
 import nobelPerCapita from '../metrics/nobelPerCapita.json' with { type: 'json' };
+import summerMedals from '../metrics/summerMedals.json' with { type: 'json' };
+import summerMedalsPerCapita from '../metrics/summerMedalsPerCapita.json' with { type: 'json' };
+import winterMedals from '../metrics/winterMedals.json' with { type: 'json' };
+import winterMedalsPerCapita from '../metrics/winterMedalsPerCapita.json' with { type: 'json' };
 import { buildSuperlativeQuestion } from './superlativeCore.js';
 import { SUPERLATIVE_METRICS } from './superlativeCatalog.js';
 
@@ -78,6 +82,7 @@ const DATA = {
   cattlePerCapita, beerPerCapita, tea, sugarcane, gold, alcoholPerCapita,
   meatPerCapita, borders, oliveOil, honey, temperature, happiness, corruption,
   tourismPerCapita, electricityPerCapita, mcdonaldsPerMillion, nobel, nobelPerCapita,
+  summerMedals, summerMedalsPerCapita, winterMedals, winterMedalsPerCapita,
 };
 
 /**
@@ -147,3 +152,7 @@ export const electricityPerCapitaQuestion = QUESTIONS.electricityPerCapita;
 export const mcdonaldsPerMillionQuestion = QUESTIONS.mcdonaldsPerMillion;
 export const nobelQuestion = QUESTIONS.nobel;
 export const nobelPerCapitaQuestion = QUESTIONS.nobelPerCapita;
+export const summerMedalsQuestion = QUESTIONS.summerMedals;
+export const summerMedalsPerCapitaQuestion = QUESTIONS.summerMedalsPerCapita;
+export const winterMedalsQuestion = QUESTIONS.winterMedals;
+export const winterMedalsPerCapitaQuestion = QUESTIONS.winterMedalsPerCapita;

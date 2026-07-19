@@ -21,6 +21,38 @@ A fresh agent picking this up should:
 
 ## Now
 
+### Feature EO: Olympic medals as four metrics, two seasons x total and per-million (code surfaces complete 2026-07-19, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Metrics 36-39, and the largest single metric addition so far. Jan's pick, and Jan's structural idea: he asked whether Summer and Winter were worth splitting and whether they could be joined as a family in Flag Party. Both answers landed slightly differently from the question, and the reasoning is worth keeping.
+
+**Summer and Winter are split, because combined is not a real metric.** Summer has roughly five times the medals of Winter, so an all-Games total is the Summer ranking with noise on top. Split, they are two genuinely different questions with different answers: the United States leads Summer, Norway leads Winter on its own and Germany leads it after the East/West merge. A test pins that the Summer and Winter leaders differ, so if the split ever stops earning its keep we find out.
+
+**But they are grouped as TWO party families, not one.** Jan's instinct to use the family mechanism was right; the grouping axis is the other one. The bar in `partyDraft.js` is "two ways of asking one question", not "related subjects" (which is why meat / cattle / sheep stay separate cards). Total vs per-million IS one question asked twice, so each season groups its own pair: `summerMedals` and `winterMedals`, joining `economy` and `nobel`. Summer vs Winter is two subjects, so it stays two cards.
+
+**Data contract:** **dense, `absence: 'zero'`.** Every real place has an answer and most have 0, written out explicitly so the TTT no-data guard blocks only org flags. The source also names 64 NOCs that have competed and never medalled, so these zeros are attested rather than assumed.
+
+**Defunct NOCs: merge only where there is exactly one successor state.** Jan's call, and the decision that shapes the numbers. The source deliberately does NOT combine defunct NOCs with successors, and those NOCs have no flag in countries.json, so each had to be merged or dropped.
+- **MERGE:** East Germany, West Germany and the United Team of Germany all fold into Germany. Reunification makes Germany the sole successor, and omitting them would put Germany absurdly low in a table it genuinely leads. The build script **asserts** the merged Summer total is 1,419 (688 + 409 + 204 + 118), which is the source's own "including precursors" figure: a real check that the four rows are disjoint and nothing double-counted.
+- **DROP:** the Soviet Union, Russian Empire, Unified Team, Czechoslovakia, Yugoslavia, Serbia and Montenegro, Australasia, British West Indies, Netherlands Antilles and Bohemia all split across many states with no fair way to divide medals. The special delegations (Refugee, Mixed, Independent, and the neutral-designation Russian teams OAR/ROC/AIN) are nobody's NOC. That costs ~1,685 medals with no modern home, which is honest. Handing the USSR's 1,204 to Russia is the single most common error in amateur versions of this table, and a test pins that we do not.
+
+**The build script throws on an unresolved NOC** rather than dropping it silently, which immediately caught `ROC` (a code that only appears in the modern rows, not the defunct section).
+
+**Breaks.** Summer `>=10/100/500` (81/31/10 places), Summer per-million `>=5/20`. Winter `>=1/10/50` (40/26/15): Winter is sparse enough that "has ever won a Winter medal" is a selective, evocative cell rather than a loose one. Winter per-million `>=1/10`. All `>=`-only: the low ends are large true-zero piles.
+
+**A latent bug in Feature EN surfaced here, worth recording.** `syntheticTaggedCountries` in `engine.test.js` hand-assigns a value ladder per metric so every break has candidates; a metric without one contributes pool categories that match nothing, and the generator burns retries dodging them. Nobel shipped without ladders and the retry budget silently absorbed five dead categories. Adding ten more exhausted it, and three generator tests failed. Fixed by adding ladders for all six (the four medal metrics plus Nobel's two, retroactively). **The fragility is structural and will bite again:** nothing forces a new metric to add a ladder, and several older metrics (mcdonaldsPerMillion, borders, meatPerCapita, alcoholPerCapita) are missing theirs too. A test asserting every `METRIC_KEYS` entry has a non-empty match-set in the synthetic pool would close it for good; not done here, deliberately out of scope.
+
+**Ranking sanity check.** Summer: US 2,765, Germany 1,419, UK 980, France 816, China 727, Italy 658, Australia 600. Winter: Germany 461, Norway 447, US 363, Austria 269, Canada 246. Summer per-million: San Marino 88.6, Hungary 55.3, Finland 54.6, Sweden 48.8, Grenada 42.7. Winter per-million: Liechtenstein 251.0, Norway 81.0, Finland 32.4, Austria 29.5.
+
+**Visuals:** torch / podium / snowflake / peak, four distinct silhouettes rather than four medals (which would collide with Nobel's). Hues `#e65100` / `#00695c` / `#0277bd` / `#7e57c2`. **The palette is genuinely saturated at 39 metrics** and these were picked for maximum separation from their nearest neighbour rather than literalism (medal gold, Olympic blue and Olympic green are all occupied). Worth a deliberate look at the hub chips before adding metric 40.
+
+- [x] 1. Data: four JSON files + `build-olympic-medals.mjs` (one script, all four) + `METRIC_FILES` lines + `metrics.test.js` coverage/merge/no-reassignment tests; visuals for all four
+- [x] 2. flagsdata lens (free once step 1 landed)
+- [x] 3. Filters: registry lines + `flagsFilter.js` scalars + `findFlag.js` URL tokens + four `Probability` modifiers + `findflag-random-coverage` skill note
+- [x] 4. TTT: four factories + breaks + registry; four attachers; `atLeast` i18n en+pl; synthetic ladders so the generator does not starve
+- [x] 5. Flag Party: four rounds + two grouped draft families (`summerMedals`, `winterMedals`)
+
+Surface 6 (daily puzzles) tracked in `METRIC_DAILY_PUZZLES.md`.
+
 ### Feature EN: Nobel laureates, and Nobel laureates per million people, as a paired absolute + intensive world metric (code surfaces complete 2026-07-19, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Thirty-fourth and thirty-fifth world metrics, and the first pair added in one go. Jan's pick. The shape is deliberate: the absolute count is the metric everyone expects, and the per-million cut is the one that plays, because its #1 is never the country with the most laureates (see memory `feedback_prefer_intensive_metrics`). Shipping them together is what makes the contrast legible; shipping only the absolute one would have been the boring half.

@@ -446,7 +446,7 @@ test('the economy family groups the two GDP metrics and nothing else', () => {
 test('every metric except the grouped ones is its own single-member family', () => {
   // The invariant that keeps this change small. If it ever fails, some metric
   // silently stopped being pickable on its own.
-  const grouped = new Set(['superlative-gdp', 'superlative-gdppc', 'superlative-nobel', 'superlative-nobel-pc']);
+  const grouped = new Set(['superlative-gdp', 'superlative-gdppc', 'superlative-nobel', 'superlative-nobel-pc', 'superlative-summer-medals', 'superlative-summer-medals-pc', 'superlative-winter-medals', 'superlative-winter-medals-pc']);
   for (const m of METRIC_MODES) {
     if (grouped.has(m.id)) continue;
     assert.deepEqual(familyForMode(m.id), { id: m.id, memberIds: [m.id], representativeId: m.id }, `${m.id}`);

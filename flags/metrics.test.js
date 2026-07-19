@@ -48,6 +48,10 @@ const ELECTRICITY_PC = /** @type {import('./metrics.js').MetricData} */ (load('m
 const MCDONALDS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/mcdonaldsPerMillion.json'));
 const NOBEL = /** @type {import('./metrics.js').MetricData} */ (load('metrics/nobel.json'));
 const NOBEL_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/nobelPerCapita.json'));
+const SUMMER_MEDALS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/summerMedals.json'));
+const SUMMER_MEDALS_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/summerMedalsPerCapita.json'));
+const WINTER_MEDALS = /** @type {import('./metrics.js').MetricData} */ (load('metrics/winterMedals.json'));
+const WINTER_MEDALS_PC = /** @type {import('./metrics.js').MetricData} */ (load('metrics/winterMedalsPerCapita.json'));
 
 // ---- fixture-driven logic (small, hand-checkable) --------------------------
 
@@ -2156,4 +2160,51 @@ test('createMetric over nobelPerCapita: the #1 is not the country with the most 
   assert.ok(pc.topN('un_member', 5).every((c) => c.code !== 'us'), 'the US must not lead per capita');
   assert.ok(/** @type {number} */ (pc.valueOf('se')) > /** @type {number} */ (pc.valueOf('us')),
     'Sweden must out-rank the US per capita');
+});
+
+// ---- real Olympic-medal metrics: dense contract + the Germany merge ---------
+
+test('medals: dense absence:zero, every real place carries a value on all four', () => {
+  for (const c of COUNTRIES) {
+    if (c.category === 'other') continue;
+    for (const m of [SUMMER_MEDALS, SUMMER_MEDALS_PC, WINTER_MEDALS, WINTER_MEDALS_PC]) {
+      assert.equal(typeof m.values[c.code], 'number', `${c.code} must carry a ${m.key} value`);
+    }
+  }
+  for (const c of COUNTRIES) {
+    if (c.category !== 'other') continue;
+    assert.ok(!(c.code in SUMMER_MEDALS.values), `org flag ${c.code} must have no medal value`);
+  }
+});
+
+test('medals: Germany carries its East/West predecessors, the one merge we make', () => {
+  // 688 (modern) + 409 (GDR) + 204 (FRG) + 118 (United Team) = 1419, which is
+  // the source's own "including precursors" figure. A silent double-count or a
+  // dropped row would move this number, and nothing else would notice.
+  assert.equal(SUMMER_MEDALS.values.de, 1419, 'Germany summer = 688+409+204+118');
+  assert.equal(WINTER_MEDALS.values.de, 461, 'Germany winter = 293+110+39+19');
+  // Germany must therefore lead Winter outright, ahead of Norway.
+  assert.ok(WINTER_MEDALS.values.de > WINTER_MEDALS.values.no, 'merged Germany leads Winter');
+});
+
+test('medals: multi-successor NOCs are excluded, not reassigned to one heir', () => {
+  // The most common error in amateur versions of this table is handing the
+  // Soviet Union's 1,204 medals to Russia. Russia must show only what it won
+  // under its own flag, which is far short of the USSR total.
+  assert.ok(SUMMER_MEDALS.values.ru < 500,
+    `Russia must not inherit the USSR's summer medals, got ${SUMMER_MEDALS.values.ru}`);
+  // Czechia likewise must not carry Czechoslovakia's 143.
+  assert.ok(SUMMER_MEDALS.values.cz < 100,
+    `Czechia must not inherit Czechoslovakia's medals, got ${SUMMER_MEDALS.values.cz}`);
+});
+
+test('createMetric over the medal metrics: Summer and Winter rank differently', () => {
+  const s = createMetric(SUMMER_MEDALS, COUNTRIES);
+  const w = createMetric(WINTER_MEDALS, COUNTRIES);
+  assert.equal(s.topN('un_member', 1)[0].code, 'us', 'the US leads Summer');
+  assert.notEqual(w.topN('un_member', 1)[0].code, 'us', 'the US must not lead Winter');
+  // And the intensive cuts must not be led by the absolute leaders.
+  const spc = createMetric(SUMMER_MEDALS_PC, COUNTRIES);
+  assert.ok(spc.topN('un_member', 5).every((c) => c.code !== 'us'),
+    'the US must not lead Summer medals per head');
 });

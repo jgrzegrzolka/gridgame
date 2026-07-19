@@ -587,12 +587,20 @@
       "superlativeMcdonalds": "McDonald's per million people",
       "superlativeNobel": "Nobel laureates",
       "superlativeNobelPc": "Nobel laureates per million people",
+      "superlativeSummerMedals": "Summer Olympic medals",
+      "superlativeSummerMedalsPc": "Summer Olympic medals per million people",
+      "superlativeWinterMedals": "Winter Olympic medals",
+      "superlativeWinterMedalsPc": "Winter Olympic medals per million people",
+      "summerMedals": "Summer Olympic medals",
+      "winterMedals": "Winter Olympic medals",
       "economy": "Economy",
       "nobel": "Nobel laureates"
     },
     "modeSub": {
       "economy": "GDP, total or per person",
-      "nobel": "Total or per person"
+      "nobel": "Total or per person",
+      "summerMedals": "Total or per person",
+      "winterMedals": "Total or per person"
     },
     "modeShort": {
       "flagsAll": "Flags",
@@ -632,7 +640,11 @@
       "superlativeElectricity": "Electricity",
       "superlativeMcdonalds": "McDonald's",
       "superlativeNobel": "Nobel laureates",
-      "superlativeNobelPc": "Nobels per million"
+      "superlativeNobelPc": "Nobels per million",
+      "superlativeSummerMedals": "Summer medals",
+      "superlativeSummerMedalsPc": "Summer per person",
+      "superlativeWinterMedals": "Winter medals",
+      "superlativeWinterMedalsPc": "Winter per person"
     },
     "roundQuestion": "Round {b}/{rounds} · Question {n}/{total}",
     "afterRound": "After round {n} of {total}",
@@ -701,6 +713,10 @@
     "hintMostMcdonalds": "Most McDonald's per person",
     "hintMostNobel": "Most Nobel laureates",
     "hintMostNobelPc": "Most Nobel laureates per person",
+    "hintMostSummerMedals": "Most Summer Olympic medals",
+    "hintMostSummerMedalsPc": "Most Summer medals per person",
+    "hintMostWinterMedals": "Most Winter Olympic medals",
+    "hintMostWinterMedalsPc": "Most Winter medals per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "fastest": "Fastest",
     "speedBonus": "Speed bonus",
@@ -1022,6 +1038,32 @@
       "2": "over 2 Nobel laureates per million"
     }
   },
+  "summerMedals": {
+    "atLeast": {
+      "10": "at least 10 Summer Olympic medals",
+      "100": "at least 100 Summer Olympic medals",
+      "500": "at least 500 Summer Olympic medals"
+    }
+  },
+  "summerMedalsPerCapita": {
+    "atLeast": {
+      "5": "over 5 Summer medals per million",
+      "20": "over 20 Summer medals per million"
+    }
+  },
+  "winterMedals": {
+    "atLeast": {
+      "1": "at least 1 Winter Olympic medal",
+      "10": "at least 10 Winter Olympic medals",
+      "50": "at least 50 Winter Olympic medals"
+    }
+  },
+  "winterMedalsPerCapita": {
+    "atLeast": {
+      "1": "over 1 Winter medal per million",
+      "10": "over 10 Winter medals per million"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 or more",
@@ -1120,7 +1162,11 @@
     "electricityPerCapita": "Electricity use per capita",
     "mcdonaldsPerMillion": "McDonald's per million people",
     "nobel": "Nobel laureates",
-    "nobelPerCapita": "Nobel laureates per million people"
+    "nobelPerCapita": "Nobel laureates per million people",
+    "summerMedals": "Summer Olympic medals",
+    "summerMedalsPerCapita": "Summer Olympic medals per million people",
+    "winterMedals": "Winter Olympic medals",
+    "winterMedalsPerCapita": "Winter Olympic medals per million people"
   },
   "flagFacts": {
     "didYouKnow": "Did you know?",

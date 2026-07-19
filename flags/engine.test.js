@@ -63,6 +63,10 @@ import {
   MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM,
   NOBEL_BREAKS_FOR_RANDOM,
   NOBEL_PER_CAPITA_BREAKS_FOR_RANDOM,
+  SUMMER_MEDALS_BREAKS_FOR_RANDOM,
+  SUMMER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM,
+  WINTER_MEDALS_BREAKS_FOR_RANDOM,
+  WINTER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM,
   ELEVATION_BREAKS_FOR_RANDOM,
   COASTLINE_BREAKS_FOR_RANDOM,
   FOREST_BREAKS_FOR_RANDOM,
@@ -884,7 +888,11 @@ test('buildRandomCategoryPool returns one entry per continent + colour + motif +
     + ELECTRICITY_PER_CAPITA_BREAKS_FOR_RANDOM.length
     + MCDONALDS_PER_MILLION_BREAKS_FOR_RANDOM.length
     + NOBEL_BREAKS_FOR_RANDOM.length
-    + NOBEL_PER_CAPITA_BREAKS_FOR_RANDOM.length;
+    + NOBEL_PER_CAPITA_BREAKS_FOR_RANDOM.length
+    + SUMMER_MEDALS_BREAKS_FOR_RANDOM.length
+    + SUMMER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM.length
+    + WINTER_MEDALS_BREAKS_FOR_RANDOM.length
+    + WINTER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM.length;
   assert.equal(pool.length, expected);
   assert.notEqual(buildRandomCategoryPool(), pool);
 });
@@ -1129,7 +1137,7 @@ test('metricGroupRepeated does not restrict non-metric groups (two continents on
 test('SINGLE_USE_METRIC_GROUPS holds exactly the numeric world metrics', () => {
   assert.deepEqual(
     [...SINGLE_USE_METRIC_GROUPS].sort(),
-    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'electricityPerCapita', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'mcdonaldsPerMillion', 'meatPerCapita', 'nobel', 'nobelPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'tea', 'temperature', 'tourismPerCapita', 'wine'],
+    ['alcoholPerCapita', 'apple', 'area', 'banana', 'beerPerCapita', 'borders', 'cattlePerCapita', 'coal', 'coastline', 'cocoa', 'coffee', 'corruption', 'density', 'electricityPerCapita', 'elevation', 'forest', 'gdp', 'gdpPerCapita', 'gold', 'happiness', 'honey', 'mcdonaldsPerMillion', 'meatPerCapita', 'nobel', 'nobelPerCapita', 'oil', 'oliveOil', 'population', 'rice', 'sheepPerCapita', 'sugarcane', 'summerMedals', 'summerMedalsPerCapita', 'tea', 'temperature', 'tourismPerCapita', 'wine', 'winterMedals', 'winterMedalsPerCapita'],
   );
 });
 
@@ -2097,6 +2105,21 @@ function syntheticTaggedCountries() {
   // gdp <=$100M / <=$1B / <=$10B / >=$100B / >=$500B / >=$1T; gdpPerCapita
   // <=$1K / <=$2K / <=$5K / >=$30K / >=$50K / >=$70K. Same "every break has a
   // candidate in every continent" contract as the three ladders above.
+  // Nobel + Olympic-medal ladders. Every one of these metrics is `>=`-only with a
+  // large true-zero population in reality, so each ladder keeps two rungs at or
+  // near 0 and climbs past the top break. Without a ladder the metric's pool
+  // categories match NOTHING here and the generator burns its retry budget dodging
+  // them: nobel/nobelPerCapita shipped without one and the budget absorbed five
+  // dead categories, but adding the four medal metrics (ten more) exhausted it.
+  // nobel >=1 / >=5 / >=20; nobelPerCapita >=0.5 / >=2.
+  const NOBEL_LADDER = [0, 0, 2, 8, 30, 120];
+  const NOBEL_PER_CAPITA_LADDER = [0, 0.1, 0.7, 1.2, 3, 9];
+  // summerMedals >=10 / >=100 / >=500; summerMedalsPerCapita >=5 / >=20.
+  const SUMMER_MEDALS_LADDER = [0, 4, 25, 150, 600, 1500];
+  const SUMMER_MEDALS_PER_CAPITA_LADDER = [0, 1, 3, 8, 25, 70];
+  // winterMedals >=1 / >=10 / >=50; winterMedalsPerCapita >=1 / >=10.
+  const WINTER_MEDALS_LADDER = [0, 0, 3, 15, 70, 250];
+  const WINTER_MEDALS_PER_CAPITA_LADDER = [0, 0.2, 0.6, 2, 15, 45];
   const GDP_LADDER = [50_000_000, 800_000_000, 8_000_000_000, 200_000_000_000, 600_000_000_000, 1_500_000_000_000];
   const GDP_PER_CAPITA_LADDER = [800, 1_800, 4_000, 35_000, 55_000, 80_000];
   // elevation <=100 / <=200 / <=500 / >=1000 / >=3000 / >=5000 m. Dense +
@@ -2223,6 +2246,12 @@ function syntheticTaggedCountries() {
           // their mutual correlation is irrelevant.)
           gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
           elevation: ELEVATION_LADDER[Math.floor(codeCounter / 3) % ELEVATION_LADDER.length],
+          nobel: NOBEL_LADDER[Math.floor(codeCounter / 2) % NOBEL_LADDER.length],
+          nobelPerCapita: NOBEL_PER_CAPITA_LADDER[Math.floor(codeCounter / 2) % NOBEL_PER_CAPITA_LADDER.length],
+          summerMedals: SUMMER_MEDALS_LADDER[Math.floor(codeCounter / 4) % SUMMER_MEDALS_LADDER.length],
+          summerMedalsPerCapita: SUMMER_MEDALS_PER_CAPITA_LADDER[Math.floor(codeCounter / 4) % SUMMER_MEDALS_PER_CAPITA_LADDER.length],
+          winterMedals: WINTER_MEDALS_LADDER[Math.floor(codeCounter / 5) % WINTER_MEDALS_LADDER.length],
+          winterMedalsPerCapita: WINTER_MEDALS_PER_CAPITA_LADDER[Math.floor(codeCounter / 5) % WINTER_MEDALS_PER_CAPITA_LADDER.length],
           coffee: CROP_LADDER[codeCounter % CROP_LADDER.length],
           wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],
@@ -2274,6 +2303,12 @@ function syntheticTaggedCountries() {
           // their mutual correlation is irrelevant.)
           gdp: GDP_LADDER[Math.floor(codeCounter / 7) % GDP_LADDER.length],
           elevation: ELEVATION_LADDER[Math.floor(codeCounter / 3) % ELEVATION_LADDER.length],
+          nobel: NOBEL_LADDER[Math.floor(codeCounter / 2) % NOBEL_LADDER.length],
+          nobelPerCapita: NOBEL_PER_CAPITA_LADDER[Math.floor(codeCounter / 2) % NOBEL_PER_CAPITA_LADDER.length],
+          summerMedals: SUMMER_MEDALS_LADDER[Math.floor(codeCounter / 4) % SUMMER_MEDALS_LADDER.length],
+          summerMedalsPerCapita: SUMMER_MEDALS_PER_CAPITA_LADDER[Math.floor(codeCounter / 4) % SUMMER_MEDALS_PER_CAPITA_LADDER.length],
+          winterMedals: WINTER_MEDALS_LADDER[Math.floor(codeCounter / 5) % WINTER_MEDALS_LADDER.length],
+          winterMedalsPerCapita: WINTER_MEDALS_PER_CAPITA_LADDER[Math.floor(codeCounter / 5) % WINTER_MEDALS_PER_CAPITA_LADDER.length],
           coffee: CROP_LADDER[codeCounter % CROP_LADDER.length],
           wine: CROP_LADDER[codeCounter % CROP_LADDER.length],
           cocoa: CROP_LADDER[codeCounter % CROP_LADDER.length],

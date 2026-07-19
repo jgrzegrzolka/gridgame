@@ -99,6 +99,10 @@ const MODE_LABELS = {
   'superlative-mcdonalds': { key: 'party.mode.superlativeMcdonalds', full: "McDonald's per million people" },
   'superlative-nobel': { key: 'party.mode.superlativeNobel', full: 'Nobel laureates' },
   'superlative-nobel-pc': { key: 'party.mode.superlativeNobelPc', full: 'Nobel laureates per million people' },
+  'superlative-summer-medals': { key: 'party.mode.superlativeSummerMedals', full: 'Summer Olympic medals' },
+  'superlative-summer-medals-pc': { key: 'party.mode.superlativeSummerMedalsPc', full: 'Summer Olympic medals per million people' },
+  'superlative-winter-medals': { key: 'party.mode.superlativeWinterMedals', full: 'Winter Olympic medals' },
+  'superlative-winter-medals-pc': { key: 'party.mode.superlativeWinterMedalsPc', full: 'Winter Olympic medals per million people' },
   // Metric families (`flags/partyDraft.js` METRIC_FAMILIES) label the CARD, not a
   // mode — the members keep their own labels above for the round title, which
   // names the statistic that was actually dealt.
@@ -117,6 +121,18 @@ const MODE_LABELS = {
     key: 'party.mode.nobel',
     full: 'Nobel laureates',
     subKey: 'party.modeSub.nobel',
+    sub: 'Total or per person',
+  },
+  summerMedals: {
+    key: 'party.mode.summerMedals',
+    full: 'Summer Olympic medals',
+    subKey: 'party.modeSub.summerMedals',
+    sub: 'Total or per person',
+  },
+  winterMedals: {
+    key: 'party.mode.winterMedals',
+    full: 'Winter Olympic medals',
+    subKey: 'party.modeSub.winterMedals',
     sub: 'Total or per person',
   },
 };

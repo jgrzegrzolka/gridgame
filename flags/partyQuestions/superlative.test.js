@@ -1234,3 +1234,67 @@ test('nobelPerCapitaQuestion: zeroFiltered, same true-zero majority as the count
     }
   }
 });
+
+test('summerMedalsQuestion / winterMedalsQuestion: most-only, correct answer', async () => {
+  const S = await import('./superlative.js');
+  const sJson = (await import('../metrics/summerMedals.json', { with: { type: 'json' } })).default;
+  const wJson = (await import('../metrics/winterMedals.json', { with: { type: 'json' } })).default;
+  assert.equal(S.summerMedalsQuestion.id, 'superlative-summer-medals');
+  assert.equal(S.winterMedalsQuestion.id, 'superlative-winter-medals');
+  for (const pair of [{ q: S.summerMedalsQuestion, data: sJson.values },
+    { q: S.winterMedalsQuestion, data: wJson.values }]) {
+    const q = pair.q;
+    const V = /** @type {Record<string, number>} */ (pair.data);
+    const pool = ['us', 'de', 'no', 'at', 'ca', 'se', 'ch', 'fi', 'it', 'fr'].map((code) => ({ code }));
+    for (let i = 0; i < 60; i++) {
+      const r = q.generate(pool, undefined, seeded(i + 1));
+      assert.equal(r.prompt, 'most', `seed ${i}: medals are most-only`);
+      for (const opt of r.options) assert.ok(V[r.answer] >= V[opt], `seed ${i}: ${r.answer} not the biggest`);
+    }
+  }
+});
+
+test('medals: Summer and Winter are genuinely different questions', async () => {
+  // The reason they are two metrics and two draft cards rather than one combined
+  // count. If these ever converge, the split has stopped earning its keep.
+  const s = /** @type {Record<string, number>} */ (
+    (await import('../metrics/summerMedals.json', { with: { type: 'json' } })).default.values);
+  const w = /** @type {Record<string, number>} */ (
+    (await import('../metrics/winterMedals.json', { with: { type: 'json' } })).default.values);
+  /** @param {Record<string, number>} v */
+  const top = (v) => Object.entries(v).sort((a, b) => b[1] - a[1])[0][0];
+  assert.equal(top(s), 'us', 'the US leads Summer');
+  assert.notEqual(top(w), 'us', 'the US must NOT lead Winter');
+  // Jamaica is the clean case: a real Summer medal record, zero Winter medals.
+  assert.ok(s.jm > 0 && w.jm === 0, 'Jamaica: Summer medals, no Winter medals');
+});
+
+test('medalsPerCapita: the #1 is never the country with the most medals', async () => {
+  const S = await import('./superlative.js');
+  const spc = /** @type {Record<string, number>} */ (
+    (await import('../metrics/summerMedalsPerCapita.json', { with: { type: 'json' } })).default.values);
+  const wpc = /** @type {Record<string, number>} */ (
+    (await import('../metrics/winterMedalsPerCapita.json', { with: { type: 'json' } })).default.values);
+  assert.equal(S.summerMedalsPerCapitaQuestion.id, 'superlative-summer-medals-pc');
+  assert.equal(S.winterMedalsPerCapitaQuestion.id, 'superlative-winter-medals-pc');
+  // The whole point of the intensive cut, on both seasons.
+  assert.ok(spc.sm > spc.us, 'San Marino must out-rank the US on Summer medals per head');
+  assert.ok(wpc.li > wpc.no, 'Liechtenstein must out-rank Norway on Winter medals per head');
+});
+
+test('medals: zeroFiltered keeps medal-free countries out of every round', async () => {
+  const S = await import('./superlative.js');
+  // True zeros are the majority on all four metrics (and 222 of 262 real places
+  // have no Winter medal at all), so without zeroFiltered a quartet would
+  // routinely be four countries tied at 0.
+  const excluded = new Set(['bd', 'np', 'kh', 'bo']);
+  const pool = ['us', 'de', 'no', 'at', 'bd', 'np', 'kh', 'bo'].map((code) => ({ code }));
+  for (const q of [S.summerMedalsQuestion, S.summerMedalsPerCapitaQuestion,
+    S.winterMedalsQuestion, S.winterMedalsPerCapitaQuestion]) {
+    for (let i = 0; i < 60; i++) {
+      for (const opt of q.generate(pool, undefined, seeded(i + 1)).options) {
+        assert.ok(!excluded.has(opt), `${q.id} seed ${i}: zero-valued ${opt} must not be an option`);
+      }
+    }
+  }
+});

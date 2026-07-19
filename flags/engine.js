@@ -691,6 +691,61 @@ export const NOBEL_PER_CAPITA_BREAKS_FOR_RANDOM = [
 ];
 
 /**
+ * Summer Olympic medal break tiers (all-time, all medals). `>=10` is "has a real
+ * Olympic history" (~78 sovereigns), `>=100` a established sporting nation (~31),
+ * `>=500` the elite (~10). `>=`-only: 121 of 262 real places have never won a
+ * Summer medal, so a `<=` break would deal a cell matching half the world.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const SUMMER_MEDALS_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 10 },
+  { op: '>=', n: 100 },
+  { op: '>=', n: 500 },
+];
+
+/**
+ * Summer-medals-per-million break tiers. `>=5` is "punches above its weight"
+ * (~46 sovereigns), `>=20` the elite (~15, led by San Marino at 88.6 off three
+ * medals and 34,000 people). Different tiers from the absolute metric so the two
+ * never deal near-identical cells. `>=`-only, same zero pile as the count.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const SUMMER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 5 },
+  { op: '>=', n: 20 },
+];
+
+/**
+ * Winter Olympic medal break tiers. Far sparser than Summer: only 40 places have
+ * ever won one, which makes `>=1` ("has ever medalled at a Winter Games") a
+ * genuinely selective and evocative cell rather than a loose one. Then `>=10`
+ * (~26) and `>=50` (~15). `>=`-only for the obvious reason: 222 real places sit
+ * at zero, most of them because they have no winter at all.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const WINTER_MEDALS_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1 },
+  { op: '>=', n: 10 },
+  { op: '>=', n: 50 },
+];
+
+/**
+ * Winter-medals-per-million break tiers. `>=1` (~24 sovereigns), `>=10` the elite
+ * (~7, led by Liechtenstein at 251, an order of magnitude clear of Norway off ten
+ * medals and 39,000 people). `>=`-only, same reason as the count.
+ *
+ * @type {Array<{ op: '>=' | '<=', n: number }>}
+ */
+export const WINTER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM = [
+  { op: '>=', n: 1 },
+  { op: '>=', n: 10 },
+];
+
+
+/**
  * Bordering-countries break tiers (number of countries sharing a land border).
  * `>=5` is a well-connected country (~59 real places), `>=8` the elite (~11:
  * Russia & China at 14, Brazil 10, DR Congo & Germany 9, plus the 8-border club:
@@ -1771,6 +1826,115 @@ export function nobelPerCapita(op, n) {
   return cat;
 }
 
+
+/**
+ * Summer-Olympic-medal-threshold Category factory (all-time, all medals). Reads the denormalized `country.summerMedals` field (`attachSummerMedalss`, a dense
+ * `absence: 'zero'` metric: every real place carries a value and most carry a true
+ * 0, so the number guard only excludes the org flags). `exclusiveGroup: 'summerMedals'`.
+ * The break list is `>=`-only; the `<=` branch is kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function summerMedals(op, n) {
+  const label = op === '>=' ? `${n}+ Summer Olympic medals` : `under ${n} Summer Olympic medals`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.summerMedals === 'number' && c.summerMedals >= n
+      : (c) => typeof c.summerMedals === 'number' && c.summerMedals <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `summerMedals:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'summerMedals',
+  };
+  return cat;
+}
+
+/**
+ * Summer-medals-per-million-threshold Category factory. Reads the denormalized `country.summerMedalsPerCapita` field (`attachSummerMedalsPerCapitas`, a dense
+ * `absence: 'zero'` metric: every real place carries a value and most carry a true
+ * 0, so the number guard only excludes the org flags). `exclusiveGroup: 'summerMedalsPerCapita'`.
+ * The break list is `>=`-only; the `<=` branch is kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function summerMedalsPerCapita(op, n) {
+  const label = op === '>=' ? `over ${n} Summer medals per million` : `under ${n} Summer medals per million`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.summerMedalsPerCapita === 'number' && c.summerMedalsPerCapita >= n
+      : (c) => typeof c.summerMedalsPerCapita === 'number' && c.summerMedalsPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `summerMedalsPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'summerMedalsPerCapita',
+  };
+  return cat;
+}
+
+/**
+ * Winter-Olympic-medal-threshold Category factory (all-time, all medals). Reads the denormalized `country.winterMedals` field (`attachWinterMedalss`, a dense
+ * `absence: 'zero'` metric: every real place carries a value and most carry a true
+ * 0, so the number guard only excludes the org flags). `exclusiveGroup: 'winterMedals'`.
+ * The break list is `>=`-only; the `<=` branch is kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function winterMedals(op, n) {
+  const label = op === '>=' ? `${n}+ Winter Olympic medals` : `under ${n} Winter Olympic medals`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.winterMedals === 'number' && c.winterMedals >= n
+      : (c) => typeof c.winterMedals === 'number' && c.winterMedals <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `winterMedals:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'winterMedals',
+  };
+  return cat;
+}
+
+/**
+ * Winter-medals-per-million-threshold Category factory. Reads the denormalized `country.winterMedalsPerCapita` field (`attachWinterMedalsPerCapitas`, a dense
+ * `absence: 'zero'` metric: every real place carries a value and most carry a true
+ * 0, so the number guard only excludes the org flags). `exclusiveGroup: 'winterMedalsPerCapita'`.
+ * The break list is `>=`-only; the `<=` branch is kept for symmetry.
+ *
+ * @param {'>=' | '<='} op
+ * @param {number} n
+ * @returns {Category}
+ */
+export function winterMedalsPerCapita(op, n) {
+  const label = op === '>=' ? `over ${n} Winter medals per million` : `under ${n} Winter medals per million`;
+  /** @type {(c: Country) => boolean} */
+  const predicate =
+    op === '>='
+      ? (c) => typeof c.winterMedalsPerCapita === 'number' && c.winterMedalsPerCapita >= n
+      : (c) => typeof c.winterMedalsPerCapita === 'number' && c.winterMedalsPerCapita <= n;
+  /** @type {Category} */
+  const cat = {
+    id: `winterMedalsPerCapita:${op}${n}`,
+    label,
+    predicate,
+    exclusiveGroup: 'winterMedalsPerCapita',
+  };
+  return cat;
+}
+
 /**
  * Bordering-countries-threshold Category factory (number of countries sharing a
  * land border). Reads the denormalized `country.borders` field (`attachBorders`, a
@@ -2448,6 +2612,54 @@ export const THRESHOLD_METRICS = {
     labelFor: (op, n, translate) => {
       if (op === '>=') return translate(`nobelPerCapita.atLeast.${n}`, `over ${n} Nobel laureates per million`);
       return translate(`nobelPerCapita.atMost.${n}`, `under ${n} Nobel laureates per million`);
+    },
+  },
+  summerMedals: {
+    breaks: SUMMER_MEDALS_BREAKS_FOR_RANDOM,
+    factory: summerMedals,
+    prefixFallback: 'Summer Olympic medals',
+    field: 'summerMedals',
+    family: 'summerMedals',
+    has: (c) => typeof c.summerMedals === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`summerMedals.atLeast.${n}`, `${n}+ Summer Olympic medals`);
+      return translate(`summerMedals.atMost.${n}`, `under ${n} Summer Olympic medals`);
+    },
+  },
+  summerMedalsPerCapita: {
+    breaks: SUMMER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: summerMedalsPerCapita,
+    prefixFallback: 'Summer Olympic medals per million people',
+    field: 'summerMedalsPerCapita',
+    family: 'summerMedals',
+    has: (c) => typeof c.summerMedalsPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`summerMedalsPerCapita.atLeast.${n}`, `over ${n} Summer medals per million`);
+      return translate(`summerMedalsPerCapita.atMost.${n}`, `under ${n} Summer medals per million`);
+    },
+  },
+  winterMedals: {
+    breaks: WINTER_MEDALS_BREAKS_FOR_RANDOM,
+    factory: winterMedals,
+    prefixFallback: 'Winter Olympic medals',
+    field: 'winterMedals',
+    family: 'winterMedals',
+    has: (c) => typeof c.winterMedals === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`winterMedals.atLeast.${n}`, `${n}+ Winter Olympic medals`);
+      return translate(`winterMedals.atMost.${n}`, `under ${n} Winter Olympic medals`);
+    },
+  },
+  winterMedalsPerCapita: {
+    breaks: WINTER_MEDALS_PER_CAPITA_BREAKS_FOR_RANDOM,
+    factory: winterMedalsPerCapita,
+    prefixFallback: 'Winter Olympic medals per million people',
+    field: 'winterMedalsPerCapita',
+    family: 'winterMedals',
+    has: (c) => typeof c.winterMedalsPerCapita === 'number',
+    labelFor: (op, n, translate) => {
+      if (op === '>=') return translate(`winterMedalsPerCapita.atLeast.${n}`, `over ${n} Winter medals per million`);
+      return translate(`winterMedalsPerCapita.atMost.${n}`, `under ${n} Winter medals per million`);
     },
   },
   borders: {
