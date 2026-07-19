@@ -344,10 +344,15 @@ export function pendingPickAfterReveal(room) {
 
 /**
  * Host opens the draft pick for the next round: the room moves from `reveal` to
- * `picking`, and the chosen `picker` (the lowest-ranked seat that hasn't picked,
- * resolved by the caller via `pickerFor`) chooses from `hand` (the mode ids the
- * caller dealt via `handFor`). Both are held on the room so a reconnect mid-pick
- * sees the same turn. Host-driven, same as {@link applyNext}.
+ * `picking`, and the chosen `picker` chooses from `hand` (the mode ids the caller
+ * dealt via `handFor`). Both are held on the room so a reconnect mid-pick sees
+ * the same turn. Host-driven, same as {@link applyNext}.
+ *
+ * **Who the picker is depends on which pick this is**, and the caller resolves it
+ * before calling: a rotation pick goes to the lowest-ranked seat that hasn't
+ * picked yet (`pickerFor`), the closing Decider to whoever is in last place
+ * outright (`deciderPickerFor`). The room stays out of that choice — it is told
+ * the seat and the `decider` flag, and only enforces what follows from them.
  *
  * @param {Room} room
  * @param {string} playerId  must be the host
@@ -363,25 +368,7 @@ export function applyEnterPicking(room, playerId, picker, hand, decider = false)
   if (!picker) return { room, broadcasts: [] };
   const isDecider = decider === true;
   const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice(), decider: isDecider };
-  // Per-recipient, so "am I the picker" is **server-authoritative**: the picker's
-  // own connection is told `youPick: true` and given the hand, and everyone else
-  // gets `youPick: false` (and no hand — no need to leak it). The client never
-  // re-derives its role by comparing its own id to the picker, which is exactly
-  // what a stale / mismatched identity could get wrong (a picker seeing the
-  // watcher view). Disconnected seats get their role on reconnect via `welcome`.
-  /** @type {Broadcast[]} */
-  const broadcasts = [{
-    to: picker,
-    message: { type: 'picking', youPick: true, picker, hand: hand.slice(), questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, decider: isDecider },
-  }];
-  for (const pid of room.present) {
-    if (pid === picker) continue;
-    broadcasts.push({
-      to: pid,
-      message: { type: 'picking', youPick: false, picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, decider: isDecider },
-    });
-  }
-  return { room: nextRoom, broadcasts };
+  return { room: nextRoom, broadcasts: pickingBroadcasts(nextRoom) };
 }
 
 /**
@@ -521,7 +508,64 @@ export function applyDisconnect(room, playerId) {
   return { room: nextRoom, broadcasts };
 }
 
+/**
+ * Hand the current pick to a different seat, because the one whose turn it was
+ * left the room. Same shape as {@link applyEnterPicking} but from `picking` to
+ * `picking`, and it keeps the pick's identity (`decider`) and its dealt `hand` —
+ * only the seat holding the turn changes.
+ *
+ * Without this the room waits on someone who is gone until the host's anti-stall
+ * timer fires, which is up to 45 s of "Bob chooses The Decider" with Bob no
+ * longer in the room. `eligiblePickers` stops an ALREADY-absent seat being
+ * chosen; this covers the seat that leaves once the pick is open.
+ *
+ * The caller re-runs the same selection it used to open the pick (rotation vs
+ * Decider) over whoever is left, so the rule that picked the original seat is the
+ * rule that picks the replacement. A null `picker` is a no-op: with nobody left
+ * to pick there is nothing better to do than hold the turn.
+ *
+ * @param {Room} room
+ * @param {string | null} picker  the seat taking over
+ * @returns {ApplyResult}
+ */
+export function applyRepick(room, picker) {
+  if (room.phase !== 'picking') return { room, broadcasts: [] };
+  if (!picker || picker === room.picker) return { room, broadcasts: [] };
+  const nextRoom = { ...room, picker };
+  return { room: nextRoom, broadcasts: pickingBroadcasts(nextRoom) };
+}
+
 // ---- internal helpers ----
+
+/**
+ * The per-recipient `picking` messages for a room already in the picking phase.
+ *
+ * Per-recipient, so "am I the picker" is **server-authoritative**: the picker's
+ * own connection is told `youPick: true` and given the hand, and everyone else
+ * gets `youPick: false` (and no hand — no need to leak it). The client never
+ * re-derives its role by comparing its own id to the picker, which is exactly
+ * what a stale / mismatched identity could get wrong (a picker seeing the
+ * watcher view). Disconnected seats get their role on reconnect via `welcome`.
+ *
+ * Shared by opening a pick and re-electing one, so a re-elected picker is told
+ * exactly what an original picker is told — a second copy of this would be the
+ * obvious place for the two to drift.
+ *
+ * @param {Room} room  already in `picking`, with `picker` / `hand` / `decider` set
+ * @returns {Broadcast[]}
+ */
+function pickingBroadcasts(room) {
+  const picker = /** @type {string} */ (room.picker);
+  const hand = room.hand ?? [];
+  const base = { type: 'picking', picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, decider: room.decider === true };
+  /** @type {Broadcast[]} */
+  const broadcasts = [{ to: picker, message: { ...base, youPick: true, hand: hand.slice() } }];
+  for (const pid of room.present) {
+    if (pid === picker) continue;
+    broadcasts.push({ to: pid, message: { ...base, youPick: false } });
+  }
+  return broadcasts;
+}
 
 /**
  * Tally the current question and move to reveal. Speed bonus is off in solo

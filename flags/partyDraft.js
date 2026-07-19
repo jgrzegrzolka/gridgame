@@ -131,6 +131,37 @@ export function pickerFor(scoreboard, alreadyPicked) {
 }
 
 /**
+ * The seats eligible to be handed a pick: those actually **in the room right
+ * now**. Both picker rules run over this rather than over the raw scoreboard.
+ *
+ * A seat outlives its socket on purpose — the score is sticky so a player can
+ * drop and reconnect without losing their game — so the scoreboard still lists
+ * players who have left. Picking one of them stalls the room on a turn nobody
+ * can take, until the host's anti-stall timer fires. And it is not a rare
+ * accident: a player who leaves stops scoring, so they *sink toward last place*,
+ * which is precisely who both picker rules aim at. The Decider aims there hardest
+ * and at the worst moment — it would structurally hand the round that decides the
+ * game to whoever was most likely to have just quit.
+ *
+ * Filtering here (rather than inside either picker rule) keeps the two rules
+ * about *ranking* and puts "can this seat actually act" in one place they share.
+ * The scoreboard the players SEE is untouched — a departed player keeps their row
+ * and their score, they simply stop being dealt turns.
+ *
+ * A skipped player does not get the pick back on reconnect: the game's length was
+ * fixed when it started, so restoring their turn would have to take someone
+ * else's or grow the game, and the lobby already promised neither.
+ *
+ * @param {Array<{ playerId: string }>} scoreboard  descending by score
+ * @param {Iterable<string>} present  playerIds with a live socket
+ * @returns {Array<{ playerId: string }>}  same order, absent seats removed
+ */
+export function eligiblePickers(scoreboard, present) {
+  const here = present instanceof Set ? present : new Set(present);
+  return (Array.isArray(scoreboard) ? scoreboard : []).filter((e) => here.has(e.playerId));
+}
+
+/**
  * Whether the pick opening at this reveal is for **the Decider** — the closing
  * double-points round — rather than an ordinary rotation slot.
  *

@@ -15,8 +15,9 @@ import {
   canVeilMode,
   isDeciderPick,
   deciderPickerFor,
+  eligiblePickers,
 } from './partyDraft.js';
-import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound } from './partyPlan.js';
+import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound, ROUND_QUESTIONS } from './partyPlan.js';
 import { veilActive } from './partyTiming.js';
 
 /** Small seeded LCG so the shuffle-based helpers are deterministic in tests.
@@ -169,6 +170,33 @@ test('deciderPickerFor: the leader never picks the Decider, where pickerFor woul
   assert.equal(deciderPickerFor(seats), 'last');
 });
 
+test('eligiblePickers: absent seats drop out, order and scores untouched', () => {
+  const full = board('leader', 'middle', 'gone', 'last');
+  assert.deepEqual(
+    eligiblePickers(full, new Set(['leader', 'middle', 'last'])).map((e) => e.playerId),
+    ['leader', 'middle', 'last'],
+  );
+  // An iterable, not only a Set — the room stores presence as a Set but callers
+  // shouldn't have to care.
+  assert.deepEqual(eligiblePickers(full, ['gone']).map((e) => e.playerId), ['gone']);
+  assert.deepEqual(eligiblePickers(full, []), []);
+  assert.deepEqual(eligiblePickers(/** @type {any} */ (null), ['a']), []);
+});
+
+test('eligiblePickers: the seat that left stops being the one both rules aim at', () => {
+  // The reason this filter exists. A player who quits stops scoring, so they sink
+  // to the bottom of the board — exactly where both picker rules look. Without
+  // the filter the room hands the turn (and, for the Decider, the round that
+  // decides the game) to whoever is most likely to have just walked away.
+  const afterQuit = board('leader', 'still-here', 'quitter');
+  assert.equal(deciderPickerFor(afterQuit), 'quitter', 'unfiltered, the leaver is chosen');
+  assert.equal(pickerFor(afterQuit, []), 'quitter', 'by both rules');
+
+  const here = eligiblePickers(afterQuit, new Set(['leader', 'still-here']));
+  assert.equal(deciderPickerFor(here), 'still-here');
+  assert.equal(pickerFor(here, []), 'still-here');
+});
+
 test('isDeciderPick: true only at the boundary into the game\'s last round', () => {
   // A 4-round draft: 20 questions, boundaries after questions 4, 9 and 14.
   const total = 4 * 5;
@@ -177,19 +205,54 @@ test('isDeciderPick: true only at the boundary into the game\'s last round', () 
   assert.equal(isDeciderPick(14, total), true, 'boundary into round 4 — the Decider');
 });
 
-test('isDeciderPick: agrees with the round that actually scores double', () => {
-  // One definition of "which round is the Decider": the pick that opens it and
-  // the multiplier that doubles it must never disagree, or a player is told the
-  // stakes are double on a round that pays single.
+test('isDeciderPick: the round it opens is exactly the round that pays double', () => {
+  // The claim worth pinning is NOT `isDeciderPick(i, t) === isFinalRound(i + 1, t)`
+  // — that is this function's own body restated, so it catches drift but cannot
+  // catch a wrong shared premise. What actually has to hold is a statement about
+  // two different questions: the round a Decider pick OPENS is the round the
+  // multiplier later doubles, and the multiplier asks `isFinalRound` about the
+  // round's own questions, never about the boundary that opened it. If those ever
+  // part company, a player is promised double points on a round that pays single.
   for (const rounds of [2, 3, 5, 8]) {
-    const total = rounds * 5;
-    for (let i = 0; i < total - 1; i++) {
-      assert.equal(
-        isDeciderPick(i, total), isFinalRound(i + 1, total),
-        `q${i} of ${rounds} rounds`,
-      );
+    const total = rounds * ROUND_QUESTIONS;
+    let deciderPicks = 0;
+    // Every round boundary: the last question of a round with another to follow.
+    for (let i = ROUND_QUESTIONS - 1; i < total - 1; i += ROUND_QUESTIONS) {
+      /** The questions of the round this pick opens. */
+      const opened = [];
+      for (let q = i + 1; q < Math.min(i + 1 + ROUND_QUESTIONS, total); q++) opened.push(q);
+      const paysDouble = opened.map((q) => isFinalRound(q, total));
+      if (isDeciderPick(i, total)) {
+        deciderPicks += 1;
+        assert.ok(paysDouble.every(Boolean), `the pick at q${i} of ${rounds} rounds opens a round that pays double`);
+      } else {
+        assert.ok(paysDouble.every((d) => !d), `the pick at q${i} of ${rounds} rounds opens a round that pays single`);
+      }
     }
+    assert.equal(deciderPicks, 1, `${rounds} rounds: exactly one closing act, never zero or two`);
   }
+});
+
+test('deciderPickerFor: a tie for last goes to the last-joined tied seat', () => {
+  // The board arrives sorted by score descending with a STABLE sort over
+  // insertion-ordered seats (`scoreboardOf`), so seats level on points keep join
+  // order and the bottom row is the last of them to have joined. That is the rule
+  // — deterministic, and it survives an eviction or a reconnect because
+  // `Map.set` on an existing key keeps its position — but nothing stated it, so
+  // it was one refactor away from silently changing. Now it is stated.
+  //
+  // If this test ever fails, the question is not "fix the assertion" but "did the
+  // ordering guarantee break", because every client and the server must agree on
+  // who picks the round that decides the game.
+  const tiedAtBottom = [
+    { playerId: 'leader' },   // 30
+    { playerId: 'early' },    // 10, joined first
+    { playerId: 'late' },     // 10, joined second
+  ];
+  assert.equal(deciderPickerFor(tiedAtBottom), 'late');
+
+  // The degenerate case: everyone level, so the whole board is one tie.
+  assert.equal(deciderPickerFor([{ playerId: 'a' }, { playerId: 'b' }, { playerId: 'c' }]), 'c');
 });
 
 test('isDeciderPick: the shortest real draft still has one', () => {
