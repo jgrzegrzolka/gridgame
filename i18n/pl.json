@@ -1120,6 +1120,9 @@
     "removeFilter": "Usuń filtr",
     "sortHighest": "Najwięcej",
     "sortLowest": "Najmniej",
+    "cutTotal": "Łącznie",
+    "cutPerPerson": "Na mieszkańca",
+    "cutPerArea": "Na km²",
     "noData": "brak danych"
   },
   "metricHub": {

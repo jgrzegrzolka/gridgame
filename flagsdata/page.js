@@ -9,6 +9,7 @@ import { createMetric } from '../flags/metrics.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { computeLensView } from '../flags/metricLens.js';
 import { createMetricHub } from '../flags/metricHub.js';
+import { chipMetrics, cutsFor, resolveCut } from '../flags/metricCuts.js';
 import { fitChipRow, rowGap } from '../flags/chipRowFit.js';
 import { t, countryName } from '../i18n.js';
 import { bindTileCountry, refreshTileNames } from '../langRefresh.js';
@@ -269,8 +270,16 @@ export function bootFlagsData() {
   // `lensMetric` its createMetric instance (rebuilt when items load), `lensSort`
   // the tile order. All metric logic lives here via createMetric — it never
   // enters the shared per-flag filter DSL. See DATA_FEATURE.md Feature DE.
-  /** @type {string | null} */
+  /** The open CHIP, which for a grouped subject is not the metric being read —
+   * see `lensMetricKey()`.
+   * @type {string | null} */
   let lensKey = null;
+  /** Which cut each grouped chip is showing, remembered for the session so a
+   * chip you set to "Per person" is still per person when you come back to it
+   * (and so a tier applied to that cut stays interpretable after the panel
+   * closes). Ungrouped metrics never appear here.
+   * @type {Record<string, 'total' | 'per'>} */
+  const lensCutByKey = {};
   /** @type {ReturnType<typeof createMetric> | null} */
   let lensMetric = null;
   /** @type {'default' | 'desc' | 'asc'} */
@@ -1114,9 +1123,70 @@ export function bootFlagsData() {
     lensSortWrap.appendChild(b);
   }
 
+  // Total / Per person, the cut control. Same segmented-control markup and
+  // stylesheet as the sort beside it (CLAUDE.md: same mechanism = same code) —
+  // both answer "which view of this metric", so they must not look like two
+  // different kinds of control. Rebuilt per open because the labels are
+  // per-subject: population's normalised cut is per km², not per person.
+  const lensCutWrap = document.createElement('div');
+  lensCutWrap.className = 'lens-sort';
+
+  /** @param {string} chipKey */
+  function buildCutControl(chipKey) {
+    lensCutWrap.replaceChildren();
+    const cuts = cutsFor(chipKey);
+    if (!cuts) return;
+    const current = lensCutByKey[chipKey] ?? 'total';
+    for (const c of cuts) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.cut = c.cut;
+      b.setAttribute('data-i18n', c.label.key);
+      b.textContent = t(c.label.key, c.label.fallback);
+      b.setAttribute('aria-pressed', String(c.cut === current));
+      b.addEventListener('click', () => setCut(chipKey, c.cut));
+      lensCutWrap.appendChild(b);
+    }
+  }
+
+  /**
+   * Switch which cut a chip reads. A tier applied to the cut we're leaving is
+   * cleared: a threshold is a statement about one metric ("over $1T"), and
+   * carrying it onto the per-person view would filter the grid by a number the
+   * reader can no longer see or reach.
+   * @param {string} chipKey @param {'total' | 'per'} cut
+   */
+  function setCut(chipKey, cut) {
+    const from = resolveCut(chipKey, lensCutByKey[chipKey] ?? 'total');
+    lensCutByKey[chipKey] = cut;
+    const to = resolveCut(chipKey, cut);
+    if (from !== to && from && /** @type {any} */ (filters)[from] != null) {
+      /** @type {any} */ (filters)[from] = null;
+      applyFilter();
+    }
+    // Rebuild the lens on the new metric, then let the hub re-read the panel:
+    // its title, hue and tier pills all describe the resolved metric. The sort
+    // survives the switch — opening a metric picks Highest, but flipping to the
+    // per-person view of the SAME subject is a comparison, and silently
+    // throwing the reader back to Highest would undo the question they asked.
+    const keepSort = lensSort;
+    setLens(chipKey);
+    if (keepSort !== 'default') {
+      lensSort = keepSort;
+      syncSortPressed();
+      renderLens();
+    }
+    hub.refreshPanel();
+  }
+
   const hub = createMetricHub({
     t,
-    metrics: METRIC_FILES,
+    // One chip per subject: the normalised halves (density, GDP per capita,
+    // the per-million Nobel and Olympic cuts) are reached through their
+    // subject's cut control instead of taking a second slot in a 39-chip row.
+    metrics: chipMetrics(METRIC_FILES),
+    // A chip stands for its subject; this is the metric it currently reads.
+    resolveKey: (key) => resolveCut(key, lensCutByKey[key] ?? 'total') ?? key,
     label: { key: 'metricHub.title', fallback: 'World facts' },
     // Tiers count against the full loaded set (same as the old filter
     // groups); empty until countries.json resolves, which only matters if a
@@ -1131,7 +1201,13 @@ export function bootFlagsData() {
     // unchanged order shows numbers but no story); closing restores the
     // resting A–Z wall.
     onPanelToggle: (key) => setLens(key),
-    panelExtras: () => [lensSortWrap],
+    // Cut first, then sort: you choose which number you are looking at before
+    // you choose which end of it. A subject with no second cut renders the
+    // sort alone rather than a one-button segmented control.
+    panelExtras: (key) => {
+      buildCutControl(key);
+      return cutsFor(key) ? [lensCutWrap, lensSortWrap] : [lensSortWrap];
+    },
     // No hub-side "+ N more": the bar's single toggle (Status row) expands
     // and collapses the world facts together with the filter groups.
     moreButton: false,
@@ -1152,11 +1228,22 @@ export function bootFlagsData() {
     }
   }
 
+  /** The metric the open chip is actually reading (chip key for an ungrouped
+   * metric, the chosen cut for a grouped one).
+   * @returns {string | null} */
+  function lensMetricKey() {
+    return lensKey ? resolveCut(lensKey, lensCutByKey[lensKey] ?? 'total') : null;
+  }
+
   /** @param {string | null} key */
   function setLens(key) {
     lensKey = key;
     lensSort = key ? 'desc' : 'default';
-    lensMetric = key && state && metricsData[key] ? createMetric(metricsData[key], state.items) : null;
+    const metricKey = lensMetricKey();
+    lensMetric =
+      metricKey && state && metricsData[metricKey]
+        ? createMetric(metricsData[metricKey], state.items)
+        : null;
     syncSortPressed();
     renderLens();
   }
@@ -1193,7 +1280,8 @@ export function bootFlagsData() {
         attachMetrics(all, Object.fromEntries(
           METRIC_FILES.map((m) => [m.key, metricsData[m.key] ? metricsData[m.key].values : null]),
         ));
-        if (lensKey && metricsData[lensKey]) lensMetric = createMetric(metricsData[lensKey], all);
+        const bootKey = lensMetricKey();
+        if (bootKey && metricsData[bootKey]) lensMetric = createMetric(metricsData[bootKey], all);
         renderLens();
         applyFilter();
       });

@@ -47,6 +47,14 @@ const GAP_FALLBACK = 6;
  *   open panel changes (`null` = closed). flagsdata drives its lens off this.
  * @property {(key: string) => Element[]} [panelExtras] consumer controls
  *   rendered between the panel lead and the tier pills, rebuilt per open.
+ * @property {(key: string) => string} [resolveKey] map a CHIP key to the metric
+ *   key its panel currently represents (default: identity). flagsdata passes
+ *   this so one chip can stand for a metric and its normalised cut — "GDP" the
+ *   chip reads `gdp` or `gdpPerCapita` depending on the cut chosen inside the
+ *   panel (see flags/metricCuts.js). Everything that treats a key as DATA goes
+ *   through it — the panel's hue, its title, its tiers and the tier
+ *   get/set — while the chip's own identity, icon and label stay on its own
+ *   key. Consumers that change what it returns must call `refreshPanel()`.
  * @property {boolean} [showCounts] render each tier's match count (findFlag).
  * @property {boolean} [moreButton] render the hub's own "+ N more" / "less"
  *   toggle (default true). flagsdata passes false: its single bar
@@ -81,6 +89,7 @@ export function createMetricHub(opts) {
     onTierChange,
     onPanelToggle,
     panelExtras,
+    resolveKey = (key) => key,
     showCounts = false,
     moreButton = true,
     expandAll = false,
@@ -235,7 +244,11 @@ export function createMetricHub(opts) {
     panel.innerHTML = '';
     panel.hidden = openKey === null;
     if (openKey === null) return;
-    const key = openKey;
+    // The chip that is open vs the metric it currently reads. They differ only
+    // for a consumer using `resolveKey` (flagsdata's cuts); `chipKey` stays the
+    // identity the extras and the toggle speak, `key` is the data.
+    const chipKey = openKey;
+    const key = resolveKey(chipKey);
     panel.style.setProperty('--mc', METRIC_HUES[key] || 'currentColor');
 
     // Lead: icon + full metric name, so a unitless tier ("over 100K tonnes")
@@ -249,8 +262,11 @@ export function createMetricHub(opts) {
     lead.appendChild(title);
     panel.appendChild(lead);
 
+    // Extras are the consumer's own controls, so they get the CHIP key: on
+    // flagsdata the cut control is what decides which metric `key` resolved to,
+    // and handing it the resolved key would make it argue with itself.
     if (panelExtras) {
-      for (const extra of panelExtras(key)) panel.appendChild(extra);
+      for (const extra of panelExtras(chipKey)) panel.appendChild(extra);
     }
 
     const tiersWrap = doc.createElement('div');
@@ -296,12 +312,12 @@ export function createMetricHub(opts) {
    */
   function update() {
     for (const c of chips) {
-      const on = openKey === c.key || getTier(c.key) !== null;
+      const on = openKey === c.key || getTier(resolveKey(c.key)) !== null;
       c.btn.classList.toggle('on', on);
       c.btn.setAttribute('aria-pressed', String(on));
       c.btn.classList.toggle('is-open', openKey === c.key);
     }
-    const tier = openKey !== null ? getTier(openKey) : null;
+    const tier = openKey !== null ? getTier(resolveKey(openKey)) : null;
     for (const btn of /** @type {HTMLElement[]} */ (childrenOf(panel, 'mhub-tiers'))) {
       const value = btn.getAttribute('data-value');
       const active = tier !== null && value === `${tier.op}${tier.n}`;
@@ -369,6 +385,14 @@ export function createMetricHub(opts) {
     hiddenChipCount() { return chips.filter((c) => c.btn.hidden).length; },
     /** Close the panel (fires onPanelToggle(null) if it was open). */
     closePanel() { setOpen(null); },
+    /**
+     * Rebuild the open panel in place, without closing it or re-firing
+     * onPanelToggle. For a consumer whose `resolveKey` changed under the same
+     * chip (flagsdata switching a metric's cut): the title, hue and tier pills
+     * all describe the resolved metric, so they must be re-read, but the panel
+     * never blinks shut and the lens stays on.
+     */
+    refreshPanel() { renderPanel(); update(); },
     /** @returns {string | null} */
     getOpenKey() { return openKey; },
   };

@@ -1120,6 +1120,9 @@
     "removeFilter": "Remove filter",
     "sortHighest": "Highest",
     "sortLowest": "Lowest",
+    "cutTotal": "Total",
+    "cutPerPerson": "Per person",
+    "cutPerArea": "Per km²",
     "noData": "no data"
   },
   "metricHub": {

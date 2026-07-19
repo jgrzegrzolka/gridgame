@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createMetricHub } from './metricHub.js';
 import { METRIC_FILES } from './metrics/index.js';
+import { METRIC_HUES } from './metricVisuals.js';
 
 /** Synthetic width for the fill-to-fit layout: text length driven, so the
  * tests exercise the same "labels change widths" behaviour the browser has. */
@@ -303,4 +304,85 @@ test('closePanel closes from the outside (flagsdata\'s hide-values path)', () =>
   hub.closePanel();
   assert.equal(hub.getOpenKey(), null);
   assert.deepEqual(toggles, ['population', null]);
+});
+
+// ---- resolveKey: one chip standing for a metric and its normalised cut ----
+// flagsdata's cuts (flags/metricCuts.js) drive this: the chip is the subject,
+// the panel reads whichever cut is selected. Everything that treats a key as
+// DATA must follow the resolution; the chip's own identity must not.
+
+test('resolveKey defaults to identity, so an unaware consumer is unchanged', () => {
+  const { hub } = makeHub();
+  chipFor(hub, 'population').click();
+  assert.equal(byClass(hub.el, 'mhub-panel-title')[0].textContent, 'Population');
+});
+
+test('the panel titles the RESOLVED metric, not the chip', () => {
+  // Otherwise a reader switches "Population" to its per-area cut and the panel
+  // still claims to be showing population.
+  const { hub } = makeHub({ resolveKey: (key) => (key === 'population' ? 'density' : key) });
+  chipFor(hub, 'population').click();
+  assert.equal(byClass(hub.el, 'mhub-panel-title')[0].textContent, 'Population density');
+});
+
+test('the panel takes the resolved metric hue', () => {
+  const { hub } = makeHub({ resolveKey: (key) => (key === 'population' ? 'density' : key) });
+  chipFor(hub, 'population').click();
+  const panel = byClass(hub.el, 'mhub-panel')[0];
+  assert.equal(panel.style.props['--mc'], METRIC_HUES.density);
+});
+
+test('tiers are the resolved metric’s, and apply to its key', () => {
+  // The correctness case: a threshold pill under a subject chip must filter
+  // the metric on screen, never its sibling.
+  /** @type {string[]} */
+  const seen = [];
+  const { hub, filter } = makeHub({
+    resolveKey: (key) => (key === 'population' ? 'coffee' : key),
+    tierItems: (key) => { seen.push(key); return /** @type {any} */ (TIERS)[key] || []; },
+  });
+  chipFor(hub, 'population').click();
+  assert.ok(seen.includes('coffee'), 'tierItems was asked about the chip, not the resolved metric');
+  const pills = byClass(hub.el, 'mhub-tiers')[0].children;
+  assert.equal(pills.length, TIERS.coffee.length);
+  pills[0].click();
+  assert.deepEqual(filter.coffee, { op: '>=', n: 100000 });
+  assert.equal(filter.population, undefined, 'the tier leaked onto the chip key');
+});
+
+test('a chip reads as applied when its RESOLVED metric carries the tier', () => {
+  // With the panel closed, the chip is the only representation of that filter.
+  const { hub, filter } = makeHub({ resolveKey: (key) => (key === 'population' ? 'density' : key) });
+  filter.density = { op: '>=', n: 100 };
+  hub.update();
+  assert.ok(chipFor(hub, 'population').className.includes('on'));
+});
+
+test('panelExtras still receive the CHIP key', () => {
+  // The extras are the control that CHOOSES the resolution; handing them the
+  // resolved key would make the cut control argue with itself.
+  /** @type {string[]} */
+  const seen = [];
+  const { hub } = makeHub({
+    resolveKey: () => 'density',
+    panelExtras: (key) => { seen.push(key); return []; },
+  });
+  chipFor(hub, 'population').click();
+  assert.deepEqual(seen, ['population']);
+});
+
+test('refreshPanel re-reads a resolution that changed under the same chip', () => {
+  let cut = 'total';
+  const { hub, toggles } = makeHub({
+    resolveKey: (key) => (key === 'population' && cut === 'per' ? 'density' : key),
+  });
+  chipFor(hub, 'population').click();
+  assert.equal(byClass(hub.el, 'mhub-panel-title')[0].textContent, 'Population');
+  cut = 'per';
+  hub.refreshPanel();
+  assert.equal(byClass(hub.el, 'mhub-panel-title')[0].textContent, 'Population density');
+  // The panel must not blink shut, and the lens must not be torn down: a
+  // second onPanelToggle would make flagsdata reset the sort it just kept.
+  assert.equal(hub.getOpenKey(), 'population');
+  assert.deepEqual(toggles, ['population']);
 });
