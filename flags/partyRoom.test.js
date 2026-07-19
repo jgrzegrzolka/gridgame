@@ -869,14 +869,14 @@ test("a kid's disabled pair is stable across a reconnect", () => {
   const room = lobbyWithKidBob();
   const question = q('jp');
   const started = applyStart(room, 'alice', question).room;
-  const onReconnect = msg(applyHello(started, 'bob', 'Bob'), 'welcome').easy;
+  const onReconnect = msg(applyHello(started, 'bob', 'Bob'), 'welcome').question.easy;
   const onQuestion = msgTo(applyStart(room, 'alice', question), 'bob').easy;
   assert.deepEqual(onReconnect, onQuestion);
 });
 
 test('a grown-up reconnecting mid-question gets no easy list', () => {
   const started = applyStart(lobbyWithKidBob(), 'alice', q('jp')).room;
-  assert.equal('easy' in msg(applyHello(started, 'alice', 'Alice'), 'welcome'), false);
+  assert.equal('easy' in msg(applyHello(started, 'alice', 'Alice'), 'welcome').question, false);
 });
 
 test('the kid flag survives an eviction', () => {

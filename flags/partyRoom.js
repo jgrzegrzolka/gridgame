@@ -841,12 +841,13 @@ function welcomeBroadcast(room, playerId) {
   const seat = room.seats.get(playerId);
   // A kid rejoining mid-question needs the same two tiles greyed out as before
   // they dropped, which is why `easyFor` is deterministic rather than random.
-  const easy = (room.question && seat && seat.kid) ? { easy: easyFor(room.question) } : {};
+  // Nested inside the question (not alongside it) so a client reads `easy` off
+  // `state.question` no matter which message delivered it.
+  const kidEasy = (room.question && seat && seat.kid) ? { easy: easyFor(room.question) } : {};
   return {
     to: playerId,
     message: {
       type: 'welcome',
-      ...easy,
       you: playerId,
       isHost: room.hostId === playerId,
       phase: room.phase,
@@ -854,7 +855,7 @@ function welcomeBroadcast(room, playerId) {
       totalQuestions: room.totalQuestions,
       tricky: room.tricky,
       roster: rosterList(room),
-      question: room.question ? publicQuestion(room.question) : null,
+      question: room.question ? { ...publicQuestion(room.question), ...kidEasy } : null,
       scoreboard: scoreboardOf(room),
       // Draft: a reconnect mid-pick needs the current picker to paint the pick
       // screen. `youPick` is server-authoritative (this seat vs the picker), and
