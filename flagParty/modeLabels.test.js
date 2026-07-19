@@ -5,7 +5,15 @@ import { readFile } from 'node:fs/promises';
 import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
 import { METRIC_FAMILIES } from '../flags/partyDraft.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
-import { modeShortLabel, modeFullLabel, modeSubLabel, roundModeId } from './page.js';
+import {
+  modeShortLabel,
+  modeFullLabel,
+  modeSubLabel,
+  roundModeId,
+  modeIconHtml,
+  modeHue,
+  roundCardIconHtml,
+} from './page.js';
 
 // Every id that can reach a label lookup: the picture modes, every metric mode
 // (the round title names the RESOLVED mode, so members still need labels), and
@@ -185,4 +193,68 @@ test('every multi-member family discloses its range', () => {
     if (f.memberIds.length === 1) continue;
     assert.ok(modeSubLabel(f.id), `family "${f.id}" groups ${f.memberIds.length} metrics but discloses nothing`);
   }
+});
+
+// ---- card visuals: icon + hue ------------------------------------------
+// The JSDoc on `metricKeyForQuestion` records that this already broke once:
+// population prompts rendered with no icon and no hue. Families made the
+// failure easier to reach, because a hand card can now be an id (`economy`,
+// `olympicMedals`, `population`) that is not a catalog mode at all, so every
+// resolver has to route through the family's representative first.
+
+test('every card the draft can deal resolves an icon', () => {
+  // ALL_CARD_IDS is what handFor deals: picture modes plus metric FAMILIES.
+  for (const id of ALL_CARD_IDS) {
+    const html = modeIconHtml(id);
+    assert.equal(typeof html, 'string');
+    assert.ok(html.length > 0, `card "${id}" would render with no icon`);
+  }
+});
+
+test('every metric family card resolves a hue', () => {
+  // The picture modes carry no metric hue by design (they use their thumbnail),
+  // so the claim is scoped to the metric families.
+  for (const f of METRIC_FAMILIES) {
+    const hue = modeHue(f.id);
+    assert.ok(hue, `family "${f.id}" would render with no accent hue`);
+    assert.match(hue, /^#[0-9a-f]{6}$/i, `family "${f.id}" hue is not a hex colour: ${hue}`);
+  }
+});
+
+test('a family wears its representative’s icon and hue, not a blank', () => {
+  // The specific regression families introduced: resolving the family id as if
+  // it were a mode id yields undefined, which used to fall through to ''.
+  for (const f of METRIC_FAMILIES) {
+    if (f.memberIds.length < 2) continue;
+    assert.equal(modeIconHtml(f.id), modeIconHtml(f.representativeId), f.id);
+    assert.equal(modeHue(f.id), modeHue(f.representativeId), f.id);
+  }
+});
+
+test('every concrete mode a family resolves to has its own icon and hue', () => {
+  // A family card is picked once, then deals ONE member. The round that follows
+  // wears that member's visuals, so every member needs them too, not just the
+  // representative the card showed.
+  for (const f of METRIC_FAMILIES) {
+    for (const memberId of f.memberIds) {
+      assert.ok(modeIconHtml(memberId).length > 0, `mode "${memberId}" has no icon`);
+      assert.ok(modeHue(memberId), `mode "${memberId}" has no hue`);
+    }
+  }
+});
+
+test('every round title card resolves artwork', () => {
+  // roundCardIconHtml takes the RESOLVED mode id (the round actually being
+  // played), never a family id, so it is pinned against the mode catalog.
+  for (const m of [...PICTURE_MODES, ...METRIC_MODES]) {
+    assert.ok(roundCardIconHtml(m.id).length > 0, `round card "${m.id}" would render blank`);
+  }
+});
+
+test('an unknown card id degrades to empty rather than throwing', () => {
+  // A stale client can hold an id this build never heard of; staleGuard reloads
+  // it, but the resolvers must not throw on the way there.
+  assert.equal(modeIconHtml('not-a-mode'), '');
+  assert.equal(modeHue('not-a-mode'), null);
+  assert.equal(roundCardIconHtml('not-a-mode'), '');
 });
