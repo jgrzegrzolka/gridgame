@@ -345,7 +345,6 @@
       "confirm": "Połącz urządzenia"
     },
     "error": {
-      "browser": "Twoja przeglądarka jeszcze tego nie obsługuje, spróbuj nowego Chrome, Safari lub Edge.",
       "generic": "Nie udało się połączyć, spróbuj jeszcze raz.",
       "expired": "Ten kod QR wygasł, wygeneruj nowy na drugim urządzeniu.",
       "invalidToken": "Ten link jest nieprawidłowy. Wygeneruj nowy QR na drugim urządzeniu."
@@ -398,7 +397,6 @@
     "in": "w",
     "newRecord": "nowy rekord!",
     "failedToLoad": "Nie udało się załadować:",
-    "cancel": "Anuluj",
     "close": "Zamknij",
     "countryName": "Nazwa kraju…"
   },
@@ -407,7 +405,6 @@
     "statsTitle": "Yet Another Quiz: Statystyki quizu flag",
     "loading": "Ładowanie…",
     "finalScore": "Wynik końcowy:",
-    "mistakes": "Pomyłki:",
     "yourBestScore": "Twój najlepszy wynik",
     "play": "Zagraj",
     "mode": {
@@ -457,7 +454,6 @@
     "todaysPuzzle": "Dzisiejsza zagadka",
     "archive": "Poprzednie zagadki",
     "archiveTitle": "Yet Another Quiz: Archiwum codziennych zagadek",
-    "archiveCount": "{n} flag",
     "notFound": "Nie znaleziono zagadki.",
     "empty": "Brak zagadek.",
     "stats": {
@@ -466,7 +462,6 @@
       "playerCount": "{count} graczy",
       "caption": "% pokazuje ilu innych graczy odgadło każdą flagę.",
       "loading": "Ładowanie statystyk",
-      "noSubmissions": "Jesteś jednym z pierwszych graczy.",
       "extra": {
         "ranking": "Najczęściej rozpoznane:",
         "topMistake": "Najczęstszy błąd:"
@@ -748,20 +743,6 @@
     "weird": "Dziwne flagi",
     "outlines": "Kształty",
     "facts": "Fakty"
-  },
-  "month": {
-    "jan": "Sty",
-    "feb": "Lut",
-    "mar": "Mar",
-    "apr": "Kwi",
-    "may": "Maj",
-    "jun": "Cze",
-    "jul": "Lip",
-    "aug": "Sie",
-    "sep": "Wrz",
-    "oct": "Paź",
-    "nov": "Lis",
-    "dec": "Gru"
   },
   "color": {
     "red": "czerwony",
@@ -1111,7 +1092,6 @@
   },
   "flagsdata": {
     "title": "Yet Another Quiz: Wszystkie flagi państw",
-    "filters": "Filtry",
     "filterStatus": "Status",
     "filterContinent": "Kontynent",
     "filterColors": "Kolory",

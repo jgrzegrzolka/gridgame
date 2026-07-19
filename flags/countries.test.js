@@ -12,6 +12,7 @@ import {
   CONTINENTS_FOR_RANDOM,
   generateRandomPuzzle,
   buildFlagCategoryPool,
+  buildRandomCategoryPool,
   METRIC_KEYS,
   axesImpliedPair,
   isFlagVisualCategory,
@@ -926,3 +927,55 @@ test('bird-bearing flags carry the bird motif AND the animal motif (subset pin)'
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
+
+// ---- the ttt-puzzle-generator skill's numbers -----------------------------
+
+test('the ttt-puzzle-generator skill states the pool sizes it actually has', () => {
+  // Why this test exists: that skill is the reference an agent reads BEFORE
+  // touching the generator, and it had drifted to "142 categories / 32 metric
+  // families / 20 flag-visual" while the live pool was 159 / 40 / 19. Nothing
+  // noticed, because prose has no compiler. Every metric added since Feature EK
+  // widened the gap.
+  //
+  // Pinning the doc rather than the numbers: adding a metric SHOULD fail this,
+  // and the fix is one edit to the sentence that is now wrong. A skill that
+  // quietly describes a smaller pool than the one it governs is worse than a
+  // skill with no numbers at all, because the reader trusts it.
+  const skill = readFileSync(
+    join(HERE, '..', '.claude', 'skills', 'ttt-puzzle-generator', 'SKILL.md'),
+    'utf-8',
+  );
+  const full = buildRandomCategoryPool();
+  const flag = buildFlagCategoryPool();
+  const visual = full.filter((c) => isFlagVisualCategory(c));
+  const continents = full.filter((c) => c.id.startsWith('continent:'));
+  const metricFamilies = new Set(
+    full
+      .filter((c) => !isFlagVisualCategory(c) && !c.id.startsWith('continent:'))
+      .map((c) => c.exclusiveGroup || c.id.split(':')[0]),
+  );
+
+  /** @type {string[]} */
+  const wrong = [];
+  /** @param {string} claim @param {number} live */
+  const pin = (claim, live) => {
+    if (!skill.includes(claim.replace('{n}', String(live)))) {
+      wrong.push(`skill should say ${JSON.stringify(claim.replace('{n}', String(live)))}`);
+    }
+  };
+  pin('all {n} categories on every retry', full.length);
+  pin('the {n} metric families badly outnumber', metricFamilies.size);
+  pin('outnumber the {n} flag-visual categories', visual.length);
+  pin('in the {n}-entry pool', full.length);
+  pin(`{n} categories (${visual.length} flag-visual + ${continents.length} continents)`, flag.length);
+  pin("against the full pool's {n}", full.length);
+  pin('metric family #{n} stays out automatically', metricFamilies.size + 1);
+
+  assert.deepEqual(
+    wrong,
+    [],
+    `ttt-puzzle-generator/SKILL.md is stale. Live: pool ${full.length}, flag pool ${flag.length}, `
+      + `${visual.length} flag-visual, ${continents.length} continents, ${metricFamilies.size} metric families.\n`
+      + wrong.join('\n'),
+  );
+});

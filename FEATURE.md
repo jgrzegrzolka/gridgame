@@ -41,7 +41,7 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 **Known drift in `ttt-puzzle-generator/SKILL.md`, fix in Phase 2** (it has to be edited there anyway, so don't do it now):
 - It documents 5 rejection rules; the live ladder runs **6** (`metricGroupRepeated`, engine.js:3168, is undocumented despite being in `SINGLE_USE_METRIC_GROUPS` at engine.js:2809-2836).
-- Counts are stale: says "~30 metric families / ~19 flag-visual", live is 32 / 20 of a 142 pool.
+- Counts were stale (said "~30 metric families / ~19 flag-visual" against a 142 pool; live is 40 / 19 of 159). Refreshed, and now pinned: `flags/countries.test.js` fails when the skill's numbers drift from the built pool, and its message states the live figures.
 
 #### Phase 2 — remove 9×9
 
@@ -195,7 +195,7 @@ Ten decks, one axis. **There is no new URL param and no new axis**: `?v=` alread
 | Europe … Oceania (6) | `europe` … | 45 / 47 / 54 / 23 / 12 / 14 | ✓ | ✓ |
 | Weird flags | `weird` | 54 (`nonSovereignPool`) | ✓ | ✓ * |
 | Outlines | `outlines` | 157 (`CONTOUR_CODE_SET`) | ✓ | ✓ * |
-| Facts | `facts` | world, 32 metrics | ✓ | ✗ |
+| Facts | `facts` | world, 39 metrics | ✓ | ✗ |
 
 \* open call — see below. **17 configurations, down from today's 28** (7 variants × 2 modes × 2 scopes), while adding three question types.
 
@@ -223,7 +223,7 @@ The play screen also ends up *lighter* than today, because `60s | all` vanishes 
 
 #### Findings from the 2026-07-17 prototype (measured, don't re-derive)
 
-- **All four deck icons already ship.** `flagParty/page.js`'s `SETUP_ICONS` has exactly these four, designed as a matched set: `flags-all` (a France tricolour thumbnail, `flags/svg/fr.svg`), `flags-territories` (**the Jolly Roger**, inline SVG), `map-outlines` (the real `flags/contours/it.svg`), `worldFacts` (an ascending stat-bar chart). Sizing is `.gs-thumb` (24 × 18) / `.gs-contour` (22 × 22) in `flagParty/index.css`. **Promote these with Flag Party as the second consumer; do not redraw.** The repo's "wait for the second consumer" rule is satisfied exactly now.
+- **All four deck icons already ship.** (Since promoted: they live in `flags/deckIcons.js` as `flags` / `weird` / `outlines` / `facts`, reached via `deckIconHtml`. `SETUP_ICONS` and the `worldFacts` id below are the prototype's names and no longer exist.) The matched set is: `flags-all` (a France tricolour thumbnail, `flags/svg/fr.svg`), `flags-territories` (**the Jolly Roger**, inline SVG), `map-outlines` (the real `flags/contours/it.svg`), `worldFacts` (an ascending stat-bar chart). Sizing is `.gs-thumb` (24 × 18) / `.gs-contour` (22 × 22) in `flagParty/index.css`. **Promoted with Flag Party as the second consumer (shipped: `flags/deckIcons.js`); do not redraw.** The repo's "wait for the second consumer" rule is satisfied exactly now.
 - **The Jolly Roger is the right icon and its own code comment says why**: *"a flag with no country ... unmistakably not a specific country."* It reads as a symbol *for* the non-sovereign pool rather than a sample *from* it. (The intuitive alternative, Nepal's pennant, is actively wrong: Nepal is sovereign, so the one flag everyone would draw for "weird flags" is in the **other** deck.)
 - **Row width at natural size, against 327px available** (375 minus 2 × 24px page padding), measured in a real 375 × 553 viewport:
 
@@ -240,7 +240,7 @@ The play screen also ends up *lighter* than today, because `60s | all` vanishes 
 
 #### ⚠️ Landmine for Phase 4 (Facts)
 
-`flags/partyQuestions/superlative.js` **statically imports 32 metric JSONs** (`import population from '../metrics/population.json' with { type: 'json' }`). Its own header says it *"runs only on the server (PartyKit; the page never imports it), so the browser 'fetch JSON, never import' rule doesn't apply."* **The flagQuiz page cannot import it.** Doing so ships a blank page in real browsers (Playwright Chromium hides it — this broke prod in #767, fixed in #769). Phase 4 needs a browser-safe path: fetch the metric JSON and inject it, splitting the pure quartet-picking logic from the data loading.
+`flags/partyQuestions/superlative.js` **statically imports 39 metric JSONs** (`import population from '../metrics/population.json' with { type: 'json' }`). Its own header says it *"runs only on the server (PartyKit; the page never imports it), so the browser 'fetch JSON, never import' rule doesn't apply."* **The flagQuiz page cannot import it.** Doing so ships a blank page in real browsers (Playwright Chromium hides it — this broke prod in #767, fixed in #769). Phase 4 needs a browser-safe path: fetch the metric JSON and inject it, splitting the pure quartet-picking logic from the data loading.
 
 #### Phases (each = one branch off `main` + one PR; Jan merges)
 
