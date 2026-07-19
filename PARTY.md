@@ -193,12 +193,14 @@ Iteration 11 below.
 
 Still open:
 
-- **Iteration 12 — the playability + UX pass (IN PROGRESS, 2 of 6 phases shipped).** Written to be
+- **Iteration 12 — the playability + UX pass (IN PROGRESS, 3 of 6 phases shipped).** Written to be
   picked up by a fresh agent one phase at a time. It opened with a measured fairness bug: the
   double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
   because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
-  round is now **the Decider**, a separate act outside the rotation picked by last place. Phase 3
-  (one shared screen transition) is next. See the entry below.
+  round is now **the Decider**, a separate act outside the rotation picked by last place. Scoring is
+  legible (phase 1) and screen changes go through one animated primitive (phase 3). **Phase 4
+  (round-start ring) is next** — it was deliberately left until transitions were smooth, which they
+  now are. See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1210,7 +1212,7 @@ information, not decoration.
 - **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
   liked it, so it wasn't built. The hard swap stays.
 
-## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-2 shipped)
+## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-3 shipped)
 
 Goal: the engine, the draft and the rounds all work; what's thin is everything *around* the
 questions. A point means the same thing whoever earned it, the round that decides the game is handed
@@ -1330,7 +1332,7 @@ build would still render the Decider pick as an ordinary one.
       Decider pick *opens* is the round the multiplier later *doubles*, across 2/3/5/8-round games,
       plus exactly one closing act per game.
 
-### Phase 3 — one shared screen transition (client only)
+### Phase 3 — one shared screen transition (client only) — SHIPPED (#983)
 
 `showSection` flips a `hidden` attribute, so question → reveal → break → pick → round card → question
 is six hard cuts a round. Replace with a single `swapSection()` primitive every screen change goes
@@ -1338,6 +1340,37 @@ through: ~120 ms out, ~180 ms in, 6 px lift.
 
 **Do this as one helper, not per-screen tweaks.** The duplicate-`countUp` bug in Iteration 11 is the
 cautionary tale: two implementations of one mechanism, and the wrong one silently won.
+
+**What shipped:**
+- [x] `flagParty/sectionSwap.js` — every screen change goes through `swapper.to()`. The DOM half
+      (which sections to hide, which classes to toggle) is injected, so the module is pure and the
+      page keeps only the adapters.
+- [x] Two edge cases carry the design, and neither is visible in a screenshot:
+      **`render()` runs on every state change AND every clock tick**, so it asks for the screen it is
+      already on far more often than for a new one — that has to be a true no-op or every screen
+      flickers for as long as it is up, and the guard is on where we are *heading*, not on what is
+      *visible* (during an out phase those differ, and guarding on the visible one restarts the swap
+      every tick and never changes screens). And **a beat can be shorter than the swap** (a clean
+      reveal is 0.9 s), so an interrupted swap cancels, unmarks the abandoned screen and redirects
+      rather than leaving a live screen wearing a faded-out class.
+- [x] **Reduced motion skips the out phase entirely**, not just the CSS animation — otherwise a
+      player who asked for less motion still waits 120 ms per screen change for nothing.
+- [x] **`.roundcard`'s private 0.35 s entrance deleted.** With the swap landed it meant one screen
+      arriving twice: the section lifting 6 px while the card inside lifted a further 8 px on a
+      different curve and duration. The card loses its `scale(0.97)` pop — restore it if that reads
+      wrong in play, but not by re-adding a second entrance mechanism.
+- [x] Added to the **strict** tsconfig (`flagParty/sectionSwap.js` + its test): it is pure logic,
+      which is where CLAUDE.md puts the type-safety ROI. Note this is the first `flagParty/` module in
+      the strict set — `staleGuard.js` is still outside it.
+- [x] `npm run validate` green (2958 tests, +10 against a fake clock) + **verified in-browser** by
+      instrumenting the real class transitions with a `MutationObserver` rather than eyeballing:
+      121 ms out / 184 ms in, the round card holding its 2 s beat, and **exactly one swap per screen
+      change** across ~10 s of question phase. Reduced motion re-checked by flipping `matchMedia`
+      live: `SHOW pt-final` with zero class events and no out-phase delay. 0 console errors.
+
+**Not verified:** a clean screenshot of the round card itself. The 2 s beat kept outrunning the
+screenshot round-trip, twice. The mutation trace proves the card's section enters through the shared
+swap, but nobody has *looked* at the card since its own animation was removed.
 
 ### Phase 4 — round-start countdown (client only)
 
