@@ -114,7 +114,9 @@ test('sole survivor: the only correct player gets the bonus', () => {
     { playerId: 'c', correct: false },
   ]);
   assert.equal(awards.a.solo, SOLE_SURVIVOR_BONUS);
-  assert.equal(awards.a.total, CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS);
+  // No speed: being "first" among one correct answer means beating nobody.
+  assert.equal(awards.a.speed, 0);
+  assert.equal(awards.a.total, CORRECT_POINTS + SOLE_SURVIVOR_BONUS);
   assert.equal(awards.b.solo, 0);
 });
 
@@ -152,7 +154,8 @@ test('sole survivor: doubles on the Decider like every other point', () => {
     { multiplier: FINAL_ROUND_MULTIPLIER },
   );
   assert.equal(awards.a.solo, SOLE_SURVIVOR_BONUS * FINAL_ROUND_MULTIPLIER);
-  assert.equal(awards.a.total, (CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS) * FINAL_ROUND_MULTIPLIER);
+  assert.equal(awards.a.speed, 0, 'still no race, even on the Decider');
+  assert.equal(awards.a.total, (CORRECT_POINTS + SOLE_SURVIVOR_BONUS) * FINAL_ROUND_MULTIPLIER);
 });
 
 test('a wrong answer earns nothing in every bucket when the question has no ranking', () => {
@@ -199,13 +202,16 @@ test('closeness: a near miss earns no speed bonus, however fast it arrived', () 
   // Speed ranks among CORRECT answers. Paying it on a near miss would reward
   // buzzing fast on a question you did not know, which is the opposite of what
   // the speed bonus is for.
+  // Two correct, so a race genuinely happened and the control below is
+  // meaningful — with a single correct answer nobody gets speed at all now.
   const awards = scoreQuestionDetailed([
     { playerId: 'fastWrong', correct: false, rank: 1 },
-    { playerId: 'slowRight', correct: true, rank: 0 },
+    { playerId: 'right1', correct: true, rank: 0 },
+    { playerId: 'right2', correct: true, rank: 0 },
   ]);
   assert.equal(awards.fastWrong.speed, 0);
   assert.equal(awards.fastWrong.total, CLOSENESS_LADDER[1]);
-  assert.equal(awards.slowRight.speed, SPEED_BONUS[0]);
+  assert.equal(awards.right1.speed, SPEED_BONUS[0], 'the actual race still pays');
 });
 
 test('closeness: a near miss does not block the sole-survivor bonus', () => {
@@ -241,4 +247,46 @@ test('closeness: scoreQuestion projects the same totals as the detailed scorer',
   const detailed = scoreQuestionDetailed(buzzes);
   for (const id of Object.keys(detailed)) assert.equal(flat[id], detailed[id].total);
   assert.equal(flat.a, CLOSENESS_LADDER[1]);
+});
+
+test('no race, no race bonus: a lone correct answer earns no speed', () => {
+  // Being 'first' among one correct answer means having beaten nobody. This
+  // used to pay SPEED_BONUS[0] on top of the sole-survivor bonus, making that
+  // question worth 20 against everyone else's 0 -- and it fires on ~24% of
+  // four-player questions, so it was the most common way a board blew open.
+  const alone = scoreQuestionDetailed([
+    { playerId: 'a', correct: true },
+    { playerId: 'b', correct: false },
+    { playerId: 'c', correct: false },
+    { playerId: 'd', correct: false },
+  ]);
+  assert.equal(alone.a.speed, 0);
+  assert.equal(alone.a.total, CORRECT_POINTS + SOLE_SURVIVOR_BONUS);
+
+  // Two correct is a real race, and the winner of it is paid.
+  const raced = scoreQuestionDetailed([
+    { playerId: 'a', correct: true },
+    { playerId: 'b', correct: true },
+    { playerId: 'c', correct: false },
+    { playerId: 'd', correct: false },
+  ]);
+  assert.equal(raced.a.speed, SPEED_BONUS[0]);
+  assert.equal(raced.b.speed, SPEED_BONUS[1]);
+  assert.equal(raced.a.solo, 0, 'two correct is not a sole survivor');
+});
+
+test('the biggest possible swing on a question is the same however many knew it', () => {
+  // The real complaint this fixed: the sole-survivor case was the ONLY outcome
+  // that could exceed a 15-point swing, and the excess was exactly the
+  // unearned speed bonus. Walk every outcome and pin that the top payout never
+  // exceeds a correct answer plus one bonus.
+  const cap = CORRECT_POINTS + Math.max(SPEED_BONUS[0], SOLE_SURVIVOR_BONUS);
+  for (let correct = 1; correct <= 4; correct++) {
+    const buzzes = [];
+    for (let i = 0; i < 4; i++) buzzes.push({ playerId: 'p' + i, correct: i < correct });
+    const awards = scoreQuestionDetailed(buzzes);
+    const top = Math.max(...Object.values(awards).map((a) => a.total));
+    assert.ok(top <= cap,
+      `${correct} correct pays a top score of ${top}, above the ${cap} cap`);
+  }
 });

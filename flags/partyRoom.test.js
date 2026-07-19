@@ -268,12 +268,13 @@ test('applyBuzz: when all present seats have buzzed, the question reveals and sc
   const rev = msg(r, 'reveal');
   assert.equal(rev.answer, 'jp', 'answer revealed');
   assert.deepEqual(rev.picks, { alice: 'jp', bob: 'kr' }, 'everyone\'s pick is shown');
-  // Alice is first correct AND the only one correct, so she takes both bonuses.
-  const aliceAward = CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS;
-  assert.equal(rev.points.alice, aliceAward, 'first correct, and the only one');
+  // Alice is the ONLY one correct, so she takes the sole-survivor bonus but no
+  // speed: there was no race to win.
+  const aliceAward = CORRECT_POINTS + SOLE_SURVIVOR_BONUS;
+  assert.equal(rev.points.alice, aliceAward, 'the only one who knew it');
   assert.deepEqual(
     rev.breakdown.alice,
-    { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: SOLE_SURVIVOR_BONUS, closeness: 0 },
+    { base: CORRECT_POINTS, speed: 0, solo: SOLE_SURVIVOR_BONUS, closeness: 0 },
     'the reveal itemises what earned it, so the break need not guess',
   );
   assert.deepEqual(rev.breakdown.bob, { base: 0, speed: 0, solo: 0, closeness: 0 },
@@ -299,9 +300,9 @@ test('applyForceReveal: host can end the question early (timeout)', () => {
   room = applyBuzz(room, 'alice', 'jp', true).room; // Bob never answers
   const r = applyForceReveal(room, 'alice');
   assert.equal(r.room.phase, 'reveal');
-  // Two seats, so the race bonus applies: Alice is the only (and first) correct,
-  // and a seat that never buzzed still counts as not having got it.
-  assert.equal(msg(r, 'reveal').points.alice, CORRECT_POINTS + SPEED_BONUS[0] + SOLE_SURVIVOR_BONUS);
+  // A seat that never buzzed still counts as not having got it, so Alice is the
+  // sole survivor -- and with nobody else correct there was no race, so no speed.
+  assert.equal(msg(r, 'reveal').points.alice, CORRECT_POINTS + SOLE_SURVIVOR_BONUS);
   assert.equal(msg(r, 'reveal').points.bob, undefined, 'Bob never buzzed, no entry');
 });
 

@@ -51,14 +51,26 @@ test('a player who never buzzed simply is not in the tally', () => {
 
 test('the sole survivor bonus keeps its own bucket instead of being read as speed', () => {
   // The reason the breakdown moved onto the wire: SOLE_SURVIVOR_BONUS equals
-  // SPEED_BONUS[0], so this player's 20 is "10 + 5 + 5" and no arithmetic on the
-  // total alone could ever have told the last two apart.
-  const t = addQuestionToTally(emptyTally(), breakdownOf([
+  // SPEED_BONUS[0], so a 15 is either "10 + 5 speed" or "10 + 5 solo" and no
+  // arithmetic on the total alone can tell them apart. Both cases below total
+  // 15 and decompose differently, which is the whole argument in two fixtures.
+  const alone = addQuestionToTally(emptyTally(), breakdownOf([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: false },
   ]));
-  assert.deepEqual(t.a, { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: SOLE_SURVIVOR_BONUS, closeness: 0 });
-  assert.deepEqual(chipsFor(t.a).map((c) => c.kind), ['base', 'speed', 'solo']);
+  assert.deepEqual(alone.a, { base: CORRECT_POINTS, speed: 0, solo: SOLE_SURVIVOR_BONUS, closeness: 0 });
+  assert.deepEqual(chipsFor(alone.a).map((c) => c.kind), ['base', 'solo']);
+
+  const raced = addQuestionToTally(emptyTally(), breakdownOf([
+    { playerId: 'a', correct: true },
+    { playerId: 'b', correct: true },
+  ]));
+  assert.deepEqual(raced.a, { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: 0, closeness: 0 });
+  assert.deepEqual(chipsFor(raced.a).map((c) => c.kind), ['base', 'speed']);
+
+  // Same total, different story.
+  const totalOf = (/** @type {{base:number,speed:number,solo:number,closeness:number}} */ x) => x.base + x.speed + x.solo + x.closeness;
+  assert.equal(totalOf(alone.a), totalOf(raced.a));
 });
 
 test('a double round arrives already scaled', () => {
