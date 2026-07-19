@@ -22,6 +22,10 @@ import {
   ledgerSchedule,
   LEDGER_ENTER_MS,
   LEDGER_ENTER_STAGGER_MS,
+  finalBoardSchedule,
+  FINAL_ROW_STAGGER_MS,
+  FINAL_WINNER_HOLD_MS,
+  FINAL_ROW_ENTER_MS,
 } from './partyTiming.js';
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
@@ -232,4 +236,65 @@ test('ledgerSchedule: even a full room finishes with reading time left in the br
 
 test('ledgerSchedule: an empty board has no entrance to wait for', () => {
   assert.equal(ledgerSchedule(0).enterMs, 0);
+});
+
+// ---- finalBoardSchedule: the finish reveal, bottom-up with the winner last ----
+
+test('finalBoardSchedule: last place leads, each row above follows a step later', () => {
+  const s = finalBoardSchedule(4);
+  // Index 3 is last place and goes first; 2 and 1 follow one stagger apart.
+  assert.equal(s.rows[3].enterAt, 0);
+  assert.equal(s.rows[2].enterAt, FINAL_ROW_STAGGER_MS);
+  assert.equal(s.rows[1].enterAt, FINAL_ROW_STAGGER_MS * 2);
+});
+
+test('finalBoardSchedule: the winner is held back an extra beat', () => {
+  // Without the hold, first place is just the next row one stagger later, and
+  // "winner last" reads as nothing in particular.
+  const s = finalBoardSchedule(4);
+  assert.equal(s.rows[0].enterAt, FINAL_ROW_STAGGER_MS * 3 + FINAL_WINNER_HOLD_MS);
+  assert.ok(s.rows[0].enterAt - s.rows[1].enterAt > FINAL_ROW_STAGGER_MS, 'the winner waits longer than a plain step');
+});
+
+test('finalBoardSchedule: every row enters strictly after the one below it', () => {
+  // The property that makes it read as a walk up the board, at any table size.
+  for (const n of [2, 3, 5, 8, 20]) {
+    const s = finalBoardSchedule(n);
+    for (let i = 0; i < n - 1; i += 1) {
+      assert.ok(s.rows[i].enterAt > s.rows[i + 1].enterAt, `row ${i} must follow row ${i + 1} (n=${n})`);
+    }
+  }
+});
+
+test('finalBoardSchedule: a score counts only once its row is on screen', () => {
+  const s = finalBoardSchedule(3);
+  for (const row of s.rows) assert.ok(row.countAt > row.enterAt, 'the number moves where you are already looking');
+});
+
+test('finalBoardSchedule: the burst lands on the winner, not on the rows still arriving', () => {
+  const s = finalBoardSchedule(4);
+  assert.ok(s.celebrationAt > s.rows[0].enterAt, 'after the winner starts arriving');
+  assert.ok(s.celebrationAt < s.rows[0].enterAt + FINAL_ROW_ENTER_MS, 'and while they are still landing');
+});
+
+test('finalBoardSchedule: a solo board has no hold and no cascade to wait for', () => {
+  const s = finalBoardSchedule(1);
+  assert.equal(s.rows.length, 1);
+  assert.equal(s.rows[0].enterAt, 0, 'one player is both first and last: nothing to hold them behind');
+});
+
+test('finalBoardSchedule: an empty board schedules nothing', () => {
+  const s = finalBoardSchedule(0);
+  assert.deepEqual(s.rows, []);
+  assert.equal(s.celebrationAt, 0);
+  assert.equal(s.totalMs, 0);
+});
+
+test('finalBoardSchedule: the whole reveal is long enough to read but stays under a second and a half', () => {
+  // The measured complaint was a 3-row board finishing its cascade in 148 ms.
+  // Guard both ways: slow enough to follow, not so slow the finish drags.
+  const s = finalBoardSchedule(3);
+  const cascadeMs = s.rows[0].enterAt - s.rows[2].enterAt;
+  assert.ok(cascadeMs >= 400, `the walk up the board must be readable, got ${cascadeMs}ms`);
+  assert.ok(s.totalMs <= 1500, `the finish must not drag, got ${s.totalMs}ms`);
 });

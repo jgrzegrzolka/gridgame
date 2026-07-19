@@ -193,15 +193,15 @@ Iteration 11 below.
 
 Still open:
 
-- **Iteration 12 — the playability + UX pass (IN PROGRESS, 5 of 6 phases shipped).** Written to be
+- **Iteration 12 — the playability + UX pass (IN PROGRESS, phases 1-5 + 6a shipped).** Written to be
   picked up by a fresh agent one phase at a time. It opened with a measured fairness bug: the
   double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
   because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
   round is now **the Decider**, a separate act outside the rotation picked by last place. Scoring is
   legible (phase 1), screen changes go through one animated primitive (phase 3, #983), and the round
   card counts the beat down with a draining ring (phase 4). Scoring now says where each point came from and the wire carries the breakdown (phase 5, streaks
-  dropped as win-more). **Phase 6 (the finale as an ending: bottom-up reveal, then awards) is the
-  last one.** See the entry below.
+  dropped as win-more). The finish now reveals bottom-up at a pace you can follow (phase 6a). **Awards
+  (phase 6b) are the last item.** See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1213,7 +1213,7 @@ information, not decoration.
 - **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
   liked it, so it wasn't built. The hard swap stays.
 
-## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-5 shipped)
+## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-5 + 6a shipped)
 
 Goal: the engine, the draft and the rounds all work; what's thin is everything *around* the
 questions. A point means the same thing whoever earned it, the round that decides the game is handed
@@ -1496,8 +1496,58 @@ my points come from" is **phase 6's awards**, not chips.
 
 ### Phase 6 — the finale as an ending (client + per-game stats)
 
-- **Reveal from the bottom up, winner last**, with a beat between each row. The rows and the count-up
-  already exist; this is sequencing, the same shape as Iteration 11's ledger.
+Split in two at Jan's call: **the reveal first, awards after**, so the sequencing can be judged in a
+real game before any stat-tracking groundwork is laid.
+
+#### Phase 6a — the reveal (client only) — SHIPPED (2026-07-19)
+
+**The finding that reframed this: the bottom-up reveal was already there.** Jan read the mock's
+"Baseline / all at once" card as a claim about current behaviour and said it was wrong. Measured on a
+real three-seat game, the app *did* cascade bottom-to-top, winner last, on the mock's own 90 ms step:
+
+| Row | `--enter-delay` | Appeared | Score settled |
+|---|---|---|---|
+| 3rd (last place) | 0 ms | 92 ms | 575 ms |
+| 2nd | 90 ms | 180 ms | 656 ms |
+| 1st (winner) | 180 ms | 240 ms | 756 ms |
+
+So the mechanism was right and **the timing was unreadable**: 148 ms between last place appearing and
+the winner appearing, under a section cross-fade and a confetti burst. The mock looks slower because
+you watch it alone in a card, not because it does anything different. The fix is legibility, not a
+new mechanism — which is why this stayed one helper rather than a rewrite.
+
+**A second, real defect the measurement exposed:** the count-up clock started **~200 ms before the
+screen was visible**, because `renderFinal` runs during the swap's out phase. Last place's number was
+already at 85 of 140 while the winner's row was still at opacity 0 — the numbers ran ahead of the rows.
+
+**What shipped:**
+- [x] `finalBoardSchedule(rowCount)` in `flags/partyTiming.js` — the finish as data, next to
+      `ledgerSchedule`. Rows are indexed **as the board renders them** (0 = the winner at the top)
+      while the reveal runs the other way, so a caller hands it the scoreboard untouched.
+- [x] The step goes **90 ms → 200 ms**, and the winner gets `FINAL_WINNER_HOLD_MS = 260` on top of
+      their turn. Without the hold, "winner last" is just "the next row, 200 ms later".
+- [x] **The count-up starts when the row is on screen**, not on a clock that began before the screen
+      did. `createSectionSwapper` gained an **`onShown`** hook that fires as a section is actually
+      displayed (after the out phase); the page holds the built sequence in `finalPending` and
+      `startFinalReveal` consumes it exactly once. That hook is the seam any self-choreographing
+      screen needs, and it is where a "start it at build time" bug would otherwise keep reappearing.
+- [x] **The burst waits for the winner** (`FINAL_CELEBRATION_OFFSET_MS` past their entrance), so it
+      punctuates the reveal instead of covering the rows still arriving underneath.
+- [x] A test pins the reveal is **readable but doesn't drag**: the walk up a 3-row board must take
+      ≥ 400 ms (it was 148 ms) and the whole finish ≤ 1.5 s. That's the actual complaint, encoded.
+- [x] `npm run validate` green (2994 tests) + **re-measured on the same three-seat setup**:
+
+      | Row | delay | Appears | Count starts | Settles |
+      |---|---|---|---|---|
+      | 3rd (last) | 0 ms | 80 ms | 131 ms | 624 ms |
+      | 2nd | 200 ms | 303 ms | 335 ms | 829 ms |
+      | 1st (winner) | 660 ms | 730 ms | 779 ms | 1282 ms |
+
+      The walk up the board went **148 ms → 650 ms**, and every row now starts counting *after* it
+      appears (131 > 80, 335 > 303, 779 > 730), which is the desync closed. 0 console errors.
+
+#### Phase 6b — awards (client + per-game stats)
+
 - **Awards** after the board — fastest finger, best round, biggest climb — so everyone leaves with
   something, including whoever finished last.
 - The awards need per-game stats nobody currently keeps (buzz ranks, per-round gains, rank history).
