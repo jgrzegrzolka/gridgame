@@ -488,7 +488,7 @@ function createShareButton() {
   btn.onclick = async () => {
     if (!shareCtx) return;
     const { n, answerCodes, foundCodes } = shareCtx;
-    const titleLine = t('daily.share.title', 'Yet Another Quiz — Daily Flag Puzzle #{n} — {score}/{total}')
+    const titleLine = t('daily.share.title', 'Yet Another Quiz: Daily Flag Puzzle #{n}, {score}/{total}')
       .replace('{n}', String(n))
       .replace('{score}', String(foundCodes.length))
       .replace('{total}', String(answerCodes.length));

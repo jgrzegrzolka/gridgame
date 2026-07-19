@@ -27,7 +27,7 @@ export function bootPrivacy() {
       // Success — leave the link disabled. If the user comes back
       // tomorrow and wants to cancel, playing again clears the flag at
       // manual-purge time — same path the page promises.
-      setStatus(status, t('privacy.removal.confirmed', 'Got it — your data is flagged for removal. Coming back to play will cancel the request.'), 'is-ok', 'privacy.removal.confirmed');
+      setStatus(status, t('privacy.removal.confirmed', 'Got it, your data is flagged for removal. Coming back to play will cancel the request.'), 'is-ok', 'privacy.removal.confirmed');
     } catch {
       setStatus(status, t('privacy.removal.error', 'Could not send the request. Please try again later.'), 'is-error', 'privacy.removal.error');
       link.removeAttribute('aria-disabled');

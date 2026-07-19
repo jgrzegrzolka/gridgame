@@ -59,7 +59,8 @@
     "fullscreen": "Toggle fullscreen",
     "sync": "Sync across devices",
     "deck": "Deck",
-    "partOfWorld": "Part of the world"
+    "partOfWorld": "Part of the world",
+    "coffee": "Buy me a coffee"
   },
   "nickname": {
     "label": "Nickname",
