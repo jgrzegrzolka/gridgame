@@ -11,7 +11,7 @@ import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundSta
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
-import { CLOSENESS_LADDER } from '../flags/partyScore.js';
+import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -1717,11 +1717,13 @@ export function bootFlagParty() {
       const toast = el('div', 'toast');
       toast.appendChild(buildAvatar(entry.playerId));
       toast.appendChild(el('span', 'toast-name', entry.nickname));
-      // Badges read straight off the itemised award rather than inferring them
-      // from the total, which is why a sole survivor now correctly shows "Only
-      // one" without "Fastest": with nobody to race, `speed` is 0.
+      // Badges read off the itemised award. "Fastest" goes through
+      // `wasFastest` rather than `speed > 0`: the speed bonus pays the first
+      // THREE correct answers, so `> 0` tagged up to three players as Fastest
+      // at once. A sole survivor still shows "Only one" without "Fastest" --
+      // with nobody to race, `speed` is 0.
       const award = breakdown[entry.playerId];
-      if (award && award.speed > 0) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
+      if (wasFastest(award)) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
       if (award && award.solo > 0) toast.appendChild(el('span', 'solo', `★ ${t('party.soleSurvivor', 'Only one')}`));
       toast.appendChild(el('span', 'pts' + (pts === 0 ? ' zero' : ''), `+${pts}`));
       list.appendChild(toast);

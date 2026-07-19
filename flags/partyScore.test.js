@@ -9,6 +9,7 @@ import {
   SOLE_SURVIVOR_BONUS,
   CLOSENESS_LADDER,
   closenessForRank,
+  wasFastest,
 } from './partyScore.js';
 
 test('speedBonusForRank: follows the curve, then 0 past the end', () => {
@@ -247,5 +248,44 @@ test('the biggest possible swing on a question is the same however many knew it'
     const top = Math.max(...Object.values(awards).map((a) => a.total));
     assert.ok(top <= cap,
       `${correct} correct pays a top score of ${top}, above the ${cap} cap`);
+  }
+});
+
+test('only ONE player is ever tagged Fastest', () => {
+  // Reported from a real game: two players showed the Fastest badge at once.
+  // SPEED_BONUS pays the first THREE correct answers (5/3/1), and the badge was
+  // rendered on `award.speed > 0`, so everyone who placed got called first.
+  const awards = scoreQuestionDetailed([
+    { playerId: 'first', correct: true },
+    { playerId: 'second', correct: true },
+    { playerId: 'third', correct: true },
+    { playerId: 'fourth', correct: true },
+  ]);
+  const tagged = Object.entries(awards).filter(([, a]) => wasFastest(a)).map(([id]) => id);
+  assert.deepEqual(tagged, ['first'], 'exactly the seat that actually arrived first');
+  // ...and the also-rans keep their points, they just are not called Fastest.
+  assert.ok(awards.second.speed > 0, 'second still earns a speed bonus');
+  assert.equal(wasFastest(awards.second), false);
+});
+
+test('wasFastest is false when there was no race at all', () => {
+  // A lone correct answer earns no speed (no race), so nobody is Fastest.
+  const alone = scoreQuestionDetailed([
+    { playerId: 'a', correct: true },
+    { playerId: 'b', correct: false },
+  ]);
+  assert.equal(wasFastest(alone.a), false);
+  assert.equal(wasFastest(alone.b), false);
+  // Solo play switches the bonus off entirely.
+  const solo = scoreQuestionDetailed([{ playerId: 'a', correct: true }], { applySpeedBonus: false });
+  assert.equal(wasFastest(solo.a), false);
+});
+
+test('SPEED_BONUS strictly decreases, which is what makes wasFastest sound', () => {
+  // wasFastest identifies the winner by the VALUE of the bonus, so a curve with
+  // a repeated or non-maximal first entry would tag two players again.
+  for (let i = 1; i < SPEED_BONUS.length; i++) {
+    assert.ok(SPEED_BONUS[i] < SPEED_BONUS[i - 1],
+      `SPEED_BONUS must strictly decrease; [${i}]=${SPEED_BONUS[i]} vs [${i - 1}]=${SPEED_BONUS[i - 1]}`);
   }
 });
