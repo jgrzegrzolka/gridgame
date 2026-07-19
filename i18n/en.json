@@ -591,16 +591,14 @@
       "superlativeSummerMedalsPc": "Summer Olympic medals per million people",
       "superlativeWinterMedals": "Winter Olympic medals",
       "superlativeWinterMedalsPc": "Winter Olympic medals per million people",
-      "summerMedals": "Summer Olympic medals",
-      "winterMedals": "Winter Olympic medals",
+      "olympicMedals": "Olympic medals",
       "economy": "Economy",
       "nobel": "Nobel laureates"
     },
     "modeSub": {
       "economy": "GDP, total or per person",
       "nobel": "Total or per person",
-      "summerMedals": "Total or per person",
-      "winterMedals": "Total or per person"
+      "olympicMedals": "Summer or Winter, total or per person"
     },
     "modeShort": {
       "flagsAll": "Flags",

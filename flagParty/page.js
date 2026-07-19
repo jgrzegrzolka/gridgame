@@ -123,17 +123,11 @@ const MODE_LABELS = {
     subKey: 'party.modeSub.nobel',
     sub: 'Total or per person',
   },
-  summerMedals: {
-    key: 'party.mode.summerMedals',
-    full: 'Summer Olympic medals',
-    subKey: 'party.modeSub.summerMedals',
-    sub: 'Total or per person',
-  },
-  winterMedals: {
-    key: 'party.mode.winterMedals',
-    full: 'Winter Olympic medals',
-    subKey: 'party.modeSub.winterMedals',
-    sub: 'Total or per person',
+  olympicMedals: {
+    key: 'party.mode.olympicMedals',
+    full: 'Olympic medals',
+    subKey: 'party.modeSub.olympicMedals',
+    sub: 'Summer or Winter, total or per person',
   },
 };
 
