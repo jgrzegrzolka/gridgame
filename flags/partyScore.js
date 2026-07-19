@@ -35,6 +35,29 @@ export function speedBonusForRank(rank) {
 }
 
 /**
+ * Was this award the **first** correct answer — the one seat that actually won
+ * the race? Drives the reveal's "⚡ Fastest" badge.
+ *
+ * Exists because the badge was rendered on `award.speed > 0`, and
+ * {@link SPEED_BONUS} pays the first THREE correct answers (5 / 3 / 1). So a
+ * question three people got right tagged all three as Fastest, which is how a
+ * real game showed two winners of the same race. The seats behind still keep
+ * their speed points; they are simply not called first.
+ *
+ * Identified by the bonus's VALUE rather than by a rank threaded through the
+ * wire: `SPEED_BONUS[0]` is its unique maximum, so matching it picks out rank 0
+ * exactly. That soundness depends on the curve strictly decreasing, which a test
+ * pins — change {@link SPEED_BONUS} to a curve with a repeated first entry and
+ * that test fails rather than the badge quietly doubling up again.
+ *
+ * @param {{ speed: number } | undefined | null} award
+ * @returns {boolean}
+ */
+export function wasFastest(award) {
+  return !!award && award.speed === SPEED_BONUS[0];
+}
+
+/**
  * Bonus for being the **only** player who got a question right. Knowing the
  * obscure flag alone used to be worth exactly as much as everyone guessing right
  * together. Off in solo play for the same reason the speed bonus is: with one
