@@ -191,17 +191,18 @@ counts up from the previous round's totals, each row wears its **round gain**, a
 on screen under the draft pick** instead of a watcher getting a lone avatar for up to 45 s. See
 Iteration 11 below.
 
+**Iteration 12 (the playability + UX pass) is SHIPPED.** It opened with a measured fairness bug: the
+double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
+because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
+round is now **the Decider**, a separate act outside the rotation picked by last place. Scoring is
+legible (phase 1), screen changes go through one animated primitive (phase 3, #983), and the round
+card counts the beat down with a draining ring (phase 4). Scoring says where each point came from and
+the wire carries the breakdown (phase 5), and the finish reveals bottom-up at a pace you can follow
+(phase 6). Streaks and the finale awards were both dropped rather than built — see the entry below
+for why.
+
 Still open:
 
-- **Iteration 12 — the playability + UX pass (IN PROGRESS, phases 1-5 + 6a shipped).** Written to be
-  picked up by a fresh agent one phase at a time. It opened with a measured fairness bug: the
-  double-points round that decides the game was chosen by whoever was *leading* 85% of the time,
-  because loser's-pick pushes the leader to the back of the rotation. That is fixed — the closing
-  round is now **the Decider**, a separate act outside the rotation picked by last place. Scoring is
-  legible (phase 1), screen changes go through one animated primitive (phase 3, #983), and the round
-  card counts the beat down with a draining ring (phase 4). Scoring now says where each point came from and the wire carries the breakdown (phase 5, streaks
-  dropped as win-more). The finish now reveals bottom-up at a pace you can follow (phase 6a). **Awards
-  (phase 6b) are the last item.** See the entry below.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1213,7 +1214,7 @@ information, not decoration.
 - **The chosen card morphing into the round title card.** Mocked and offered; Jan wasn't sure he
   liked it, so it wasn't built. The hard swap stays.
 
-## Iteration 12 — playability + UX pass — IN PROGRESS (2026-07-19, phases 1-5 + 6a shipped)
+## Iteration 12 — playability + UX pass — SHIPPED (2026-07-19)
 
 Goal: the engine, the draft and the rounds all work; what's thin is everything *around* the
 questions. A point means the same thing whoever earned it, the round that decides the game is handed
@@ -1491,15 +1492,15 @@ what's left, and both are comeback-neutral or better.
 **Where a point's origin is visible, decided (2026-07-19).** Checked against the mock: it never put a
 breakdown on the **final** board either. §02's chips are drawn on the standings break ("After round
 3") and the mock **fades them out after the count-up** exactly as shipped, so the transience is the
-design, not a shortcut. The final board stays a total per player; the ending's answer to "where did
-my points come from" is **phase 6's awards**, not chips.
+design, not a shortcut. The final board stays a total per player, and with awards dropped
+(see phase 6) nothing else on the finish screen attributes points either — the break is where a point
+says where it came from.
 
-### Phase 6 — the finale as an ending (client + per-game stats)
+### Phase 6 — the finale as an ending (client only) — SHIPPED (2026-07-19)
 
-Split in two at Jan's call: **the reveal first, awards after**, so the sequencing can be judged in a
-real game before any stat-tracking groundwork is laid.
-
-#### Phase 6a — the reveal (client only) — SHIPPED (2026-07-19)
+Shipped as the reveal alone. **Awards were dropped from this iteration (Jan, 2026-07-19)**: they want
+either proper per-game stat keeping or a different shape of game behind them, and neither is worth
+inventing to justify an honours list. Jan will raise it again if he wants it.
 
 **The finding that reframed this: the bottom-up reveal was already there.** Jan read the mock's
 "Baseline / all at once" card as a claim about current behaviour and said it was wrong. Measured on a
@@ -1546,22 +1547,12 @@ already at 85 of 140 while the winner's row was still at opacity 0 — the numbe
       The walk up the board went **148 ms → 650 ms**, and every row now starts counting *after* it
       appears (131 > 80, 335 > 303, 779 > 730), which is the desync closed. 0 console errors.
 
-#### Phase 6b — awards (client + per-game stats)
-
-- **Awards** after the board — fastest finger, best round, biggest climb — so everyone leaves with
-  something, including whoever finished last.
-- The awards need per-game stats nobody currently keeps (buzz ranks, per-round gains, rank history).
-  Most are derivable from what the client already sees round by round, so it's a tracking job rather
-  than a protocol change — but it is the one item here with real groundwork, hence last.
-
 ### Open questions for Jan (decide when the phase comes up, not now)
 
 - Does last place picking the Decider feel like a comeback or like a handout? The mock's worked
   example exists to make that judgeable in play rather than arguable in advance.
 - Should the Decider's pick be **hidden until the card flips**, so the table doesn't know the terrain
   until it starts? More theatre, but it removes the "oh no, not coffee" groan that is half the fun.
-- Do streaks want to survive a round boundary, or reset with the round? Surviving is more dramatic;
-  resetting keeps a round self-contained.
 
 ## Out of scope (don't sweep in)
 
