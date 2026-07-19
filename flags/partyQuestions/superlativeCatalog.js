@@ -368,6 +368,29 @@ export const SUPERLATIVE_METRICS = [
     hintMost: { key: 'party.hintMostMcdonalds', fallback: "Most McDonald's per person" },
     hintLeast: null,
   },
+  {
+    // Most-only. "Fewest Nobel laureates" is a tie among the 172 places with zero,
+    // which is not a question anyone can answer.
+    key: 'nobel',
+    questionId: 'superlative-nobel',
+    direction: 'most',
+    // Essential: true zeros are the majority (172 of 262 real places), so an
+    // unfiltered quartet would routinely deal four countries tied at 0.
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostNobel', fallback: 'Most Nobel laureates' },
+    hintLeast: null,
+  },
+  {
+    // Most-only for the same reason as the absolute metric: the low pole is the
+    // same pile of zeros. The interesting pole is the top, where the answer is
+    // almost never the country with the most laureates.
+    key: 'nobelPerCapita',
+    questionId: 'superlative-nobel-pc',
+    direction: 'most',
+    zeroFiltered: true,
+    hintMost: { key: 'party.hintMostNobelPc', fallback: 'Most Nobel laureates per person' },
+    hintLeast: null,
+  },
 ];
 
 /** @type {Record<string, SuperlativeMetric>} */

@@ -32,6 +32,8 @@ import happiness from '../flags/metrics/happiness.json' with { type: 'json' };
 import tourismPerCapita from '../flags/metrics/tourismPerCapita.json' with { type: 'json' };
 import electricityPerCapita from '../flags/metrics/electricityPerCapita.json' with { type: 'json' };
 import mcdonaldsPerMillion from '../flags/metrics/mcdonaldsPerMillion.json' with { type: 'json' };
+import nobel from '../flags/metrics/nobel.json' with { type: 'json' };
+import nobelPerCapita from '../flags/metrics/nobelPerCapita.json' with { type: 'json' };
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { TicTacToeServer } from './ticTacToeServer.js';
 
@@ -76,6 +78,8 @@ attachMetrics(countries, {
   tourismPerCapita: tourismPerCapita.values,
   electricityPerCapita: electricityPerCapita.values,
   mcdonaldsPerMillion: mcdonaldsPerMillion.values,
+  nobel: nobel.values,
+  nobelPerCapita: nobelPerCapita.values,
 });
 
 export default class GameServer extends TicTacToeServer {

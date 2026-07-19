@@ -31,6 +31,8 @@ import corruption from '../metrics/corruption.json' with { type: 'json' };
 import tourismPerCapita from '../metrics/tourismPerCapita.json' with { type: 'json' };
 import electricityPerCapita from '../metrics/electricityPerCapita.json' with { type: 'json' };
 import mcdonaldsPerMillion from '../metrics/mcdonaldsPerMillion.json' with { type: 'json' };
+import nobel from '../metrics/nobel.json' with { type: 'json' };
+import nobelPerCapita from '../metrics/nobelPerCapita.json' with { type: 'json' };
 import { buildSuperlativeQuestion } from './superlativeCore.js';
 import { SUPERLATIVE_METRICS } from './superlativeCatalog.js';
 
@@ -75,7 +77,7 @@ const DATA = {
   apple, elevation, coastline, forest, oil, rice, coal, sheepPerCapita,
   cattlePerCapita, beerPerCapita, tea, sugarcane, gold, alcoholPerCapita,
   meatPerCapita, borders, oliveOil, honey, temperature, happiness, corruption,
-  tourismPerCapita, electricityPerCapita, mcdonaldsPerMillion,
+  tourismPerCapita, electricityPerCapita, mcdonaldsPerMillion, nobel, nobelPerCapita,
 };
 
 /**
@@ -143,3 +145,5 @@ export const corruptionQuestion = QUESTIONS.corruption;
 export const tourismPerCapitaQuestion = QUESTIONS.tourismPerCapita;
 export const electricityPerCapitaQuestion = QUESTIONS.electricityPerCapita;
 export const mcdonaldsPerMillionQuestion = QUESTIONS.mcdonaldsPerMillion;
+export const nobelQuestion = QUESTIONS.nobel;
+export const nobelPerCapitaQuestion = QUESTIONS.nobelPerCapita;

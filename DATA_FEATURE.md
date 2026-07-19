@@ -21,6 +21,44 @@ A fresh agent picking this up should:
 
 ## Now
 
+### Feature EN: Nobel laureates, and Nobel laureates per million people, as a paired absolute + intensive world metric (code surfaces complete 2026-07-19, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
+
+Thirty-fourth and thirty-fifth world metrics, and the first pair added in one go. Jan's pick. The shape is deliberate: the absolute count is the metric everyone expects, and the per-million cut is the one that plays, because its #1 is never the country with the most laureates (see memory `feedback_prefer_intensive_metrics`). Shipping them together is what makes the contrast legible; shipping only the absolute one would have been the boring half.
+
+**Attribution: country of birth, on modern borders.** The decision that shapes both metrics, taken with Jan before any code. The Nobel Foundation publishes two country fields per laureate, birth and affiliation-at-award. Affiliation piles ~40% of all prizes onto the United States and turns the per-capita metric into a ranking of research funding. Birth country is what the popular league tables use and what puts the Faroe Islands and Saint Lucia at the top of the per-million chart. The cost, stated in the build script and in both `source` strings: a laureate who emigrated as an infant still counts for their birthplace. All six categories are included; the 28 organisation laureates (Red Cross, UNHCR, WFP) have no birth country and are dropped, so these count people, not prizes.
+
+**Data contract:** **dense, `absence: 'zero'`.** "How many laureates were born here" has an answer for every real place, and for 172 of 262 the answer is a true 0, not a gap: the Foundation's list is complete, so absence from it means nobody. Every real place is filled explicitly, so the TTT no-data guard blocks only the org flags. Zero-population places (Antarctica, the uninhabited territories) take an explicit 0 per million rather than an undefined 0/0.
+
+**Source: the Nobel Foundation's own laureate API** (`api.nobelprize.org/2.1/laureates`, 1,018 records over 11 pages), not a Wikipedia table or a listicle. `birth.place.countryNow` already resolves historical states (born in Breslau, German Empire → Poland), and we take that field verbatim rather than re-deriving it: it is the Foundation's own call and more consistent than anything hand-rolled.
+
+**Two places where the build script overrides the API, both because countries.json carries sub-national places the API does not:**
+- **UK constituent nations.** `countryNow` is inconsistent here: it says "Scotland" for 11 laureates but "United Kingdom" for four more plainly born in Scotland (Aberdeen, Edinburgh, Bearsden, Bellshill), and never says "Wales" at all. Letting those fall through to `gb` would print "Wales: 0 laureates" on the lens, which is false. So every UK birth city is mapped to its nation, England spelled out explicitly rather than left as a silent fallback (a fallback would file a future Glasgow-born laureate as English and nobody would notice). Result: England 88, Scotland 15, Northern Ireland 5, Wales 3, summing to the UK's 111.
+- **Spanish autonomous communities.** Same shape, one hit: Iria Flavia (Camilo José Cela) is in Galicia. Catalonia and the Basque Country genuinely have no Nobel-born laureate among Spain's seven, so their 0 is a real 0.
+
+Three laureates carry no birth place in the API at all and are hand-filled after individual verification: Abdulrazak Gurnah (Zanzibar), James A. Robinson (Chelmsford), John M. Martinis (USA). The script **throws** on an unmapped country or an unknown UK city rather than silently dropping or mis-filing anyone, so the next prize announcement surfaces as a build failure, not a quiet wrong number.
+
+**Nesting:** sub-national places roll UP, so `gb` carries the whole UK (111) and each nation carries its own share of that same 111. This matches population.json and gdp.json, which is what keeps the per-capita division honest at both levels. Separately-coded territories (Faroe Islands, Guadeloupe) are NOT rolled into Denmark / France: the API reports them disjointly and countries.json treats them as their own place.
+
+**Direction: most-only, both.** "Fewest Nobel laureates" is a tie among 172 places at zero, which is not a question.
+
+**Zero-filtered: yes, both.** True zeros are the majority of values, so an unfiltered quartet would routinely deal four countries tied at 0. Recorded in the per-metric tests in `superlative.test.js`, per the skill's rule that the generic catalog tests prove flags are honoured, never that they are right.
+
+**Breaks.** Absolute: `>=1 / >=5 / >=20` (82 / 28 / 11 sovereigns). Three tiers rather than the usual two because `>=1` ("has ever produced a laureate") is the most legible cell of the set and one a player can reason about from general knowledge. Per million: `>=0.5 / >=2` (29 / 8), deliberately different tiers so the two metrics never deal near-identical cells. Both `>=`-only: the low end is the same pile of 172 true zeros, so a `<=` break would match two thirds of the world and ask "which countries are small or poor".
+
+**The two are grouped in BOTH family mechanisms, which are separate and were easy to conflate.** (1) `THRESHOLD_METRICS.family: 'nobel'` in `flags/engine.js` stops a random **TTT** puzzle carrying both axes; without it a "20+ laureates" x "2+ per million" cell would be near-degenerate. (2) `METRIC_FAMILIES` in `flags/partyDraft.js` gives them **one Flag Party draft card** (`nobel`, representative `superlative-nobel`, the medal), joining `economy` as only the second grouped family. Jan caught the second one missing after the first was done: two cards would spend a fifth of the draft hand asking the picker to arbitrate "total or per head", which is exactly the distinction the round itself exists to reveal. The family card needs its own `MODE_LABELS` entry with a `sub` line disclosing the range ("Total or per person"), which the `modeLabels.test.js` range-disclosure test enforces.
+
+**Ranking sanity check.** Absolute (sovereign pool): US 297, UK 111, Germany 84, France 63, Japan 30, Sweden 30, Russia 29, Poland 28, Canada 22, Italy 20. Per million: Faroe Islands 18.4, Saint Lucia 11.2, Luxembourg 3.0, Sweden 2.9, Scotland 2.7, Northern Ireland 2.6, Guadeloupe 2.6, Iceland 2.6, Norway 2.4, Switzerland 2.1, with the US down at 0.87. The top of the per-million chart is a small-sample artefact by construction (one laureate over a tiny population) and that is exactly the fun, but no surface should imply the Faroes are a research powerhouse.
+
+**Visuals:** academic purple `#6a1b9a` (medal icon) for the count, deep crimson `#ad1457` (laurel-wreath icon) for the per-million cut. Deliberately not one hue and one icon twice: a player must tell the two rounds apart from the setup chip alone. Medal gold was the literal pick but that region already carries gold / honey / electricity / beer / GDP.
+
+- [x] 1. Data: `flags/metrics/nobel.json` + `nobelPerCapita.json` + `build-nobel.mjs` (one script, both files) + `METRIC_FILES` lines + `metrics.test.js` coverage; visuals: icon + hue + short label for both
+- [x] 2. flagsdata lens (free once step 1 landed)
+- [x] 3. Filters: registry lines + `flagsFilter.js` scalars + `findFlag.js` URL tokens; `nobelProbability` / `nobelPerCapitaProbability` in `pickRandomMix` + `findflag-random-coverage` skill note; attach sites
+- [x] 4. TTT: `nobel()` / `nobelPerCapita()` factories + breaks + pool/id/label wiring; `attachNobels` / `attachNobelPerCapitas` at all load sites; `atLeast` i18n en+pl
+- [x] 5. Flag Party rounds (`superlative-nobel`, `superlative-nobel-pc`), six spots each
+
+Surface 6 (daily puzzles) tracked in `METRIC_DAILY_PUZZLES.md`.
+
 ### Feature EM: McDonald's per million people as a world metric, the first brand-footprint metric (in flight, started 2026-07-19)
 
 Thirty-third world metric, and a deliberate break from the catalog's shape. The metric trail had drifted heavy on agricultural / commodity output (9 crops plus oil, coal, gold), which all answer the same underlying question ("which tropical or resource-rich country produces the most X") and so play as one repeated Flag Party round. This one is picked purely for **party legibility**: everybody has an intuition about McDonald's, nobody has one about terawatt-hours of coal. Jan's pick.

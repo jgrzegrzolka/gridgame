@@ -585,10 +585,14 @@
       "superlativeTourism": "Przyjazdy turystów na mieszkańca",
       "superlativeElectricity": "Zużycie prądu na osobę",
       "superlativeMcdonalds": "McDonald's na milion mieszkańców",
-      "economy": "Gospodarka"
+      "superlativeNobel": "Nobliści",
+      "superlativeNobelPc": "Nobliści na milion mieszkańców",
+      "economy": "Gospodarka",
+      "nobel": "Nobliści"
     },
     "modeSub": {
-      "economy": "PKB, całkowite lub na mieszkańca"
+      "economy": "PKB, całkowite lub na mieszkańca",
+      "nobel": "Łącznie lub na mieszkańca"
     },
     "modeShort": {
       "flagsAll": "Flagi",
@@ -626,7 +630,9 @@
       "superlativeHappiness": "Szczęście",
       "superlativeTourism": "Turystyka",
       "superlativeElectricity": "Prąd",
-      "superlativeMcdonalds": "McDonald's"
+      "superlativeMcdonalds": "McDonald's",
+      "superlativeNobel": "Nobliści",
+      "superlativeNobelPc": "Nobliści na milion"
     },
     "roundQuestion": "Runda {b}/{rounds} · Pytanie {n}/{total}",
     "afterRound": "Po rundzie {n} z {total}",
@@ -693,6 +699,8 @@
     "hintMostTourism": "Najwięcej przyjazdów turystów na mieszkańca",
     "hintMostElectricity": "Największe zużycie prądu na osobę",
     "hintMostMcdonalds": "Najwięcej McDonald's na mieszkańca",
+    "hintMostNobel": "Najwięcej noblistów",
+    "hintMostNobelPc": "Najwięcej noblistów na mieszkańca",
     "updateNeeded": "Dostępna jest nowa wersja. Odśwież stronę, aby grać dalej.",
     "fastest": "Najszybszy",
     "speedBonus": "Bonus za szybkość",
@@ -1001,6 +1009,19 @@
       "25": "ponad 25 McDonald's na milion mieszkańców"
     }
   },
+  "nobel": {
+    "atLeast": {
+      "1": "co najmniej 1 noblista",
+      "5": "co najmniej 5 noblistów",
+      "20": "co najmniej 20 noblistów"
+    }
+  },
+  "nobelPerCapita": {
+    "atLeast": {
+      "0.5": "ponad 0,5 noblisty na milion mieszkańców",
+      "2": "ponad 2 noblistów na milion mieszkańców"
+    }
+  },
   "borders": {
     "atLeast": {
       "5": "5 lub więcej",
@@ -1097,7 +1118,9 @@
     "honey": "Produkcja miodu",
     "tourismPerCapita": "Przyjazdy turystów na mieszkańca",
     "electricityPerCapita": "Zużycie prądu na osobę",
-    "mcdonaldsPerMillion": "McDonald's na milion mieszkańców"
+    "mcdonaldsPerMillion": "McDonald's na milion mieszkańców",
+    "nobel": "Nobliści",
+    "nobelPerCapita": "Nobliści na milion mieszkańców"
   },
   "flagFacts": {
     "didYouKnow": "Czy wiesz, że?",

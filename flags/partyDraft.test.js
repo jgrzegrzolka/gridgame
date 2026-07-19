@@ -446,7 +446,7 @@ test('the economy family groups the two GDP metrics and nothing else', () => {
 test('every metric except the grouped ones is its own single-member family', () => {
   // The invariant that keeps this change small. If it ever fails, some metric
   // silently stopped being pickable on its own.
-  const grouped = new Set(['superlative-gdp', 'superlative-gdppc']);
+  const grouped = new Set(['superlative-gdp', 'superlative-gdppc', 'superlative-nobel', 'superlative-nobel-pc']);
   for (const m of METRIC_MODES) {
     if (grouped.has(m.id)) continue;
     assert.deepEqual(familyForMode(m.id), { id: m.id, memberIds: [m.id], representativeId: m.id }, `${m.id}`);
@@ -551,5 +551,34 @@ test('no family card can be veiled', () => {
   // pick card must not offer a chip that would do nothing.
   for (const f of METRIC_FAMILIES) {
     assert.equal(canVeilMode(f.id), false, `family "${f.id}" offered a veil chip`);
+  }
+});
+
+test('nobel family: the two Nobel metrics share one card, like economy', () => {
+  // Same contract as the GDP pair. Two cards would spend a fifth of the hand
+  // asking the picker to arbitrate "total or per head", which is the distinction
+  // the round itself exists to reveal.
+  const nobel = METRIC_FAMILIES.find((f) => f.id === 'nobel');
+  assert.ok(nobel, 'a "nobel" family must exist');
+  assert.deepEqual(nobel.memberIds, ['superlative-nobel', 'superlative-nobel-pc']);
+  assert.equal(nobel.representativeId, 'superlative-nobel');
+  assert.equal(usedIdForMode('superlative-nobel'), 'nobel');
+  assert.equal(usedIdForMode('superlative-nobel-pc'), 'nobel');
+  // Playing either member retires the whole card.
+  for (const member of ['superlative-nobel', 'superlative-nobel-pc']) {
+    assert.equal(isValidPick('nobel', [usedIdForMode(member)]), false, `${member} did not retire the card`);
+  }
+  // A pick resolves to both members over enough draws, never to anything else.
+  const seen = new Set();
+  for (let i = 0; i < 200; i++) seen.add(resolveFamilyPick('nobel'));
+  assert.deepEqual([...seen].sort(), ['superlative-nobel', 'superlative-nobel-pc']);
+});
+
+test('handFor never deals a Nobel member id as its own card', () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    const hand = handFor([], seeded(seed));
+    for (const forbidden of ['superlative-nobel', 'superlative-nobel-pc']) {
+      assert.ok(!hand.includes(forbidden), `seed ${seed}: hand offered "${forbidden}" instead of "nobel"`);
+    }
   }
 });

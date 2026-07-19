@@ -49,4 +49,6 @@ export const METRIC_FILES = [
   { key: 'tourismPerCapita', file: 'tourismPerCapita.json', label: 'Tourist arrivals per capita' },
   { key: 'electricityPerCapita', file: 'electricityPerCapita.json', label: 'Electricity use per capita' },
   { key: 'mcdonaldsPerMillion', file: 'mcdonaldsPerMillion.json', label: "McDonald's per million people" },
+  { key: 'nobel', file: 'nobel.json', label: 'Nobel laureates' },
+  { key: 'nobelPerCapita', file: 'nobelPerCapita.json', label: 'Nobel laureates per million people' },
 ];

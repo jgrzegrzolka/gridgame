@@ -119,6 +119,10 @@ export const METRIC_ICONS = {
   // unmistakable against the drink / food / economic icons.
   electricityPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-2 8 9-12h-7z"/></svg>',
   mcdonaldsPerMillion: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10a4 4 0 0 1 8 0v10M12 10a4 4 0 0 1 8 0v10"/></svg>',
+  // A medal for the count, a laurel wreath for the per-capita cut. Two different
+  // silhouettes rather than one icon twice, so the chips read apart at 24px.
+  nobel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="6"/><path d="M8.6 9.6 6 2l6 3 6-3-2.6 7.6"/></svg>',
+  nobelPerCapita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-4.5-1.7-7-5.5-7-9.7 0-3.4 1.6-6.3 3.4-8.3 1.2 3.2 1.2 5.6 0 7.6"/><path d="M12 21c4.5-1.7 7-5.5 7-9.7 0-3.4-1.6-6.3-3.4-8.3-1.2 3.2-1.2 5.6 0 7.6"/></svg>',
 };
 
 /** @type {Record<string, string>} */
@@ -159,6 +163,13 @@ export const METRIC_HUES = {
   // yellow region already carries electricity / beer / gold / honey; red only has
   // temperature and meat, so the chip stays tellable apart.
   mcdonaldsPerMillion: '#da291c',
+  // The literal pick would be medal gold, but that region already carries gold /
+  // honey / electricity / beer / GDP. Academic purple is the next-most-legible
+  // reading of "prize", and it sits clear of density's muted lavender by being far
+  // more saturated. The per-capita sibling deliberately does NOT share the hue: a
+  // player must be able to tell the two Nobel rounds apart from the chip alone.
+  nobel: '#6a1b9a',
+  nobelPerCapita: '#ad1457',
 };
 
 /**
@@ -204,6 +215,8 @@ export const METRIC_SHORT = {
   tourismPerCapita: { key: 'party.modeShort.superlativeTourism', fallback: 'Tourism' },
   electricityPerCapita: { key: 'party.modeShort.superlativeElectricity', fallback: 'Electricity' },
   mcdonaldsPerMillion: { key: 'party.modeShort.superlativeMcdonalds', fallback: "McDonald's" },
+  nobel: { key: 'party.modeShort.superlativeNobel', fallback: 'Nobel laureates' },
+  nobelPerCapita: { key: 'party.modeShort.superlativeNobelPc', fallback: 'Nobels per million' },
 };
 
 /**
