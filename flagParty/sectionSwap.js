@@ -42,6 +42,12 @@ export const ENTERING_CLASS = 'pt-entering';
  * @property {(fn: () => void, ms: number) => any} schedule
  * @property {(handle: any) => void} cancel
  * @property {() => boolean} reduced  whether the player asked for reduced motion.
+ * @property {((which: string | null) => void) | undefined} [onShown]  called the
+ *   moment a section actually becomes visible — i.e. after the out phase, not when
+ *   it was requested. A screen whose own choreography is timed (the finish board's
+ *   bottom-up reveal) has to start from here: `render()` builds it ~200 ms before
+ *   the swap displays it, so a sequence started at build time is already part-run
+ *   by the time anyone can see it.
  */
 
 /**
@@ -91,6 +97,7 @@ export function createSectionSwapper(io) {
   function enter(which, animate) {
     io.show(which);
     shown = which;
+    if (io.onShown) io.onShown(which);
     if (!animate || which === null) return;
     io.mark(which, ENTERING_CLASS, true);
     timer = io.schedule(() => {

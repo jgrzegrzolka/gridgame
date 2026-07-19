@@ -14,7 +14,7 @@ import {
  * to do — asserting on it is how "the outgoing screen leaves BEFORE the incoming
  * one arrives" becomes a test rather than an eyeball judgement.
  *
- * @param {{ reduced?: boolean }} [opts]
+ * @param {{ reduced?: boolean, onShown?: (which: string | null) => void }} [opts]
  */
 function harness(opts = {}) {
   /** @type {string[]} */
@@ -37,6 +37,7 @@ function harness(opts = {}) {
     },
     cancel: (/** @type {number} */ id) => { log.push(`cancel:${id}`); timers[id] = null; },
     reduced: () => reduced,
+    onShown: opts.onShown,
   };
 
   return {
@@ -219,4 +220,51 @@ test('hiding everything is a legal destination and never marks a null screen', (
   assert.ok(script.includes('show:null'));
   assert.ok(!script.some((s) => s.includes(':null') && s !== 'show:null'), 'no class toggled on null');
   assert.equal(h.swapper.shown, null);
+});
+
+// ---- onShown: the seam a self-choreographing screen starts from ----
+
+test('onShown fires when the section is displayed, not when it was requested', () => {
+  // The finish board is BUILT during the out phase and must not start its reveal
+  // until anyone can see it. Firing on the request instead would put the sequence
+  // a whole out phase ahead of the screen — the bug this hook exists to close.
+  /** @type {Array<string | null>} */
+  const shown = [];
+  const h = harness({ onShown: (which) => shown.push(which) });
+  h.swapper.to('question');
+  assert.deepEqual(shown, ['question'], 'the first screen has no out phase to wait for');
+
+  h.swapper.to('final');
+  assert.deepEqual(shown, ['question'], 'still nothing: the old screen is falling away');
+  h.tick(SWAP_OUT_MS);
+  assert.deepEqual(shown, ['question', 'final'], 'fires as the incoming screen lands');
+});
+
+test('onShown fires immediately under reduced motion, which skips the out phase', () => {
+  /** @type {Array<string | null>} */
+  const shown = [];
+  const h = harness({ reduced: true, onShown: (which) => shown.push(which) });
+  h.swapper.to('question');
+  h.swapper.to('final');
+  assert.deepEqual(shown, ['question', 'final']);
+});
+
+test('a repeated request for the screen already shown does not re-fire onShown', () => {
+  // render() asks for the screen it is already on far more often than for a new
+  // one; re-firing would restart the finish reveal on every clock tick.
+  /** @type {Array<string | null>} */
+  const shown = [];
+  const h = harness({ onShown: (which) => shown.push(which) });
+  h.swapper.to('final');
+  h.swapper.to('final');
+  h.swapper.to('final');
+  assert.deepEqual(shown, ['final']);
+});
+
+test('a swapper with no onShown still swaps normally', () => {
+  const h = harness();
+  h.swapper.to('question');
+  h.swapper.to('final');
+  h.tick(SWAP_OUT_MS);
+  assert.equal(h.swapper.shown, 'final');
 });

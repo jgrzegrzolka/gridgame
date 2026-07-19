@@ -114,6 +114,65 @@ export function ledgerSchedule(rowCount = 0) {
   return { enterMs, countAt, slideAt, chipsOffAt, totalMs: chipsOffAt };
 }
 
+// ---- the finish: revealing the final board from the bottom up ----
+// The rows already cascaded bottom-to-top, but at a 90 ms step the whole walk up
+// a three-player board was over in 148 ms — measured, not guessed — which is why
+// it read as everyone arriving at once. These beats are the same choreography
+// slowed to where an eye can follow it, plus the gameshow grammar the break
+// already uses: hold the winner back, and let the burst punctuate their arrival
+// rather than cover the reveal.
+
+/** Gap between one row landing and the next one up starting. */
+export const FINAL_ROW_STAGGER_MS = 200;
+/** How long a row's own entrance animation runs (matches `scoreline-in`). */
+export const FINAL_ROW_ENTER_MS = 500;
+/** How long a row's score takes to count up to its final value. */
+export const FINAL_COUNT_MS = 600;
+/** A row counts from just after it is on screen, not before: the number should
+ *  move where you are already looking. */
+export const FINAL_COUNT_OFFSET_MS = 120;
+/** The extra beat the winner is held back for, on top of their turn in the
+ *  cascade. This is the whole "winner last" idea — without it first place is
+ *  just the next row 200 ms later. */
+export const FINAL_WINNER_HOLD_MS = 260;
+/** Delay from the winner's row starting to arrive to the confetti / fireworks.
+ *  Slightly into their entrance, so the burst lands *on* the winner rather than
+ *  over the rows still arriving underneath. */
+export const FINAL_CELEBRATION_OFFSET_MS = 220;
+
+/**
+ * The finish-screen reveal, as data: when each row enters and when its score
+ * starts counting, plus when the celebration fires.
+ *
+ * Rows are indexed **as the board renders them** — index 0 is first place at the
+ * top — while the reveal runs the other way, so index 0 gets the *largest* delay.
+ * A caller can therefore hand this its scoreboard order untouched.
+ *
+ * @param {number} rowCount  how many players finished
+ * @returns {{ rows: Array<{ enterAt: number, countAt: number }>, celebrationAt: number, totalMs: number }}
+ */
+export function finalBoardSchedule(rowCount = 0) {
+  const count = Math.max(0, Math.floor(rowCount));
+  /** @type {Array<{ enterAt: number, countAt: number }>} */
+  const rows = [];
+  for (let i = 0; i < count; i += 1) {
+    // Last place (the highest index) leads at 0; each row above waits one more
+    // step; first place waits an extra beat on top of that.
+    const stepsFromBottom = count - 1 - i;
+    const enterAt = stepsFromBottom * FINAL_ROW_STAGGER_MS + (i === 0 && count > 1 ? FINAL_WINNER_HOLD_MS : 0);
+    rows.push({ enterAt, countAt: enterAt + FINAL_COUNT_OFFSET_MS });
+  }
+  if (!rows.length) return { rows, celebrationAt: 0, totalMs: 0 };
+  const winnerEnterAt = rows[0].enterAt;
+  return {
+    rows,
+    celebrationAt: winnerEnterAt + FINAL_CELEBRATION_OFFSET_MS,
+    // The finish is over when the last number stops moving, or when the winner's
+    // row has finished arriving — whichever is later.
+    totalMs: Math.max(rows[0].countAt + FINAL_COUNT_MS, winnerEnterAt + FINAL_ROW_ENTER_MS),
+  };
+}
+
 /** Seconds the **round title card** holds before the first question of a new round
  *  begins (round 2..N — the opening round starts play straight away). A short
  *  beat announcing "Round 2 of 3 · Coffee · 5 questions" with who picked it; the

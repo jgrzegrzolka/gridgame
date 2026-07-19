@@ -6,7 +6,7 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
@@ -389,6 +389,9 @@ export function bootFlagParty() {
     schedule: (fn, ms) => window.setTimeout(fn, ms),
     cancel: (handle) => { window.clearTimeout(handle); },
     reduced: prefersReducedMotion,
+    // The finish board choreographs itself and therefore has to start when it is
+    // actually on screen — `renderFinal` builds it during the out phase.
+    onShown: (which) => { if (which === 'final') startFinalReveal(); },
   });
 
   function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'|null} */ which) {
@@ -1527,6 +1530,27 @@ export function bootFlagParty() {
     // shows who scored and moves on.
   }
 
+  /** The finish reveal waiting for its screen: which scores count up when, and
+   *  when the burst goes off. Set by `renderFinal`, consumed once by
+   *  `startFinalReveal`, and null whenever nothing is pending. */
+  let finalPending = /** @type {{ celebrate: boolean, steps: Array<{ node: HTMLElement, to: number, at: number }>, celebrationAt: number, board: Array<{ playerId: string, nickname: string, score: number }> } | null} */ (null);
+
+  /** Run the pending finish reveal. Called the moment the final section becomes
+   *  visible — never at build time, which is ~200 ms earlier and used to leave
+   *  last place's score already sprinting before the winner's row had appeared.
+   *  Idempotent: consuming the pending sequence is what stops a second call (a
+   *  re-render, a repeated state message) from restarting a reveal mid-flight. */
+  function startFinalReveal() {
+    const pending = finalPending;
+    if (!pending) return;
+    finalPending = null;
+    for (const step of pending.steps) countUp(step.node, 0, step.to, FINAL_COUNT_MS, step.at);
+    if (!pending.celebrate) return;
+    window.setTimeout(() => {
+      runCelebration(pickPartyCelebration({ scoreboard: pending.board, you: state.you }));
+    }, pending.celebrationAt);
+  }
+
   function renderFinal() {
     const board = state.scoreboard || [];
     const top = board[0];
@@ -1545,6 +1569,12 @@ export function bootFlagParty() {
     const firstShow = !finalCelebrated;
     const animate = firstShow && !prefersReducedMotion();
 
+    // The reveal walks up the board from last place, holds the winner back, and
+    // only then lets the burst off — the gameshow grammar the mock calls for. The
+    // beats are data (`finalBoardSchedule`), so they are unit-pinned rather than
+    // three magic numbers scattered through this function.
+    const schedule = finalBoardSchedule(board.length);
+    finalPending = null;
     finalBoard.innerHTML = '';
     board.forEach((entry, i) => {
       const isWinner = i === 0 && !tie && entry.score > 0;
@@ -1554,15 +1584,14 @@ export function bootFlagParty() {
       row.appendChild(el('span', 'rank', String(i + 1)));
       row.appendChild(buildAvatar(entry.playerId));
       row.appendChild(el('span', 'nm', entry.nickname));
-      const sc = el('span', 'sc', String(entry.score));
+      // Start every animated row at zero. The CSS entrance is declarative (it
+      // begins when the section is displayed, so it needs no gate), but the
+      // count-up is a JS clock and must not start until anyone can see it.
+      const sc = el('span', 'sc', String(animate ? 0 : entry.score));
       row.appendChild(sc);
       if (animate) {
-        // Cascade in bottom-to-top so the winner's row lands last, then tick
-        // that row's score up once it has settled.
-        const delay = (board.length - 1 - i) * 90;
         row.classList.add('enter');
-        row.style.setProperty('--enter-delay', `${delay}ms`);
-        countUp(sc, 0, entry.score, 600, delay + 200);
+        row.style.setProperty('--enter-delay', `${schedule.rows[i].enterAt}ms`);
       }
       finalBoard.appendChild(row);
     });
@@ -1570,9 +1599,30 @@ export function bootFlagParty() {
     if (firstShow) {
       // Pop only applies to the tie caption (the sole surviving subtitle).
       if (animate && tie) { finalSub.classList.remove('pop'); void finalSub.offsetWidth; finalSub.classList.add('pop'); }
-      runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
       finalCelebrated = true;
     }
+    if (!animate) {
+      // Reduced motion (or a re-render of a board already up): no sequence to
+      // run, so the celebration such a player gets is whatever runCelebration
+      // itself allows, immediately.
+      if (firstShow) runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
+      return;
+    }
+    // Held until the swap actually displays the section (see `onShown`). Built
+    // here because this is where the rows and their targets are known.
+    finalPending = {
+      celebrate: firstShow,
+      steps: board.map((entry, i) => ({
+        node: /** @type {HTMLElement} */ (finalBoard.children[i].querySelector('.sc')),
+        to: entry.score,
+        at: schedule.rows[i].countAt,
+      })),
+      celebrationAt: schedule.celebrationAt,
+      board,
+    };
+    // A re-render while the final screen is ALREADY up gets no `onShown` (the
+    // swapper is settled), so kick the sequence off here instead.
+    if (swapper.shown === 'final') startFinalReveal();
 
     // Only the host can restart, so both "Play again" and the "·" separator
     // that divides it from "Home" show for the host alone; everyone else sees
