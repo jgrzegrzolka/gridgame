@@ -345,7 +345,6 @@
       "confirm": "Link devices"
     },
     "error": {
-      "browser": "Your browser doesn’t support this yet, try a recent Chrome, Safari, or Edge.",
       "generic": "Couldn’t link this device, try again.",
       "expired": "That QR has expired, generate a new one on your other device.",
       "invalidToken": "That link isn’t valid. Generate a new QR on your other device."
@@ -398,7 +397,6 @@
     "in": "in",
     "newRecord": "new record!",
     "failedToLoad": "Failed to load:",
-    "cancel": "Cancel",
     "close": "Close",
     "countryName": "Country name…"
   },
@@ -407,7 +405,6 @@
     "statsTitle": "Yet Another Quiz: Flag Quiz Stats",
     "loading": "Loading…",
     "finalScore": "Final score:",
-    "mistakes": "Mistakes:",
     "yourBestScore": "Your best score",
     "play": "Play",
     "mode": {
@@ -457,7 +454,6 @@
     "todaysPuzzle": "Today's puzzle",
     "archive": "Previous puzzles",
     "archiveTitle": "Yet Another Quiz: Daily Archive",
-    "archiveCount": "{n} flags",
     "notFound": "Puzzle not found.",
     "empty": "No puzzles yet.",
     "stats": {
@@ -466,7 +462,6 @@
       "playerCount": "{count} players",
       "caption": "% shows how many other players found each flag.",
       "loading": "Loading stats",
-      "noSubmissions": "You're one of the first to play this puzzle.",
       "extra": {
         "ranking": "Most recognised:",
         "topMistake": "Most common mistake:"
@@ -748,20 +743,6 @@
     "weird": "Weird flags",
     "outlines": "Outlines",
     "facts": "Facts"
-  },
-  "month": {
-    "jan": "Jan",
-    "feb": "Feb",
-    "mar": "Mar",
-    "apr": "Apr",
-    "may": "May",
-    "jun": "Jun",
-    "jul": "Jul",
-    "aug": "Aug",
-    "sep": "Sep",
-    "oct": "Oct",
-    "nov": "Nov",
-    "dec": "Dec"
   },
   "color": {
     "red": "red",
@@ -1111,7 +1092,6 @@
   },
   "flagsdata": {
     "title": "Yet Another Quiz: All Country Flags",
-    "filters": "Filters",
     "filterStatus": "Status",
     "filterContinent": "Continent",
     "filterColors": "Colors",

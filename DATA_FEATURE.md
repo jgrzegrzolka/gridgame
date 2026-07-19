@@ -21,6 +21,37 @@ A fresh agent picking this up should:
 
 ## Now
 
+### Feature EQ: one chip per subject on flagsdata, with the normalised cut inside its panel (shipped 2026-07-19, PR #1012)
+
+Written after the fact, which is itself the finding: the add-world-metric skill says the Feature entry is step ONE, and both this and Feature EP shipped without one. The audit that caught it is the reason this section exists at all.
+
+**The problem.** The world-facts row had grown to 39 chips, and five subjects sat in it twice: GDP beside GDP per capita, Nobel beside Nobel per million, both Olympic pairs, population beside density. Four Olympic pills in particular were a 2x2 (season x normalisation) flattened into a list. Two chips for one subject make the reader arbitrate "total or normalised" from the row, before they have seen a number, and spend two slots doing it.
+
+**The shape.** `flags/metricCuts.js` holds `METRIC_CUT_GROUPS`, where a group's id IS its total metric's key. That identity is the whole trick: the chip keeps the icon, hue, i18n and tier breakpoints it already had, and only the normalised half leaves the row. `flags/metricHub.js` gained an optional `resolveKey` hook (default identity, so findFlag's chooser is untouched) applied everywhere a key is treated as DATA (panel hue, title, tiers, tier get/set) while the chip's own identity stays on its own key, plus `refreshPanel()` to re-read a resolution that changed under the same chip.
+
+**Summer and Winter stay two chips**, unlike the party hand (Feature EO), and the asymmetry is deliberate: ten pick slots are scarce in a way a browse row is not, and on flagsdata you want to land on a specific view directly. Do not "fix" it.
+
+**Three rules, each now pinned by a test** (`planCutSwitch`, PR #1016, extracted because they originally lived in `flagsdata/page.js`, which has no test file):
+
+- A tier belongs to a metric, not a chip, so a threshold on the cut being left is cleared. A tier already on the cut being entered stays: it is the reader's own filter on the view they asked for.
+- The sort survives a cut switch. `setLens` resets to `desc` on every open, so without this a reader asking for "fewest medals per person" is thrown back to Highest.
+- A chip remembers its cut for the session, so a tier applied to a per-person view stays interpretable after the panel closes.
+
+**findFlag is deliberately NOT grouped.** Its chips are filters, not a sort lens, so the normalised variants are separate filterable things there. That absence is a decision; see memory `project_metric_cut_grouping`.
+
+### Feature EP: population and density share ONE party draft card (shipped 2026-07-19, PR #1011)
+
+The fourth grouped family, and the one that took the longest to justify, because population is the flagship metric of the whole catalog.
+
+Population and density are the same count read two ways: how many people, and how many people per square kilometre. Same source column, and density exists precisely to answer the "yes but it's a big country" objection the raw total raises, which is the bar `economy` and `nobel` already cleared.
+
+**Population is the representative** despite being the flagship, for the same reason `economy` chose total GDP: it is the subject a player recognises, so density lands as the twist rather than the header. The `sub` line ("Total or per square kilometre") states the range up front.
+
+Reviewed and rejected in the same pass, so nobody re-derives them: every crop is production-only with no consumption counterpart in the data, so none of them pair. Sheep-per-person and cattle-per-person are different questions that share a barn. Beer plus alcohol per capita is the closest remaining candidate (beer is a subset of total alcohol) and was left separate as its own judgement call.
+
+Deck went 34 cards to 33; both metrics still deal as their own rounds once the card is picked.
+
+
 ### Feature EO: Olympic medals as four metrics, two seasons x total and per-million (code surfaces complete 2026-07-19, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Metrics 36-39, and the largest single metric addition so far. Jan's pick, and Jan's structural idea: he asked whether Summer and Winter were worth splitting and whether they could be joined as a family in Flag Party. Both answers landed slightly differently from the question, and the reasoning is worth keeping.
@@ -81,7 +112,7 @@ Three laureates carry no birth place in the API at all and are hand-filled after
 
 **Breaks.** Absolute: `>=1 / >=5 / >=20` (82 / 28 / 11 sovereigns). Three tiers rather than the usual two because `>=1` ("has ever produced a laureate") is the most legible cell of the set and one a player can reason about from general knowledge. Per million: `>=0.5 / >=2` (29 / 8), deliberately different tiers so the two metrics never deal near-identical cells. Both `>=`-only: the low end is the same pile of 172 true zeros, so a `<=` break would match two thirds of the world and ask "which countries are small or poor".
 
-**The two are grouped in BOTH family mechanisms, which are separate and were easy to conflate.** (1) `THRESHOLD_METRICS.family: 'nobel'` in `flags/engine.js` stops a random **TTT** puzzle carrying both axes; without it a "20+ laureates" x "2+ per million" cell would be near-degenerate. (2) `METRIC_FAMILIES` in `flags/partyDraft.js` gives them **one Flag Party draft card** (`nobel`, representative `superlative-nobel`, the medal), joining `economy` as only the second grouped family. Jan caught the second one missing after the first was done: two cards would spend a fifth of the draft hand asking the picker to arbitrate "total or per head", which is exactly the distinction the round itself exists to reveal. The family card needs its own `MODE_LABELS` entry with a `sub` line disclosing the range ("Total or per person"), which the `modeLabels.test.js` range-disclosure test enforces.
+**The two are grouped in BOTH family mechanisms, which are separate and were easy to conflate.** (1) `THRESHOLD_METRICS.family: 'nobel'` in `flags/engine.js` stops a random **TTT** puzzle carrying both axes; without it a "20+ laureates" x "2+ per million" cell would be near-degenerate. (2) `METRIC_FAMILIES` in `flags/partyDraft.js` gives them **one Flag Party draft card** (`nobel`, representative `superlative-nobel`, the medal), joining `economy` as the second grouped family (there are four today: `economy`, `nobel`, `olympicMedals`, `population`). Jan caught the second one missing after the first was done: two cards would spend a fifth of the draft hand asking the picker to arbitrate "total or per head", which is exactly the distinction the round itself exists to reveal. The family card needs its own `MODE_LABELS` entry with a `sub` line disclosing the range ("Total or per person"), which the `modeLabels.test.js` range-disclosure test enforces.
 
 **Ranking sanity check.** Absolute (sovereign pool): US 297, UK 111, Germany 84, France 63, Japan 30, Sweden 30, Russia 29, Poland 28, Canada 22, Italy 20. Per million: Faroe Islands 18.4, Saint Lucia 11.2, Luxembourg 3.0, Sweden 2.9, Scotland 2.7, Northern Ireland 2.6, Guadeloupe 2.6, Iceland 2.6, Norway 2.4, Switzerland 2.1, with the US down at 0.87. The top of the per-million chart is a small-sample artefact by construction (one laureate over a tiny population) and that is exactly the fun, but no surface should imply the Faroes are a research powerhouse.
 
