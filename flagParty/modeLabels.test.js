@@ -3,13 +3,22 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
+import { METRIC_FAMILIES } from '../flags/partyDraft.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
-import { modeShortLabel, modeFullLabel, roundModeId } from './page.js';
+import { modeShortLabel, modeFullLabel, modeSubLabel, roundModeId } from './page.js';
 
-// Every mode the lobby can render — the two fixed picture modes plus every
-// metric superlative mode. The draft hand labels each of these, so each MUST
-// resolve a real label.
+// Every id that can reach a label lookup: the picture modes, every metric mode
+// (the round title names the RESOLVED mode, so members still need labels), and
+// every metric FAMILY (the pick card names the family). Each MUST resolve a real
+// label — an undefined key is what crashed the lobby, and for a family card it
+// would also send the picker into the stale-client reload path for no reason.
 const ALL_MODE_IDS = [...PICTURE_MODES, ...METRIC_MODES].map((m) => m.id);
+
+/** Everything a HAND can contain: picture modes plus metric families. Families
+ *  are cards, not modes, so they need a full label (the card) but never a short
+ *  one — the round title card names the mode the family RESOLVED to, which is
+ *  always an ordinary catalog mode. */
+const ALL_CARD_IDS = [...PICTURE_MODES.map((m) => m.id), ...METRIC_FAMILIES.map((f) => f.id)];
 
 /**
  * Regression guard for the crash that blanked the whole Flag Party lobby on
@@ -34,7 +43,7 @@ test('every party mode resolves a defined SHORT label (key + fallback)', () => {
 });
 
 test('every party mode resolves a defined FULL label (key + fallback)', () => {
-  for (const id of ALL_MODE_IDS) {
+  for (const id of [...ALL_MODE_IDS, ...ALL_CARD_IDS]) {
     const { key, fallback } = modeFullLabel(id);
     assert.equal(typeof key, 'string', `mode "${id}" has no full-label key`);
     assert.ok(/** @type {string} */ (key).length > 0, `mode "${id}" full-label key is empty`);
@@ -140,3 +149,40 @@ for (const lang of /** @type {const} */ (['en', 'pl'])) {
     }
   });
 }
+
+// ---- metric family cards ----
+
+test('every hand card this build can be dealt has a label — the stale-guard contract', () => {
+  // `canRenderHand` refuses a hand containing an id MODE_LABELS doesn't cover and
+  // reloads the tab. Within ONE build that must never fire: a family added to the
+  // catalog and forgotten here would send every picker into a reload, then into
+  // the "update needed" notice, in a game where nothing is actually stale.
+  for (const id of ALL_CARD_IDS) {
+    const { key, fallback } = modeFullLabel(id);
+    assert.equal(typeof key, 'string', `card "${id}" has no label key`);
+    assert.equal(typeof fallback, 'string', `card "${id}" has no label fallback`);
+  }
+});
+
+test('a family card carries a sub-label, an ordinary mode does not', () => {
+  // The sub-label is the honesty line: it states the range a family can resolve
+  // to, so the round reads as a reveal rather than a substitution. A card that can
+  // only be one thing has nothing to disclose and must not grow a second line.
+  const economy = modeSubLabel('economy');
+  assert.ok(economy, 'the economy family has no sub-label');
+  assert.equal(typeof economy.key, 'string');
+  assert.ok(economy.fallback.length > 0);
+
+  for (const id of ALL_MODE_IDS) {
+    assert.equal(modeSubLabel(id), null, `mode "${id}" grew a sub-label`);
+  }
+});
+
+test('every multi-member family discloses its range', () => {
+  // Derived from the catalog rather than naming `economy`, so the next family
+  // cannot ship without its disclosure line.
+  for (const f of METRIC_FAMILIES) {
+    if (f.memberIds.length === 1) continue;
+    assert.ok(modeSubLabel(f.id), `family "${f.id}" groups ${f.memberIds.length} metrics but discloses nothing`);
+  }
+});

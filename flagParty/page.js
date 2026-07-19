@@ -14,8 +14,8 @@ import { formatValue } from '../flags/metricLens.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validatePicksPerPlayer, canVeilMode, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
-import { renderableQuestionIds, questionRenderAction, canRenderQuestion } from './staleGuard.js';
+import { roundCountFor, validatePicksPerPlayer, canVeilMode, representativeModeFor, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
+import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
@@ -95,6 +95,20 @@ const MODE_LABELS = {
   'superlative-tourism': { key: 'party.mode.superlativeTourism', full: 'Tourist arrivals per capita' },
   'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita' },
   'superlative-mcdonalds': { key: 'party.mode.superlativeMcdonalds', full: "McDonald's per million people" },
+  // Metric families (`flags/partyDraft.js` METRIC_FAMILIES) label the CARD, not a
+  // mode — the members keep their own labels above for the round title, which
+  // names the statistic that was actually dealt.
+  //
+  // `sub` is the honesty line and only families have one: without it a player
+  // picks "Economy" and is asked about GDP per capita with no warning. It states
+  // the range up front so the round is a reveal rather than a substitution — the
+  // same contract the 'most' / 'least' direction has always run under.
+  economy: {
+    key: 'party.mode.economy',
+    full: 'Economy',
+    subKey: 'party.modeSub.economy',
+    sub: 'GDP, total or per person',
+  },
 };
 
 
@@ -104,6 +118,13 @@ const MODE_LABELS = {
  *  this set; when that happens {@link questionRenderAction} reloads us onto the new
  *  build rather than rendering a broken question. See `flagParty/staleGuard.js`. */
 const KNOWN_QUESTION_IDS = renderableQuestionIds(SUPERLATIVE_METRICS.map((m) => m.questionId));
+
+/** Every hand card id this build can put a name on — derived from MODE_LABELS
+ *  itself, because that map is exactly what fails when the server deals a card we
+ *  don't know: a missing entry yields an undefined i18n key, and `t(undefined)`
+ *  takes the render down. Deriving it (rather than listing ids again) means a
+ *  future family can't be added to the catalog and forgotten here. */
+const KNOWN_CARD_IDS = new Set(Object.keys(MODE_LABELS));
 
 /** Little pictures leading each draft hand card, distinct enough to tell apart at
  *  a glance. The artwork is shared with flagQuiz's deck indicator via
@@ -147,18 +168,23 @@ const METRIC_FILE_BY_KEY = Object.fromEntries(METRIC_FILES.map((m) => [m.key, m.
 const MODE_BY_ID = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m]));
 
 /** The icon HTML for a draft card: the picture thumbnail for a picture mode, or
- *  the metric's own icon for a statistic. Empty string if unknown. */
-function modeIconHtml(/** @type {string} */ modeId) {
-  if (MODE_ICONS[modeId]) return MODE_ICONS[modeId];
-  const mode = MODE_BY_ID[modeId];
+ *  the metric's own icon for a statistic. Empty string if unknown.
+ *
+ *  A hand card can be a metric FAMILY id (`economy`), which is not a catalog
+ *  mode, so it resolves to the family's representative first —
+ *  `representativeModeFor` is the identity for every other id. */
+function modeIconHtml(/** @type {string} */ cardId) {
+  if (MODE_ICONS[cardId]) return MODE_ICONS[cardId];
+  const mode = MODE_BY_ID[representativeModeFor(cardId)];
   if (!mode) return '';
   const key = metricKeyForQuestion(mode.questionId);
   return (key && METRIC_ICONS[key]) || '';
 }
 
-/** The per-metric hue for a statistic mode (for the draft card accent), or null. */
-function modeHue(/** @type {string} */ modeId) {
-  const mode = MODE_BY_ID[modeId];
+/** The per-metric hue for a statistic card (for the draft card accent), or null.
+ *  Family-aware, same as {@link modeIconHtml}. */
+function modeHue(/** @type {string} */ cardId) {
+  const mode = MODE_BY_ID[representativeModeFor(cardId)];
   if (!mode) return null;
   const key = metricKeyForQuestion(mode.questionId);
   return (key && METRIC_HUES[key]) || null;
@@ -213,6 +239,23 @@ export function modeShortLabel(id) {
 export function modeFullLabel(id) {
   const ml = MODE_LABELS[id];
   return { key: ml && ml.key, fallback: ml && ml.full };
+}
+
+/**
+ * A card's second line, or null if it has none. Only metric FAMILIES carry one —
+ * it states the range the family can resolve to, so the round's variant reads as
+ * a reveal rather than a substitution.
+ *
+ * Returning null (rather than an empty `{key, fallback}`) is what lets the caller
+ * skip the element entirely: an empty `.pick-card-sub` would still take its
+ * margin and make family cards taller than their neighbours for no reason.
+ *
+ * @param {string} id
+ * @returns {{ key: string, fallback: string } | null}
+ */
+export function modeSubLabel(id) {
+  const ml = MODE_LABELS[id];
+  return ml && ml.subKey && ml.sub ? { key: ml.subKey, fallback: ml.sub } : null;
 }
 
 /**
@@ -936,7 +979,16 @@ export function bootFlagParty() {
       // question has name-reveal enabled.
       if (state.phase === 'question' && (veilActive() || nameActive())) startVeil(); else stopVeil();
     }
-    else if (state.phase === 'picking') { stopVeil(); showSection('pick'); renderPick(); syncClock(); }
+    else if (state.phase === 'picking') {
+      // Same skew guard as the question path, on the other surface a newer server
+      // can reach us through: a hand card id this build can't label (a metric
+      // family added since this tab loaded). Routed to the same one-shot reload
+      // rather than rendering a card with no name — see `canRenderHand`.
+      const handAction = questionRenderAction(canRenderHand(state.hand, KNOWN_CARD_IDS), updateReloadTried());
+      if (handAction === 'reload') { markUpdateReload(); stopClock(); stopVeil(); window.location.reload(); return; }
+      if (handAction === 'blocked') { stopClock(); stopVeil(); resetRoundIntro(); showSection('question'); renderUpdateNotice(); return; }
+      stopVeil(); showSection('pick'); renderPick(); syncClock();
+    }
     else if (state.phase === 'final') { stopClock(); stopVeil(); resetRoundIntro(); showSection('final'); renderFinal(); }
     else {
       // Lobby = a fresh game (or play-again reset): forget the round baselines so
@@ -1191,7 +1243,12 @@ export function bootFlagParty() {
         ic.innerHTML = modeIconHtml(modeId);
         ic.setAttribute('aria-hidden', 'true');
         card.appendChild(ic);
-        card.appendChild(el('span', 'pick-card-label', modeLabel(modeId)));
+        const label = el('span', 'pick-card-label', modeLabel(modeId));
+        // A family card names its range on a second line (see MODE_LABELS). Only
+        // families have one, so every other card is untouched.
+        const sub = modeSubLabel(modeId);
+        if (sub) label.appendChild(el('span', 'pick-card-sub', t(sub.key, sub.fallback)));
+        card.appendChild(label);
         card.addEventListener('click', () => {
           if (pickSent) return;
           pickSent = true;

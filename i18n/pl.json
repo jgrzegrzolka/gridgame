@@ -583,7 +583,11 @@
       "superlativeCorruption": "Uczciwość władz",
       "superlativeTourism": "Przyjazdy turystów na mieszkańca",
       "superlativeElectricity": "Zużycie prądu na osobę",
-      "superlativeMcdonalds": "McDonald's na milion mieszkańców"
+      "superlativeMcdonalds": "McDonald's na milion mieszkańców",
+      "economy": "Gospodarka"
+    },
+    "modeSub": {
+      "economy": "PKB, całkowite lub na mieszkańca"
     },
     "modeShort": {
       "flagsAll": "Flagi",
