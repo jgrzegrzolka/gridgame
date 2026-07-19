@@ -1574,7 +1574,10 @@ export function bootFlagParty() {
       if (chips.length && chips.reduce((s, c) => s + c.value, 0) === r.roundGain) {
         for (const c of chips) {
           const chip = el('span', `chip chip-${c.kind}`, `+${c.value}`);
-          if (c.kind === 'speed') chip.setAttribute('aria-label', `${c.value} ${t('party.fastest', 'Fastest')}`);
+          // "Speed bonus", not "Fastest": this chip is the round TOTAL of speed
+          // points, so 13 can mean first twice and second once. Only the reveal's
+          // per-question badge (`wasFastest`) may claim someone actually came first.
+          if (c.kind === 'speed') chip.setAttribute('aria-label', `${c.value} ${t('party.speedBonus', 'Speed bonus')}`);
           gain.appendChild(chip);
         }
       } else if (r.roundGain > 0) {
