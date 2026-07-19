@@ -15,6 +15,7 @@ import {
   applyEnterPicking,
   applyRepick,
   applyPick,
+  applySetKid,
   serializeRoom,
   deserializeRoom,
   DEFAULT_QUESTIONS,
@@ -579,9 +580,9 @@ test('the scoreboard keeps join order when scores tie', () => {
   let room = createRoom(15);
   for (const id of ['early', 'leader', 'late']) room = applyHello(room, id, id).room;
   const seats = new Map(room.seats);
-  seats.set('early', { nickname: 'early', score: 10 });   // joined 1st
-  seats.set('leader', { nickname: 'leader', score: 30 });
-  seats.set('late', { nickname: 'late', score: 10 });     // joined 3rd, same score
+  seats.set('early', { nickname: 'early', score: 10, kid: false });   // joined 1st
+  seats.set('leader', { nickname: 'leader', score: 30, kid: false });
+  seats.set('late', { nickname: 'late', score: 10, kid: false });     // joined 3rd, same score
   room = { ...room, seats, phase: /** @type {any} */ ('question'), question: q('pa', ['pa', 'us']), buzzes: [] };
 
   // Read the board the way the server does — off a broadcast, not a private helper.
@@ -783,3 +784,118 @@ function createRoomWith2() {
   room = applyHello(room, 'alice', 'Alice').room;
   return applyHello(room, 'bob', 'Bob').room;
 }
+
+// ---- kid mode ----
+
+/** @param {any} room @param {string} pid @returns {any} the seat, asserted present */
+function seatOf(room, pid) {
+  const seat = room.seats.get(pid);
+  assert.ok(seat, `expected a seat for ${pid}`);
+  return seat;
+}
+
+/**
+ * The message addressed to one specific player.
+ * @param {{ broadcasts: Array<{ to: string, message: any }> }} result
+ * @param {string} to
+ * @returns {any}
+ */
+function msgTo(result, to) {
+  const b = result.broadcasts.find((x) => x.to === to);
+  assert.ok(b, `expected a broadcast addressed to ${to}`);
+  return b.message;
+}
+
+/** Seat Alice (host) + Bob, mark Bob a kid. Returns the lobby room. */
+function lobbyWithKidBob() {
+  return applySetKid(createRoomWith2(), 'alice', 'bob', true).room;
+}
+
+test('applySetKid: the host marks a seat as a kid', () => {
+  const room = lobbyWithKidBob();
+  assert.equal(seatOf(room, 'bob').kid, true);
+  assert.equal(seatOf(room, 'alice').kid, false, 'everyone else is untouched');
+});
+
+test('applySetKid: rebroadcasts the roster so every client repaints the badge', () => {
+  const result = applySetKid(createRoomWith2(), 'alice', 'bob', true);
+  const roster = msg(result, 'roster').roster;
+  assert.equal(roster.find((/** @type {any} */ r) => r.playerId === 'bob').kid, true);
+  assert.equal(roster.find((/** @type {any} */ r) => r.playerId === 'alice').kid, false);
+});
+
+test('applySetKid: a non-host cannot mark anyone, not even themselves', () => {
+  const result = applySetKid(createRoomWith2(), 'bob', 'bob', true);
+  assert.equal(seatOf(result.room, 'bob').kid, false);
+  assert.deepEqual(result.broadcasts, []);
+});
+
+test('applySetKid: only from the lobby — no handicap changes mid-game', () => {
+  const room = applyStart(createRoomWith2(), 'alice', q('jp')).room;
+  const result = applySetKid(room, 'alice', 'bob', true);
+  assert.equal(seatOf(result.room, 'bob').kid, false);
+  assert.deepEqual(result.broadcasts, []);
+});
+
+test('applySetKid: unmarking works, and an unknown seat is a no-op', () => {
+  let room = lobbyWithKidBob();
+  room = applySetKid(room, 'alice', 'bob', false).room;
+  assert.equal(seatOf(room, 'bob').kid, false);
+  assert.deepEqual(applySetKid(room, 'alice', 'nobody', true).broadcasts, []);
+});
+
+test('a kid gets two wrong options to disable; nobody else gets any', () => {
+  const result = applyStart(lobbyWithKidBob(), 'alice', q('jp', ['jp', 'kr', 'cn', 'th']));
+  const toBob = msgTo(result, 'bob');
+  const toAlice = msgTo(result, 'alice');
+
+  assert.equal(toBob.easy.length, 2);
+  assert.equal(toBob.easy.includes('jp'), false, 'the answer is never disabled');
+  assert.equal('easy' in toAlice, false, 'a grown-up plays the full four');
+  assert.equal('answer' in toBob, false, 'and the answer still never rides the question');
+});
+
+test('a room with no kids still sends one broadcast to all', () => {
+  // The per-recipient fan-out is opt-in: an ordinary game keeps the cheap
+  // single-message path it has always had.
+  const result = applyStart(createRoomWith2(), 'alice', q('jp'));
+  assert.equal(result.broadcasts.length, 1);
+  assert.equal(result.broadcasts[0].to, 'all');
+});
+
+test("a kid's disabled pair is stable across a reconnect", () => {
+  // Deterministic, not random: the welcome a kid gets on reconnect must name
+  // the same two tiles the question did, or two more options vanish mid-round.
+  const room = lobbyWithKidBob();
+  const question = q('jp');
+  const started = applyStart(room, 'alice', question).room;
+  const onReconnect = msg(applyHello(started, 'bob', 'Bob'), 'welcome').easy;
+  const onQuestion = msgTo(applyStart(room, 'alice', question), 'bob').easy;
+  assert.deepEqual(onReconnect, onQuestion);
+});
+
+test('a grown-up reconnecting mid-question gets no easy list', () => {
+  const started = applyStart(lobbyWithKidBob(), 'alice', q('jp')).room;
+  assert.equal('easy' in msg(applyHello(started, 'alice', 'Alice'), 'welcome'), false);
+});
+
+test('the kid flag survives an eviction', () => {
+  const room = deserializeRoom(serializeRoom(lobbyWithKidBob()));
+  assert.equal(seatOf(room, 'bob').kid, true);
+});
+
+test('a seat stored before kid mode deserializes as a grown-up', () => {
+  const room = deserializeRoom({ seats: [['alice', { nickname: 'Alice', score: 7 }]] });
+  assert.equal(seatOf(room, 'alice').kid, false);
+  assert.equal(seatOf(room, 'alice').score, 7, 'and keeps everything else');
+});
+
+test('play again keeps the kid flag — scores reset, handicaps do not', () => {
+  let room = lobbyWithKidBob();
+  room = applyStart(room, 'alice', q('jp')).room;
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'jp', true).room;
+  const after = applyPlayAgain({ ...room, phase: /** @type {any} */ ('final') }, 'alice').room;
+  assert.equal(seatOf(after, 'bob').kid, true);
+  assert.equal(seatOf(after, 'bob').score, 0);
+});
