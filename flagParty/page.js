@@ -285,6 +285,7 @@ export function bootFlagParty() {
   const breakBoard = $('break-board');
   const roundCardCount = $('roundcard-count');
   const roundCardIc = $('roundcard-ic');
+  const roundCardRing = $('roundcard-ring-fill');
   const roundCardName = $('roundcard-name');
   const roundCardQuestions = $('roundcard-questions');
   const roundCardPick = $('roundcard-pick');
@@ -736,10 +737,21 @@ export function bootFlagParty() {
   /** @type {string | null} */
   let roundIntroToken = null;
   let roundIntroActive = false;
+  /** Wall-clock instant the beat ends; the ring drains against it. */
+  let roundIntroDeadline = 0;
+  let roundIntroRaf = 0;
   function armRoundIntro(/** @type {string} */ token) {
     roundIntroToken = token;
     roundIntroActive = true;
     window.clearTimeout(roundIntroTimer);
+    // Arm the ring from a stopped loop and a full circle, so nothing about this
+    // round's countdown depends on how the previous one ended. Without this the
+    // `if (roundIntroRaf) return` guard below keys on a handle left over from the
+    // last round instead of on this one: rAF doesn't fire in a hidden tab but
+    // `setTimeout` does, so backgrounding the tab across a beat strands a
+    // non-zero handle and the next round's ring never arms.
+    stopRoundIntroRing();
+    roundIntroDeadline = Date.now() + ROUND_INTRO_SECONDS * 1000;
     roundIntroTimer = window.setTimeout(() => { roundIntroActive = false; render(); }, ROUND_INTRO_SECONDS * 1000);
   }
   function resetRoundIntro() {
@@ -747,7 +759,48 @@ export function bootFlagParty() {
     roundIntroTimer = 0;
     roundIntroToken = null;
     roundIntroActive = false;
+    stopRoundIntroRing();
     resetRoundBreakAnswer();
+  }
+
+  // The round card's draining ring: the same "time is running out" language as the
+  // question bar (pink over the muted-soft track, `remainingFraction` off a
+  // deadline), curled around the mode icon so the card says how long the beat has
+  // left instead of ending without warning. Deliberately NOT a CSS animation keyed
+  // on the card becoming visible: the shared section swap holds the card back ~120 ms
+  // while this beat's setTimeout is already running, so an animation would finish
+  // that much after the question arrives. Driving it off the same deadline the
+  // timeout uses keeps the ring honest — it empties exactly when play starts.
+  // A ring is a timer, not decoration, so it is not gated on reduced motion; the
+  // loop is only alive for the ~2 s beat. Note this is deliberately *smoother*
+  // than the question bar, which keeps its 0.2 s width transition inside a
+  // `no-preference` query and so steps for a reduced-motion player: at 2 s the
+  // ring would read as a stutter rather than a countdown if it stepped too, and
+  // both still tell the same truth about time left. Same reason the ring runs on
+  // rAF while the bar ticks on a 200 ms interval — ten visible steps is fine
+  // across 20 s and wrong across 2 s.
+  function startRoundIntroRing() {
+    if (roundIntroRaf) return;
+    // `EMPTY` is the whole circle spent; `pathLength=100` on the element makes the
+    // offset plain percent, so this never has to know the circumference.
+    const EMPTY = 100;
+    const paint = (/** @type {number} */ off) => { roundCardRing.style.strokeDashoffset = off.toFixed(1); };
+    const step = () => {
+      // Paint the terminal frame on the way out. rAF stops a frame or two shy of
+      // the deadline, so without this the ring visibly quits at ~99% drained and
+      // the card cuts away before the circle ever closes.
+      if (!roundIntroActive) { paint(EMPTY); roundIntroRaf = 0; return; }
+      const p = remainingFraction(roundIntroDeadline, Date.now(), ROUND_INTRO_SECONDS * 1000);
+      paint((1 - p) * EMPTY);
+      roundIntroRaf = window.requestAnimationFrame(step);
+    };
+    // Paint frame 0 synchronously: the card mounts with a full ring rather than
+    // whatever the last round left, one frame before rAF gets its turn.
+    step();
+  }
+  function stopRoundIntroRing() {
+    if (roundIntroRaf) { window.cancelAnimationFrame(roundIntroRaf); roundIntroRaf = 0; }
+    roundCardRing.style.strokeDashoffset = '0';
   }
 
   // ---- round-boundary answer beat ----
@@ -789,7 +842,10 @@ export function bootFlagParty() {
 
   // ---- render ----
   function render() {
-    if (!activeRoom) { stopClock(); stopVeil(); showSection('start'); return; }
+    // Leaving the room entirely (kicked, rejected): tear down every running loop,
+    // the round-intro beat included, so nothing keeps animating a screen the
+    // player can no longer see.
+    if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); showSection('start'); return; }
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
     // Re-arm the pick guard whenever we're not mid-pick, so the next draft turn
@@ -805,7 +861,7 @@ export function bootFlagParty() {
       const q = state.question;
       const action = questionRenderAction(canRenderQuestion(q, KNOWN_QUESTION_IDS), updateReloadTried());
       if (action === 'reload') { markUpdateReload(); stopClock(); stopVeil(); window.location.reload(); return; }
-      if (action === 'blocked') { stopClock(); stopVeil(); showSection('question'); renderUpdateNotice(); return; }
+      if (action === 'blocked') { stopClock(); stopVeil(); resetRoundIntro(); showSection('question'); renderUpdateNotice(); return; }
       clearUpdateReload();
       // Leaving a break (the next round's first question is here): the standings
       // we just showed become the baseline the following break diffs against.
@@ -838,7 +894,7 @@ export function bootFlagParty() {
       if (state.phase === 'question' && isRoundStart(state.questionIndex, state.totalQuestions)) {
         const token = String(state.questionIndex);
         if (roundIntroToken !== token) armRoundIntro(token);
-        if (roundIntroActive) { stopClock(); stopVeil(); showSection('roundcard'); renderRoundCard(); return; }
+        if (roundIntroActive) { stopClock(); stopVeil(); showSection('roundcard'); renderRoundCard(); startRoundIntroRing(); return; }
       }
       // At a round boundary the reveal becomes the standings break instead of the
       // answer tiles. The clock still runs (host advances after the break beat),
@@ -861,7 +917,7 @@ export function bootFlagParty() {
       if (state.phase === 'question' && (veilActive() || nameActive())) startVeil(); else stopVeil();
     }
     else if (state.phase === 'picking') { stopVeil(); showSection('pick'); renderPick(); syncClock(); }
-    else if (state.phase === 'final') { stopClock(); stopVeil(); showSection('final'); renderFinal(); }
+    else if (state.phase === 'final') { stopClock(); stopVeil(); resetRoundIntro(); showSection('final'); renderFinal(); }
     else {
       // Lobby = a fresh game (or play-again reset): forget the round baselines so
       // the first break of the next game shows gains-from-zero, no deltas, and
