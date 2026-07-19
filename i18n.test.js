@@ -832,3 +832,18 @@ test('no party string still uses the retired block vocabulary', async () => {
   }
   assert.deepEqual(offenders, [], offenders.join('\n'));
 });
+
+test('the reveal badge and the break chip do not share one label', async () => {
+  // `party.fastest` is a per-question claim that someone actually came first
+  // (gated by `wasFastest`). `party.speedBonus` labels the break chip, which is
+  // a round TOTAL of speed points -- 13 there can mean first twice and second
+  // once. Reusing `fastest` for both announced "13 Fastest" to screen readers.
+  const enJson = JSON.parse(await readFile(new URL('./i18n/en.json', import.meta.url), 'utf8'));
+  const plJson = JSON.parse(await readFile(new URL('./i18n/pl.json', import.meta.url), 'utf8'));
+  for (const [name, j] of [['en', enJson], ['pl', plJson]]) {
+    assert.ok(j.party.fastest, `${name}: party.fastest must exist`);
+    assert.ok(j.party.speedBonus, `${name}: party.speedBonus must exist`);
+    assert.notEqual(j.party.speedBonus, j.party.fastest,
+      `${name}: the chip label must not be the same string as the badge`);
+  }
+});
