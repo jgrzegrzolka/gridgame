@@ -601,18 +601,44 @@ export function buildToggleLi({ label, labelKey, initial, onChange, reload = tru
   textSpan.className = 'scope-toggle-text';
   textSpan.textContent = label;
   if (labelKey) textSpan.setAttribute('data-i18n', labelKey);
+  const switchSpan = buildToggleSwitch({
+    initial,
+    onChange: (checked) => {
+      onChange(checked);
+      // Let the slide animation finish so the user sees the toggle move
+      // before the page reloads. Skipped when `reload` is false — the
+      // caller applies the change live in `onChange` instead.
+      if (reload) setTimeout(() => window.location.reload(), 350);
+    },
+  });
+  toggleLabel.appendChild(textSpan);
+  toggleLabel.appendChild(switchSpan);
+  toggleLi.appendChild(toggleLabel);
+  return toggleLi;
+}
+
+/**
+ * The switch itself — the `.scope-toggle-switch / -track / -thumb` trio with a
+ * real `<input type="checkbox">` behind it, so Tab / Space and screen readers
+ * get native checkbox behaviour and the visual chrome paints off `:checked`.
+ *
+ * Split out of {@link buildToggleLi} because the burger menu's `<li><label>`
+ * wrapper is menu chrome, not part of the control: Flag Party's lobby needs the
+ * same switch sitting inside a player chip, where an `<li>` would be wrong and a
+ * nested `<label>` would fight the chip's own hit target. `profile/sync/page.js`
+ * had already hand-assembled these four elements for the same reason, which is
+ * the second copy that made this worth extracting rather than repeating.
+ *
+ * @param {{ initial: boolean, onChange: (checked: boolean) => void }} opts
+ * @returns {HTMLSpanElement}
+ */
+export function buildToggleSwitch({ initial, onChange }) {
   const switchSpan = document.createElement('span');
   switchSpan.className = 'scope-toggle-switch';
   const toggleInput = document.createElement('input');
   toggleInput.type = 'checkbox';
   toggleInput.checked = initial;
-  toggleInput.addEventListener('change', () => {
-    onChange(toggleInput.checked);
-    // Let the slide animation finish so the user sees the toggle move
-    // before the page reloads. Skipped when `reload` is false — the
-    // caller applies the change live in `onChange` instead.
-    if (reload) setTimeout(() => window.location.reload(), 350);
-  });
+  toggleInput.addEventListener('change', () => onChange(toggleInput.checked));
   const trackSpan = document.createElement('span');
   trackSpan.className = 'scope-toggle-track';
   trackSpan.setAttribute('aria-hidden', 'true');
@@ -621,8 +647,5 @@ export function buildToggleLi({ label, labelKey, initial, onChange, reload = tru
   trackSpan.appendChild(thumbSpan);
   switchSpan.appendChild(toggleInput);
   switchSpan.appendChild(trackSpan);
-  toggleLabel.appendChild(textSpan);
-  toggleLabel.appendChild(switchSpan);
-  toggleLi.appendChild(toggleLabel);
-  return toggleLi;
+  return switchSpan;
 }

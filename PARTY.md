@@ -1587,6 +1587,14 @@ the kid's copy carries `easy`. `easy` rides *inside* the question on both `quest
 so the client reads it from one place. The answer still never leaves before reveal; `easy` names
 only wrong codes.
 
+**The control is the site's standard switch.** The first build made the whole chip the tap target,
+which shipped an invisible affordance: the lobby looked identical to before the feature existed, and
+a hint line was a patch over that rather than a fix. It is now the shared `.scope-toggle-switch`
+(`buildToggleSwitch`, extracted from `buildToggleLi` in `common.js` — the burger menus and
+`profile/sync` were already two copies of the same four elements). The chip stays a `<div>`: a
+checkbox inside a `<button>` is invalid and would give the row two competing hit targets. Non-hosts
+see a read-only badge, never a dead control.
+
 **Scoring is untouched.** A kid's correct answer is worth exactly what anyone else's is. That is the
 simple version and it is deliberate — the handicap is a render aid, so nobody's points mean two
 different things depending on who was marked. It does mean a marked player has a real edge; whether

@@ -546,7 +546,6 @@
     "players": "Players",
     "host": "host",
     "kid": "kid",
-    "kidHint": "Tap a player to mark them as a kid",
     "waitingHost": "Waiting for the host to start…",
     "startGame": "Start game",
     "mode": {

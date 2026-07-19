@@ -18,7 +18,7 @@ import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../
 import { roundCountFor, validatePicksPerPlayer, canVeilMode, representativeModeFor, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
-import { buildAvatar, shareUrl } from '../common.js';
+import { buildAvatar, shareUrl, buildToggleSwitch } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
@@ -1015,24 +1015,27 @@ export function bootFlagParty() {
     const inLobby = state.phase === 'lobby';
     const hostSetup = state.isHost && inLobby;
     for (const r of state.roster) {
-      // Host-only, lobby-only: the chip itself is the kid toggle, so there is no
-      // extra control crowding the row on a phone. Everyone sees the badge; only
-      // the host can change it, and the server re-checks both conditions anyway.
-      const chip = el(hostSetup ? 'button' : 'div', 'chip' + (r.present ? '' : ' away') + (r.kid ? ' kid' : ''));
+      const chip = el('div', 'chip' + (r.present ? '' : ' away') + (r.kid ? ' kid' : ''));
       chip.appendChild(buildAvatar(r.playerId));
       chip.appendChild(el('span', 'chip-name', r.nickname));
       if (r.playerId === roomHostId) chip.appendChild(el('span', 'chip-host', t('party.host', 'host')));
-      if (r.kid) chip.appendChild(el('span', 'chip-kid', t('party.kid', 'kid')));
       if (hostSetup) {
-        /** @type {HTMLButtonElement} */ (chip).type = 'button';
-        chip.addEventListener('click', () => send({ type: 'setKid', playerId: r.playerId, kid: !r.kid }));
+        // The host gets the site's standard on/off switch (`buildToggleSwitch`,
+        // the same control the burger menus use) rather than a bespoke chip
+        // affordance. The row is not the tap target: the switch is, which is why
+        // the chip stays a <div> — nesting a checkbox inside a <button> is
+        // invalid and would give the row two competing hit areas.
+        chip.appendChild(el('span', 'chip-kid-label', t('party.kid', 'kid')));
+        chip.appendChild(buildToggleSwitch({
+          initial: r.kid === true,
+          onChange: (checked) => send({ type: 'setKid', playerId: r.playerId, kid: checked }),
+        }));
+      } else if (r.kid) {
+        // Everyone else just sees who is marked, with no control to operate.
+        chip.appendChild(el('span', 'chip-kid', t('party.kid', 'kid')));
       }
       playersEl.appendChild(chip);
     }
-    // The chip IS the toggle, which is invisible until you know it. One line of
-    // instruction, host + lobby only, so the affordance is discoverable without
-    // adding a control to every row.
-    if (hostSetup) playersEl.appendChild(el('p', 'kid-hint', t('party.kidHint', 'Tap a player to mark them as a kid')));
     startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
     // (play alone), and more players can join before the tap. The guard only

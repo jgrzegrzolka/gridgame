@@ -546,7 +546,6 @@
     "players": "Gracze",
     "host": "gospodarz",
     "kid": "dziecko",
-    "kidHint": "Dotknij gracza, aby oznaczyć go jako dziecko",
     "waitingHost": "Czekanie, aż gospodarz rozpocznie…",
     "startGame": "Rozpocznij grę",
     "mode": {

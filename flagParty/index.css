@@ -123,19 +123,18 @@
 .chip.away { opacity: 0.5; }
 .chip-name { color: var(--primary-color); }
 .chip-host { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: 600; }
-/* In the host's lobby the chip is a <button> (tap to mark a kid), so it needs
-   the usual button reset to keep looking exactly like the <div> everyone else
-   sees. Hover is the site-wide quiet wash, same as every other tappable thing. */
-button.chip { width: 100%; font: inherit; text-align: left; cursor: pointer; }
-button.chip:hover { background: var(--hover-color); }
 /* Marked as a kid: an applied state, so it carries the accent rather than the
    neutral grey the host label uses. */
 .chip.kid { border-color: var(--secondary-color); }
+/* The host's row ends with a caption + the shared `.scope-toggle-switch`
+   (common.css). The caption is muted, not accented: it labels the control
+   rather than reporting a state, and the switch itself carries on/off. */
+.chip-kid-label { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: 600; }
+.chip .scope-toggle-switch { margin-left: 8px; }
+/* What everyone who is NOT the host sees: a read-only badge, no control. */
 .chip-kid { margin-left: auto; font-size: 11px; color: var(--secondary-color); font-weight: 600; }
-.chip-host + .chip-kid { margin-left: 6px; }
+.chip-host + .chip-kid, .chip-host + .chip-kid-label { margin-left: 6px; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
-/* Names the chip-tap affordance, which has no visual of its own. */
-.kid-hint { margin: 2px 0 0; text-align: center; color: var(--muted-color); font-size: 12px; }
 
 /* Question: prompt + flags */
 .question-pill {
