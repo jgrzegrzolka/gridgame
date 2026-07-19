@@ -1144,12 +1144,13 @@ export function bootFlagParty() {
     }
 
     footEl.innerHTML = '';
-    // The chart reveal is the WHOLE reveal. The foot's per-player points row
-    // restates what the chart just said -- your avatar is already sitting on a
-    // row that prints its own award -- and a second thing to read inside the
-    // beat is what the ranking was meant to replace. Every other question type
-    // keeps its foot: there, the tiles carry no points at all.
-    if (isReveal && !chartReveal()) renderRevealFoot();
+    // Every reveal gets the foot, chart or not. It was briefly suppressed here
+    // as duplication, which was wrong: the chart says WHAT the ranking was and
+    // which row you landed on, but only the foot says who was fastest, who was
+    // the only one, and that nobody knew it. That is per-PLAYER information the
+    // ranking structurally cannot carry, and it is what every other question
+    // type shows after an answer.
+    if (isReveal) renderRevealFoot();
   }
 
   /**
