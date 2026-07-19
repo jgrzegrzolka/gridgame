@@ -308,6 +308,33 @@ export function withLocalBuzz(state, choice) {
 }
 
 /**
+ * The options this player's grid should draw.
+ *
+ * For a grown-up, and for every reveal, that is simply the question's four.
+ * For a kid mid-question it is the two live ones: their dead pair is **removed**
+ * rather than greyed out.
+ *
+ * Removal, not dimming, because dimming did not survive tricky mode. `.opt.dim`
+ * is `opacity: .42`, and a veiled tile is already greyed, blurred and covered by
+ * the reveal panels, so a disabled tile read as "slightly fainter mush" and the
+ * handicap was invisible exactly when the round was hardest. Rendering two tiles
+ * is also the literal 50/50 instead of one the player has to infer, which is the
+ * point for the small child this exists for.
+ *
+ * The reveal deliberately shows all four again, so a kid sees the whole board
+ * they were shielded from, including the two they never had.
+ *
+ * @param {PartyClientState} state
+ * @param {boolean} isReveal
+ * @returns {string[]}
+ */
+export function visibleOptions(state, isReveal) {
+  const options = state.question ? state.question.options : [];
+  if (isReveal) return options.slice();
+  return options.filter((code) => !isDisabledOption(state, code));
+}
+
+/**
  * Whether an option is greyed out for this player — kid mode's half of the
  * board. Always false for a grown-up (no `easy` on their question) and for
  * every option once the question is over.

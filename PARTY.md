@@ -1595,6 +1595,14 @@ a hint line was a patch over that rather than a fix. It is now the shared `.scop
 checkbox inside a `<button>` is invalid and would give the row two competing hit targets. Non-hosts
 see a read-only badge, never a dead control.
 
+**A kid draws two tiles, not four greyed ones.** The first build dimmed the dead pair with `.opt.dim`
+(`opacity: .42`). That collapsed under tricky mode: a veiled tile is already greyed, blurred and
+covered by the reveal panels, so a disabled tile read as slightly fainter mush and the handicap went
+invisible exactly when the round was hardest. `visibleOptions` (`flags/partyClient.js`) now removes
+them instead, which is veil-proof, is the literal 50/50 rather than one to infer, and gives a small
+child two things to look at instead of four. The reveal still draws all four, so they see the board
+they were shielded from.
+
 **Scoring is untouched.** A kid's correct answer is worth exactly what anyone else's is. That is the
 simple version and it is deliberate — the handicap is a render aid, so nobody's points mean two
 different things depending on who was marked. It does mean a marked player has a real edge; whether

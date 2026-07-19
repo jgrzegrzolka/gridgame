@@ -5,6 +5,7 @@ import {
   reducePartyMessage,
   withLocalBuzz,
   isDisabledOption,
+  visibleOptions,
   pickPartyCelebration,
   isCleanReveal,
   isBlankReveal,
@@ -487,4 +488,37 @@ test('the next question clears the previous one\'s disabled pair', () => {
   state = reducePartyMessage(state, { type: 'question', prompt: 'us', options: ['us', 'ca', 'mx', 'br'] }).state;
   assert.equal(questionOf(state).easy, null);
   assert.equal(isDisabledOption(state, 'ca'), false);
+});
+
+test('a kid draws only the two live options during the question', () => {
+  const state = kidMidQuestion();
+  assert.deepEqual(visibleOptions(state, false), ['jp', 'th']);
+});
+
+test('the reveal gives a kid the whole board back', () => {
+  // They should see what they were shielded from, including the two tiles they
+  // never had a chance to pick.
+  const state = kidMidQuestion();
+  assert.deepEqual(visibleOptions(state, true), ['jp', 'kr', 'cn', 'th']);
+});
+
+test('a grown-up always draws all four', () => {
+  const { state } = reducePartyMessage(initialPartyClientState(), {
+    type: 'question', prompt: 'jp', options: ['jp', 'kr', 'cn', 'th'],
+  });
+  assert.deepEqual(visibleOptions(state, false), ['jp', 'kr', 'cn', 'th']);
+  assert.deepEqual(visibleOptions(state, true), ['jp', 'kr', 'cn', 'th']);
+});
+
+test('visibleOptions keeps the question order it was given', () => {
+  // The grid draws in this order, so a stable order keeps a kid's two tiles in
+  // the same relative places the table sees them.
+  const { state } = reducePartyMessage(initialPartyClientState(), {
+    type: 'question', prompt: 'jp', options: ['kr', 'jp', 'cn', 'th'], easy: ['cn', 'kr'],
+  });
+  assert.deepEqual(visibleOptions(state, false), ['jp', 'th']);
+});
+
+test('visibleOptions is safe with no question at all', () => {
+  assert.deepEqual(visibleOptions(initialPartyClientState(), false), []);
 });
