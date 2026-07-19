@@ -688,6 +688,8 @@
     "hintMostElectricity": "Most electricity use per person",
     "updateNeeded": "A new version is available. Refresh the page to keep playing.",
     "fastest": "Fastest",
+    "soleSurvivor": "Only one",
+    "nobodyKnew": "Nobody knew that one",
     "tie": "It's a tie!",
     "playAgain": "Play again",
     "backToSettings": "Back to settings",

@@ -1,4 +1,4 @@
-import { scoreQuestion, FINAL_ROUND_MULTIPLIER } from './partyScore.js';
+import { scoreQuestionDetailed, FINAL_ROUND_MULTIPLIER } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
 
 /**
@@ -581,10 +581,23 @@ function toReveal(room) {
   // The final round (the one that decides the game) scores double, so a trailing
   // player can still swing it. `doubled` rides the reveal so clients can badge it.
   const doubled = isFinalRound(room.questionIndex, room.totalQuestions);
-  const points = scoreQuestion(room.buzzes, {
+  // Score itemised, then project to totals. The reveal carries both: `points`
+  // for the seat arithmetic and every client that only wants the number, and
+  // `breakdown` so the break's chips can say what earned each point instead of
+  // inferring it from the total (undecidable now that the solo bonus and the
+  // first speed bonus are both 5).
+  const awards = scoreQuestionDetailed(room.buzzes, {
     applySpeedBonus: room.seats.size > 1,
     multiplier: doubled ? FINAL_ROUND_MULTIPLIER : 1,
   });
+  /** @type {Record<string, number>} */
+  const points = {};
+  /** @type {Record<string, { base: number, speed: number, solo: number }>} */
+  const breakdown = {};
+  for (const [pid, award] of Object.entries(awards)) {
+    points[pid] = award.total;
+    breakdown[pid] = { base: award.base, speed: award.speed, solo: award.solo };
+  }
   const seats = new Map();
   for (const [pid, seat] of room.seats) {
     seats.set(pid, { ...seat, score: seat.score + (points[pid] ?? 0) });
@@ -602,6 +615,7 @@ function toReveal(room) {
         answer: q.answer,
         picks,
         points,
+        breakdown,
         doubled,
         scoreboard: scoreboardOf(nextRoom),
         questionIndex: room.questionIndex,

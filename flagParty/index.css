@@ -348,8 +348,22 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 }
 .toast-name { color: var(--primary-color); }
 .toast .fast { font-size: 11px; color: var(--muted-color); font-weight: 700; }
+/* Same badge slot as ⚡ Fastest; pink because being the only one right is the
+   rarer thing of the two and should be the one that catches the eye. */
+.toast .solo { font-size: 11px; color: var(--secondary-color); font-weight: 700; }
 .toast .pts { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary-color); }
 .toast .pts.zero { color: var(--muted-color); }
+
+/* "Nobody knew that one" — the reveal's named beat when the question beat the
+   whole room. Sits above the per-player toasts, quiet by design: it is a shared
+   groan, not an accusation, so it reads as a caption rather than a score line. */
+.nobody-knew {
+  text-align: center;
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-color);
+}
 
 /* Final screen actions reuse the site's shared `.result-links` + `.result-link`
    (common.css) — the same inline "Play again · Home" row as flagQuiz / TTT,
@@ -431,6 +445,11 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 }
 .scoreline .chip-base { color: var(--muted-color); }
 .scoreline .chip-speed { color: var(--secondary-color); }
+/* Sole survivor: the loudest of the three, so it takes primary — the only ink
+   darker than the row's own text. The mock drew this chip green; green is not
+   one of the eight, and the setup-chip hue exception is confined to setup, so
+   the weight is carried by contrast instead of by a new colour. */
+.scoreline .chip-solo { color: var(--primary-color); }
 .scoreline .gain.on { opacity: 1; }
 .scoreline .gain + .sc { margin-left: 9px; }
 @media (prefers-reduced-motion: no-preference) {

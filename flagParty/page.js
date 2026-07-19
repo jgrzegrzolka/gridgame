@@ -4,9 +4,8 @@ import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { CORRECT_POINTS, SPEED_BONUS, FINAL_ROUND_MULTIPLIER } from '../flags/partyScore.js';
 import { QUESTION_SECONDS, revealSecondsFor, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
@@ -880,8 +879,9 @@ export function bootFlagParty() {
         const t = String(state.questionIndex);
         if (tallyQuestionToken !== t) {
           tallyQuestionToken = t;
-          const multiplier = state.reveal.doubled ? FINAL_ROUND_MULTIPLIER : 1;
-          roundTally = addQuestionToTally(roundTally, state.reveal.points || {}, multiplier);
+          // The award arrives itemised, multiplier already applied, so the tally
+          // only adds up numbers the server already attributed.
+          roundTally = addQuestionToTally(roundTally, state.reveal.breakdown);
         }
       }
       // Every round opens with a title-card beat before its first question — the
@@ -1498,14 +1498,26 @@ export function bootFlagParty() {
 
   function renderRevealFoot() {
     const list = el('div', 'toast-list');
-    const fastest = CORRECT_POINTS + (SPEED_BONUS[0] || 0);
     const points = (state.reveal && state.reveal.points) || {};
+    const breakdown = (state.reveal && state.reveal.breakdown) || {};
+    // The question beat everyone: name it. No points move, but a shared groan is
+    // the moment, and silence made a question nobody got look identical to one
+    // everybody got wrong on their own.
+    if (isBlankReveal(state.roster, state.reveal)) {
+      footEl.appendChild(el('p', 'nobody-knew', t('party.nobodyKnew', 'Nobody knew that one')));
+    }
     for (const entry of state.scoreboard || []) {
       const pts = points[entry.playerId] || 0;
       const toast = el('div', 'toast');
       toast.appendChild(buildAvatar(entry.playerId));
       toast.appendChild(el('span', 'toast-name', entry.nickname));
-      if (pts === fastest) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
+      // Badges read straight off the itemised award. This used to compare the
+      // total against `CORRECT_POINTS + SPEED_BONUS[0]`, which ignored the
+      // multiplier — so on the Decider a first-correct scored 30, never matched
+      // 15, and nobody was ever tagged Fastest on the round that decides it.
+      const award = breakdown[entry.playerId];
+      if (award && award.speed > 0) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
+      if (award && award.solo > 0) toast.appendChild(el('span', 'solo', `★ ${t('party.soleSurvivor', 'Only one')}`));
       toast.appendChild(el('span', 'pts' + (pts === 0 ? ' zero' : ''), `+${pts}`));
       list.appendChild(toast);
     }
