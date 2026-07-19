@@ -41,44 +41,60 @@ const VEIL_ORDER = [0, 4, 2, 5, 1, 3];
 /** Lobby copy for each catalog mode (`flags/partyPlan.js` PARTY_MODES). The
  *  catalog stays pure (ids only); labels live here, translated via i18n with the
  *  English text as the fallback. `full` shows in the dial row, `short` in the
- *  collapsed summary mix. */
+ *  collapsed summary mix.
+ *
+ *  **A metric's `full` names the subject and never the direction.** These labels
+ *  used to end in the direction the question could be dealt in ("Coffee
+ *  production: most", "Happiness score: happiest & least happy"), which is noise
+ *  on the one screen that uses them — the draft pick card. The direction is
+ *  chosen by the server when the round starts and announced twice already: on the
+ *  round title card and, throughout the question, as the criterion label
+ *  `hintFor` resolves. On the two-directional metrics the suffix wasn't even
+ *  information, since "most & least" was true of every one of them.
+ *
+ *  The picture trio keeps its colon ("Flags: countries", "Map: outlines") — that
+ *  names the POOL a round draws from, which nothing else on the pick screen says.
+ *
+ *  Pinned by `flagParty/modeLabels.test.js`, over these fallbacks AND over both
+ *  shipped locales: the player reads the i18n string, so pinning only the
+ *  fallback would let pl.json drift back unnoticed. */
 const MODE_LABELS = {
   'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
   'flags-weird': { key: 'party.mode.flagsWeird', full: 'Weird flags', shortKey: 'party.modeShort.flagsWeird', short: 'Weird' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
-  'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population: most & least' },
-  'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area: largest & smallest' },
-  'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density: most & least' },
-  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP: largest & smallest' },
-  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita: largest & smallest' },
-  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production: most' },
-  'superlative-wine': { key: 'party.mode.superlativeWine', full: 'Wine production: most' },
-  'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production: most' },
-  'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production: most' },
-  'superlative-apple': { key: 'party.mode.superlativeApple', full: 'Apple production: most' },
-  'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Highest elevation: highest & lowest' },
-  'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length: longest & shortest' },
-  'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover: most & least forested' },
-  'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production: most' },
-  'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production: most' },
-  'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production: most' },
-  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita: most' },
-  'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita: most' },
-  'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer consumption per capita: most' },
-  'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production: most' },
-  'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production: most' },
-  'superlative-gold': { key: 'party.mode.superlativeGold', full: 'Gold production: most' },
-  'superlative-alcohol': { key: 'party.mode.superlativeAlcohol', full: 'Alcohol consumption per capita: most' },
-  'superlative-meat': { key: 'party.mode.superlativeMeat', full: 'Meat consumption per capita: most' },
-  'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries: most' },
-  'superlative-olive-oil': { key: 'party.mode.superlativeOliveOil', full: 'Olive oil production: most' },
-  'superlative-honey': { key: 'party.mode.superlativeHoney', full: 'Honey production: most' },
-  'superlative-temperature': { key: 'party.mode.superlativeTemperature', full: 'Average temperature: hottest & coldest' },
-  'superlative-happiness': { key: 'party.mode.superlativeHappiness', full: 'Happiness score: happiest & least happy' },
-  'superlative-corruption': { key: 'party.mode.superlativeCorruption', full: 'Government integrity: most & least corrupt' },
-  'superlative-tourism': { key: 'party.mode.superlativeTourism', full: 'Tourist arrivals per capita: most' },
-  'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita: most' },
-  'superlative-mcdonalds': { key: 'party.mode.superlativeMcdonalds', full: "McDonald's per million people: most" },
+  'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population' },
+  'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area' },
+  'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density' },
+  'superlative-gdp': { key: 'party.mode.superlativeGdp', full: 'GDP' },
+  'superlative-gdppc': { key: 'party.mode.superlativeGdppc', full: 'GDP per capita' },
+  'superlative-coffee': { key: 'party.mode.superlativeCoffee', full: 'Coffee production' },
+  'superlative-wine': { key: 'party.mode.superlativeWine', full: 'Wine production' },
+  'superlative-cocoa': { key: 'party.mode.superlativeCocoa', full: 'Cocoa production' },
+  'superlative-banana': { key: 'party.mode.superlativeBanana', full: 'Banana production' },
+  'superlative-apple': { key: 'party.mode.superlativeApple', full: 'Apple production' },
+  'superlative-elevation': { key: 'party.mode.superlativeElevation', full: 'Elevation' },
+  'superlative-coastline': { key: 'party.mode.superlativeCoastline', full: 'Coastline length' },
+  'superlative-forest': { key: 'party.mode.superlativeForest', full: 'Forest cover' },
+  'superlative-oil': { key: 'party.mode.superlativeOil', full: 'Oil production' },
+  'superlative-rice': { key: 'party.mode.superlativeRice', full: 'Rice production' },
+  'superlative-coal': { key: 'party.mode.superlativeCoal', full: 'Coal production' },
+  'superlative-sheep': { key: 'party.mode.superlativeSheep', full: 'Sheep per capita' },
+  'superlative-cattle': { key: 'party.mode.superlativeCattle', full: 'Cattle per capita' },
+  'superlative-beer': { key: 'party.mode.superlativeBeer', full: 'Beer consumption per capita' },
+  'superlative-tea': { key: 'party.mode.superlativeTea', full: 'Tea production' },
+  'superlative-sugarcane': { key: 'party.mode.superlativeSugarcane', full: 'Sugarcane production' },
+  'superlative-gold': { key: 'party.mode.superlativeGold', full: 'Gold production' },
+  'superlative-alcohol': { key: 'party.mode.superlativeAlcohol', full: 'Alcohol consumption per capita' },
+  'superlative-meat': { key: 'party.mode.superlativeMeat', full: 'Meat consumption per capita' },
+  'superlative-borders': { key: 'party.mode.superlativeBorders', full: 'Bordering countries' },
+  'superlative-olive-oil': { key: 'party.mode.superlativeOliveOil', full: 'Olive oil production' },
+  'superlative-honey': { key: 'party.mode.superlativeHoney', full: 'Honey production' },
+  'superlative-temperature': { key: 'party.mode.superlativeTemperature', full: 'Average temperature' },
+  'superlative-happiness': { key: 'party.mode.superlativeHappiness', full: 'Happiness score' },
+  'superlative-corruption': { key: 'party.mode.superlativeCorruption', full: 'Government integrity' },
+  'superlative-tourism': { key: 'party.mode.superlativeTourism', full: 'Tourist arrivals per capita' },
+  'superlative-electricity': { key: 'party.mode.superlativeElectricity', full: 'Electricity use per capita' },
+  'superlative-mcdonalds': { key: 'party.mode.superlativeMcdonalds', full: "McDonald's per million people" },
 };
 
 
