@@ -13,6 +13,8 @@ import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTal
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
+import { clausesFromPrompt, failingClause, filtersFor } from '../flags/partyQuestions/spotFlag.js';
+import { filterTitle, pillLabel } from '../flags/findFlag.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -68,6 +70,7 @@ const MODE_LABELS = {
   'flags-all': { key: 'party.mode.flagsAll', full: 'Flags: countries', shortKey: 'party.modeShort.flagsAll', short: 'Flags' },
   'flags-weird': { key: 'party.mode.flagsWeird', full: 'Weird flags', shortKey: 'party.modeShort.flagsWeird', short: 'Weird' },
   'map-outlines': { key: 'party.mode.mapOutlines', full: 'Map: outlines', shortKey: 'party.modeShort.mapOutlines', short: 'Maps' },
+  'spot-flag': { key: 'party.mode.spotFlag', full: 'Spot the flag', shortKey: 'party.modeShort.spotFlag', short: 'Spot' },
   'superlative-pop': { key: 'party.mode.superlativePop', full: 'Population' },
   'superlative-area': { key: 'party.mode.superlativeArea', full: 'Land area' },
   'superlative-density': { key: 'party.mode.superlativeDensity', full: 'Population density' },
@@ -171,6 +174,7 @@ const MODE_ICONS = {
   'flags-all': deckIconHtml('flags', { className: 'mode-thumb' }),
   'flags-weird': deckIconHtml('weird', { className: 'mode-thumb' }),
   'map-outlines': deckIconHtml('outlines', { className: 'mode-contour' }),
+  'spot-flag': deckIconHtml('spot', { className: 'mode-thumb' }),
 };
 
 /** Metric key (the flags/metrics registry) for a superlative question id. The
@@ -238,6 +242,12 @@ export function roundCardIconHtml(/** @type {string} */ modeId) {
       .replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
   }
   if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'roundcard-contour' });
+  // The magnifier is inline SVG on a 24x24 viewBox, so it needs the same `slice`
+  // treatment as the jolly roger above to fill the circle instead of letterboxing.
+  if (modeId === 'spot-flag') {
+    return deckIconHtml('spot', { className: 'roundcard-thumb' })
+      .replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
+  }
   const mode = MODE_BY_ID[modeId];
   const key = mode ? metricKeyForQuestion(mode.questionId) : null;
   return (key && METRIC_ICONS[key]) || '';
@@ -462,7 +472,11 @@ export function bootFlagParty() {
     window.matchMedia('(pointer: coarse)').matches;
   shareBtn.hidden = !isTouchDevice;
 
-  /** @type {Map<string, { code: string, name: string }>} */
+  /** Loaded countries by code. Declared as the full Country (which is what
+   *  `loadCountries` actually puts in here) rather than the `{ code, name }` this
+   *  used to claim: spot-the-flag's reveal reads `motifs` / `primaryColors` off
+   *  these to work out which clause each wrong flag missed.
+   *  @type {Map<string, import('../flags/group.js').Country>} */
   const byCode = new Map();
 
   // Metric values for each superlative question's reveal strip, keyed by questionId
@@ -1399,6 +1413,11 @@ export function bootFlagParty() {
     const isMap = q.questionId === 'mapPick';
     const superCfg = superlativeMetricByQuestionId(q.questionId);
     const isSuperlative = superCfg !== null;
+    const isSpot = q.questionId === 'spotFlag';
+    // Decoded once per render and reused by the prompt and the reveal strips.
+    // Null only when the spec names something this build can't label, which
+    // `canRenderQuestion` has already routed to a reload before we get here.
+    const spotClauses = isSpot ? clausesFromPrompt(q.prompt) : null;
     // Country-name questions (flag / map) show one prominent line, nothing else:
     // the tiles already say you're matching a flag or outline, so a "Which flag?"
     // cue was just extra reading. Superlative questions instead lead the criterion
@@ -1429,6 +1448,16 @@ export function bootFlagParty() {
       promptLead.innerHTML = (promptMetricKey && METRIC_ICONS[promptMetricKey]) || '';
       promptLead.hidden = !promptLead.innerHTML;
       promptTarget.textContent = t(label.key, label.fallback);
+    } else if (isSpot) {
+      // Spot-the-flag states its criteria instead of naming a target, and the
+      // SAME text stays up through the reveal: the criteria are what the answer
+      // has to be read against, so removing them at the moment the answer lands
+      // would take away the explanation just as it becomes useful.
+      //
+      // `filterTitle` is findFlag's own criteria line ("red · not green · star or
+      // moon"), including the Polish genitive for negated clauses. Reused rather
+      // than reworded so one criterion reads identically on every surface.
+      promptTarget.textContent = filterTitle(filtersFor(spotClauses || []), t);
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
       const country = byCode.get(targetCode);
@@ -1441,10 +1470,22 @@ export function bootFlagParty() {
     // population data actually loaded.
     const metricData = isSuperlative ? metricByQuestion[q.questionId] : null;
     const popStrip = (/** @type {string} */ code) => {
+      const c = byCode.get(code);
+      // Spot-the-flag's reveal names the clause each wrong flag missed ("not
+      // green"), reusing the superlative pop strip. Without it the mode reads as
+      // arbitrary even when it is provably fair: you are told you were wrong and
+      // never told what you failed to notice, which is the whole lesson of the
+      // round. The answer tile gets a bare name — it broke no rule.
+      if (isSpot && isReveal && spotClauses && c) {
+        const miss = failingClause(c, spotClauses);
+        return {
+          name: countryName(c),
+          value: miss ? pillLabel(miss.group, miss.value, miss.sign === 'exclude' ? 'include' : 'exclude', t) : '',
+        };
+      }
       if (!(isSuperlative && isReveal) || !metricData) return null;
       const v = metricData.values[code];
       if (v == null) return null;
-      const c = byCode.get(code);
       return { name: c ? countryName(c) : code, value: formatValue(v, metricData.format) };
     };
 

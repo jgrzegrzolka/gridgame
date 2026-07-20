@@ -412,6 +412,14 @@ export function veilProgress(deadlineMs, nowMs, totalMs, clearFrac) {
  */
 export function veilActive(tricky, questionId) {
   if (isMetricQuestion(questionId)) return false;
+  // - **never on a spot-the-flag question.** Its criteria are colours and
+  //   motifs, and the veil's whole job is to withhold exactly those. Veiled,
+  //   the round stops being "look carefully" and becomes "wait for the veil to
+  //   clear, then look" -- the clock spent on the interesting part instead.
+  //   Same principle as the metric exclusion above: hiding the flag tests the
+  //   wrong skill, it just fails in the opposite direction (there the flag is
+  //   incidental, here it is the entire question).
+  if (questionId === 'spotFlag') return false;
   return tricky === true;
 }
 

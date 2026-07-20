@@ -185,6 +185,7 @@ export const PARTY_MODES = [
   { id: 'flags-all', questionId: 'flagPick', poolId: 'sovereign', group: 'picture' },
   { id: 'flags-weird', questionId: 'flagPick', poolId: 'nonSovereign', group: 'picture' },
   { id: 'map-outlines', questionId: 'mapPick', poolId: 'sovereign', group: 'picture' },
+  { id: 'spot-flag', questionId: 'spotFlag', poolId: 'sovereign', group: 'picture' },
   { id: 'superlative-pop', questionId: 'superlative', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-area', questionId: 'superlative-area', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-density', questionId: 'superlative-density', poolId: 'sovereign', group: 'metric' },

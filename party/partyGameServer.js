@@ -27,6 +27,7 @@ import {
 import * as flagPick from '../flags/partyQuestions/flagPick.js';
 import * as mapPick from '../flags/partyQuestions/mapPick.js';
 import * as superlative from '../flags/partyQuestions/superlative.js';
+import * as spotFlag from '../flags/partyQuestions/spotFlag.js';
 
 /** @typedef {import('../flags/partyRoom.js').Room} Room */
 /** @typedef {import('../flags/partyRoom.js').Broadcast} Broadcast */
@@ -46,7 +47,7 @@ const POOLS = {
  * never drift from the plan's `questionId`. Adding a mode = one import + one entry.
  * @type {Record<string, { generate: Function, isCorrect: Function }>}
  */
-const QUESTIONS = Object.fromEntries([flagPick, mapPick, superlative, superlative.areaQuestion, superlative.densityQuestion, superlative.gdpQuestion, superlative.gdpPerCapitaQuestion, superlative.coffeeQuestion, superlative.wineQuestion, superlative.cocoaQuestion, superlative.bananaQuestion, superlative.appleQuestion, superlative.elevationQuestion, superlative.coastlineQuestion, superlative.forestQuestion, superlative.oilQuestion, superlative.riceQuestion, superlative.coalQuestion, superlative.sheepPerCapitaQuestion, superlative.cattlePerCapitaQuestion, superlative.beerPerCapitaQuestion, superlative.teaQuestion, superlative.sugarcaneQuestion, superlative.goldQuestion, superlative.alcoholPerCapitaQuestion, superlative.meatPerCapitaQuestion, superlative.bordersQuestion, superlative.oliveOilQuestion, superlative.honeyQuestion, superlative.temperatureQuestion, superlative.happinessQuestion, superlative.corruptionQuestion, superlative.tourismPerCapitaQuestion, superlative.electricityPerCapitaQuestion, superlative.mcdonaldsPerMillionQuestion, superlative.nobelQuestion, superlative.nobelPerCapitaQuestion, superlative.summerMedalsQuestion, superlative.summerMedalsPerCapitaQuestion, superlative.winterMedalsQuestion, superlative.winterMedalsPerCapitaQuestion].map((m) => [m.id, m]));
+const QUESTIONS = Object.fromEntries([flagPick, mapPick, spotFlag, superlative, superlative.areaQuestion, superlative.densityQuestion, superlative.gdpQuestion, superlative.gdpPerCapitaQuestion, superlative.coffeeQuestion, superlative.wineQuestion, superlative.cocoaQuestion, superlative.bananaQuestion, superlative.appleQuestion, superlative.elevationQuestion, superlative.coastlineQuestion, superlative.forestQuestion, superlative.oilQuestion, superlative.riceQuestion, superlative.coalQuestion, superlative.sheepPerCapitaQuestion, superlative.cattlePerCapitaQuestion, superlative.beerPerCapitaQuestion, superlative.teaQuestion, superlative.sugarcaneQuestion, superlative.goldQuestion, superlative.alcoholPerCapitaQuestion, superlative.meatPerCapitaQuestion, superlative.bordersQuestion, superlative.oliveOilQuestion, superlative.honeyQuestion, superlative.temperatureQuestion, superlative.happinessQuestion, superlative.corruptionQuestion, superlative.tourismPerCapitaQuestion, superlative.electricityPerCapitaQuestion, superlative.mcdonaldsPerMillionQuestion, superlative.nobelQuestion, superlative.nobelPerCapitaQuestion, superlative.summerMedalsQuestion, superlative.summerMedalsPerCapitaQuestion, superlative.winterMedalsQuestion, superlative.winterMedalsPerCapitaQuestion].map((m) => [m.id, m]));
 
 const TOTAL_QUESTIONS = totalQuestions(DEFAULT_PLAN);
 
