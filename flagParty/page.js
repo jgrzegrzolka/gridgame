@@ -16,7 +16,7 @@ import { barFractions } from '../flags/partyChart.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validatePicksPerPlayer, canVeilMode, representativeModeFor, PICKS_PER_PLAYER_OPTIONS, DEFAULT_PICKS_PER_PLAYER } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { buildAvatar, shareUrl } from '../common.js';
@@ -24,16 +24,20 @@ import { buildAvatar, shareUrl } from '../common.js';
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
 
 const NICKNAME_KEY = 'gridgame.nickname';
-// How many rounds each player picks (1-4). The game's length follows from it
-// and the seat count, so this is the only thing the host stores.
+// The host's chosen game length ('short' / 'medium' / 'long') — the only thing
+// the host stores, since everything else about a draft falls out of it.
 //
-// The host-built "Custom setup" door was retired: it stored a plan, a tricky
-// toggle and per-category reveal timing (`gridgame.party.{setup,plan,tricky,
-// reveal,mode}`). Draft is the only way a game starts now, so the plan comes
-// from the players' picks and the veil timing is a fixed constant
-// (DEFAULT_REVEAL). Those five keys are dead — left unread rather than migrated,
-// since nothing in the draft flow has a use for what they held.
-const PICKS_KEY = 'gridgame.party.picksPerPlayer';
+// Replaces `gridgame.party.picksPerPlayer`, which held a 1-4 pick count. Left
+// unread rather than migrated: the numbers do not map onto the three lengths
+// (picks 1 meant a different game at every table size, which is exactly what the
+// lengths fixed), so a returning host gets the medium default and re-picks once.
+//
+// The host-built "Custom setup" door was retired before that: it stored a plan, a
+// tricky toggle and per-category reveal timing (`gridgame.party.{setup,plan,
+// tricky,reveal,mode}`). Draft is the only way a game starts now, so the plan
+// comes from the players' picks and the veil timing is a fixed constant
+// (DEFAULT_REVEAL). Those five keys are dead for the same reason.
+const LENGTH_KEY = 'gridgame.party.gameLength';
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -240,6 +244,25 @@ export function roundCardIconHtml(/** @type {string} */ modeId) {
 }
 
 /**
+ * The glyph for a game length: one, two or three strokes, so the control reads
+ * as "longer" before the label is read. `currentColor` throughout, so the
+ * stylesheet owns the accent and the unselected step-back.
+ *
+ * Empty string for an unknown length — the caller renders an empty slot rather
+ * than a broken box, matching {@link roundCardIconHtml}.
+ *
+ * @param {string} length  one of GAME_LENGTHS
+ * @returns {string}
+ */
+export function lengthIconHtml(length) {
+  const rows = { short: [12], medium: [8, 16], long: [6, 12, 18] }[length];
+  if (!rows) return '';
+  return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    rows.map((y) => `<path d="M7 ${y}h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>`).join('') +
+    '</svg>';
+}
+
+/**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
  * mapping can be pinned by a test. **`modeShortLabel` currently has no production
  * caller** — its `t()` wrapper died with the custom-setup panel, and the round
@@ -385,9 +408,16 @@ export function bootFlagParty() {
   const roundCardQuestions = $('roundcard-questions');
   const roundCardPick = $('roundcard-pick');
   const draftLengthEl = $('draft-length');
+  const draftLengthGroup = $('draft-length-group');
   const draftLengthHint = $('draft-length-hint');
   const draftPickBtns = /** @type {HTMLButtonElement[]} */ (
     [...draftLengthEl.querySelectorAll('.dl-pick')]);
+  // One, two, three strokes. Painted here rather than sitting in the HTML so the
+  // markup stays the flat, translatable shell the rest of the page keeps.
+  for (const btn of draftPickBtns) {
+    const icon = btn.querySelector('.dl-ic');
+    if (icon) icon.innerHTML = lengthIconHtml(btn.dataset.length ?? '');
+  }
   const pickPill = $('pick-pill');
   const pickLead = $('pick-lead');
   const pickHand = $('pick-hand');
@@ -503,22 +533,22 @@ export function bootFlagParty() {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
 
-  // ---- draft length (host-only): how many rounds each player picks ----
-  // Length is expressed as picks-per-player, not a total: "each of you picks 2
-  // rounds" is something a host can reason about, where a bare "5" left them to
-  // work out what it bought. The total (`seats x picks + 2`, the bookends being
-  // the opening Flags round and the closing Decider) is shown underneath and
-  // moves as players join. Persisted per device; the server re-validates
-  // whatever we send.
-  let picksPerPlayer = loadPicks();
+  // ---- game length (host-only) ----
+  // The host chooses a LENGTH and the picks fall out, not the other way round.
+  // Picks-per-player was legible but it was not a length: `seats x picks + 2`
+  // meant one setting bought a 7-minute game at two seats and a 45-minute one at
+  // ten, and the answer moved under the host every time somebody joined. Now the
+  // round count comes off a table (`roundCountFor`) and only the pick share
+  // moves. Persisted per device; the server re-validates whatever we send.
+  let gameLength = loadLength();
 
-  function loadPicks() {
+  function loadLength() {
     try {
-      return validatePicksPerPlayer(Number(window.localStorage.getItem(PICKS_KEY)));
-    } catch { return DEFAULT_PICKS_PER_PLAYER; }
+      return validateGameLength(window.localStorage.getItem(LENGTH_KEY));
+    } catch { return DEFAULT_GAME_LENGTH; }
   }
-  function savePicks() {
-    try { window.localStorage.setItem(PICKS_KEY, String(picksPerPlayer)); } catch { /* private mode */ }
+  function saveLength() {
+    try { window.localStorage.setItem(LENGTH_KEY, gameLength); } catch { /* private mode */ }
   }
 
   /** Seats currently in the room — the other half of the length arithmetic. */
@@ -528,20 +558,54 @@ export function bootFlagParty() {
 
   /** Rounds a start would actually deal, given the seats present right now. */
   function effectiveRounds() {
-    return roundCountFor(seatCount(), picksPerPlayer);
+    return roundCountFor(seatCount(), gameLength);
   }
 
-  /** Paint the picks row: which option is on, and what it currently buys. */
+  /**
+   * The hint under the control: how many rounds, and how the picks land. Three
+   * shapes, because the pick share genuinely has three cases — see
+   * {@link pickShareFor}. Up to six seats it always divides evenly, so the common
+   * reading is the flat "you each pick N".
+   */
+  function lengthHintText() {
+    const rounds = effectiveRounds();
+    const seats = seatCount();
+    const { each, extra } = pickShareFor(rounds, seats);
+    const roundsText = fmt(t('party.lengthRounds', '{r} rounds'), { r: rounds });
+    // A host alone in a fresh room is the state this line is seen in most, and
+    // "you each pick 10" is nonsense addressed to one person. The share only
+    // means anything once there is somebody to share with.
+    if (seats < 2) return roundsText;
+    if (each === 0) {
+      // A big room on a short game: fewer rotation slots than seats.
+      return `${roundsText} · ${fmt(t('party.lengthSomePick', '{n} of you pick a round'), { n: extra })}`;
+    }
+    const share = extra === 0
+      ? fmt(t('party.lengthEachPicks', 'you each pick {n}'), { n: each })
+      : fmt(t('party.lengthEachPicksPlus', 'you each pick {n}, {x} pick one more'), { n: each, x: extra });
+    return `${roundsText} · ${share}`;
+  }
+
+  /** Paint the length control: which option is checked, and what it buys. */
   function syncDraftLength() {
     for (const btn of draftPickBtns) {
-      const on = Number(btn.dataset.picks) === picksPerPlayer;
-      btn.classList.toggle('on', on);
-      btn.setAttribute('aria-pressed', String(on));
+      const on = btn.dataset.length === gameLength;
+      btn.setAttribute('aria-checked', String(on));
+      // Roving tabindex: the group is one tab stop and the arrow keys move
+      // within it, which is what `role="radiogroup"` promises.
+      btn.tabIndex = on ? 0 : -1;
     }
-    const rounds = effectiveRounds();
-    draftLengthHint.textContent = fmt(t('party.draftLengthTotal', '{r} rounds, {q} questions'), {
-      r: rounds, q: rounds * ROUND_QUESTIONS,
-    });
+    draftLengthHint.textContent = lengthHintText();
+  }
+
+  /** Choose a length, optionally pulling focus with it (keyboard navigation). */
+  function setGameLength(next, focus) {
+    gameLength = validateGameLength(next);
+    saveLength();
+    syncDraftLength();
+    if (!focus) return;
+    const active = draftPickBtns.find((b) => b.dataset.length === gameLength);
+    if (active) active.focus();
   }
 
   // Thin `t()` wrappers over the pure resolvers (modeFullLabel / modeShortLabel
@@ -1919,18 +1983,27 @@ export function bootFlagParty() {
   });
 
   for (const btn of draftPickBtns) {
-    btn.addEventListener('click', () => {
-      picksPerPlayer = validatePicksPerPlayer(Number(btn.dataset.picks));
-      savePicks();
-      syncDraftLength();
-    });
+    btn.addEventListener('click', () => setGameLength(btn.dataset.length, false));
   }
+  // Arrow keys move the selection within the group and wrap. Home/End jump to the
+  // ends. This is the behaviour a radiogroup is expected to have, and the reason
+  // the control is one tab stop rather than three.
+  draftLengthGroup.addEventListener('keydown', (e) => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+    if (!keys.includes(e.key)) return;
+    e.preventDefault();
+    const i = GAME_LENGTHS.indexOf(gameLength);
+    if (e.key === 'Home') return setGameLength(GAME_LENGTHS[0], true);
+    if (e.key === 'End') return setGameLength(GAME_LENGTHS[GAME_LENGTHS.length - 1], true);
+    const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+    setGameLength(GAME_LENGTHS[(i + step + GAME_LENGTHS.length) % GAME_LENGTHS.length], true);
+  });
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
     // plan (the server builds the opening Flags round and sizes the game from the
     // seat count) and no reveal config (the veil clear timing is a fixed constant
-    // now — see DEFAULT_REVEAL). The only host input is how many rounds each
-    // player picks, so `picks` is the whole message.
+    // now — see DEFAULT_REVEAL). The only host input is the game length, so
+    // `length` is the whole message.
     //
     // A `draft: true` flag rode along until the server that needed it was gone.
     // It selected the draft branch on the pre-#974 server, which is no longer
@@ -1939,7 +2012,7 @@ export function bootFlagParty() {
     // is ever added the same way: PartyKit and the SWA site deploy on separate
     // workflows, so the server has to understand a field before the client sends
     // it, and has to stop needing one before the client drops it.
-    send({ type: 'start', picks: picksPerPlayer });
+    send({ type: 'start', length: gameLength });
   });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
   questionToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));

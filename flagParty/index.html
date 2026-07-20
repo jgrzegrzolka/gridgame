@@ -90,18 +90,28 @@
         <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
         <div class="players" id="players"></div>
         <!-- Host-only: game length. Draft is the only mode, so this is the whole
-             setup — how many rounds each player picks. -->
+             setup — how long the game runs. A `radiogroup`, not a row of
+             `aria-pressed` toggle buttons: exactly one of the three applies, and
+             the toggle-button pattern announces each as an independent on/off
+             while giving no arrow-key roving. The JS owns `tabindex` and
+             `aria-checked`. -->
         <div class="draft-length" id="draft-length" hidden>
-          <span class="dl-text">
-            <span class="dl-title" data-i18n="party.draftLength">Rounds each player picks</span>
-            <span class="dl-hint" id="draft-length-hint"></span>
+          <span class="dl-title" id="dl-title" data-i18n="party.gameLength">Game length</span>
+          <span class="dl-step" role="radiogroup" id="draft-length-group" aria-labelledby="dl-title">
+            <button type="button" class="dl-pick" role="radio" data-length="short" aria-checked="false" tabindex="-1">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.lengthShort">Short</span>
+            </button>
+            <button type="button" class="dl-pick" role="radio" data-length="medium" aria-checked="true" tabindex="0">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.lengthMedium">Medium</span>
+            </button>
+            <button type="button" class="dl-pick" role="radio" data-length="long" aria-checked="false" tabindex="-1">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.lengthLong">Long</span>
+            </button>
           </span>
-          <span class="dl-step" role="group" aria-label="Rounds each player picks">
-            <button type="button" class="dl-pick" data-picks="1" aria-pressed="true">1</button>
-            <button type="button" class="dl-pick" data-picks="2" aria-pressed="false">2</button>
-            <button type="button" class="dl-pick" data-picks="3" aria-pressed="false">3</button>
-            <button type="button" class="dl-pick" data-picks="4" aria-pressed="false">4</button>
-          </span>
+          <span class="dl-hint" id="draft-length-hint"></span>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">

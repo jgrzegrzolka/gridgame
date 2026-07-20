@@ -578,40 +578,69 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    door is retired. `display:flex` outweighs the UA `[hidden]`, so the hidden
    state has to be pinned explicitly or a guest in the lobby would see the
    host-only length row. Same trap as `.party section[hidden]`. */
+/* ---- lobby: game length (host only) ----
+   A segmented control: one bordered container, the three options flush against
+   each other with hairline dividers, no inner padding or gaps. The fill is
+   INVERTED from the usual selected idiom — the chosen segment is the LIGHT one
+   (surface) and the two still available are darker (hover). Selecting by taking
+   colour away rather than adding it keeps the accent free for the start button,
+   which should stay the loudest thing in the lobby. */
 .draft-length {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 12px;
-  background: var(--surface-color);
+  flex-direction: column;
+  gap: 6px;
 }
 .draft-length[hidden] { display: none; }
-.dl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.dl-title { font-size: 14px; font-weight: 600; color: var(--primary-color); }
+.dl-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-color);
+}
 .dl-hint { font-size: 12.5px; color: var(--muted-color); line-height: 1.4; }
-.dl-step { display: flex; align-items: center; gap: 4px; flex: none; }
+.dl-step {
+  display: flex;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+  /* Clips the segment fills to the container's corners; without it the first and
+     last segment paint square corners over the rounded border. */
+  overflow: hidden;
+}
 .dl-pick {
   appearance: none;
-  width: 34px;
-  height: 34px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   box-sizing: border-box;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 8px;
-  background: var(--surface-color);
-  color: var(--primary-color);
+  border: 0;
+  padding: 9px 4px;
+  background: var(--hover-color);
+  color: var(--muted-color);
   font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
   cursor: pointer;
-  font-variant-numeric: tabular-nums;
+  transition: background 0.15s, color 0.15s;
 }
-.dl-pick:hover:not(.on) { background: var(--hover-color); }
-/* Same selected idiom as the mode doors above, so "this one is chosen" reads
-   identically for both controls in the lobby. */
-.dl-pick.on { border-color: var(--secondary-color); background: var(--selected-color); }
+/* The divider is a real left border on every segment but the first, so it sits
+   exactly on the seam rather than being faked with a gap. */
+.dl-pick + .dl-pick { border-left: 1px solid var(--muted-soft-color); }
+.dl-pick:hover[aria-checked='false'] { background: var(--muted-soft-color); }
+.dl-pick[aria-checked='true'] { background: var(--surface-color); color: var(--primary-color); }
+.dl-pick:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+.dl-lab { font-size: 11px; font-weight: 600; }
+/* One, two or three strokes — the count IS the length, so the control says
+   "longer" before the label is read. Pink throughout; the two you have not
+   chosen step back rather than changing colour, so the trio still reads as one
+   family. */
+.dl-ic { display: block; width: 20px; height: 20px; color: var(--secondary-color); }
+.dl-ic svg { display: block; width: 100%; height: 100%; }
+.dl-pick[aria-checked='false'] .dl-ic { opacity: 0.45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-pick { transition: none; }
+}
 
 /* ---- draft: the pick screen (no countdown — picking isn't a race) ---- */
 .pick-hand { display: flex; flex-direction: column; gap: 9px; }

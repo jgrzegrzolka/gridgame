@@ -6,6 +6,7 @@ import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
 import { METRIC_FAMILIES } from '../flags/partyDraft.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
+import { GAME_LENGTHS } from '../flags/partyDraft.js';
 import {
   modeShortLabel,
   modeFullLabel,
@@ -14,6 +15,7 @@ import {
   modeIconHtml,
   modeHue,
   roundCardIconHtml,
+  lengthIconHtml,
 } from './page.js';
 
 // Every id that can reach a label lookup: the picture modes, every metric mode
@@ -262,6 +264,22 @@ test('the round card crops its inline-svg artwork to the circle', () => {
   // The rectangle is still correct everywhere the icon is identified rather than
   // used as the card's hero, so the shared helper must NOT have been changed.
   assert.doesNotMatch(deckIconHtml('weird'), /preserveAspectRatio/);
+});
+
+test('every game length draws its own number of strokes', () => {
+  // The stroke count IS the length, so the control reads as "longer" before the
+  // label does. One / two / three, and never the same picture twice.
+  const counts = GAME_LENGTHS.map((l) => (lengthIconHtml(l).match(/<path/g) || []).length);
+  assert.deepEqual(counts, [1, 2, 3], 'short/medium/long draw 1/2/3 strokes');
+  // currentColor throughout, so the stylesheet owns the accent and the
+  // step-back on the two that are not chosen.
+  for (const l of GAME_LENGTHS) assert.match(lengthIconHtml(l), /currentColor/);
+});
+
+test('an unknown length degrades to empty rather than a broken box', () => {
+  for (const bad of ['huge', '', 'Short', undefined]) {
+    assert.equal(lengthIconHtml(/** @type {any} */ (bad)), '', String(bad));
+  }
 });
 
 test('an unknown card id degrades to empty rather than throwing', () => {
