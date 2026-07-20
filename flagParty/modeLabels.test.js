@@ -16,6 +16,7 @@ import {
   modeHue,
   roundCardIconHtml,
   lengthIconHtml,
+  roundPipStates,
 } from './page.js';
 
 // Every id that can reach a label lookup: the picture modes, every metric mode
@@ -274,6 +275,34 @@ test('every game length draws its own number of strokes', () => {
   // currentColor throughout, so the stylesheet owns the accent and the
   // step-back on the two that are not chosen.
   for (const l of GAME_LENGTHS) assert.match(lengthIconHtml(l), /currentColor/);
+});
+
+test('round pips: one per round, marking played / current / to come', () => {
+  assert.deepEqual(roundPipStates(1, 6), ['now', '', '', '', '', '']);
+  assert.deepEqual(roundPipStates(3, 6), ['done', 'done', 'now', '', '', '']);
+  assert.deepEqual(roundPipStates(6, 6), ['done', 'done', 'done', 'done', 'done', 'now']);
+});
+
+test('round pips: exactly one is current, and the count matches the game', () => {
+  // The row is the whole "where are we" signal now that the card no longer says
+  // "Round 3 of 6" in words, so both properties are load-bearing.
+  for (const total of [4, 6, 10, 20]) {
+    for (let r = 1; r <= total; r++) {
+      const pips = roundPipStates(r, total);
+      assert.equal(pips.length, total, `${r}/${total} length`);
+      assert.equal(pips.filter((p) => p === 'now').length, 1, `${r}/${total} one current`);
+      assert.equal(pips.filter((p) => p === 'done').length, r - 1, `${r}/${total} played`);
+    }
+  }
+});
+
+test('round pips: a junk round number never paints a current dot', () => {
+  // Unreachable in play; this is the guard. Nothing should throw or mark two.
+  for (const bad of [0, -3, NaN, 99]) {
+    const pips = roundPipStates(/** @type {any} */ (bad), 6);
+    assert.equal(pips.length, 6);
+    assert.ok(pips.filter((p) => p === 'now').length <= 1, String(bad));
+  }
 });
 
 test('an unknown length degrades to empty rather than a broken box', () => {

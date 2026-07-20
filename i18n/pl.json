@@ -642,7 +642,6 @@
       "superlativeWinterMedals": "Medale zimowe",
       "superlativeWinterMedalsPc": "Zimowe na mieszkańca"
     },
-    "roundQuestion": "Runda {b}/{rounds} · Pytanie {n}/{total}",
     "afterRound": "Po rundzie {n} z {total}",
     "roundMvp": "Najlepszy w rundzie",
     "standings": "Klasyfikacja",
@@ -663,7 +662,6 @@
     "aPlayer": "Gracz",
     "roundPick": "wybór: {name}",
     "roundCardCount": "Runda {n} z {total}",
-    "roundCardQuestions": "Pytań: {n}",
     "decider": "Runda decydująca",
     "yourPickDecider": "Twój wybór, i to on rozstrzyga grę",
     "isChoosingDecider": "{name} wybiera rundę decydującą",

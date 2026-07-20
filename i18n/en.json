@@ -642,7 +642,6 @@
       "superlativeWinterMedals": "Winter medals",
       "superlativeWinterMedalsPc": "Winter per person"
     },
-    "roundQuestion": "Round {b}/{rounds} · Question {n}/{total}",
     "afterRound": "After round {n} of {total}",
     "roundMvp": "Best of the round",
     "standings": "Standings",
@@ -663,7 +662,6 @@
     "aPlayer": "A player",
     "roundPick": "{name}'s pick",
     "roundCardCount": "Round {n} of {total}",
-    "roundCardQuestions": "{n} questions",
     "decider": "The Decider",
     "yourPickDecider": "Your pick, and it decides the game",
     "isChoosingDecider": "{name} chooses The Decider",
