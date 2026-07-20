@@ -662,7 +662,6 @@
     "aPlayer": "Gracz",
     "roundPick": "wybór: {name}",
     "roundCardCount": "Runda {n} z {total}",
-    "roundCardQuestions": "Pytań: {n}",
     "decider": "Runda decydująca",
     "yourPickDecider": "Twój wybór, i to on rozstrzyga grę",
     "isChoosingDecider": "{name} wybiera rundę decydującą",

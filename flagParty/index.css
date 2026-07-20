@@ -138,13 +138,6 @@
   padding: 4px 12px;
   border-radius: 999px;
 }
-/* The pill only has something to say on the first question of a drafted round
-   ("Zosia's pick"). It holds its slot the rest of the time rather than being
-   removed, because the alternative is the whole question — prompt, flags, the
-   lot — jumping up between question 1 and question 2 of every round. The JS
-   parks a non-breaking space inside it so the reserved height is the pill's own,
-   not a number guessed here. */
-.question-pill.is-blank { visibility: hidden; }
 /* Question countdown: a shrinking bar everyone sees. The host's copy is what
    actually drives question -> reveal and reveal -> next (flags/partyTiming.js);
    the rest are cosmetic so the whole room feels the clock. */
@@ -158,8 +151,8 @@
 /* Every other "no bar right now" — the reveal, the pick — goes through this
    instead, which keeps the row's height. `hidden` was removing it from layout,
    so answering a question made the bar vanish and pulled the prompt, the flags
-   and everything under them upward. Same reason as `.question-pill.is-blank`:
-   the countdown is intermittent, its slot should not be. */
+   and everything under them upward. The countdown is intermittent; its slot
+   should not be. */
 .question-timer.is-idle { visibility: hidden; }
 .question-timer-track {
   flex: 1;
@@ -763,7 +756,23 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   width: 100%;
   max-width: 320px;
 }
+/* The count line carries one of two things. The Decider gets words (it is the
+   one round whose name says more than its position); every other round gets a
+   dot per round, which reads at a glance and lets the card open on its artwork
+   instead of a sentence. `.is-pips` switches between the two. */
 .roundcard-count { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
+.roundcard-count.is-pips { display: flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.roundcard-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted-soft-color);
+  flex: none;
+}
+/* Rounds already played read as muted, the one being announced as the accent.
+   Same three-state language as the draft's own pick states. */
+.roundcard-pip.done { background: var(--muted-color); }
+.roundcard-pip.now { background: var(--secondary-color); }
 /* The round-start ring: the beat's countdown, drawn around the mode icon in the
    question bar's language (pink over the muted-soft track) so "ring empty" reads
    as "go" without a 3-2-1 screen. `pathLength=100` makes the drain plain percent,
@@ -794,7 +803,6 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .roundcard-ic .roundcard-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .roundcard-contour { width: 64px; height: 64px; object-fit: contain; }
 .roundcard-name { font-size: 22px; font-weight: 700; color: var(--primary-color); line-height: 1.2; }
-.roundcard-questions { font-size: 14px; color: var(--muted-color); }
 .roundcard-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--primary-color); }
 .roundcard-pick .avatar { width: 26px; height: 26px; border-radius: 6px; }
 /* The card has no entrance animation of its own: its section rises in through

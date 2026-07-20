@@ -128,7 +128,11 @@
 
       <!-- Question (question + reveal share this) -->
       <section class="pt-question" id="pt-question" hidden>
-        <div class="question-pill" id="question-pill"></div>
+        <!-- No pill here. It carried "Round 1/6 · Question 1/30" (a number that
+             said the show is long, not where you are) and "Zosia's pick" — which
+             the round card already shows, with an avatar, in the beat right
+             before this question. `.question-pill` itself lives on: the pick and
+             break screens below still wear it. -->
         <div class="question-timer" id="question-timer" data-mode="question" hidden>
           <div class="question-timer-track"><div class="question-timer-fill" id="question-timer-fill"></div></div>
           <div class="question-timer-label" id="question-timer-label"></div>
@@ -159,7 +163,6 @@
             <span class="roundcard-ic" id="roundcard-ic"></span>
           </span>
           <span class="roundcard-name" id="roundcard-name"></span>
-          <span class="roundcard-questions" id="roundcard-questions"></span>
           <span class="roundcard-pick" id="roundcard-pick" hidden></span>
         </div>
       </section>

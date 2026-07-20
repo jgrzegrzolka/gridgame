@@ -244,6 +244,28 @@ export function roundCardIconHtml(/** @type {string} */ modeId) {
 }
 
 /**
+ * The state of each dot on the round card's progress row: `'done'` for rounds
+ * already played, `'now'` for the one being announced, `''` for the rest.
+ *
+ * Pure so the arithmetic is pinned rather than eyeballed through a game — the
+ * card only shows for {@link ROUND_INTRO_SECONDS} at a round boundary, which is
+ * an expensive place to notice an off-by-one.
+ *
+ * @param {number} roundNum  1-based round being announced
+ * @param {number} totalRounds
+ * @returns {Array<'done' | 'now' | ''>}
+ */
+export function roundPipStates(roundNum, totalRounds) {
+  const total = Number.isFinite(totalRounds) ? Math.max(0, Math.floor(totalRounds)) : 0;
+  const now = Number.isFinite(roundNum) ? Math.floor(roundNum) : 0;
+  return Array.from({ length: total }, (_, i) => {
+    const n = i + 1;
+    if (n === now) return 'now';
+    return n < now ? 'done' : '';
+  });
+}
+
+/**
  * The glyph for a game length: one, two or three strokes, so the control reads
  * as "longer" before the label is read. `currentColor` throughout, so the
  * stylesheet owns the accent and the unselected step-back.
@@ -386,7 +408,6 @@ export function bootFlagParty() {
   const playersEl = $('players');
   const startBtn = /** @type {HTMLButtonElement} */ ($('start-game'));
   const waitEl = $('lobby-wait');
-  const questionPill = $('question-pill');
   const timerEl = $('question-timer');
   const timerFill = $('question-timer-fill');
   const timerLabel = $('question-timer-label');
@@ -405,7 +426,6 @@ export function bootFlagParty() {
   const roundCardIc = $('roundcard-ic');
   const roundCardRing = $('roundcard-ring-fill');
   const roundCardName = $('roundcard-name');
-  const roundCardQuestions = $('roundcard-questions');
   const roundCardPick = $('roundcard-pick');
   const draftLengthEl = $('draft-length');
   const draftLengthGroup = $('draft-length-group');
@@ -841,8 +861,6 @@ export function bootFlagParty() {
    *  build (cached HTML, offline). Show a plain notice in the question frame rather
    *  than looping the reload or rendering the broken question. */
   function renderUpdateNotice() {
-    questionPill.textContent = '';
-    questionPill.classList.remove('is-blank');
     // The notice replaces the whole question frame, so here the bar really does
     // go — there is no layout underneath it left to preserve.
     timerEl.hidden = true;
@@ -1156,15 +1174,6 @@ export function bootFlagParty() {
     // chose this round. That appears on the first question of a drafted round
     // and nowhere else, so the pill is usually absent entirely rather than
     // present-and-empty (an empty pill still paints its border and padding).
-    const picker = state.lastPick
-      ? state.roster.find((r) => r.playerId === state.lastPick?.picker)
-      : null;
-    // A non-breaking space when there is nothing to say, so the pill keeps its
-    // own height and question 2 of a round does not sit higher than question 1.
-    questionPill.textContent = picker
-      ? fmt(t('party.roundPick', "{name}'s pick"), { name: picker.nickname })
-      : ' ';
-    questionPill.classList.toggle('is-blank', !picker);
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.questionId === 'mapPick';
     const superCfg = superlativeMetricByQuestionId(q.questionId);
@@ -1564,9 +1573,27 @@ export function bootFlagParty() {
     // last. Derived from the question alone (the same rule that doubles its
     // points), so a client that joined mid-game still announces it correctly.
     const isFinal = isFinalRound(state.questionIndex, state.totalQuestions);
-    roundCardCount.textContent = isFinal
-      ? `🏁 ${t('party.decider', 'The Decider')}`
-      : fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds });
+    // Dots, not "Round 3 of 6": the shape of the game reads at a glance and the
+    // card opens on its artwork instead of a sentence. The Decider keeps its
+    // words — it is the one round whose name carries more than its position.
+    //
+    // The dots are decoration to a screen reader, so the sentence they replace
+    // rides along as the container's label. That is why `party.roundCardCount`
+    // is still here despite nothing rendering it as text.
+    roundCardCount.textContent = '';
+    roundCardCount.classList.toggle('is-pips', !isFinal);
+    if (isFinal) {
+      roundCardCount.removeAttribute('aria-label');
+      roundCardCount.textContent = `🏁 ${t('party.decider', 'The Decider')}`;
+    } else {
+      roundCardCount.setAttribute('aria-label',
+        fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds }));
+      for (const state of roundPipStates(roundNum, totalRounds)) {
+        const pip = el('span', 'roundcard-pip' + (state ? ` ${state}` : ''));
+        pip.setAttribute('aria-hidden', 'true');
+        roundCardCount.appendChild(pip);
+      }
+    }
 
     const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined);
     if (modeId) {
@@ -1582,10 +1609,8 @@ export function bootFlagParty() {
       roundCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
     }
 
-    roundCardQuestions.textContent = fmt(t('party.roundCardQuestions', '{n} questions'), { n: ROUND_QUESTIONS });
-
-    // Draft: name who chose this round (the big-card version of the question pill's
-    // "Zosia's pick"). Absent on a custom round (no picker).
+    // Draft: name who chose this round. Now the only place it is said — the
+    // question screen's pill used to repeat it moments later.
     roundCardPick.innerHTML = '';
     const pickSeat = state.lastPick ? state.roster.find((r) => r.playerId === state.lastPick?.picker) : null;
     roundCardPick.hidden = !pickSeat;
@@ -1593,8 +1618,6 @@ export function bootFlagParty() {
       roundCardPick.appendChild(buildAvatar(pickSeat.playerId));
       roundCardPick.appendChild(el('span', 'roundcard-pick-name', fmt(t('party.roundPick', "{name}'s pick"), { name: pickSeat.nickname })));
     }
-
-    // The Decider scores double — announce the stakes under the picker's name.
   }
 
   /** The between-rounds standings break: the round's MVP, then the full board
