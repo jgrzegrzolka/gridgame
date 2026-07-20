@@ -138,15 +138,29 @@
   padding: 4px 12px;
   border-radius: 999px;
 }
+/* The pill only has something to say on the first question of a drafted round
+   ("Zosia's pick"). It holds its slot the rest of the time rather than being
+   removed, because the alternative is the whole question — prompt, flags, the
+   lot — jumping up between question 1 and question 2 of every round. The JS
+   parks a non-breaking space inside it so the reserved height is the pill's own,
+   not a number guessed here. */
+.question-pill.is-blank { visibility: hidden; }
 /* Question countdown: a shrinking bar everyone sees. The host's copy is what
    actually drives question -> reveal and reveal -> next (flags/partyTiming.js);
    the rest are cosmetic so the whole room feels the clock. */
 .question-timer { display: flex; align-items: center; gap: 10px; }
 /* `display:flex` outweighs the UA `[hidden]`, so spell out the hide — otherwise
-   `timerEl.hidden = true` (set for every non-question phase) wouldn't take, and
-   the stale countdown bar would leak into the reveal, which is meant to show no
-   timer at all. Same trap as `.party section[hidden]`. */
+   `timerEl.hidden = true` wouldn't take, and the stale countdown bar would leak
+   into the reveal, which is meant to show no timer at all. Same trap as
+   `.party section[hidden]`. Only the update notice uses this now: it replaces the
+   whole question frame, so there is no layout to preserve. */
 .question-timer[hidden] { display: none; }
+/* Every other "no bar right now" — the reveal, the pick — goes through this
+   instead, which keeps the row's height. `hidden` was removing it from layout,
+   so answering a question made the bar vanish and pulled the prompt, the flags
+   and everything under them upward. Same reason as `.question-pill.is-blank`:
+   the countdown is intermittent, its slot should not be. */
+.question-timer.is-idle { visibility: hidden; }
 .question-timer-track {
   flex: 1;
   height: 6px;

@@ -704,7 +704,8 @@ export function bootFlagParty() {
   function stopClock() {
     if (clockInterval) { window.clearInterval(clockInterval); clockInterval = 0; }
     clockToken = null;
-    timerEl.hidden = true;
+    // Idle, not hidden: the bar keeps its slot so nothing below it moves.
+    timerEl.classList.add('is-idle');
   }
 
   // ---- question-phase reveal animation (tricky veil + world-facts names) ----
@@ -790,8 +791,12 @@ export function bootFlagParty() {
     clockTotalMs = secs * 1000;
     clockDeadline = Date.now() + clockTotalMs;
     // Only the question phase shows the question bar. The reveal and the pick are
-    // bar-less (the reveal is sub-second; the pick shouldn't feel timed).
-    timerEl.hidden = mode !== 'question';
+    // bar-less (the reveal is sub-second; the pick shouldn't feel timed) — but
+    // bar-less by going invisible, not by leaving the layout, so answering does
+    // not yank the prompt and the flags upward. `hidden` is cleared here in case
+    // the update notice set it.
+    timerEl.hidden = false;
+    timerEl.classList.toggle('is-idle', mode !== 'question');
     timerEl.setAttribute('data-mode', mode);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
     tickClock();
@@ -837,6 +842,9 @@ export function bootFlagParty() {
    *  than looping the reload or rendering the broken question. */
   function renderUpdateNotice() {
     questionPill.textContent = '';
+    questionPill.classList.remove('is-blank');
+    // The notice replaces the whole question frame, so here the bar really does
+    // go — there is no layout underneath it left to preserve.
     timerEl.hidden = true;
     promptLead.hidden = true; promptLead.textContent = '';
     promptTarget.textContent = t('party.updateNeeded', 'A new version is available. Refresh the page to keep playing.');
@@ -1148,14 +1156,15 @@ export function bootFlagParty() {
     // chose this round. That appears on the first question of a drafted round
     // and nowhere else, so the pill is usually absent entirely rather than
     // present-and-empty (an empty pill still paints its border and padding).
-    questionPill.textContent = '';
     const picker = state.lastPick
       ? state.roster.find((r) => r.playerId === state.lastPick?.picker)
       : null;
-    if (picker) {
-      questionPill.textContent = fmt(t('party.roundPick', "{name}'s pick"), { name: picker.nickname });
-    }
-    questionPill.hidden = !picker;
+    // A non-breaking space when there is nothing to say, so the pill keeps its
+    // own height and question 2 of a round does not sit higher than question 1.
+    questionPill.textContent = picker
+      ? fmt(t('party.roundPick', "{name}'s pick"), { name: picker.nickname })
+      : ' ';
+    questionPill.classList.toggle('is-blank', !picker);
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.questionId === 'mapPick';
     const superCfg = superlativeMetricByQuestionId(q.questionId);
