@@ -18,6 +18,7 @@ import {
   pendingPickAfterReveal,
   applyEnterPicking,
   applyRepick,
+  applySetLength,
   applyPick,
   serializeRoom,
   deserializeRoom,
@@ -301,11 +302,23 @@ export default class PartyGameServer {
           // per-round choice the picker arms (`segment.veil`), not a game-wide
           // host flag, so start always applies false and lets the pick set it.
           // Reveal timing is the fixed DEFAULT_REVEAL constant.
-          const targetRounds = roundCountFor(this.room.present.size, validateGameLength(parsed.length));
+          // The length is room state now, set from the lobby and seen by every
+          // player. `parsed.length` is still honoured as a fallback for one
+          // deploy cycle: PartyKit and the SWA site ship on separate workflows,
+          // so a client that predates `setLength` can still reach this server and
+          // would otherwise silently get a medium game whatever it chose.
+          const length = validateGameLength(this.room.length ?? parsed.length);
+          const targetRounds = roundCountFor(this.room.present.size, length);
           const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
           this.usedModes.add(OPENING_MODE_ID);
           const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, DEFAULT_REVEAL);
           result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, false, DEFAULT_REVEAL, { draft: true, targetRounds });
+          break;
+        }
+        case 'setLength': {
+          // Validated in the reducer (which also owns the host and phase
+          // guards), so the raw value goes straight through.
+          result = applySetLength(this.room, playerId, parsed.length);
           break;
         }
         case 'buzz': {

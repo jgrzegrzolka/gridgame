@@ -22,6 +22,9 @@
  * @property {number} questionIndex
  * @property {boolean} tricky  host's tricky-mode choice, learned from the server;
  *   when true the page veils each question tile and clears it over the clock.
+ * @property {string} length  the host's game-length choice, learned from the
+ *   server. Every seat renders it in the lobby — the host as a control, everyone
+ *   else read-only — so a guest can see what they are in for before it starts.
  * @property {PublicQuestion | null} question
  * @property {number} buzzedCount
  * @property {number} seatCount
@@ -51,6 +54,8 @@
  * @typedef {{ type: 'close' }} Effect
  */
 
+import { DEFAULT_GAME_LENGTH } from './partyDraft.js';
+
 /** @returns {PartyClientState} */
 export function initialPartyClientState() {
   return {
@@ -61,6 +66,7 @@ export function initialPartyClientState() {
     totalQuestions: 0,
     questionIndex: 0,
     tricky: false,
+    length: DEFAULT_GAME_LENGTH,
     question: null,
     buzzedCount: 0,
     seatCount: 0,
@@ -117,6 +123,10 @@ export function reducePartyMessage(state, message) {
           totalQuestions: message.totalQuestions ?? state.totalQuestions,
           questionIndex: message.questionIndex ?? 0,
           tricky: message.tricky ?? state.tricky,
+          // `?? state.length` rather than a default: an older server omits the
+          // field entirely, and falling back to the default would stamp 'medium'
+          // over whatever the host had already told us.
+          length: message.length ?? state.length,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
           // A reconnect mid-pick resumes the draft turn (picker + hand ride the
@@ -146,6 +156,14 @@ export function reducePartyMessage(state, message) {
         effects: [],
       };
     }
+    case 'settings': {
+      // The host changed a lobby setting. Only `length` today, and it is the
+      // only room state that moves while nobody is playing.
+      return {
+        state: { ...state, length: message.length ?? state.length },
+        effects: [],
+      };
+    }
     case 'lobby': {
       // Sent on Play again: back to the lobby with a clean slate.
       return {
@@ -153,6 +171,7 @@ export function reducePartyMessage(state, message) {
           ...state,
           phase: 'lobby',
           roster: message.roster ?? state.roster,
+          length: message.length ?? state.length,
           isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
           question: null,
           reveal: null,

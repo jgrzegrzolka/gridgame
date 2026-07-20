@@ -1,5 +1,6 @@
 import { scoreQuestionDetailed } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
+import { DEFAULT_GAME_LENGTH, validateGameLength } from './partyDraft.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -43,6 +44,12 @@ import { isRoundBoundary, isFinalRound } from './partyPlan.js';
  *   `DEFAULT_PLAN`. The room only stores it (so it survives a durable-object
  *   eviction mid-game and the server can generate the right question type); the
  *   room never reads it.
+ * @property {string | null} length  the host's game-length choice ('short' /
+ *   'medium' / 'long'), the one setting shared during the lobby rather than
+ *   riding `start`. Every player renders it — guests read-only — so a joiner sees
+ *   what they are signing up for. **null means no client has ever set it**, which
+ *   is how a room hosted by a pre-`setLength` build looks; the server reads that
+ *   as permission to size the game from the start message instead.
  * @property {number} questionIndex  0-based index of the current question.
  * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
  *   veil each tile (grey + blur + panel wipe) and clear it over the question
@@ -111,6 +118,20 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     present: new Set(),
     totalQuestions,
     plan,
+    // The host's game-length choice, and the room's ONLY lobby-phase setting.
+    // It lives here rather than on the host's device because every player sees
+    // it: a guest reads it (read-only) while deciding whether to stay for a Long
+    // game. Everything else the host once configured — the plan, tricky, reveal —
+    // rode on `start` and was never shared, which is why nothing like this
+    // existed before.
+    //
+    // `null`, not the default, and the distinction is load-bearing: it means "no
+    // client has ever told this room a length", which is exactly the state a room
+    // hosted by a build older than `setLength` stays in. `applyStart` reads that
+    // as permission to fall back to the length riding the start message. Readers
+    // that just want a value run it through `validateGameLength`, which turns
+    // null into the default.
+    length: null,
     questionIndex: 0,
     tricky: false,
     reveal: null,
@@ -447,6 +468,9 @@ function resetToLobby(room) {
     buzzes: [],
     seats,
     // Clear any draft-in-progress state so the next game starts its draft clean.
+    // `length` is deliberately NOT reset — the spread carries it through. The
+    // host chose it for this room, and making them choose again after every game
+    // would be the odd behaviour.
     draft: false,
     targetRounds: 0,
     pickedBy: [],
@@ -456,7 +480,17 @@ function resetToLobby(room) {
   };
   return {
     room: nextRoom,
-    broadcasts: [{ to: 'all', message: { type: 'lobby', hostId: nextRoom.hostId, roster: rosterList(nextRoom) } }],
+    broadcasts: [{
+      to: 'all',
+      message: {
+        type: 'lobby',
+        hostId: nextRoom.hostId,
+        roster: rosterList(nextRoom),
+        // Stated rather than left implicit: a client that reset its own state
+        // would otherwise repaint the lobby with a length nobody chose.
+        length: nextRoom.length,
+      },
+    }],
   };
 }
 
@@ -539,6 +573,34 @@ export function applyRepick(room, picker) {
   if (!picker || picker === room.picker) return { room, broadcasts: [] };
   const nextRoom = { ...room, picker };
   return { room: nextRoom, broadcasts: pickingBroadcasts(nextRoom) };
+}
+
+/**
+ * The host changes the game length from the lobby. The **only** reducer that
+ * mutates the room before `start` — everything else the host once configured
+ * rode on the start message and was never shared, so nothing about a lobby was
+ * broadcast except who was in it.
+ *
+ * Refused off the lobby (the length is fixed once a game is sized) and refused
+ * from anyone but the host, checked here rather than at the call site so the
+ * guard cannot be forgotten by a second caller. An unchanged value broadcasts
+ * nothing, which also stops a mashed arrow key fanning out to the whole room.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @param {unknown} length
+ * @returns {ApplyResult}
+ */
+export function applySetLength(room, playerId, length) {
+  if (room.phase !== 'lobby') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  const next = validateGameLength(length);
+  if (next === room.length) return { room, broadcasts: [] };
+  const nextRoom = { ...room, length: next };
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'settings', length: next } }],
+  };
 }
 
 // ---- internal helpers ----
@@ -761,6 +823,9 @@ function welcomeBroadcast(room, playerId) {
       questionIndex: room.questionIndex,
       totalQuestions: room.totalQuestions,
       tricky: room.tricky,
+      // So a joiner paints the length immediately instead of waiting for the
+      // host to happen to change it.
+      length: room.length,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
@@ -791,6 +856,7 @@ export function serializeRoom(room) {
     seats: [...room.seats.entries()],
     totalQuestions: room.totalQuestions,
     plan: room.plan,
+    length: room.length,
     questionIndex: room.questionIndex,
     tricky: room.tricky,
     reveal: room.reveal,
@@ -819,6 +885,9 @@ export function deserializeRoom(snapshot) {
     present: new Set(),
     totalQuestions: snapshot.totalQuestions ?? DEFAULT_QUESTIONS,
     plan: snapshot.plan ?? null,
+    // A snapshot written before the lobby had a length stays null — "nobody set
+    // this" — rather than being given a default nobody chose.
+    length: snapshot.length ?? null,
     questionIndex: snapshot.questionIndex ?? 0,
     tricky: snapshot.tricky ?? false,
     reveal: snapshot.reveal ?? null,

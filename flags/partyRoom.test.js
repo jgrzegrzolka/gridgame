@@ -14,6 +14,7 @@ import {
   pendingPickAfterReveal,
   applyEnterPicking,
   applyRepick,
+  applySetLength,
   applyPick,
   serializeRoom,
   deserializeRoom,
@@ -21,6 +22,7 @@ import {
   MAX_SEATS,
 } from './partyRoom.js';
 import { CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS, CLOSENESS_LADDER } from './partyScore.js';
+import { DEFAULT_GAME_LENGTH } from './partyDraft.js';
 
 /** @param {string} answer @returns {{prompt:string,options:string[],answer:string}} */
 function q(answer, options = ['jp', 'kr', 'cn', 'th']) {
@@ -603,6 +605,88 @@ test('applyEnterPicking: the Decider flag rides both the picker and the watcher 
   const ordinary = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']);
   assert.equal(ordinary.room.decider, false);
   assert.equal(/** @type {any} */ (ordinary.broadcasts.find((b) => b.to === 'bob')?.message).decider, false);
+});
+
+// ---- applySetLength ----
+// The first and only reducer that mutates the room during the lobby. Everything
+// else the host once configured rode on `start`, so these guards have no
+// precedent to inherit and are pinned individually.
+
+test('applySetLength: the host sets it, and the whole room is told', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  assert.equal(room.length, null, 'a fresh room has not been told a length by anyone');
+
+  const r = applySetLength(room, 'alice', 'long');
+  assert.equal(r.room.length, 'long');
+  assert.equal(r.broadcasts.length, 1);
+  assert.equal(r.broadcasts[0].to, 'all', 'a guest has to see it too — that is the point');
+  assert.deepEqual(r.broadcasts[0].message, { type: 'settings', length: 'long' });
+});
+
+test('applySetLength: a guest cannot change it', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  const r = applySetLength(room, 'bob', 'long');
+  assert.equal(r.room, room, 'the same room object, untouched');
+  assert.deepEqual(r.broadcasts, []);
+});
+
+test('applySetLength: refused once the game is sized', () => {
+  // The length decides targetRounds at start; changing it mid-game would leave
+  // the room claiming a length its plan does not match.
+  const room = startedTwoPlayer();
+  const r = applySetLength(room, 'alice', 'long');
+  assert.equal(r.room, room);
+  assert.deepEqual(r.broadcasts, []);
+});
+
+test('applySetLength: junk lands on the default, never in the room raw', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  for (const bad of ['huge', 3, null, {}]) {
+    const r = applySetLength(room, 'alice', /** @type {any} */ (bad));
+    assert.equal(r.room.length, DEFAULT_GAME_LENGTH, String(bad));
+  }
+});
+
+test('applySetLength: setting the value it already has says nothing', () => {
+  // A held-down arrow key should not fan out to every socket in the room.
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  const first = applySetLength(room, 'alice', 'short');
+  assert.equal(first.broadcasts.length, 1);
+  const again = applySetLength(first.room, 'alice', 'short');
+  assert.deepEqual(again.broadcasts, []);
+  assert.equal(again.room, first.room);
+});
+
+test('the length survives Play again — the host chose it for this room', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetLength(room, 'alice', 'long').room;
+  room = applyStart(room, 'alice', q('jp')).room;
+  const back = applyPlayAgain({ ...room, phase: 'final' }, 'alice');
+  assert.equal(back.room.length, 'long', 'not reset to the default');
+  const msg = back.broadcasts.find((b) => b.to === 'all');
+  assert.equal(/** @type {any} */ (msg?.message).length, 'long', 'and the lobby broadcast says so');
+});
+
+test('a snapshot written before the lobby had a length stays unset', () => {
+  // Not defaulted: null is what tells the server this room is hosted by a build
+  // that never learned to send `setLength`, so the start message still decides.
+  const old = serializeRoom(createRoom());
+  delete (/** @type {any} */ (old)).length;
+  assert.equal(deserializeRoom(old).length, null);
+});
+
+test('the length round-trips through persistence', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetLength(room, 'alice', 'short').room;
+  assert.equal(deserializeRoom(serializeRoom(room)).length, 'short');
 });
 
 test('applyRepick: the turn moves, the pick keeps its identity', () => {

@@ -560,15 +560,47 @@ export function bootFlagParty() {
   // ten, and the answer moved under the host every time somebody joined. Now the
   // round count comes off a table (`roundCountFor`) and only the pick share
   // moves. Persisted per device; the server re-validates whatever we send.
-  let gameLength = loadLength();
-
+  //
+  // The ROOM is authoritative once connected: the length is shared state, so a
+  // guest renders the host's choice read-only rather than a stale local one, and
+  // two host devices in the same room cannot disagree. localStorage survives only
+  // as the seed a host opens a fresh room with.
   function loadLength() {
     try {
       return validateGameLength(window.localStorage.getItem(LENGTH_KEY));
     } catch { return DEFAULT_GAME_LENGTH; }
   }
-  function saveLength() {
-    try { window.localStorage.setItem(LENGTH_KEY, gameLength); } catch { /* private mode */ }
+  function saveLength(length) {
+    try { window.localStorage.setItem(LENGTH_KEY, length); } catch { /* private mode */ }
+  }
+
+  /** The length to render: the room's, once it has told us one. */
+  function currentLength() {
+    return validateGameLength(state.length);
+  }
+
+  /** Rooms this device has already pushed its remembered length into. */
+  const seededRooms = new Set();
+
+  /**
+   * Carry this device's remembered length into a room it hosts, once. Without
+   * this the stored preference would be unreachable — the room opens on its own
+   * default and nothing would ever tell it otherwise, so a host who always plays
+   * Long would have to re-pick every single game.
+   *
+   * Keyed by room code and guarded on the value actually differing, so it fires
+   * at most once per room and never fights a host who changes their mind.
+   */
+  function seedHostLength() {
+    const code = activeRoom ? activeRoom.code : null;
+    if (!code || !state.isHost || state.phase !== 'lobby') return;
+    if (seededRooms.has(code)) return;
+    seededRooms.add(code);
+    // Sent unconditionally, not only when it differs from what the room shows.
+    // The server treats a null room length as "an old client is hosting, size the
+    // game from the start message instead" — so a modern host must always claim
+    // the room, even when their choice happens to match the default.
+    send({ type: 'setLength', length: loadLength() });
   }
 
   /** Seats currently in the room — the other half of the length arithmetic. */
@@ -578,7 +610,7 @@ export function bootFlagParty() {
 
   /** Rounds a start would actually deal, given the seats present right now. */
   function effectiveRounds() {
-    return roundCountFor(seatCount(), gameLength);
+    return roundCountFor(seatCount(), currentLength());
   }
 
   /**
@@ -606,25 +638,42 @@ export function bootFlagParty() {
     return `${roundsText} · ${share}`;
   }
 
-  /** Paint the length control: which option is checked, and what it buys. */
+  /**
+   * Paint the length control: which option is checked, what it buys, and whether
+   * this seat may change it. Guests see the same control in the same place,
+   * disabled — the length is something they are told, not something hidden from
+   * them, because it decides how long they are staying.
+   */
   function syncDraftLength() {
+    const mine = state.isHost;
+    const length = currentLength();
     for (const btn of draftPickBtns) {
-      const on = btn.dataset.length === gameLength;
+      const on = btn.dataset.length === length;
       btn.setAttribute('aria-checked', String(on));
-      // Roving tabindex: the group is one tab stop and the arrow keys move
-      // within it, which is what `role="radiogroup"` promises.
-      btn.tabIndex = on ? 0 : -1;
+      btn.disabled = !mine;
+      // A disabled radiogroup is not a tab stop at all. For the host it keeps the
+      // roving tabindex `role="radiogroup"` promises: one stop, arrows move within.
+      btn.tabIndex = mine && on ? 0 : -1;
     }
+    draftLengthGroup.classList.toggle('is-readonly', !mine);
     draftLengthHint.textContent = lengthHintText();
   }
 
-  /** Choose a length, optionally pulling focus with it (keyboard navigation). */
+  /**
+   * Choose a length. The host does not change it locally and tell the room; it
+   * asks the room and repaints when the room agrees, so every seat (including
+   * this one) is painting the same server-owned value. Ignored for a guest, whose
+   * buttons are disabled anyway — this is the keyboard's back door.
+   */
   function setGameLength(next, focus) {
-    gameLength = validateGameLength(next);
-    saveLength();
-    syncDraftLength();
+    if (!state.isHost) return;
+    const length = validateGameLength(next);
+    if (length !== currentLength()) {
+      saveLength(length);
+      send({ type: 'setLength', length });
+    }
     if (!focus) return;
-    const active = draftPickBtns.find((b) => b.dataset.length === gameLength);
+    const active = draftPickBtns.find((b) => b.dataset.length === length);
     if (active) active.focus();
   }
 
@@ -1151,10 +1200,12 @@ export function bootFlagParty() {
     // greys out the impossible empty-roster case.
     startBtn.disabled = state.roster.filter((r) => r.present).length < 1;
     waitEl.hidden = !(!state.isHost && inLobby);
-    // Draft is the only mode, so the length row is the whole host setup: it shows
-    // exactly when the start button does.
-    draftLengthEl.hidden = !hostSetup;
+    // Everyone in the lobby sees the length, not just the host — it decides how
+    // long they are staying, so it is something to be told rather than something
+    // to be surprised by. `syncDraftLength` disables it for guests.
+    draftLengthEl.hidden = !inLobby;
     syncDraftLength();
+    seedHostLength();
   }
 
   function renderQuestion() {
@@ -2023,8 +2074,11 @@ export function bootFlagParty() {
   draftLengthGroup.addEventListener('keydown', (e) => {
     const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
     if (!keys.includes(e.key)) return;
+    // A guest's control is read-only, so leave their arrow keys alone rather than
+    // swallowing them into a change the server would refuse anyway.
+    if (!state.isHost) return;
     e.preventDefault();
-    const i = GAME_LENGTHS.indexOf(gameLength);
+    const i = GAME_LENGTHS.indexOf(currentLength());
     if (e.key === 'Home') return setGameLength(GAME_LENGTHS[0], true);
     if (e.key === 'End') return setGameLength(GAME_LENGTHS[GAME_LENGTHS.length - 1], true);
     const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
@@ -2044,7 +2098,7 @@ export function bootFlagParty() {
     // is ever added the same way: PartyKit and the SWA site deploy on separate
     // workflows, so the server has to understand a field before the client sends
     // it, and has to stop needing one before the client drops it.
-    send({ type: 'start', length: gameLength });
+    send({ type: 'start', length: currentLength() });
   });
   playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
   questionToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
