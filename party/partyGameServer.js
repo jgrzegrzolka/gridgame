@@ -94,6 +94,13 @@ export default class PartyGameServer {
     /** Mode ids already played this game (draft mode), so the pick hand and the
      *  no-repeat clause never offer a mode twice. */
     this.usedModes = new Set();
+    /** Seats currently holding the chart reveal open. Transient like `usedModes`
+     *  -- it lives for a few seconds inside one reveal, so it stays off the room
+     *  and out of the snapshot. Its ONLY job is to make a disconnect releasable:
+     *  held time is unbounded now, so a seat that drops mid-hold would otherwise
+     *  freeze the room with nothing left to send the release.
+     *  @type {Set<string>} */
+    this.holders = new Set();
   }
 
   /**
@@ -275,6 +282,7 @@ export default class PartyGameServer {
       if (!parsed || typeof parsed.type !== 'string') return;
 
       /** @type {import('../flags/partyRoom.js').ApplyResult | null} */
+      const phaseBefore = this.room ? this.room.phase : null;
       let result = null;
       switch (parsed.type) {
         case 'start': {
@@ -333,13 +341,18 @@ export default class PartyGameServer {
         case 'reveal':
           result = applyForceReveal(this.room, playerId);
           break;
-        case 'hold':
+        case 'hold': {
           // Any seat can freeze the reveal's countdown while it reads the chart.
-          // Pure relay — the reducer keeps no hold state, and the clients' own
-          // cap (partyTiming.MAX_HOLD_SECONDS) bounds a hold that never ends, so
-          // the server has nothing to expire and nothing to clean up on a drop.
-          result = applyHold(this.room, playerId, parsed.on === true);
+          // The reducer owns the guards (seat, reveal phase, and that this reveal
+          // actually draws a chart) and produces the relay; we only remember WHO
+          // is holding, so `onClose` can release a seat that drops mid-hold.
+          const on = parsed.on === true;
+          result = applyHold(this.room, playerId, on);
+          if (result.broadcasts.length > 0) {
+            if (on) this.holders.add(playerId); else this.holders.delete(playerId);
+          }
           break;
+        }
         case 'next': {
           // In a draft, a `next` that lands on a round boundary opens a pick
           // instead of dealing the next question: the lowest-ranked seat that
@@ -436,6 +449,11 @@ export default class PartyGameServer {
         return;
       }
       this.room = result.room;
+      // Holds belong to the reveal they were pressed on. Dropping them on any
+      // phase change (rather than in the `next` case alone) means a stale seat
+      // can't linger here and earn a phantom release broadcast when it later
+      // disconnects, whichever route the room took off the reveal.
+      if (result.room.phase !== phaseBefore) this.holders.clear();
       await this.saveRoom();
       this.dispatch(result.broadcasts);
     } catch (err) {
@@ -457,6 +475,15 @@ export default class PartyGameServer {
       this.room = result.room;
       /** @type {Array<{ to: string | 'all', message: object }>} */
       const broadcasts = [...result.broadcasts];
+      // A seat that drops while holding the chart open can never send its own
+      // release, and held time is unbounded, so without this the room stays
+      // frozen on a reveal nobody is reading. This is the one hold case a client
+      // cannot close by itself -- every other (let go, tab hidden, page gone) is
+      // handled on the page. Emitted directly rather than through `applyHold`,
+      // which by then would refuse it: the seat is gone from `room.seats`.
+      if (this.holders.delete(playerId)) {
+        broadcasts.push({ to: 'all', message: { type: 'holding', playerId, on: false } });
+      }
       // If the seat that just left was the one holding a pick, hand the turn to
       // whoever is still here rather than waiting out the host's anti-stall
       // timer. Re-run the SAME rule that opened this pick — `room.decider` says

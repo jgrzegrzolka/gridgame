@@ -40,26 +40,36 @@ export const MISS_REVEAL_SECONDS = 2.5;
  *  chart and keep their snappy pace. */
 export const CHART_REVEAL_SECONDS = 5.5;
 
-/** Seconds of *held* reading time one reveal can buy, across the whole room.
- *
- *  A chart reveal is the one screen in the show with something to actually read,
- *  and {@link CHART_REVEAL_SECONDS} is a guess that is sometimes wrong. Rather
- *  than raise it for everyone -- which slows every question to serve the slowest
- *  reading of one -- any player can press and hold to freeze the clock and let
- *  go when they are done. Held time is proportional by construction: you take
- *  what you need and the room resumes the instant you release, so the average
- *  cost is lower than any fixed extension long enough to be worth having.
- *
- *  The cap is what makes it safe to hand every seat a pause button. It is
- *  enforced purely by {@link heldMsAt} clamping, NOT by a timer or a server-side
- *  release: a player who holds forever, backgrounds the tab mid-hold, or drops
- *  off the network while holding costs the room exactly this many seconds and
- *  then the clock resumes on its own. There is deliberately no disconnect
- *  handling anywhere in the hold path, because the arithmetic already bounds the
- *  worst case. */
-export const MAX_HOLD_SECONDS = 8;
-
 /**
+ * Hold-to-read: freezing the chart reveal's clock while someone studies it.
+ *
+ * A chart reveal is the one screen in the show with something to actually read,
+ * and {@link CHART_REVEAL_SECONDS} is a guess that is sometimes wrong. Rather
+ * than raise it for everyone -- which slows every question to serve the slowest
+ * reading of one -- any player presses and holds to freeze the clock and lets go
+ * when they are done. You take what you need and the room resumes the instant
+ * you release, so the average cost is lower than any fixed extension long enough
+ * to be worth having.
+ *
+ * **Held time is deliberately unbounded.** An earlier version clamped it, which
+ * made the arithmetic self-healing but meant the button quietly stopped meaning
+ * what it said: hold as long as you want, until a hidden allowance ran out
+ * mid-sentence. A hold now ends only when the holder lets go, hides the tab, or
+ * leaves -- so the ways a hold could get stuck are closed at their source
+ * instead of being papered over by a timer:
+ *
+ * - **let go** -- pointerup / pointercancel / pointerleave / keyup on the page;
+ * - **tab hidden, phone locked, laptop closed** -- `visibilitychange` and
+ *   `pagehide` release locally (`flagParty/page.js`);
+ * - **network drop, tab closed, crash** -- the server releases the seat on
+ *   disconnect (`party/partyGameServer.js` `onClose`), which is the case a
+ *   client-side release can never cover;
+ * - **phase moved on** -- the client clears holders on any phase change.
+ *
+ * What is left is a player deliberately holding a button on a visible screen,
+ * which is a person the room can see ("Zosia is reading...") and speak to, not a
+ * failure mode to engineer against.
+ *
  * @typedef {{ heldMs: number, sinceMs: number | null }} HoldState
  *   `heldMs` is time already banked from finished holds; `sinceMs` is the epoch
  *   ms the current hold started, or null when nobody is holding.
@@ -86,8 +96,8 @@ export function beginHold(hold, nowMs) {
 }
 
 /**
- * The last holder let go. Banks the live stretch *clamped*, so a reveal that is
- * held, released and held again can never accumulate past the cap.
+ * The last holder let go. Banks the live stretch so a reveal held, released and
+ * held again keeps the time it already bought.
  *
  * @param {HoldState} hold
  * @param {number} nowMs
@@ -99,11 +109,11 @@ export function endHold(hold, nowMs) {
 }
 
 /**
- * Total held ms as of `nowMs` -- banked plus live -- clamped to the cap.
+ * Total held ms as of `nowMs` -- banked plus live.
  *
- * Callers add this to the reveal's deadline, which is what makes the clamp the
- * entire enforcement mechanism: once it stops growing the deadline stops moving
- * and the countdown resumes underneath a still-pressed button.
+ * Callers add this to the reveal's deadline rather than pausing a counter, so
+ * the freeze is always derived from wall time and survives a tick the browser
+ * skips (a backgrounded tab, a stalled frame) instead of drifting.
  *
  * @param {HoldState} hold
  * @param {number} nowMs
@@ -111,21 +121,7 @@ export function endHold(hold, nowMs) {
  */
 export function heldMsAt(hold, nowMs) {
   const live = hold.sinceMs == null ? 0 : Math.max(0, nowMs - hold.sinceMs);
-  return Math.min(MAX_HOLD_SECONDS * 1000, hold.heldMs + live);
-}
-
-/**
- * Fraction of the hold allowance still unspent, in [0, 1] -- drawn as the
- * draining pill inside the hold button, so the cap is visible before it bites
- * rather than arriving as the clock inexplicably restarting.
- *
- * @param {HoldState} hold
- * @param {number} nowMs
- * @returns {number}
- */
-export function holdBudgetFraction(hold, nowMs) {
-  const capMs = MAX_HOLD_SECONDS * 1000;
-  return Math.max(0, Math.min(1, (capMs - heldMsAt(hold, nowMs)) / capMs));
+  return hold.heldMs + live;
 }
 
 /**

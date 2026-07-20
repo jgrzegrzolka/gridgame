@@ -151,12 +151,10 @@
         <!-- "Hold to read" on a chart reveal. It lives HERE, as a sibling of the
              grid, rather than inside the chart the JS builds: the grid's
              innerHTML is replaced on every re-render, and a button destroyed
-             mid-press would strand the hold with the finger still down. The pill
-             inside it drains to show the shared cap. -->
+             mid-press would strand the hold with the finger still down. -->
         <div class="hold-read" id="hold-read" hidden>
           <button type="button" class="hold-btn" id="hold-btn">
             <span id="hold-btn-label" data-i18n="party.holdToRead">Hold to read</span>
-            <span class="hold-budget" aria-hidden="true"><i id="hold-budget-fill"></i></span>
           </button>
           <p class="hold-who" id="hold-who" aria-live="polite"></p>
         </div>

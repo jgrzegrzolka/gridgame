@@ -6,13 +6,13 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, holdBudgetFraction } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
-import { barFractions } from '../flags/partyChart.js';
+import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -419,7 +419,6 @@ export function bootFlagParty() {
   const holdReadEl = $('hold-read');
   const holdBtn = /** @type {HTMLButtonElement} */ ($('hold-btn'));
   const holdBtnLabel = $('hold-btn-label');
-  const holdBudgetFill = $('hold-budget-fill');
   const holdWho = $('hold-who');
   const footEl = $('question-foot');
   const finalSub = $('final-sub');
@@ -554,8 +553,14 @@ export function bootFlagParty() {
     swapper.to(which);
   }
 
+  /** @returns {boolean} whether the socket was open enough to actually send.
+   *  Most callers ignore this — a dropped `buzz` is covered by the reconnect —
+   *  but the hold button needs to know, since lighting up on a press that never
+   *  left the tab would show a freeze that isn't happening. */
   function send(/** @type {object} */ msg) {
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    if (!(ws && ws.readyState === WebSocket.OPEN)) return false;
+    ws.send(JSON.stringify(msg));
+    return true;
   }
 
   // ---- game length (host-only) ----
@@ -815,7 +820,7 @@ export function bootFlagParty() {
   }
 
   /** Start / stop freezing, following the holders set. Called whenever it changes
-   *  and on every clock tick, so a cap reached mid-hold banks itself. */
+   *  and on every clock tick. */
   function syncHoldAccounting() {
     const now = Date.now();
     const anyone = state.holders.length > 0;
@@ -826,24 +831,20 @@ export function bootFlagParty() {
    *  independent of render(), so a press never rebuilds the chart being read. */
   function paintHoldStatus() {
     syncHoldAccounting();
-    const now = Date.now();
-    const budget = holdBudgetFraction(hold, now);
-    holdBudgetFill.style.width = String(budget * 100) + '%';
-    // Out of allowance: the button goes inert rather than silently doing nothing,
-    // so a press that buys no time is visibly a press that buys no time.
-    const spent = budget <= 0;
-    holdBtn.disabled = spent;
-    holdBtn.classList.toggle('held', holdPressed && !spent);
-    holdBtnLabel.textContent = holdPressed && !spent
-      ? t('party.holdReadingYou', 'Reading…')
+    holdBtn.classList.toggle('held', holdPressed);
+    holdBtnLabel.textContent = holdPressed
+      ? t('party.holdReadingYou', 'You are reading…')
       : t('party.holdToRead', 'Hold to read');
     // A countdown that silently stops looks broken, so the freeze always names
-    // whose finger is on it. Others first: "you are holding" is already obvious
+    // whose finger is on it. Others only: that you are holding is already obvious
     // from the button under your thumb.
     const others = state.holders.filter((id) => id !== state.you);
-    if (others.length > 0 && !spent) {
-      const entry = state.roster.find((r) => r.playerId === others[0]);
-      const name = entry ? entry.nickname : '';
+    const entry = others.length > 0 ? state.roster.find((r) => r.playerId === others[0]) : null;
+    if (others.length > 0) {
+      // A seat can leave mid-hold, and the server's release crosses with our
+      // roster update either way round, so the name can genuinely be unknown for
+      // a beat. Say "someone" rather than rendering a headless " is reading...".
+      const name = entry ? entry.nickname : t('party.holdReadingSomeone', 'Someone');
       const extra = others.length - 1;
       holdWho.textContent = fmt(t('party.holdReading', '{name} is reading…'), { name })
         + (extra > 0 ? ` +${extra}` : '');
@@ -852,8 +853,12 @@ export function bootFlagParty() {
     }
   }
 
-  /** Show or hide the control as the chart comes and goes. */
+  /** Show or hide the control as the chart comes and goes. Hiding it always
+   *  releases first: a button that vanishes with a press still registered would
+   *  never see its own pointerup, so this device would hold the room until the
+   *  phase changed. */
   function syncHoldControl(/** @type {boolean} */ visible) {
+    if (!visible && holdPressed) setHoldPressed(false);
     holdReadEl.hidden = !visible;
     if (visible) paintHoldStatus();
   }
@@ -862,9 +867,12 @@ export function bootFlagParty() {
    *  so a pointercancel following a pointerup can't send a second release. */
   function setHoldPressed(/** @type {boolean} */ on) {
     if (holdPressed === on) return;
-    if (on && holdBudgetFraction(hold, Date.now()) <= 0) return;
+    // `send` drops silently when the socket isn't open, which on a press would
+    // light the button up while nothing actually froze -- and leave no release to
+    // send later. Better to ignore the press than to lie about it.
+    if (on && !send({ type: 'hold', on: true })) return;
     holdPressed = on;
-    send({ type: 'hold', on });
+    if (!on) send({ type: 'hold', on: false });
     // Paint immediately rather than waiting for our own press to round-trip, so
     // the button responds to the finger, not to the network.
     paintHoldStatus();
@@ -888,11 +896,16 @@ export function bootFlagParty() {
   holdBtn.addEventListener('keyup', (e) => {
     if (e.key === ' ' || e.key === 'Enter') setHoldPressed(false);
   });
-  // Backgrounding the tab mid-hold releases locally so the room isn't held by a
-  // screen nobody is looking at. Belt-and-braces only: the cap already bounds it.
+  // A hold is unbounded, so the ways one could get stuck are closed at source
+  // rather than timed out. These two cover the screen going away with a finger
+  // still down -- tab switched, phone locked, laptop closed, page navigated --
+  // which is otherwise indistinguishable from someone still reading. The case
+  // neither can cover (the tab dies outright, or the network drops) is handled
+  // server-side, where `onClose` releases the seat.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) setHoldPressed(false);
   });
+  window.addEventListener('pagehide', () => setHoldPressed(false));
 
   // ---- question-phase reveal animation (tricky veil + world-facts names) ----
   // One rAF loop drives two independent time-based reveals over the same clock
@@ -1003,7 +1016,17 @@ export function bootFlagParty() {
     // `heldMsAt` clamps, so once the allowance is spent the deadline stops moving
     // and the countdown resumes even with a button still pressed.
     if (mode === 'reveal' && !holdReadEl.hidden) paintHoldStatus();
-    const left = secondsLeft(clockDeadline + (mode === 'reveal' ? heldNow() : 0), now);
+    const held = mode === 'reveal' ? heldNow() : 0;
+    // The boundary answer beat rides the SAME held offset as the reveal deadline
+    // below, so the chart never disappears out from under a hold. Re-rendering
+    // here (rather than from a timer callback) also means the break path gets to
+    // run `syncHoldControl(false)` and put the button away.
+    if (roundBreakAnswerActive && now >= roundBreakAnswerDeadline + held) {
+      roundBreakAnswerActive = false;
+      render();
+      return;
+    }
+    const left = secondsLeft(clockDeadline + held, now);
     // Only the question paints a bar; the reveal and the pick are bar-less (their
     // clocks still run below — the reveal to advance the room, the pick as the
     // invisible force-pick fallback).
@@ -1185,20 +1208,25 @@ export function bootFlagParty() {
   // duration. `roundBreakToken` guards the once-per-boundary arm against
   // render()'s re-runs; `roundBreakAnswerActive` is true while the answer tiles
   // are on screen, false once we've flipped to the standings.
-  let roundBreakTimer = 0;
+  //
+  // The flip is a DEADLINE the reveal clock checks, not a `setTimeout`. It was a
+  // timeout, and that was a bug: a hold extends `clockDeadline` but could not
+  // extend a timer already counting down, so holding on a boundary chart — every
+  // 5th question — yanked the chart away to the standings at the normal beat
+  // while the held seconds silently went to lengthening the break instead. One
+  // clock that knows about holds cannot disagree with itself; two could, and did.
+  let roundBreakAnswerDeadline = 0;
   /** @type {string | null} */
   let roundBreakToken = null;
   let roundBreakAnswerActive = false;
   function armRoundBreakAnswer(/** @type {string} */ token) {
     roundBreakToken = token;
     roundBreakAnswerActive = true;
-    window.clearTimeout(roundBreakTimer);
     const clean = isCleanReveal(state.roster, state.reveal);
-    roundBreakTimer = window.setTimeout(() => { roundBreakAnswerActive = false; render(); }, revealSecondsFor(clean, chartReveal()) * 1000);
+    roundBreakAnswerDeadline = Date.now() + revealSecondsFor(clean, chartReveal()) * 1000;
   }
   function resetRoundBreakAnswer() {
-    window.clearTimeout(roundBreakTimer);
-    roundBreakTimer = 0;
+    roundBreakAnswerDeadline = 0;
     roundBreakToken = null;
     roundBreakAnswerActive = false;
   }
@@ -1217,6 +1245,12 @@ export function bootFlagParty() {
     // the round-intro beat included, so nothing keeps animating a screen the
     // player can no longer see.
     if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); showSection('start'); return; }
+    // Put the hold button away by default; only the chart-reveal path below turns
+    // it back on. Doing it here rather than per-branch means every screen that
+    // returns early (the standings break, the round card, the pick, the final
+    // board) is covered — the break was the one that wasn't, which left the
+    // button live inside a hidden section with a press still registered.
+    syncHoldControl(false);
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
     // Re-arm the pick guard whenever we're not mid-pick, so the next draft turn
@@ -1472,29 +1506,15 @@ export function bootFlagParty() {
       && Array.isArray(state.reveal.ranking) && state.reveal.ranking.length > 0);
   }
 
-  /**
-   * The chart's scale line: what the numbers count, and as of when.
-   *
-   * Four bare numbers over four bars are close to unreadable without it — "8"
-   * says nothing until you know it counts medals, and the bars are normalised to
-   * the quartet's own range (`barFractions`), so their lengths carry no absolute
-   * meaning either. The unit reads through `metricUnit.<key>` so it translates;
-   * the metric file's own English `unit` is the fallback for a key that has not
-   * been translated yet, which beats showing no scale at all.
-   *
-   * @param {{ key: string, unit: string, year: number | null } | null} metricData
-   *   null on any screen that isn't a chart reveal, which hides the line.
-   */
+  /** Paint (or hide) the chart's scale line. The line itself is assembled by
+   *  `chartUnitLine` in flags/partyChart.js, where it is unit-tested; this is
+   *  only the DOM half.
+   *  @param {{ key: string, year: number | null } | null} metricData
+   *    null on any screen that isn't a chart reveal, which hides the line. */
   function paintChartUnit(metricData) {
-    if (!metricData) {
-      promptUnit.hidden = true;
-      promptUnit.textContent = '';
-      return;
-    }
-    const unit = metricData.key ? t('metricUnit.' + metricData.key, metricData.unit) : metricData.unit;
-    const parts = [unit, metricData.year ? String(metricData.year) : ''].filter(Boolean);
-    promptUnit.textContent = parts.join(' · ');
-    promptUnit.hidden = parts.length === 0;
+    const line = chartUnitLine(metricData, t);
+    promptUnit.textContent = line;
+    promptUnit.hidden = line === '';
   }
 
   /**
@@ -1530,9 +1550,7 @@ export function bootFlagParty() {
     // width is stamped once here, from the BUSIEST row, rather than left to each
     // row's own content. Sized like the CSS stacks them: 22px each, overlapping
     // by 6px after the first.
-    const widestRail = Math.max(1, ...ranking.map(
-      (code) => Object.values(reveal.picks).filter((choice) => choice === code).length));
-    chart.style.setProperty('--rail-w', String(22 + (widestRail - 1) * 16) + 'px');
+    chart.style.setProperty('--rail-w', String(railWidthPx(ranking, reveal.picks)) + 'px');
     ranking.forEach((code, rank) => {
       const row = el('div', 'rank-row');
       row.style.setProperty('--d', String(rank * 110) + 'ms');

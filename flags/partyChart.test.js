@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { barFractions } from './partyChart.js';
+import { readFileSync } from 'node:fs';
+import { barFractions, railWidthPx, chartUnitLine, RAIL_AVATAR_PX, RAIL_AVATAR_OVERLAP_PX } from './partyChart.js';
 
 test('all-positive metrics read as a share of the biggest', () => {
   // The common case, and the one a player intuitively expects: the winner fills
@@ -65,4 +66,81 @@ test('empty or absent inputs return an empty list, not a crash', () => {
 
 test('one option is a full bar', () => {
   assert.deepEqual(barFractions(['a'], { a: 42 }), [1]);
+});
+
+// ---- railWidthPx ----
+
+test('railWidthPx: an empty rail still reserves one avatar', () => {
+  // Every row needs the same track, including the three nobody picked -- that is
+  // the whole point of measuring the chart rather than the row.
+  assert.equal(railWidthPx(['jp', 'kr'], {}), RAIL_AVATAR_PX);
+});
+
+test('railWidthPx: sized by the BUSIEST row, not by each row', () => {
+  const ranking = ['jp', 'kr', 'cn', 'th'];
+  const picks = { a: 'kr', b: 'kr', c: 'kr', d: 'jp' };
+  const step = RAIL_AVATAR_PX - RAIL_AVATAR_OVERLAP_PX;
+  assert.equal(railWidthPx(ranking, picks), RAIL_AVATAR_PX + 2 * step, 'three on one row');
+});
+
+test('railWidthPx: overlapping avatars cost less than their full width', () => {
+  // Regression guard on the arithmetic itself: stacking must use the overlap
+  // step, not the avatar width, or the rail is far wider than what it holds.
+  const wide = railWidthPx(['jp'], { a: 'jp', b: 'jp' });
+  assert.ok(wide < RAIL_AVATAR_PX * 2, 'the second avatar slides over the first');
+  assert.equal(wide, RAIL_AVATAR_PX * 2 - RAIL_AVATAR_OVERLAP_PX);
+});
+
+test('railWidthPx: a pick for a code that is not on the chart does not widen it', () => {
+  assert.equal(railWidthPx(['jp', 'kr'], { a: 'zz' }), RAIL_AVATAR_PX);
+});
+
+test('railWidthPx: survives a missing ranking or picks', () => {
+  assert.equal(railWidthPx(/** @type {any} */ (null), /** @type {any} */ (null)), RAIL_AVATAR_PX);
+  assert.equal(railWidthPx([], {}), RAIL_AVATAR_PX);
+});
+
+test('the rail constants match the stylesheet they mirror', () => {
+  // The arithmetic hardcodes two CSS numbers. Without this, resizing an avatar in
+  // index.css silently desyncs the rail width and nothing fails.
+  const css = readFileSync(new URL('../flagParty/index.css', import.meta.url), 'utf8');
+  const avatar = css.match(/\.rank-rail \.avatar\s*\{[^}]*width:\s*(\d+)px/);
+  const overlap = css.match(/\.rank-rail \.avatar \+ \.avatar\s*\{[^}]*margin-left:\s*-(\d+)px/);
+  assert.ok(avatar, 'expected a .rank-rail .avatar width in flagParty/index.css');
+  assert.ok(overlap, 'expected a .rank-rail .avatar + .avatar negative margin');
+  assert.equal(Number(avatar[1]), RAIL_AVATAR_PX);
+  assert.equal(Number(overlap[1]), RAIL_AVATAR_OVERLAP_PX);
+});
+
+// ---- chartUnitLine ----
+
+/** A translator that knows only the keys it is given.
+ *  @param {Record<string, string>} dict
+ *  @returns {(key: string, fallback: string) => string} */
+const tWith = (dict) => (key, fallback) => (key in dict ? dict[key] : fallback);
+
+test('chartUnitLine: joins the translated unit and the year', () => {
+  const t = tWith({ 'metricUnit.summerMedals': 'medals' });
+  assert.equal(chartUnitLine({ key: 'summerMedals', year: 2026 }, t), 'medals · 2026');
+});
+
+test('chartUnitLine: an untranslated metric shows the year alone, never English', () => {
+  // Deliberately no fallback to the metric file's own `unit`: those are English,
+  // and some are less precise than the translated string (the gdpPerCapita file
+  // says "US$" where the string says "US$/person"), so a fallback would mislabel
+  // a per-capita chart rather than merely fail to translate.
+  const t = tWith({});
+  assert.equal(chartUnitLine({ key: 'gdpPerCapita', year: 2023 }, t), '2023');
+});
+
+test('chartUnitLine: nothing to say yields an empty line, not a stray separator', () => {
+  const t = tWith({});
+  assert.equal(chartUnitLine({ key: '', year: null }, t), '');
+  assert.equal(chartUnitLine(null, t), '');
+  assert.equal(chartUnitLine(undefined, t), '');
+});
+
+test('chartUnitLine: a unit with no year drops the separator', () => {
+  const t = tWith({ 'metricUnit.area': 'km²' });
+  assert.equal(chartUnitLine({ key: 'area', year: null }, t), 'km²');
 });

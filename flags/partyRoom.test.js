@@ -25,7 +25,8 @@ import {
 import { CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS, CLOSENESS_LADDER } from './partyScore.js';
 import { DEFAULT_GAME_LENGTH } from './partyDraft.js';
 
-/** @param {string} answer @returns {{prompt:string,options:string[],answer:string}} */
+/** @param {string} answer
+ *  @returns {{prompt:string,options:string[],answer:string,ranking?:string[],values?:Record<string,number>}} */
 function q(answer, options = ['jp', 'kr', 'cn', 'th']) {
   return { prompt: answer, options, answer };
 }
@@ -872,9 +873,14 @@ function createRoomWith2() {
 
 // ---- applyHold ----
 
-test('applyHold: a seated player at a reveal relays press and release to everyone', () => {
-  let room = startedTwoPlayer();
-  room = applyForceReveal(room, 'alice').room;
+/** A room sitting on a CHART reveal -- the only reveal that accepts a hold. */
+function atChartReveal() {
+  const chartQ = { ...q('jp'), ranking: ['jp', 'kr', 'cn', 'th'], values: { jp: 8, kr: 1, cn: 1, th: 1 } };
+  return applyForceReveal(startedTwoPlayer(chartQ), 'alice').room;
+}
+
+test('applyHold: a seated player at a chart reveal relays press and release to everyone', () => {
+  const room = atChartReveal();
   const down = applyHold(room, 'bob', true);
   assert.deepEqual(down.broadcasts.map((b) => b.to), ['all'], 'the whole room freezes, not just the holder');
   assert.deepEqual(msg(down, 'holding'), { type: 'holding', playerId: 'bob', on: true });
@@ -883,11 +889,10 @@ test('applyHold: a seated player at a reveal relays press and release to everyon
 });
 
 test('applyHold: changes nothing on the room', () => {
-  // Holds are a few seconds inside one reveal. Keeping them out of room state is
-  // what spares the snapshot a field to serialize, migrate and clear -- and is
-  // why no disconnect handler has to unwedge a holder who never releases.
-  let room = startedTwoPlayer();
-  room = applyForceReveal(room, 'alice').room;
+  // Holds are a few seconds inside one reveal, so they stay off the room and out
+  // of the snapshot. The server keeps its own transient set purely so a seat that
+  // drops mid-hold can be released.
+  const room = atChartReveal();
   assert.equal(applyHold(room, 'bob', true).room, room, 'same object, not merely equal');
 });
 
@@ -901,17 +906,34 @@ test('applyHold: ignored outside a reveal', () => {
 });
 
 test('applyHold: ignored from someone who is not a seat here', () => {
-  let room = startedTwoPlayer();
-  room = applyForceReveal(room, 'alice').room;
+  const room = atChartReveal();
   assert.deepEqual(applyHold(room, 'mallory', true).broadcasts, [], 'a spoofed id buys nobody time');
 });
 
 test('applyHold: coerces the flag, so a junk value cannot read as a press', () => {
   // The `on` field comes off the wire. Anything that is not literally true is a
   // release -- the failure mode that matters is a stuck freeze, not a lost pause.
-  let room = startedTwoPlayer();
-  room = applyForceReveal(room, 'alice').room;
+  const room = atChartReveal();
   for (const junk of [1, 'true', {}, undefined, null]) {
     assert.equal(msg(applyHold(room, 'bob', /** @type {any} */ (junk)), 'holding').on, false, String(junk));
   }
+});
+
+test('applyHold: ignored on a reveal that draws no chart', () => {
+  // The guard that matters most, because it is the ONLY thing enforcing it: the
+  // button is never shown off a chart, so no honest client sends this. A crafted
+  // one sending {hold, on:true} at every reveal would otherwise freeze the 0.9s
+  // and 2.5s flag reveals too, for the whole room, all game.
+  const plainReveal = applyForceReveal(startedTwoPlayer(), 'alice').room;
+  assert.equal(plainReveal.phase, 'reveal');
+  assert.deepEqual(applyHold(plainReveal, 'bob', true).broadcasts, []);
+});
+
+test('applyHold: the chart guard keys on the same field the client renders from', () => {
+  // If these two ever disagree the button appears and does nothing, or accepts
+  // holds where no chart exists. Both read `question.ranking`.
+  const emptyRanking = applyForceReveal(startedTwoPlayer({ ...q('jp'), ranking: [] }), 'alice').room;
+  assert.deepEqual(applyHold(emptyRanking, 'bob', true).broadcasts, [], 'an empty ranking is not a chart');
+  const notAnArray = applyForceReveal(startedTwoPlayer({ ...q('jp'), ranking: /** @type {any} */ ('jp,kr') }), 'alice').room;
+  assert.deepEqual(applyHold(notAnArray, 'bob', true).broadcasts, [], 'nor is a junk ranking');
 });
