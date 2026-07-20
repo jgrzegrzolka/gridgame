@@ -326,16 +326,26 @@ export default class PartyGameServer {
           // the fixed opener this used to hardcode, so an older client is unchanged.
           const openerId = validateOpenerMode(this.room.opener);
           const openerMode = MODE_BY_ID[openerId] ?? OPENING_MODE;
-          const openingPlan = [{ poolId: openerMode.poolId, questionId: openerMode.questionId, questions: ROUND_QUESTIONS }];
+          // The host may veil the opening round (lobby toggle). Re-checked through
+          // `canVeilMode` rather than trusted, exactly as a draft pick's veil is:
+          // every opener mode is veilable today, but the guard keeps a future
+          // non-veilable opener from being armed by a stale client. It reaches the
+          // round two ways that must agree -- the segment's `veil` (so a stale
+          // reload re-derives it) and `applyStart`'s `tricky` argument (which sets
+          // `room.tricky` for round 0, since the opener is dealt, not picked).
+          const openerVeil = this.room.openerVeil === true && canVeilMode(openerId);
+          const openingPlan = [{ poolId: openerMode.poolId, questionId: openerMode.questionId, questions: ROUND_QUESTIONS, ...(openerVeil ? { veil: true } : {}) }];
           this.usedModes.add(usedIdForMode(openerId));
           const question = this.generateForQuestion(openerMode.questionId, openerMode.poolId, DEFAULT_REVEAL);
-          result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, false, DEFAULT_REVEAL, { draft: true, targetRounds });
+          result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, openerVeil, DEFAULT_REVEAL, { draft: true, targetRounds });
           break;
         }
         case 'setOpener': {
           // Validated in the reducer (which owns the host and phase guards), so
-          // the raw value goes straight through -- same shape as setLength.
-          result = applySetOpener(this.room, playerId, parsed.opener);
+          // the raw values go straight through -- same shape as setLength. The
+          // veil rides this message; `parsed.veil` is undefined from an older
+          // host, which the reducer reads as "leave it".
+          result = applySetOpener(this.room, playerId, parsed.opener, parsed.veil);
           break;
         }
         case 'setLength': {

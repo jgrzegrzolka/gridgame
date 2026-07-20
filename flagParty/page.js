@@ -44,6 +44,7 @@ const LENGTH_KEY = 'gridgame.party.gameLength';
 // way the length is. A host who always opens on Spot the flag should not re-pick
 // it every game.
 const OPENER_KEY = 'gridgame.party.opener';
+const OPENER_VEIL_KEY = 'gridgame.party.openerVeil';
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -458,6 +459,7 @@ export function bootFlagParty() {
   }
   const draftOpenerEl = $('draft-opener');
   const draftOpenerGroup = $('draft-opener-group');
+  const draftOpenerVeil = /** @type {HTMLButtonElement} */ ($('draft-opener-veil'));
   const draftOpenerBtns = /** @type {HTMLButtonElement[]} */ (
     [...draftOpenerEl.querySelectorAll('.dl-pick')]);
   // Each opener segment wears its own mode's artwork, so the row is recognisable
@@ -626,10 +628,21 @@ export function bootFlagParty() {
   function saveOpener(opener) {
     try { window.localStorage.setItem(OPENER_KEY, opener); } catch { /* private mode */ }
   }
+  function loadOpenerVeil() {
+    try { return window.localStorage.getItem(OPENER_VEIL_KEY) === '1'; } catch { return false; }
+  }
+  function saveOpenerVeil(/** @type {boolean} */ on) {
+    try { window.localStorage.setItem(OPENER_VEIL_KEY, on ? '1' : '0'); } catch { /* private mode */ }
+  }
 
   /** The opening round to render: the room's, once it has told us one. */
   function currentOpener() {
     return validateOpenerMode(state.opener);
+  }
+
+  /** Whether the opening round is veiled: the room's value, painted by every seat. */
+  function currentOpenerVeil() {
+    return state.openerVeil === true;
   }
 
   /** Rooms this device has already pushed its remembered length into. */
@@ -663,7 +676,7 @@ export function bootFlagParty() {
     // This send is symmetry plus remembered-preference delivery, not a protocol
     // requirement: it is what carries a host who always opens on Spot the flag
     // into their room without re-picking.
-    send({ type: 'setOpener', opener: loadOpener() });
+    send({ type: 'setOpener', opener: loadOpener(), veil: loadOpenerVeil() });
   }
 
   /** Seats currently in the room — the other half of the length arithmetic. */
@@ -719,23 +732,40 @@ export function bootFlagParty() {
    */
   function syncDraftOpener() {
     paintRadioGroup(draftOpenerBtns, draftOpenerGroup, 'opener', currentOpener(), state.isHost);
+    // The veil toggle: shown to everyone in the lobby (guests read it, like the
+    // opener buttons), but only the host may press it. Hidden entirely off the
+    // lobby. `disabled` for guests matches how the radiogroup treats them.
+    draftOpenerVeil.hidden = false;
+    draftOpenerVeil.disabled = !state.isHost;
+    draftOpenerVeil.setAttribute('aria-pressed', String(currentOpenerVeil()));
   }
 
   /**
    * Choose the opening round. Like the length, the host asks the room and repaints
    * when the room agrees, rather than changing it locally and announcing it — so
-   * every seat paints one server-owned value.
+   * every seat paints one server-owned value. The veil rides every setOpener so a
+   * mode change never drops the host's armed veil (the server keeps the last one
+   * on an omitted field, but sending it is clearer than relying on that).
    */
   function setOpener(next, focus) {
     if (!state.isHost) return;
     const opener = validateOpenerMode(next);
     if (opener !== currentOpener()) {
       saveOpener(opener);
-      send({ type: 'setOpener', opener });
+      send({ type: 'setOpener', opener, veil: loadOpenerVeil() });
     }
     if (!focus) return;
     const active = draftOpenerBtns.find((b) => b.dataset.opener === opener);
     if (active) active.focus();
+  }
+
+  /** Arm or disarm the opening round's veil. Host-only, same ask-the-room pattern
+   *  as {@link setOpener}: send the change and let the broadcast repaint every
+   *  seat, rather than flipping local state and announcing it. */
+  function setOpenerVeil(on) {
+    if (!state.isHost || on === currentOpenerVeil()) return;
+    saveOpenerVeil(on);
+    send({ type: 'setOpener', opener: currentOpener(), veil: on });
   }
 
   /**
@@ -2400,6 +2430,7 @@ export function bootFlagParty() {
     const next = nextRadioId(ids, currentOpener(), e.key);
     if (next) setOpener(next, true);
   });
+  draftOpenerVeil.addEventListener('click', () => setOpenerVeil(!currentOpenerVeil()));
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
     // plan (the server builds the opening round from the host's chosen opener and

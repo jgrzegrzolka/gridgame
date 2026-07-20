@@ -635,9 +635,29 @@ test('applySetOpener: the host sets it, and the whole room is told', () => {
 
   const r = applySetOpener(room, 'alice', 'spot-flag');
   assert.equal(r.room.opener, 'spot-flag');
+  assert.equal(r.room.openerVeil, false, 'veil defaults off and an opener-only change leaves it');
   assert.equal(r.broadcasts.length, 1);
   assert.equal(r.broadcasts[0].to, 'all', 'a guest sees the round they will open on');
-  assert.deepEqual(r.broadcasts[0].message, { type: 'settings', opener: 'spot-flag' });
+  assert.deepEqual(r.broadcasts[0].message, { type: 'settings', opener: 'spot-flag', openerVeil: false });
+});
+
+test('applySetOpener: the veil rides the same message and can change alone', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+
+  // Arm the veil without touching the mode: still fans out, since the veil changed.
+  const armed = applySetOpener(room, 'alice', room.opener, true);
+  assert.equal(armed.room.openerVeil, true);
+  assert.equal(msg(armed, 'settings').openerVeil, true);
+  room = armed.room;
+
+  // An opener-only change (veil omitted) keeps the armed veil rather than blanking it.
+  const modeOnly = applySetOpener(room, 'alice', 'map-outlines');
+  assert.equal(modeOnly.room.opener, 'map-outlines');
+  assert.equal(modeOnly.room.openerVeil, true, 'omitting veil leaves it as-is');
+
+  // A true no-op (same mode, same veil) broadcasts nothing.
+  assert.equal(applySetOpener(modeOnly.room, 'alice', 'map-outlines', true).broadcasts.length, 0);
 });
 
 test('applySetOpener: guests cannot set it, and not once the game has started', () => {

@@ -761,6 +761,37 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   .dl-pick { transition: none; }
 }
 
+/* The opening-round veil toggle: a single centred pill under the opener row.
+   Same "armed = selected grey + accent border + accent glyph" treatment as the
+   pick-card veil chip (`.pick-card-veil[aria-pressed='true']`), so the two veil
+   controls read as the same mechanic. Not a `.dl-pick`: it is a toggle, not a
+   member of the radiogroup, so it must not borrow the segmented look. */
+.opener-veil {
+  align-self: center;
+  margin-top: 8px;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--muted-soft-color);
+  background: var(--surface-color);
+  color: var(--muted-color);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.opener-veil:hover:not(:disabled) { background: var(--hover-color); border-color: var(--secondary-color); }
+.opener-veil:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
+.opener-veil:disabled { cursor: default; }
+.opener-veil[aria-pressed='true'] {
+  background: var(--selected-color);
+  border-color: var(--secondary-color);
+  color: var(--secondary-color);
+}
+
 /* ---- draft: the pick screen (no countdown — picking isn't a race) ---- */
 .pick-hand { display: flex; flex-direction: column; gap: 9px; }
 .pick-hand.sent { opacity: 0.6; pointer-events: none; }

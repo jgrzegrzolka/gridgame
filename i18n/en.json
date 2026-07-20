@@ -664,6 +664,8 @@
     "yourPick": "Your pick, choose the next round",
     "veilChip": "Veil",
     "veilChipHint": "Veil this round: the flags start hidden and clear as the clock runs",
+    "veilOpener": "Hidden start",
+    "veilOpenerHint": "Veil the opening round: the tiles start hidden and clear as the clock runs",
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "roundPick": "{name}'s pick",

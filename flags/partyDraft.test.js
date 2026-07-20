@@ -447,17 +447,13 @@ test('isValidPick: rejects a repeat, an unknown mode, and non-strings', () => {
   assert.equal(isValidPick(/** @type {any} */ (42), []), false);
 });
 
-test('canVeilMode: the recognition picture modes, and not spot-the-flag', () => {
-  // "Every picture mode veils" stopped being true when spot-the-flag arrived, and
-  // the exception is the point rather than an oversight: that round's criteria ARE
-  // colours and motifs, so a veil withholds the exact thing the question asks you
-  // to look at, turning "look carefully" into "wait, then look". Same reasoning as
-  // the metric exclusion, failing in the opposite direction -- there the flag is
-  // incidental to the question, here it IS the question.
-  for (const m of PICTURE_MODES) {
-    const expected = m.id !== 'spot-flag';
-    assert.equal(canVeilMode(m.id), expected, `${m.id} veilable should be ${expected}`);
-  }
+test('canVeilMode: every picture mode veils, no metric mode does', () => {
+  // Spot-the-flag was the one picture mode excluded here; that was reversed
+  // (2026-07-21, see veilActive) because it is the gentlest recognition round and
+  // the veil is the difficulty it wanted. So the whole picture trio-plus-one is
+  // veilable now, and only the metric family is not (the flag is incidental to a
+  // "which is biggest?" question, so hiding it withholds nothing that mattered).
+  for (const m of PICTURE_MODES) assert.equal(canVeilMode(m.id), true, `${m.id} should be veilable`);
   for (const m of METRIC_MODES) assert.equal(canVeilMode(m.id), false, `${m.id} should not be veilable`);
   assert.equal(canVeilMode('no-such-mode'), false, 'an unknown mode is never veilable');
 });
