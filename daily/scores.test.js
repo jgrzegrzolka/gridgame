@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadScores, saveScore, formatScore, isCompleteRecord, applyScoreMigrations, migrateScores } from './scores.js';
+import { loadScores, saveScore, formatScore, isCompleteRecord, applyScoreMigrations, migrateScores, livesFromRecord } from './scores.js';
 
 function fakeStore(initial = {}) {
   /** @type {Map<string, string>} */
@@ -259,4 +259,80 @@ test('applyScoreMigrations: gq_add_star is idempotent — a migrated record is l
 test('applyScoreMigrations: gq_add_star ignores puzzles it does not own', () => {
   const { changed } = applyScoreMigrations({ 44: { f: 5, t: 11, c: ['so'] } });
   assert.equal(changed, false);
+});
+
+// ---- lives on the archive / revisit screen ---------------------------------
+// The hearts gauge is drawn during play by `startGame`. On revisit that never
+// runs, so the row would be empty. `livesFromRecord` rebuilds the gauge from
+// the saved record — but ONLY for runs actually played under the cap.
+//
+// The tempting shortcut is to derive it from `w.length` alone. That is wrong:
+// pre-cap runs also have `w`, and those guesses cost nothing, so a perfect
+// 13/13 with 15 wrong guesses would render as "0 hearts, cut off". Presence of
+// the `cap` field is what marks a run as capped.
+
+test('livesFromRecord returns null for a record with no cap (pre-cap run)', () => {
+  assert.equal(livesFromRecord({ f: 13, t: 13, c: [], w: ['a', 'b', 'c'] }), null);
+});
+
+test('livesFromRecord returns null for a missing record', () => {
+  assert.equal(livesFromRecord(undefined), null);
+});
+
+test('livesFromRecord rebuilds the gauge from cap minus wrong guesses', () => {
+  assert.deepEqual(livesFromRecord({ f: 5, t: 12, c: [], w: ['pl', 'de'], cap: 7 }), { max: 7, left: 5 });
+});
+
+test('livesFromRecord treats a missing wrong list as an untouched run', () => {
+  assert.deepEqual(livesFromRecord({ f: 12, t: 12, c: [], cap: 7 }), { max: 7, left: 7 });
+});
+
+test('livesFromRecord floors at zero for a run that was cut off', () => {
+  const w = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+  assert.deepEqual(livesFromRecord({ f: 3, t: 12, c: [], w, cap: 7 }), { max: 7, left: 0 });
+});
+
+test('livesFromRecord honours the cap stored on the record, not a constant', () => {
+  // A record keeps the cap it was played under, so changing DAILY_LIVES later
+  // cannot retroactively rewrite how an old run is drawn.
+  assert.deepEqual(livesFromRecord({ f: 1, t: 6, c: [], w: ['x'], cap: 5 }), { max: 5, left: 4 });
+});
+
+test('livesFromRecord rejects a nonsense cap rather than drawing a broken row', () => {
+  for (const cap of [0, -3, 1.5, '7', null]) {
+    assert.equal(livesFromRecord({ f: 1, t: 6, c: [], w: [], cap }), null, `cap ${JSON.stringify(cap)}`);
+  }
+});
+
+test('saveScore stores the cap when one is supplied', () => {
+  const store = fakeStore();
+  saveScore(store, 45, 3, 12, ['so'], ['pl'], 7);
+  assert.equal(JSON.parse(store.getItem('daily.scores'))[45].cap, 7);
+});
+
+test('saveScore omits cap when none is supplied, so uncapped runs stay unmarked', () => {
+  const store = fakeStore();
+  saveScore(store, 45, 3, 12, ['so'], ['pl']);
+  assert.ok(!('cap' in JSON.parse(store.getItem('daily.scores'))[45]));
+});
+
+// A migration must never drop fields it doesn't know about. Both migrations
+// originally rebuilt the record as a fresh `{f, t, c}` literal, which silently
+// discarded everything else: puzzle1_add_li dropped `w`, and gq_add_star then
+// dropped the `cap` that the revisit heart row depends on. The symptom is
+// remote from the cause — the hearts simply never appear on a migrated record.
+
+test('gq_add_star preserves the cap so the revisit hearts survive migration', () => {
+  const { scores } = applyScoreMigrations({
+    45: { f: 3, t: 11, c: ['so'], w: ['pl', 'de', 'es'], cap: 7 },
+  });
+  assert.equal(scores[45].cap, 7, 'cap must survive the migration');
+  assert.deepEqual(livesFromRecord(scores[45]), { max: 7, left: 4 });
+});
+
+test('puzzle1_add_li preserves the wrong-guess list', () => {
+  const { scores } = applyScoreMigrations({
+    1: { f: 8, t: 9, c: ['ch'], w: ['fr', 'it'] },
+  });
+  assert.deepEqual(scores[1].w, ['fr', 'it'], 'w must survive the migration');
 });
