@@ -628,3 +628,51 @@ function ruleById(id) {
   if (!rule) throw new Error(`no rule with id ${id}`);
   return rule;
 }
+
+// --- grid icons ------------------------------------------------------------
+// The `gridIcon(n)` family renders "n of 16" as a 4x4 grid. It originally
+// emitted ONLY the filled cells over an outlined box, which meant the low
+// counts rendered as a broken asset rather than as progress: `first-daily`
+// (n=1) was a single square in the top-left corner of an empty rectangle,
+// and `empty-slate` (n=0) was an empty rectangle full stop. Reported from
+// the daily result toast, where it sat next to a normal centred glyph and
+// read as a missing image.
+
+/** Every achievement whose icon is a 4x4 progress grid, with its filled count. */
+const GRID_ICONS = [
+  { id: 'empty-slate', filled: 0 },
+  { id: 'first-daily', filled: 1 },
+  { id: 'daily-habit', filled: 7 },
+];
+
+test('grid icons draw all 16 cells so a low count reads as progress, not a broken icon', () => {
+  for (const { id } of GRID_ICONS) {
+    const rule = ALL_ACHIEVEMENTS.find((r) => r.id === id);
+    assert.ok(rule, `${id}: rule not found`);
+    const rects = (rule.icon.match(/<rect /g) || []).length;
+    assert.equal(rects, 16, `${id}: expected all 16 grid cells to be drawn, got ${rects}`);
+  }
+});
+
+test('grid icons mark exactly the earned cells as filled', () => {
+  // Unfilled cells carry an explicit opacity; filled ones do not. If this
+  // inverts, every badge silently reads as complete.
+  for (const { id, filled } of GRID_ICONS) {
+    const rule = ALL_ACHIEVEMENTS.find((r) => r.id === id);
+    assert.ok(rule, `${id}: rule not found`);
+    const ghosted = (rule.icon.match(/<rect [^>]*opacity=/g) || []).length;
+    assert.equal(16 - ghosted, filled, `${id}: expected ${filled} solid cells, got ${16 - ghosted}`);
+  }
+});
+
+test('grid icons carry no sub-pixel stroke', () => {
+  // The old outline used stroke-width="0.5" on a 16-unit viewBox. At the
+  // profile badge's 20px render that is ~0.6px, which rounds away on a
+  // standard-DPI display (same trap as PR #540 -> #541). Filled rects need
+  // no stroke at all, so the safest pin is that none is declared.
+  for (const { id } of GRID_ICONS) {
+    const rule = ALL_ACHIEVEMENTS.find((r) => r.id === id);
+    assert.ok(rule, `${id}: rule not found`);
+    assert.ok(!/stroke-width="0?\.\d+"/.test(rule.icon), `${id}: sub-pixel stroke-width in icon`);
+  }
+});
