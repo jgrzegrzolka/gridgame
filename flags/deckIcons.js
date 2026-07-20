@@ -66,6 +66,14 @@ const JOLLY_ROGER =
   '<circle cx="14" cy="10" r="1.4" fill="#241f22"/><circle cx="18" cy="10" r="1.4" fill="#241f22"/>' +
   '<rect x="15.3" y="11.6" width="1.4" height="2" fill="#241f22"/></svg>';
 
+/** Flag Party's "spot the flag" round: a magnifier, because that round is the one
+ *  where you inspect the flags rather than recall them. `currentColor` like
+ *  STAT_BARS, so it inherits wherever it is placed. */
+const MAGNIFIER =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" ' +
+  'stroke-linecap="round">' +
+  '<circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"/></svg>';
+
 const STAT_BARS =
   '<svg viewBox="0 0 24 24" fill="currentColor">' +
   '<rect x="3" y="13" width="4.4" height="8" rx="1"/>' +
@@ -90,5 +98,6 @@ export function deckIconHtml(deck, { base = '../', className = '' } = {}) {
   if (asset) return `<img${cls} src="${base}${asset}" alt="" />`;
   if (deck === 'weird') return JOLLY_ROGER.replace('<svg ', `<svg${cls} `);
   if (deck === 'facts') return STAT_BARS.replace('<svg ', `<svg${cls} `);
+  if (deck === 'spot') return MAGNIFIER.replace('<svg ', `<svg${cls} `);
   return '';
 }

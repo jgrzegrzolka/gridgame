@@ -20,6 +20,7 @@
  */
 
 import { superlativeMetricByQuestionId, canLabelDirection } from '../flags/partyQuestions/superlativeCatalog.js';
+import { clausesFromPrompt } from '../flags/partyQuestions/spotFlag.js';
 
 /**
  * The question ids this build can actually render: the two fixed picture questions
@@ -33,7 +34,7 @@ import { superlativeMetricByQuestionId, canLabelDirection } from '../flags/party
  * @returns {Set<string>}
  */
 export function renderableQuestionIds(superlativeQuestionIds) {
-  return new Set(['flagPick', 'mapPick', ...superlativeQuestionIds]);
+  return new Set(['flagPick', 'mapPick', 'spotFlag', ...superlativeQuestionIds]);
 }
 
 /**
@@ -71,6 +72,13 @@ export function canRenderQuestion(question, knownQuestionIds) {
   if (!question) return true;
   const { questionId } = question;
   if (!questionId || !knownQuestionIds.has(questionId)) return false;
+  // Spot-the-flag carries its criteria IN the prompt, so its skew surface is the
+  // vocabulary rather than the id: a newer server that adds a colour or motif
+  // deals a spec this build can only render with a clause missing. That is the
+  // silent-mis-scoring shape again — the room would see three tiles that all look
+  // to satisfy a two-clause spec, and the "wrong" ones would look right. Treated
+  // as proof the server is ahead of us, same one-shot reload.
+  if (questionId === 'spotFlag') return clausesFromPrompt(question.prompt) !== null;
   const metric = superlativeMetricByQuestionId(questionId);
   if (!metric) return true;
   return canLabelDirection(metric, question.prompt === 'least' ? 'least' : 'most');

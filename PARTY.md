@@ -1765,6 +1765,99 @@ than changing colour, so the trio still reads as one family.
 timing constants, but never measured a game, and printing a number the engine has not earned is
 worse than three honest buckets. Time a real game before adding them.
 
+## Iteration 15 — Spot the flag: a round that rewards looking — BUILT (2026-07-20)
+
+The show's three other modes all reward *knowing* something: which flag is Peru, which outline is
+Chile, which country grows the most coffee. This one states its criteria on screen and asks which of
+four flags satisfies them:
+
+> **has red · no green · has a star or moon**
+
+Exactly one does. Nothing is hidden, so a player who knows no flags at all can beat someone who knows
+them all, on pure observation. That is the mode's reason to exist, not a side effect — and it is the
+gentler-pool lever Iteration 13 concluded was the right answer for mixed-ability tables, reached
+through the *question* rather than through a per-seat handicap that had to label a player to work.
+
+**The design that made it cheap: state the rule.** The first sketch was a classic odd-one-out (three
+flags share a hidden trait, spot the intruder). That version has to prove no *competing* rule picks a
+different flag, which is an expensive search over the whole tag set and, worse, a judgement call —
+"is this ambiguous" has no mechanical answer, so puzzles would have needed human review and therefore
+a pre-authored catalog. Stating the rule deletes the problem entirely: there is nothing to infer, so
+validity collapses to "exactly one of the four matches", a filter and a length check. That is what
+lets this mode generate **on the fly, server-side**, like every other party question, instead of
+becoming a second daily-style catalog to maintain.
+
+**Every clause earns its place.** Each wrong flag fails exactly one clause, and no two fail the same
+one — so each clause is the sole reason some tile dies. Check one, eliminate exactly one. If two
+distractors died to the same clause, a third clause would never be tested and the puzzle would be
+softer than it reads. Clauses = tiles − 1, which is also the difficulty dial: a fourth clause means a
+fifth tile, and it raises difficulty without reaching for obscurer flags.
+
+**Almost nothing was built.** A spec *is* a findFlag `Filters`, so the mode borrows the predicate
+(`matchesFilters`), the wire format (`serializeFilter` / `parseFilterString`, already round-trip
+tested), and the localized pill labels including the Polish genitive for negated clauses. The prompt
+line is findFlag's own `filterTitle`, so one criterion reads identically on every surface. The reveal
+reuses the superlative pop strip to name the clause each wrong flag missed ("not cross", "blue"),
+which is what stops the round feeling arbitrary even when it is provably fair — you are told you were
+wrong *and* what you failed to notice. New code is one question module and its tests.
+
+### Three rules the generator enforces, each for a reason
+
+- **Colours match `primaryColors`, never the full palette.** The full palette includes anything
+  visible in a coat of arms, which is right for findFlag's browse UI where you can zoom, and wrong
+  here where you have a thumbnail and a few seconds. Same call the daily generator makes.
+- **No flag carrying a coat of arms, at all.** This is the finding that cost the most to learn. The
+  tag set records what is TRUE, not what is VISIBLE: Moldova genuinely has an animal, a bird and a
+  cross on it, all inside a crest nobody can resolve at tile size, and **10 of the 29 cross-tagged
+  flags** are crest-bound (Serbia, Slovakia, Spain, Vatican, San Marino, Fiji, Dominica, Montenegro,
+  Dominican Republic, Moldova). Liechtenstein's only motif is a cross that lives inside the crown.
+  Tags authored for a knowledge game do not transfer to a spot-it-by-eye game for free. The blunt
+  exclusion costs 34 countries; the precise fix is a per-flag "this motif is prominent" annotation,
+  which is data work that should wait until the mode proves itself.
+- **Never red-and-green as the discriminating pair, and always at least one motif clause.** Roughly
+  one man in twelve cannot make that discrimination, and a spec of three colours can force exactly
+  it. A motif clause guarantees every puzzle has a non-colour way in.
+
+Flags whose own `ambiguousColors` names a clause colour are also dropped: those are the cases we have
+already documented reasonable people reading differently, and this mode asks a player to confirm a
+colour by eye, in public.
+
+### Measured, not assumed
+
+Over 5000 generated puzzles against the sovereign pool (195, of which 161 are spottable): **161
+distinct answers** (every eligible country reachable), **983 distinct specs**, top-10 answers cover
+**32%**. Roughly half of random specs yield a valid puzzle, so the retry budget is never near
+exhaustion. The tests pin the spread distributionally, not just structurally — a shape assertion
+would pass against a generator that emits one puzzle forever, which is the Iteration 13 lesson.
+
+### It does not veil
+
+`veilActive` returns false for `spotFlag` even with tricky on. The veil's whole job is to withhold
+colours and motifs, which are exactly this round's criteria — veiled, "look carefully" becomes "wait
+for the veil to clear, then look". Same principle as the metric exclusion, failing in the opposite
+direction: there the flag is incidental to the question, here it *is* the question. This broke the
+"every picture mode veils" invariant, which was a genuine design statement and is now restated
+rather than widened (`flags/partyDraft.test.js`).
+
+### Skew surface
+
+Spot-the-flag carries its criteria *in* the prompt, so its version-skew surface is the vocabulary
+rather than the question id: a newer server adding a colour or motif would deal a spec an older tab
+can only render with a clause missing — showing the room a puzzle whose answer looks plainly wrong.
+`clausesFromPrompt` returns null on any unknown token and `canRenderQuestion` routes that to the same
+one-shot reload as an unknown question id.
+
+### Open, for Jan
+
+- **Reveal strip wording.** The strips currently read `red` / `not cross` / `blue` — findFlag's pill
+  language, which is house-consistent but terse as a *reason* under a tile. "has red" / "no cross"
+  may read better in that position. Copy call, not a code one.
+- **`animal` contains `bird`.** All 17 bird flags are also tagged `animal`, so "no animal" can be
+  failed by a frigatebird (Kiribati). Defensible — a bird is an animal — but a player may argue it.
+- **Question clock.** Reading three clauses and scanning four flags may want more than
+  `QUESTION_SECONDS = 20`, which is currently one global constant with no per-mode override. Needs a
+  played game to judge, not a guess.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).
