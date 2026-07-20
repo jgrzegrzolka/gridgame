@@ -116,6 +116,85 @@ const HEART_PATH =
   'M12 21C12 21 1.5 14.2 1.5 7.6 1.5 4.2 4.2 1.5 7.5 1.5c2 0 3.7 1 4.5 2.5' +
   '.8-1.5 2.5-2.5 4.5-2.5 3.3 0 6 2.7 6 6.1C22.5 14.2 12 21 12 21z';
 
+/* One heart per life, spent ones hollowed out left-to-right.
+ *
+ * Built in JS rather than as two CSS `mask-image` data URIs so the
+ * filled and outline forms share a single path constant — two copies
+ * of a hand-written heart path is exactly the kind of duplicate that
+ * drifts the first time someone nudges a curve.
+ *
+ * Colour comes from `currentColor`, so the stylesheet keeps ownership
+ * of the hue (`--secondary-color` on `.daily-life`) and this function
+ * only decides fill-vs-stroke. Stroke is 2.8 units in a 24-unit
+ * viewBox rendered at 13 px ≈ 1.5 px on screen: a 1 px-equivalent
+ * hairline in pink disappears into the page tint at this size, and
+ * anything under 1 px would round away entirely on standard-DPI
+ * displays.
+ *
+ * @param {boolean} spent
+ * @returns {SVGSVGElement}
+ */
+function heartSvg(spent) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 22');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', HEART_PATH);
+  if (spent) {
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '2.8');
+    path.setAttribute('stroke-linejoin', 'round');
+  } else {
+    path.setAttribute('fill', 'currentColor');
+  }
+  svg.appendChild(path);
+  return svg;
+}
+
+/**
+ * Paint a heart row: `max` hearts, the first `left` of them filled.
+ *
+ * Rebuilt wholesale rather than toggling a class on one heart because the
+ * row is at most `DAILY_LIVES` nodes, and a full repaint keeps the
+ * language-switch path (which re-runs the label) trivially correct.
+ *
+ * On the last life the row pulses rather than turning red: red is
+ * `--wrong-color`, which this repo reserves for "that answer was wrong",
+ * and a heart meaning "one guess left" is a warning, not a verdict. The
+ * exact count stays spelled out in the aria-label.
+ *
+ * Exported because two surfaces draw this row and must not drift: the
+ * live game (via `startGame`) and the revisit / archive result, which
+ * rebuilds it from the saved record because `startGame` never runs there.
+ * Same mechanism, one implementation — see CLAUDE.md's UI-consistency rule.
+ *
+ * @param {HTMLElement} el   the `#daily-lives` list
+ * @param {number} max
+ * @param {number} left
+ */
+export function paintLives(el, max, left) {
+  el.setAttribute(
+    'aria-label',
+    // Label-then-number, not "{n} guesses left": Polish agrees the noun
+    // with the count in three different ways (1 / 2-4 / 5+), so a counted
+    // noun would be wrong at both ends. This shape is correct at every n
+    // in both languages without a plural-rules table.
+    t('daily.guessesLeft', 'Wrong guesses left: {n}').replace('{n}', String(left)),
+  );
+  el.classList.toggle('daily-lives--last', left === 1);
+  el.innerHTML = '';
+  for (let i = 0; i < max; i += 1) {
+    const li = document.createElement('li');
+    const spent = i >= left;
+    li.className = spent ? 'daily-life daily-life--spent' : 'daily-life';
+    li.appendChild(heartSvg(spent));
+    el.appendChild(li);
+  }
+}
+
 /**
  * The active puzzle's per-answer "why" notes (`entry.notes`), keyed by
  * country code. Set once per puzzle via `setZoomNotes` from the page boot
@@ -600,71 +679,8 @@ export function startGame(n, category, targets, all, opts = {}) {
   function updateCount() {
     countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
   }
-  /* One heart per life, spent ones hollowed out left-to-right.
-   *
-   * Built in JS rather than as two CSS `mask-image` data URIs so the
-   * filled and outline forms share a single path constant — two copies
-   * of a hand-written heart path is exactly the kind of duplicate that
-   * drifts the first time someone nudges a curve.
-   *
-   * Colour comes from `currentColor`, so the stylesheet keeps ownership
-   * of the hue (`--secondary-color` on `.daily-life`) and this function
-   * only decides fill-vs-stroke. Stroke is 2.8 units in a 24-unit
-   * viewBox rendered at 13 px ≈ 1.5 px on screen: a 1 px-equivalent
-   * hairline in pink disappears into the page tint at this size, and
-   * anything under 1 px would round away entirely on standard-DPI
-   * displays.
-   *
-   * @param {boolean} spent
-   * @returns {SVGSVGElement}
-   */
-  function heartSvg(spent) {
-    const NS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 24 22');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.setAttribute('focusable', 'false');
-    const path = document.createElementNS(NS, 'path');
-    path.setAttribute('d', HEART_PATH);
-    if (spent) {
-      path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', 'currentColor');
-      path.setAttribute('stroke-width', '2.8');
-      path.setAttribute('stroke-linejoin', 'round');
-    } else {
-      path.setAttribute('fill', 'currentColor');
-    }
-    svg.appendChild(path);
-    return svg;
-  }
-
-  /* One heart per life, spent ones hollowed out left-to-right. Rebuilt
-   * wholesale rather than toggling a class on one dot because the row
-   * is at most `DAILY_LIVES` nodes and a full repaint keeps the
-   * language-switch path (which re-runs the label) trivially correct.
-   * On the last life the row pulses rather than turning red: red is
-   * `--wrong-color`, which this repo reserves for "that answer was
-   * wrong", and a dot meaning "one guess left" is a warning, not a
-   * verdict. The exact count stays spelled out in the aria-label. */
   function renderLives() {
-    const left = lives.remaining();
-    livesEl.setAttribute(
-      'aria-label',
-      // Label-then-number, not "{n} guesses left": Polish agrees the noun
-      // with the count in three different ways (1 / 2-4 / 5+), so a counted
-      // noun would be wrong at both ends. This shape is correct at every n
-      // in both languages without a plural-rules table.
-      t('daily.guessesLeft', 'Wrong guesses left: {n}').replace('{n}', String(left)),
-    );
-    livesEl.classList.toggle('daily-lives--last', left === 1);
-    livesEl.innerHTML = '';
-    for (let i = 0; i < lives.max; i += 1) {
-      const li = document.createElement('li');
-      const spent = i >= left;
-      li.className = spent ? 'daily-life daily-life--spent' : 'daily-life';
-      li.appendChild(heartSvg(spent));
-      livesEl.appendChild(li);
-    }
+    paintLives(livesEl, lives.max, lives.remaining());
   }
   /* Brief flash on each correct guess. Remove → force reflow → add
    * is the standard pattern for re-triggering a CSS animation on the
@@ -833,7 +849,10 @@ export function startGame(n, category, targets, all, opts = {}) {
     // we never leave both records alive at once.
     if (persistProgress) clearProgress(window.localStorage, n);
     if (!skipSave) {
-      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes));
+      // `lives.max` is stored so the revisit screen can redraw the heart row
+      // (`livesFromRecord`). It also records which cap this run was played
+      // under, so changing DAILY_LIVES later can't rewrite an old result.
+      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes), lives.max);
     }
     const { tier, intensity } = pickCelebration({ found, total });
     runCelebration(tier, { intensity });

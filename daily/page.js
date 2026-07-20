@@ -4,7 +4,7 @@ import { buildAnswerPool } from './answerPool.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory, superlativeToCategory } from '../flags/daily.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
-import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
+import { loadScores, isCompleteRecord, migrateScores, livesFromRecord } from './scores.js';
 import { loadProgress } from './progress.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../flags/populationRank.js';
@@ -22,6 +22,7 @@ import {
   setTileMeta,
   setCriteriaFilter,
   setCriteriaLead,
+  paintLives,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices } from '../flags/syncHydrate.js';
@@ -825,6 +826,20 @@ export function bootDaily() {
         // population overlay on the first render rather than a beat later.
         await popReady;
         renderResult(result.targets, foundCodes, category.label);
+        // Redraw the heart row from the saved record. `startGame` never runs
+        // on this path, so without it the row sits empty for a run that had a
+        // real budget — and since every visit after finishing is a revisit,
+        // that is the state players see most of the time. Uncapped runs
+        // (played before the budget shipped) return null and draw nothing,
+        // rather than inventing a constraint they never faced.
+        const revisitLives = livesFromRecord(stored);
+        if (revisitLives) {
+          paintLives(
+            /** @type {HTMLElement} */ (document.getElementById('daily-lives')),
+            revisitLives.max,
+            revisitLives.left,
+          );
+        }
         setShareCtx(n, result.targets, foundCodes);
         paintPersonalStats(foundCodes.size, result.targets.length);
         paintCommunityStats(null, result.targets.length, { loading: true });
