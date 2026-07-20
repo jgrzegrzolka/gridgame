@@ -1,0 +1,5 @@
+# Markdown docs are the project trackers and get edited by tooling on Windows.
+# Pinning them to LF stops a stray CRLF pass rewriting a 1900-line file as a
+# whole-file diff, which is how PARTY.md once merged as 1956 insertions for a
+# 156-line change -- unreviewable, and it re-churns on every later edit.
+*.md text eol=lf
