@@ -13,14 +13,14 @@ import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTal
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
-import { clausesFromPrompt, failingClause, filtersFor } from '../flags/partyQuestions/spotFlag.js';
-import { filterTitle, pillLabel } from '../flags/findFlag.js';
+import { clausesFromPrompt, missLabel, spotTitle } from '../flags/partyQuestions/spotFlag.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
 import { roundCountFor, validateGameLength, validateOpenerMode, OPENING_MODE_ID, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
+import { nextRadioId, paintRadioGroup, RADIO_KEYS } from './radioGroup.js';
 import { buildAvatar, shareUrl } from '../common.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -636,15 +636,16 @@ export function bootFlagParty() {
   const seededRooms = new Set();
 
   /**
-   * Carry this device's remembered length into a room it hosts, once. Without
-   * this the stored preference would be unreachable — the room opens on its own
-   * default and nothing would ever tell it otherwise, so a host who always plays
-   * Long would have to re-pick every single game.
+   * Carry this device's remembered lobby settings — the game length and the
+   * opening round — into a room it hosts, once. Without this the stored
+   * preferences would be unreachable: the room opens on its own defaults and
+   * nothing would ever tell it otherwise, so a host who always plays Long, or
+   * always opens on Spot the flag, would have to re-pick every single game.
    *
    * Keyed by room code and guarded on the value actually differing, so it fires
    * at most once per room and never fights a host who changes their mind.
    */
-  function seedHostLength() {
+  function seedHostSettings() {
     const code = activeRoom ? activeRoom.code : null;
     if (!code || !state.isHost || state.phase !== 'lobby') return;
     if (seededRooms.has(code)) return;
@@ -654,8 +655,14 @@ export function bootFlagParty() {
     // game from the start message instead" — so a modern host must always claim
     // the room, even when their choice happens to match the default.
     send({ type: 'setLength', length: loadLength() });
-    // Same one-shot claim for the opening round, and for the same reason: a room
-    // whose `opener` is still null is one the server sizes from its own default.
+    // The opening round rides the same one-shot claim, but NOT for the same
+    // reason, and the difference is worth stating so nobody later "fixes" one to
+    // match the other. A null room length is load-bearing — the server reads it
+    // as "size the game from the start message" — while a null opener is not,
+    // because `validateOpenerMode` maps null and 'flags-all' to the same round.
+    // This send is symmetry plus remembered-preference delivery, not a protocol
+    // requirement: it is what carries a host who always opens on Spot the flag
+    // into their room without re-picking.
     send({ type: 'setOpener', opener: loadOpener() });
   }
 
@@ -701,17 +708,7 @@ export function bootFlagParty() {
    * them, because it decides how long they are staying.
    */
   function syncDraftLength() {
-    const mine = state.isHost;
-    const length = currentLength();
-    for (const btn of draftPickBtns) {
-      const on = btn.dataset.length === length;
-      btn.setAttribute('aria-checked', String(on));
-      btn.disabled = !mine;
-      // A disabled radiogroup is not a tab stop at all. For the host it keeps the
-      // roving tabindex `role="radiogroup"` promises: one stop, arrows move within.
-      btn.tabIndex = mine && on ? 0 : -1;
-    }
-    draftLengthGroup.classList.toggle('is-readonly', !mine);
+    paintRadioGroup(draftPickBtns, draftLengthGroup, 'length', currentLength(), state.isHost);
     draftLengthHint.textContent = lengthHintText();
   }
 
@@ -721,15 +718,7 @@ export function bootFlagParty() {
    * opening round is something they are told rather than something withheld.
    */
   function syncDraftOpener() {
-    const mine = state.isHost;
-    const opener = currentOpener();
-    for (const btn of draftOpenerBtns) {
-      const on = btn.dataset.opener === opener;
-      btn.setAttribute('aria-checked', String(on));
-      btn.disabled = !mine;
-      btn.tabIndex = mine && on ? 0 : -1;
-    }
-    draftOpenerGroup.classList.toggle('is-readonly', !mine);
+    paintRadioGroup(draftOpenerBtns, draftOpenerGroup, 'opener', currentOpener(), state.isHost);
   }
 
   /**
@@ -1060,7 +1049,7 @@ export function bootFlagParty() {
     // A world-facts reveal draws the ranked chart, which needs its own longer
     // beat whether or not the question was swept: the ranking is the payoff of
     // the question, not a consolation for missing it.
-    const chart = mode === 'reveal' && chartReveal();
+    const chart = chartNow(mode);
     const revealSecs = atRoundBreak()
       ? revealSecondsFor(clean, chart) + ROUND_BREAK_SECONDS
       : revealSecondsFor(clean, chart);
@@ -1115,7 +1104,7 @@ export function bootFlagParty() {
     // `held` grows in lockstep with `now`, so `deadline + held - now` — the
     // remaining time — holds exactly still. That stall is the only on-screen
     // proof a press landed. (`held` is zero outside the reveal.)
-    if (barPaints(mode, mode === 'reveal' && chartReveal())) {
+    if (barPaints(mode, chartNow(mode))) {
       timerFill.style.width = `${remainingFraction(clockDeadline + held, now, clockTotalMs) * 100}%`;
       // Running-out urgency belongs to answering only. The chart reveal is a
       // screen for reading, so its bar drains without ever pulsing at you.
@@ -1459,7 +1448,7 @@ export function bootFlagParty() {
     // it is the first thing they will play, so being told beats being surprised.
     draftOpenerEl.hidden = !inLobby;
     syncDraftOpener();
-    seedHostLength();
+    seedHostSettings();
   }
 
   function renderQuestion() {
@@ -1527,7 +1516,7 @@ export function bootFlagParty() {
       // `filterTitle` is findFlag's own criteria line ("red · not green · star or
       // moon"), including the Polish genitive for negated clauses. Reused rather
       // than reworded so one criterion reads identically on every surface.
-      promptTarget.textContent = filterTitle(filtersFor(spotClauses || []), t);
+      promptTarget.textContent = spotTitle(spotClauses || [], t);
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
       const country = byCode.get(targetCode);
@@ -1547,11 +1536,7 @@ export function bootFlagParty() {
       // never told what you failed to notice, which is the whole lesson of the
       // round. The answer tile gets a bare name — it broke no rule.
       if (isSpot && isReveal && spotClauses && c) {
-        const miss = failingClause(c, spotClauses);
-        return {
-          name: countryName(c),
-          value: miss ? pillLabel(miss.group, miss.value, miss.sign === 'exclude' ? 'include' : 'exclude', t) : '',
-        };
+        return { name: countryName(c), value: missLabel(c, spotClauses, t) };
       }
       if (!(isSuperlative && isReveal) || !metricData) return null;
       const v = metricData.values[code];
@@ -1619,6 +1604,15 @@ export function bootFlagParty() {
    * against an older PartyKit build falls back to the tile reveal rather than
    * rendering an empty chart (see memory `project_party_stale_client_skew`).
    */
+  /** Whether the beat now on screen is a chart reveal — the one input `barPaints`
+   *  needs beyond the mode. Both clock functions ask through here rather than each
+   *  re-deriving it, so the bar cannot paint on one tick and not the next because
+   *  two copies of the same expression drifted apart.
+   *  @param {string} mode @returns {boolean} */
+  function chartNow(mode) {
+    return mode === 'reveal' && chartReveal();
+  }
+
   function chartReveal() {
     return !!(state.phase === 'reveal' && state.reveal
       && Array.isArray(state.reveal.ranking) && state.reveal.ranking.length > 0);
@@ -2378,40 +2372,35 @@ export function bootFlagParty() {
   // ends. This is the behaviour a radiogroup is expected to have, and the reason
   // the control is one tab stop rather than three.
   draftLengthGroup.addEventListener('keydown', (e) => {
-    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
-    if (!keys.includes(e.key)) return;
+    if (!RADIO_KEYS.includes(e.key)) return;
     // A guest's control is read-only, so leave their arrow keys alone rather than
     // swallowing them into a change the server would refuse anyway.
     if (!state.isHost) return;
     e.preventDefault();
-    const i = GAME_LENGTHS.indexOf(currentLength());
-    if (e.key === 'Home') return setGameLength(GAME_LENGTHS[0], true);
-    if (e.key === 'End') return setGameLength(GAME_LENGTHS[GAME_LENGTHS.length - 1], true);
-    const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
-    setGameLength(GAME_LENGTHS[(i + step + GAME_LENGTHS.length) % GAME_LENGTHS.length], true);
+    const next = nextRadioId([...GAME_LENGTHS], currentLength(), e.key);
+    if (next) setGameLength(next, true);
   });
   for (const btn of draftOpenerBtns) {
     btn.addEventListener('click', () => setOpener(btn.dataset.opener, false));
   }
-  // Same roving-tabindex keyboard contract as the length group above.
+  // Same keyboard contract as the length group, through the same helper -- these
+  // two rows were a copy of each other before `radioGroup.js` existed.
   draftOpenerGroup.addEventListener('keydown', (e) => {
-    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
-    if (!keys.includes(e.key)) return;
+    if (!RADIO_KEYS.includes(e.key)) return;
     if (!state.isHost) return;
     e.preventDefault();
     const ids = draftOpenerBtns.map((b) => b.dataset.opener ?? '');
-    const i = ids.indexOf(currentOpener());
-    if (e.key === 'Home') return setOpener(ids[0], true);
-    if (e.key === 'End') return setOpener(ids[ids.length - 1], true);
-    const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
-    setOpener(ids[(i + step + ids.length) % ids.length], true);
+    const next = nextRadioId(ids, currentOpener(), e.key);
+    if (next) setOpener(next, true);
   });
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
-    // plan (the server builds the opening Flags round and sizes the game from the
-    // seat count) and no reveal config (the veil clear timing is a fixed constant
-    // now — see DEFAULT_REVEAL). The only host input is the game length, so
-    // `length` is the whole message.
+    // plan (the server builds the opening round from the host's chosen opener and
+    // sizes the game from the seat count) and no reveal config (the veil clear
+    // timing is a fixed constant now — see DEFAULT_REVEAL). Both host inputs, the
+    // length and the opening round, already reached the room over `setLength` /
+    // `setOpener` during the lobby, so `length` rides along only as the legacy
+    // fallback described below.
     //
     // A `draft: true` flag rode along until the server that needed it was gone.
     // It selected the draft branch on the pre-#974 server, which is no longer

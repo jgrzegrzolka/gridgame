@@ -992,3 +992,46 @@ test('applyHold: the chart guard keys on the same field the client renders from'
   const notAnArray = applyForceReveal(startedTwoPlayer({ ...q('jp'), ranking: /** @type {any} */ ('jp,kr') }), 'alice').room;
   assert.deepEqual(applyHold(notAnArray, 'bob', true).broadcasts, [], 'nor is a junk ranking');
 });
+
+test('the opening round survives Play again — the host chose it for this room', () => {
+  // Twin of the length test above. The lobby broadcast states both explicitly, so
+  // a client that reset its own state does not repaint a setup nobody chose; if
+  // only one of them rode along, Play again would silently drop the other and the
+  // two settings would behave differently despite the comment saying they do not.
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetOpener(room, 'alice', 'spot-flag').room;
+  room = applyStart(room, 'alice', q('jp')).room;
+  const back = applyPlayAgain({ ...room, phase: 'final' }, 'alice');
+  assert.equal(back.room.opener, 'spot-flag', 'not reset to the Flags default');
+  const msg = back.broadcasts.find((b) => b.to === 'all');
+  assert.equal(/** @type {any} */ (msg?.message).opener, 'spot-flag', 'and the lobby broadcast says so');
+});
+
+test('a snapshot written before the lobby had an opening round stays unset', () => {
+  // Same null contract as `length`: it is what tells the server this room is
+  // hosted by a build that never learned to send `setOpener`, so the Flags
+  // fallback applies rather than a value nobody chose.
+  const old = serializeRoom(createRoom());
+  delete (/** @type {any} */ (old)).opener;
+  assert.equal(deserializeRoom(old).opener, null);
+});
+
+test('the opening round round-trips through persistence', () => {
+  // A PartyKit hibernation wake must not quietly reopen the room on Flags.
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetOpener(room, 'alice', 'map-outlines').room;
+  assert.equal(deserializeRoom(serializeRoom(room)).opener, 'map-outlines');
+});
+
+test('welcome carries the opening round, so a joiner paints it immediately', () => {
+  // Without this a mid-lobby joiner shows Flags until the host happens to change
+  // it — the same reason the length rides along.
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetOpener(room, 'alice', 'flags-weird').room;
+  const r = applyHello(room, 'bob', 'Bob');
+  const welcome = r.broadcasts.find((b) => b.to === 'bob');
+  assert.equal(/** @type {any} */ (welcome?.message).opener, 'flags-weird');
+});

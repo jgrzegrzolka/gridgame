@@ -1,5 +1,5 @@
 import { emptyFilters, matchesFilters } from '../flagsFilter.js';
-import { serializeFilter, parseFilterString } from '../findFlag.js';
+import { serializeFilter, parseFilterString, pillLabel, filterTitle } from '../findFlag.js';
 
 /**
  * The "spot the flag" question: the criteria are SHOWN, and exactly one of the
@@ -128,11 +128,16 @@ function ambiguousUnder(c, clauses) {
  * tests). Pure translation: our clause list is just a flatter view of a Filters.
  *
  * @param {Clause[]} clauses
- * @returns {any}
+ * @returns {Filters}
  */
 export function filtersFor(clauses) {
   const f = emptyFilters();
-  for (const cl of clauses) f[cl.group][cl.sign].add(cl.value);
+  // Cast at this single line rather than widening the return type: `Filters` is
+  // a fixed-shape record, so indexing it by a variable group name is what needs
+  // loosening, not what every caller gets back. Returning `any` erased checking
+  // on `matchesFilters`, `serializeFilter` and the page's title call alike, which
+  // is the opposite of what flags/** being on the strict config is for.
+  for (const cl of clauses) /** @type {any} */ (f)[cl.group][cl.sign].add(cl.value);
   return f;
 }
 
@@ -182,7 +187,20 @@ export function clausesFromPrompt(prompt) {
       }
     }
   }
-  return out.length === SPOT_CLAUSES ? out : null;
+  if (out.length !== SPOT_CLAUSES) return null;
+  // Reject anything we cannot faithfully REPRESENT, not merely anything we cannot
+  // label. The loop above walks only the colour and motif groups, so a spec naming
+  // a group this mode does not use — a continent, a statehood, a colour count —
+  // would have that clause silently dropped; and with three colour/motif clauses
+  // still standing, the count check above would pass and the room would be shown a
+  // three-clause spec for a four-clause question. The tiles that fail the missing
+  // clause look like they pass, everyone picks one, everyone is scored wrong. That
+  // is the exact failure this guard exists to prevent.
+  //
+  // Round-tripping catches it whatever the extra group turns out to be, which
+  // matters because the point of the guard is to survive a server NEWER than this
+  // build: re-serialising what we understood must reproduce what we were sent.
+  return serializeFilter(filtersFor(out)) === serializeFilter(f) ? out : null;
 }
 
 /**
@@ -302,6 +320,48 @@ export function generate(pool, exclude, rng = Math.random) {
     return { prompt: serializeFilter(filtersFor(p.clauses)), options, answer: p.answer.code };
   }
   throw new Error(`spotFlag: no puzzle after ${MAX_ATTEMPTS} attempts`);
+}
+
+/**
+ * The reveal's label for a flag that missed the spec: what this flag DID, stated
+ * as the criterion it broke. "not green" in the spec becomes **"green"** on the
+ * offending tile, and "has a cross" becomes **"not cross"**.
+ *
+ * That inversion is the whole point and the easy thing to get backwards. The spec
+ * says what the answer must be; the strip has to say what this flag *is*, which is
+ * the opposite of the clause it failed. Printing the clause unchanged would label
+ * a green flag "not green" under a spec that already reads "not green", which
+ * tells the room nothing and looks like a bug.
+ *
+ * Returns '' for a flag that satisfies everything -- the answer broke no rule, so
+ * its tile gets a bare name.
+ *
+ * Localised through findFlag's own `pillLabel`, so the words match the criteria
+ * line above the tiles exactly, Polish genitive included.
+ *
+ * @param {Country} c
+ * @param {Clause[]} clauses
+ * @param {(key: string, fallback: string) => string} translate
+ * @returns {string}
+ */
+export function missLabel(c, clauses, translate) {
+  const miss = failingClause(c, clauses);
+  if (!miss) return '';
+  const inverted = miss.sign === 'exclude' ? 'include' : 'exclude';
+  return pillLabel(miss.group, miss.value, inverted, translate);
+}
+
+/**
+ * The criteria line shown above the tiles, and kept up through the reveal so the
+ * answer can be read against it. findFlag's own title builder, so one criterion
+ * reads identically on every surface of the site.
+ *
+ * @param {Clause[]} clauses
+ * @param {(key: string, fallback: string) => string} translate
+ * @returns {string}
+ */
+export function spotTitle(clauses, translate) {
+  return filterTitle(filtersFor(clauses), translate);
 }
 
 /**

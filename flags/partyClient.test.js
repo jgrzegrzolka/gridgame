@@ -497,3 +497,46 @@ test('a hold on the last reveal does not survive into the final board', () => {
   assert.equal(final.phase, 'final');
   assert.deepEqual(final.holders, []);
 });
+
+// ---- lobby settings: length and the opening round ----
+// The `settings` message had no test at all before the opening round arrived,
+// which is how a one-field message clobbering the other field could have shipped
+// unnoticed. Both fields fall back to what we already hold precisely so a message
+// naming one does not blank the other; that `??` is the thing these pin.
+
+test('settings: a length-only message leaves the opening round alone', () => {
+  let s = initialPartyClientState();
+  s = reduce(s, { type: 'settings', opener: 'spot-flag' });
+  s = reduce(s, { type: 'settings', length: 'short' });
+  assert.equal(s.length, 'short');
+  assert.equal(s.opener, 'spot-flag', 'the host changing length must not reset the opener');
+});
+
+test('settings: an opener-only message leaves the length alone', () => {
+  let s = initialPartyClientState();
+  s = reduce(s, { type: 'settings', length: 'long' });
+  s = reduce(s, { type: 'settings', opener: 'map-outlines' });
+  assert.equal(s.opener, 'map-outlines');
+  assert.equal(s.length, 'long', 'the host changing the opener must not reset the length');
+});
+
+test('welcome: a joiner learns both lobby settings immediately', () => {
+  // Without this a mid-lobby joiner paints the defaults until the host happens to
+  // change something, so they see a game they are not actually about to play.
+  const s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, hostId: 'h', phase: 'lobby', roster: [],
+    length: 'short', opener: 'flags-weird',
+  });
+  assert.equal(s.length, 'short');
+  assert.equal(s.opener, 'flags-weird');
+});
+
+test('welcome: a server that sends neither setting leaves what we hold', () => {
+  // An older PartyKit deploy omits them; the SWA site and PartyKit ship on
+  // separate workflows, so this pairing is real and not hypothetical.
+  let s = initialPartyClientState();
+  s = reduce(s, { type: 'settings', length: 'long', opener: 'spot-flag' });
+  s = reduce(s, { type: 'welcome', you, hostId: 'h', phase: 'lobby', roster: [] });
+  assert.equal(s.length, 'long');
+  assert.equal(s.opener, 'spot-flag');
+});

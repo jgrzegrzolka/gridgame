@@ -51,12 +51,14 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateOpenerMode } from './p
  *   is how a room hosted by a pre-`setLength` build looks; the server reads that
  *   as permission to size the game from the start message instead.
  * @property {string | null} opener  the host's chosen opening round (a picture
- *   mode id), the second lobby-shared setting. Same null contract as `length`:
- *   null means no client ever set it, which is how a room hosted by a build that
- *   predates the setting looks, and readers coerce it through
- *   `validateOpenerMode` — turning null into the Flags default that was the fixed
- *   opener before the host could choose. It counts as the host's first pick, so
- *   `applyStart` seeds `pickedBy` with them.
+ *   mode id), the second lobby-shared setting. Null is *shaped* like `length`'s
+ *   null but is **not** load-bearing the way that one is: a null `length` tells
+ *   the server "an old client is hosting, size the game from the start message
+ *   instead", whereas every reader here runs the opener through
+ *   `validateOpenerMode`, which maps null and `'flags-all'` to the same result.
+ *   So null here means only "nobody has chosen yet", and the fallback is the
+ *   Flags round that was the fixed opener before the host could choose at all.
+ *   It counts as the host's first pick, so `applyStart` seeds `pickedBy`.
  * @property {number} questionIndex  0-based index of the current question.
  * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
  *   veil each tile (grey + blur + panel wipe) and clear it over the question
