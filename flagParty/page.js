@@ -222,7 +222,17 @@ export function modeHue(/** @type {string} */ cardId) {
  *  generic Flags card instead). */
 export function roundCardIconHtml(/** @type {string} */ modeId) {
   if (modeId === 'flags-all') return deckIconHtml('flags', { className: 'roundcard-thumb' });
-  if (modeId === 'flags-weird') return deckIconHtml('weird', { className: 'roundcard-thumb' });
+  // The weird deck's artwork is an INLINE svg, not an <img>, so the circular
+  // `object-fit: cover` on `.roundcard-thumb` does not reach it — inline SVG
+  // scales by `preserveAspectRatio`, whose default (`meet`) would letterbox the
+  // 32x24 jolly roger inside the 56px circle and leave transparent wedges above
+  // and below it. `slice` is the cover equivalent. Applied here rather than in
+  // `deckIcons.js` because every other surface draws this icon as a rectangle,
+  // where letterboxing is the correct behaviour.
+  if (modeId === 'flags-weird') {
+    return deckIconHtml('weird', { className: 'roundcard-thumb' })
+      .replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
+  }
   if (modeId === 'map-outlines') return deckIconHtml('outlines', { className: 'roundcard-contour' });
   const mode = MODE_BY_ID[modeId];
   const key = mode ? metricKeyForQuestion(mode.questionId) : null;
