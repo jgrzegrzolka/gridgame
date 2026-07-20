@@ -849,10 +849,7 @@ export function startGame(n, category, targets, all, opts = {}) {
     // we never leave both records alive at once.
     if (persistProgress) clearProgress(window.localStorage, n);
     if (!skipSave) {
-      // `lives.max` is stored so the revisit screen can redraw the heart row
-      // (`livesFromRecord`). It also records which cap this run was played
-      // under, so changing DAILY_LIVES later can't rewrite an old result.
-      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes), lives.max);
+      saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes));
     }
     const { tier, intensity } = pickCelebration({ found, total });
     runCelebration(tier, { intensity });

@@ -261,60 +261,6 @@ test('applyScoreMigrations: gq_add_star ignores puzzles it does not own', () => 
   assert.equal(changed, false);
 });
 
-// ---- lives on the archive / revisit screen ---------------------------------
-// The hearts gauge is drawn during play by `startGame`. On revisit that never
-// runs, so the row would be empty. `livesFromRecord` rebuilds the gauge from
-// the saved record — but ONLY for runs actually played under the cap.
-//
-// The tempting shortcut is to derive it from `w.length` alone. That is wrong:
-// pre-cap runs also have `w`, and those guesses cost nothing, so a perfect
-// 13/13 with 15 wrong guesses would render as "0 hearts, cut off". Presence of
-// the `cap` field is what marks a run as capped.
-
-test('livesFromRecord returns null for a record with no cap (pre-cap run)', () => {
-  assert.equal(livesFromRecord({ f: 13, t: 13, c: [], w: ['a', 'b', 'c'] }), null);
-});
-
-test('livesFromRecord returns null for a missing record', () => {
-  assert.equal(livesFromRecord(undefined), null);
-});
-
-test('livesFromRecord rebuilds the gauge from cap minus wrong guesses', () => {
-  assert.deepEqual(livesFromRecord({ f: 5, t: 12, c: [], w: ['pl', 'de'], cap: 7 }), { max: 7, left: 5 });
-});
-
-test('livesFromRecord treats a missing wrong list as an untouched run', () => {
-  assert.deepEqual(livesFromRecord({ f: 12, t: 12, c: [], cap: 7 }), { max: 7, left: 7 });
-});
-
-test('livesFromRecord floors at zero for a run that was cut off', () => {
-  const w = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-  assert.deepEqual(livesFromRecord({ f: 3, t: 12, c: [], w, cap: 7 }), { max: 7, left: 0 });
-});
-
-test('livesFromRecord honours the cap stored on the record, not a constant', () => {
-  // A record keeps the cap it was played under, so changing DAILY_LIVES later
-  // cannot retroactively rewrite how an old run is drawn.
-  assert.deepEqual(livesFromRecord({ f: 1, t: 6, c: [], w: ['x'], cap: 5 }), { max: 5, left: 4 });
-});
-
-test('livesFromRecord rejects a nonsense cap rather than drawing a broken row', () => {
-  for (const cap of [0, -3, 1.5, '7', null]) {
-    assert.equal(livesFromRecord({ f: 1, t: 6, c: [], w: [], cap }), null, `cap ${JSON.stringify(cap)}`);
-  }
-});
-
-test('saveScore stores the cap when one is supplied', () => {
-  const store = fakeStore();
-  saveScore(store, 45, 3, 12, ['so'], ['pl'], 7);
-  assert.equal(JSON.parse(store.getItem('daily.scores'))[45].cap, 7);
-});
-
-test('saveScore omits cap when none is supplied, so uncapped runs stay unmarked', () => {
-  const store = fakeStore();
-  saveScore(store, 45, 3, 12, ['so'], ['pl']);
-  assert.ok(!('cap' in JSON.parse(store.getItem('daily.scores'))[45]));
-});
 
 // A migration must never drop fields it doesn't know about. Both migrations
 // originally rebuilt the record as a fresh `{f, t, c}` literal, which silently
@@ -335,4 +281,37 @@ test('puzzle1_add_li preserves the wrong-guess list', () => {
     1: { f: 8, t: 9, c: ['ch'], w: ['fr', 'it'] },
   });
   assert.deepEqual(scores[1].w, ['fr', 'it'], 'w must survive the migration');
+});
+
+// ---- hearts on the archive / revisit screen -------------------------------
+// The gauge is drawn during play by `startGame`, which never runs on revisit.
+// It is DERIVED from the record at display time rather than stored: `w` is the
+// deduped wrong-guess list and `lives.js` charges once per wrong code, so
+// `DAILY_LIVES - w.length` is the hearts left. Storing it instead was tried
+// and reverted — a stored marker only lands on runs finished after it ships,
+// so every existing player saw an empty row.
+
+test('livesFromRecord derives the gauge from the wrong-guess list', () => {
+  assert.deepEqual(livesFromRecord({ f: 5, t: 12, c: [], w: ['pl', 'de'] }), { max: 7, left: 5 });
+});
+
+test('livesFromRecord treats a record with no wrong list as untouched', () => {
+  assert.deepEqual(livesFromRecord({ f: 12, t: 12, c: [] }), { max: 7, left: 7 });
+});
+
+test('livesFromRecord floors at zero rather than going negative', () => {
+  const w = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'];
+  assert.deepEqual(livesFromRecord({ f: 3, t: 12, c: [], w }), { max: 7, left: 0 });
+});
+
+test('livesFromRecord returns null for a missing record', () => {
+  assert.equal(livesFromRecord(undefined), null);
+});
+
+test('livesFromRecord needs nothing beyond what saveScore already writes', () => {
+  // The whole point: it works on records that predate the heart row, with no
+  // migration and no new field.
+  const store = fakeStore();
+  saveScore(store, 45, 3, 12, ['so'], ['pl', 'de', 'es']);
+  assert.deepEqual(livesFromRecord(loadScores(store)[45]), { max: 7, left: 4 });
 });
