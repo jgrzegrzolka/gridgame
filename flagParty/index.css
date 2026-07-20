@@ -740,7 +740,18 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .roundcard-ring-fill { stroke: var(--secondary-color); stroke-linecap: butt; stroke-dasharray: 100; stroke-dashoffset: 0; }
 .roundcard-ic { width: 72px; height: 72px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); }
 .roundcard-ic svg { width: 60px; height: 60px; display: block; }
-.roundcard-thumb { width: 68px; height: 46px; object-fit: contain; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+/* The deck artwork is cropped to a circle so it agrees with the ring around it —
+   a 3:2 thumb inside an 88px ring left dead corners on all four sides and read as
+   two shapes arguing. `cover`, not `contain`: contain would letterbox the flag
+   inside the circle and put the mismatch back. Only the round card does this; the
+   setup rows and draft cards keep the true rectangle, because there the flag is
+   being identified rather than used as a hero. */
+/* Scoped to `.roundcard-ic` on purpose: the sibling `.roundcard-ic svg` rule
+   (0,1,1) outranks a lone `.roundcard-thumb` (0,1,0), so the weird deck's inline
+   svg took the 60px hero size and rendered a circle 4px wider than the flag's,
+   sitting visibly tighter inside the ring. Two classes (0,2,0) settle it, and
+   both decks now crop to the same 56px coin. */
+.roundcard-ic .roundcard-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .roundcard-contour { width: 64px; height: 64px; object-fit: contain; }
 .roundcard-name { font-size: 22px; font-weight: 700; color: var(--primary-color); line-height: 1.2; }
 .roundcard-questions { font-size: 14px; color: var(--muted-color); }

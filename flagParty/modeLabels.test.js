@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { PICTURE_MODES, METRIC_MODES } from '../flags/partyPlan.js';
 import { METRIC_FAMILIES } from '../flags/partyDraft.js';
 import { METRIC_SHORT } from '../flags/metricVisuals.js';
+import { deckIconHtml } from '../flags/deckIcons.js';
 import {
   modeShortLabel,
   modeFullLabel,
@@ -249,6 +250,18 @@ test('every round title card resolves artwork', () => {
   for (const m of [...PICTURE_MODES, ...METRIC_MODES]) {
     assert.ok(roundCardIconHtml(m.id).length > 0, `round card "${m.id}" would render blank`);
   }
+});
+
+test('the round card crops its inline-svg artwork to the circle', () => {
+  // `.roundcard-thumb` crops to a circle with `object-fit: cover`, which only
+  // applies to replaced elements. The weird deck's artwork is an inline <svg>,
+  // so it needs `preserveAspectRatio="slice"` to cover instead — without it the
+  // 32x24 viewBox letterboxes and the circle shows transparent wedges top and
+  // bottom. Nothing about that failure throws, so only this pin catches it.
+  assert.match(roundCardIconHtml('flags-weird'), /preserveAspectRatio="xMidYMid slice"/);
+  // The rectangle is still correct everywhere the icon is identified rather than
+  // used as the card's hero, so the shared helper must NOT have been changed.
+  assert.doesNotMatch(deckIconHtml('weird'), /preserveAspectRatio/);
 });
 
 test('an unknown card id degrades to empty rather than throwing', () => {
