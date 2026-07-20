@@ -1830,6 +1830,20 @@ distinct answers** (every eligible country reachable), **983 distinct specs**, t
 exhaustion. The tests pin the spread distributionally, not just structurally — a shape assertion
 would pass against a generator that emits one puzzle forever, which is the Iteration 13 lesson.
 
+### It is always pickable
+
+Added to `REPEATABLE_MODE_IDS` alongside Flags and Weird flags, so it stays in the hand however many
+times it has already been played (Jan's call, 2026-07-20). The justification is different from theirs
+though: they are exempt because they are *the game* and Flags is the fixed opener, while this one is
+exempt because a second helping is not a repeat — every round is a freshly generated puzzle out of
+~983 distinct specs, so playing it twice is two different puzzles. That is exactly what separates it
+from outlines, which is one fixed game whatever order it arrives in. The no-repeat rule exists to keep
+a draft varied; this mode supplies its own variety.
+
+One constant governs it end to end: the server routes both the deal (`handFor`) and the validation
+(`isValidPick`, including the stale-hand re-filter) through the same list, so the room layer needed no
+change.
+
 ### It does not veil
 
 `veilActive` returns false for `spotFlag` even with tricky on. The veil's whole job is to withhold

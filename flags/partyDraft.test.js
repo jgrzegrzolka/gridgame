@@ -340,9 +340,11 @@ test('handFor: surfaces the unused picture modes (they are few and characterful)
   for (const id of REPEATABLE_MODE_IDS) assert.ok(hand.includes(id), `expected ${id} in the hand`);
 });
 
-test('handFor: Flags and Weird flags stay on offer however often they are played', () => {
-  // They are the game itself, and Flags is the fixed opener — the no-repeat rule
-  // retired it before anyone could choose it even once.
+test('handFor: the staples stay on offer however often they are played', () => {
+  // Flags and Weird flags are the game itself, and Flags is the fixed opener --
+  // the no-repeat rule retired it before anyone could choose it even once.
+  // Spot the flag is exempt for a different reason: it generates a fresh puzzle
+  // every round, so a second helping is a different puzzle rather than a repeat.
   const playedALot = [...REPEATABLE_MODE_IDS, ...REPEATABLE_MODE_IDS, 'map-outlines'];
   const hand = handFor(playedALot, seeded(11));
   for (const id of REPEATABLE_MODE_IDS) assert.ok(hand.includes(id), `${id} still offered`);
@@ -362,7 +364,7 @@ test('handFor: the picture modes always lead, in catalog order', () => {
 test('handFor: a played one-shot picture mode drops out without disturbing the order', () => {
   const hand = handFor(['map-outlines'], seeded(5));
   assert.deepEqual(hand.slice(0, REPEATABLE_MODE_IDS.length), REPEATABLE_MODE_IDS,
-    'the repeatable pair still leads, still in order');
+    'the repeatable staples still lead, still in order');
   assert.ok(!hand.includes('map-outlines'));
 });
 
@@ -398,8 +400,8 @@ const ALL_CARD_IDS = [...PICTURE_MODES.map((m) => m.id), ...METRIC_FAMILIES.map(
 
 test('handFor: shrinks gracefully when few modes remain', () => {
   // Everything played except the last two statistics. The hand is those two plus
-  // the repeatable pair, which never runs out — so a late-game picker always has
-  // a real choice rather than a single forced card.
+  // the repeatable staples, which never run out -- so a late-game picker always
+  // has a real choice rather than a single forced card.
   const allButTwo = ALL_CARD_IDS.slice(0, -2);
   const hand = handFor(allButTwo, seeded(9));
   assert.equal(hand.length, 2 + REPEATABLE_MODE_IDS.length);
