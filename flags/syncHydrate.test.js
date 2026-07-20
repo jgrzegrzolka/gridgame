@@ -473,3 +473,61 @@ test('trySyncDevices: stamps the timestamp BEFORE awaiting the fetch (de-races c
   ]);
   assert.equal(calls.length, 1, 'second concurrent call hit the fresh gate after the first stamped');
 });
+
+// ---- wrong guesses survive the hydrate -------------------------------------
+// The payload carried only foundCodes + totalCount, so any record that reached
+// a device via sync lost its wrong-guess list. Two visible symptoms: the
+// revisit "your wrong guesses" section was empty, and the daily heart row —
+// which derives spent hearts from `w` — showed a full row on a puzzle the
+// player had actually fumbled 11 times. The data was in Cosmos the whole time.
+
+test('applyHydratePayload: daily rows carry wrongCodes into the local record', () => {
+  const store = makeStore();
+  applyHydratePayload({
+    store,
+    payload: {
+      daily: [{ puzzleId: 43, foundCodes: ['cn', 'in'], totalCount: 8, wrongCodes: ['ru', 'tr', 'mn'] }],
+      records: {},
+    },
+  });
+  const blob = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
+  assert.deepEqual(blob[43].w, ['ru', 'tr', 'mn']);
+});
+
+test('applyHydratePayload: a row with no wrong guesses writes no w key', () => {
+  const store = makeStore();
+  applyHydratePayload({
+    store,
+    payload: { daily: [{ puzzleId: 44, foundCodes: ['fi'], totalCount: 1, wrongCodes: [] }], records: {} },
+  });
+  const blob = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
+  assert.ok(!('w' in blob[44]), 'empty wrong list should not write a w key');
+});
+
+test('applyHydratePayload: a hydrate without wrongCodes does not erase a local w', () => {
+  // Older servers, and any row predating the field, send no wrongCodes. The
+  // hydrate overwrites the record wholesale, so without this guard a sync
+  // would silently delete wrong guesses the player earned on this device.
+  const store = makeStore();
+  store.setItem('daily.scores', JSON.stringify({ 45: { f: 2, t: 12, c: ['so'], w: ['cg', 'er', 'sd'] } }));
+  applyHydratePayload({
+    store,
+    payload: { daily: [{ puzzleId: 45, foundCodes: ['so', 'km'], totalCount: 12 }], records: {} },
+  });
+  const blob = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
+  assert.deepEqual(blob[45].w, ['cg', 'er', 'sd'], 'local wrong guesses must survive');
+  assert.equal(blob[45].f, 2, 'and the rest of the row still hydrates');
+});
+
+test('applyHydratePayload: non-string wrong codes are filtered out', () => {
+  const store = makeStore();
+  applyHydratePayload({
+    store,
+    payload: {
+      daily: [{ puzzleId: 43, foundCodes: ['cn'], totalCount: 8, wrongCodes: /** @type {any} */ (['ru', 7, null, 'tr']) }],
+      records: {},
+    },
+  });
+  const blob = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
+  assert.deepEqual(blob[43].w, ['ru', 'tr']);
+});

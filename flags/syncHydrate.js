@@ -87,7 +87,7 @@ function bestKeyFromConfigKey(configKey) {
  * @param {{
  *   store: HydrateStore,
  *   payload: {
- *     daily: Array<{ puzzleId: number, foundCodes: string[], totalCount: number }>,
+ *     daily: Array<{ puzzleId: number, foundCodes: string[], totalCount: number, wrongCodes?: string[] }>,
  *     records: Record<string, { score: number, durationMs: number }>,
  *     nickname?: string | null,
  *   },
@@ -122,11 +122,29 @@ export function applyHydratePayload({ store, payload }) {
     for (const row of payload.daily) {
       if (!Number.isInteger(row.puzzleId) || row.puzzleId < 1) continue;
       const codes = Array.isArray(row.foundCodes) ? row.foundCodes : [];
-      scores[row.puzzleId] = {
+      /** @type {{ f: number, t: number, c: string[], w?: string[] }} */
+      const next = {
         f: codes.length,
         t: row.totalCount,
         c: codes,
       };
+      // Wrong guesses ride along when the server sends them. They power the
+      // revisit "your wrong guesses" section and the daily heart row, which
+      // derives spent hearts from this list — a hydrated record without it
+      // showed a full row on a puzzle the player had actually fumbled.
+      const wrong = Array.isArray(row.wrongCodes)
+        ? row.wrongCodes.filter((/** @type {unknown} */ x) => typeof x === 'string')
+        : null;
+      if (wrong && wrong.length > 0) {
+        next.w = wrong;
+      } else if (wrong === null) {
+        // Server sent nothing (older deploy, or a row predating the field).
+        // This hydrate overwrites the record wholesale, so preserve whatever
+        // the device already knew rather than silently deleting it.
+        const prev = /** @type {any} */ (scores[row.puzzleId]);
+        if (prev && Array.isArray(prev.w) && prev.w.length > 0) next.w = [...prev.w];
+      }
+      scores[row.puzzleId] = next;
       dailyWritten += 1;
     }
     try {

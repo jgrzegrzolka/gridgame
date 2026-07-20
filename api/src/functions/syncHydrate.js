@@ -68,7 +68,7 @@ app.http('syncHydrate', {
       [dailyRes, quizRes, profileRes] = await Promise.all([
         queryDocs({
           connString: conn, dbName: DB_NAME, containerName: 'dailyResults',
-          query: 'SELECT c.puzzleId, c.foundCodes, c.totalCount FROM c WHERE c.deviceId = @did',
+          query: 'SELECT c.puzzleId, c.foundCodes, c.wrongCodes, c.totalCount FROM c WHERE c.deviceId = @did',
           parameters: [{ name: '@did', value: deviceId }],
           enableCrossPartition: true,
         }),
@@ -94,7 +94,7 @@ app.http('syncHydrate', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    /** @type {Array<{ puzzleId: number, foundCodes: string[], totalCount: number }>} */
+    /** @type {Array<{ puzzleId: number, foundCodes: string[], wrongCodes: string[], totalCount: number }>} */
     const daily = [];
     for (const row of dailyRes.docs) {
       if (typeof row.puzzleId !== 'number') continue;
@@ -102,7 +102,14 @@ app.http('syncHydrate', {
         ? row.foundCodes.filter((/** @type {unknown} */ x) => typeof x === 'string')
         : [];
       const totalCount = typeof row.totalCount === 'number' ? row.totalCount : foundCodes.length;
-      daily.push({ puzzleId: row.puzzleId, foundCodes, totalCount });
+      // wrongCodes rides along so a device that receives this row can rebuild
+      // the revisit "your wrong guesses" section and the daily heart row,
+      // which derives spent hearts from it. Omitting it made a hydrated
+      // record look like a flawless run.
+      const wrongCodes = Array.isArray(row.wrongCodes)
+        ? row.wrongCodes.filter((/** @type {unknown} */ x) => typeof x === 'string')
+        : [];
+      daily.push({ puzzleId: row.puzzleId, foundCodes, wrongCodes, totalCount });
     }
 
     const quizRow = quizRes.docs[0];
