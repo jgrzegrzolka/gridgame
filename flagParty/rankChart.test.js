@@ -44,25 +44,44 @@ function rankRowTracks() {
   return tracks[1].trim().split(/\s+(?![^(]*\))/);
 }
 
+/**
+ * Per-character advance of `.rank-val`, in em. **Measured, not guessed**: the
+ * widest real value ("202,080", 7 chars) renders at 52px in a 15px `.rank-val`
+ * in Chromium, giving 52 / (7 x 15) = 0.495. Rounded up to 0.5.
+ *
+ * It has to be a constant rather than a live measurement because there is no
+ * layout engine here, and it has to be honest because the column width is
+ * checked against it: an estimate tuned until the shipped value passed would
+ * make this test a restatement of that value rather than a check on it.
+ */
+const CHAR_ADVANCE_EM = 0.5;
+
+/** Headroom the column must have beyond the widest value it can be asked to
+ *  hold. Without a margin the assertion passes at exactly the boundary, which
+ *  is indistinguishable from having been derived from it — and leaves nothing
+ *  for a font that renders a hair wider than Chromium's. */
+const MARGIN_PX = 4;
+
 test('the value column fits the widest value any metric can produce', () => {
   const widest = widestValueChars();
   const valueTrack = rankRowTracks()[3];
   const px = Number((valueTrack.match(/^(\d+)px$/) || [])[1]);
   assert.ok(px, `expected a fixed px value track, got "${valueTrack}"`);
-  // 15px tabular digits run about 0.55em per character (they are all one
-  // advance, by definition of tabular-nums). Comma and period are narrower, so
-  // this over-estimates slightly, which is the direction we want.
-  const needed = Math.ceil(widest.length * 15 * 0.55);
+  const needed = Math.ceil(widest.length * 15 * CHAR_ADVANCE_EM) + MARGIN_PX;
   assert.ok(px >= needed,
-    `.rank-row's value column is ${px}px but "${widest}" (${widest.length} chars) needs about ${needed}px; ` +
-    'it will overflow left onto the bar');
+    `.rank-row's value column is ${px}px but "${widest}" (${widest.length} chars) needs ${needed}px ` +
+    `(including ${MARGIN_PX}px headroom); it will overflow left onto the bar`);
 });
 
 test('the value column is not so wide it starves the name and bar', () => {
   // The other direction: the flexible 1fr track carries the country name AND the
   // bar, so an over-generous fixed column squeezes the thing the chart is for.
+  // The bound is the widest value plus half again — enough that a genuinely
+  // wider metric can grow the column, but not enough to let it creep.
   const px = Number((rankRowTracks()[3].match(/^(\d+)px$/) || [])[1]);
-  assert.ok(px <= 80, `a ${px}px value column leaves too little for the name and bar`);
+  const ceiling = Math.ceil(widestValueChars().length * 15 * CHAR_ADVANCE_EM * 1.5);
+  assert.ok(px <= ceiling,
+    `a ${px}px value column exceeds the ${ceiling}px ceiling and leaves too little for the name and bar`);
 });
 
 test('every fixed track on a chart row really is fixed', () => {

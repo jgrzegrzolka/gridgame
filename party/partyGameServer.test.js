@@ -575,3 +575,139 @@ test('draft (3 players): the picking broadcast names the same picker for everyon
     }
   }
 });
+
+// ---- hold-to-read: the holders set ----
+// `applyHold` is a pure relay and is tested in flags/partyRoom.test.js. The
+// LIFECYCLE lives only here, in the shell, and cannot be reached from there:
+// which seats are currently holding, when that set is cleared, and — the one
+// case no client can ever cover, because its tab is already gone — releasing a
+// seat that drops mid-hold. Held time is unbounded, so if that release is ever
+// lost the room freezes on a reveal nobody is reading, with nothing to bail it
+// out. These pin it.
+
+/** A metric card from the hand actually dealt — the hand is random, so a
+ *  hardcoded id is not reliably on offer. Metric rounds are the ones that rank
+ *  their options, which is what makes their reveal a chart. */
+function metricCardIn(conn) {
+  const hand = conn.last('picking').hand;
+  const card = hand.find((id) => id.startsWith('superlative-'));
+  assert.ok(card, `expected a metric card in the dealt hand: ${hand.join(', ')}`);
+  return card;
+}
+
+/** Choose a metric round from whichever seat was actually dealt the hand. The
+ *  picker is the trailing seat, so in a multi-seat game it is not necessarily
+ *  the one driving the test — and the hand is only ever sent to the picker. */
+async function pickMetricRound(srv, conns) {
+  // Watchers get a `picking` message too — it names who is choosing — but only
+  // the picker's carries a hand, so match on the hand rather than the message.
+  const picker = conns.find((c) => c.last('picking')?.hand);
+  assert.ok(picker, 'expected one seat to have been dealt a hand');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: metricCardIn(picker) }), picker);
+}
+
+/** Drive a solo draft game to a CHART reveal (a metric round's first question,
+ *  answered). Only a reveal carrying `question.ranking` accepts a hold. */
+async function atChartReveal() {
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), conn);
+  await playBlock(srv, conn);
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: metricCardIn(conn) }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  assert.equal(srv.room.phase, 'reveal');
+  assert.ok(Array.isArray(srv.room.question.ranking) && srv.room.question.ranking.length > 0,
+    'expected a ranked (chart) question so the hold is accepted');
+  return { srv, conn };
+}
+
+test('hold: a press is remembered and a release forgets it', async () => {
+  const { srv, conn } = await atChartReveal();
+  await srv.onMessage(JSON.stringify({ type: 'hold', on: true }), conn);
+  assert.deepEqual([...srv.holders], ['alice'], 'the server knows who to release later');
+  assert.deepEqual(conn.last('holding'), { type: 'holding', playerId: 'alice', on: true });
+  await srv.onMessage(JSON.stringify({ type: 'hold', on: false }), conn);
+  assert.deepEqual([...srv.holders], []);
+  assert.equal(conn.last('holding').on, false);
+});
+
+test('hold: a rejected hold is not remembered', async () => {
+  // The bookkeeping must follow the reducer's verdict, not the message. If a
+  // refused hold were recorded, that seat would emit a phantom release on
+  // disconnect — telling every client to unfreeze a hold that never existed.
+  const { srv, conn } = await startSoloDraft();
+  assert.equal(srv.room.phase, 'question', 'not a reveal, so the hold is refused');
+  await srv.onMessage(JSON.stringify({ type: 'hold', on: true }), conn);
+  assert.deepEqual([...srv.holders], []);
+  assert.equal(conn.last('holding'), null, 'and nothing was broadcast');
+});
+
+test('hold: a hold on a reveal that draws no chart is refused and not remembered', async () => {
+  // The opening Flags round reveals without a ranking. Only a crafted client
+  // gets here (the button is never rendered), which is exactly why it is pinned.
+  const { srv, conn } = await startSoloDraft();
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  assert.equal(srv.room.phase, 'reveal');
+  assert.ok(!srv.room.question.ranking, 'a flag-pick reveal has no ranking');
+  await srv.onMessage(JSON.stringify({ type: 'hold', on: true }), conn);
+  assert.deepEqual([...srv.holders], [], 'refused, so nothing to release later');
+});
+
+test('hold: dropping mid-hold releases the seat for the whole room', async () => {
+  // THE case that justifies the holders set. The holder cannot send its own
+  // release — its tab is gone — and held time has no ceiling, so without this
+  // broadcast every remaining client stays frozen forever.
+  const holder = mockConn('a');
+  const watcher = mockConn('b');
+  const srv = new PartyGameServer(mockParty([holder, watcher]));
+  await srv.onStart();
+  await srv.onConnect(holder, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(watcher, ctxFor('bob', 'join', 'Bob'));
+  await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), holder);
+  // Both seats have to buzz for the question to resolve — with one still
+  // outstanding there is no auto-reveal, and `next` on a live question is a
+  // no-op, so a one-sided block would simply never advance the room.
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), holder);
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), watcher);
+    await srv.onMessage(JSON.stringify({ type: 'next' }), holder);
+  }
+  await pickMetricRound(srv, [holder, watcher]);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), holder);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), watcher);
+  assert.equal(srv.room.phase, 'reveal');
+  await srv.onMessage(JSON.stringify({ type: 'hold', on: true }), holder);
+  assert.deepEqual([...srv.holders], ['alice']);
+
+  await srv.onClose(holder);
+  const release = watcher.last('holding');
+  assert.deepEqual(release, { type: 'holding', playerId: 'alice', on: false },
+    'the seats still here are told to unfreeze');
+  assert.deepEqual([...srv.holders], [], 'and the seat is forgotten');
+});
+
+test('hold: a seat that was not holding produces no release when it drops', async () => {
+  const holder = mockConn('a');
+  const other = mockConn('b');
+  const srv = new PartyGameServer(mockParty([holder, other]));
+  await srv.onStart();
+  await srv.onConnect(holder, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(other, ctxFor('bob', 'join', 'Bob'));
+  await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), holder);
+  await srv.onClose(other);
+  assert.equal(holder.last('holding'), null, 'no phantom release for a seat that never held');
+});
+
+test('hold: holders are cleared when the phase moves on', async () => {
+  // A hold belongs to the reveal it was pressed on. A stale entry surviving into
+  // the next question would earn a phantom release the moment that seat later
+  // disconnected, unfreezing a clock nobody was holding.
+  const { srv, conn } = await atChartReveal();
+  await srv.onMessage(JSON.stringify({ type: 'hold', on: true }), conn);
+  assert.deepEqual([...srv.holders], ['alice']);
+  await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
+  assert.notEqual(srv.room.phase, 'reveal', 'the room moved on');
+  assert.deepEqual([...srv.holders], [], 'so the hold did not survive with it');
+});
