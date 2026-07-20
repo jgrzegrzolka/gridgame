@@ -251,6 +251,14 @@ const KNOWN_MOTIFS = [
   // Dominica's red disc carries ten green stars (one per parish) ringing the
   // Sisserou parrot — a genuine star motif, same as any other multi-star flag.
   { code: 'dm',    motifs: ['star-or-moon'], note: 'Dominica — ten stars ringing the parrot' },
+  // Equatorial Guinea's arms carry six gold six-pointed stars above the
+  // silk-cotton tree (mainland + five islands) — visible in svg/gq.svg as a
+  // single gold path of six star subpaths. Stars that live inside a coat of
+  // arms still count: Slovenia (three stars above Triglav) and Croatia (the
+  // morning star in the crown) are both tagged the same way. Missing this
+  // made Equatorial Guinea a wrong answer on the Africa + blue + star-or-moon
+  // daily, where it costs the player a life.
+  { code: 'gq',    motifs: ['coat-of-arms', 'star-or-moon'], note: 'Equatorial Guinea — six stars above the tree in the arms' },
 ];
 
 test('known animal/coat-of-arms flags keep their expected motif tags', () => {

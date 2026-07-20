@@ -202,3 +202,61 @@ test('migrateScores does not write when nothing changed', () => {
   migrateScores(store);
   assert.equal(store._map.get('daily.scores'), before);
 });
+
+// ---- gq_add_star (2026-07-20) -------------------------------------------
+// Equatorial Guinea gained the `star-or-moon` motif after its six emblem
+// stars were found missing from countries.json, which grew puzzle #13
+// (15 → 16) and #45 (11 → 12). Unlike puzzle1_add_li, gq may already sit in
+// a player's *wrong* list — it was a rejected guess until the fix — so the
+// migration has to move it across, not just append it.
+
+test('applyScoreMigrations: gq_add_star credits #45 finishers and bumps the total', () => {
+  const { scores, changed } = applyScoreMigrations({
+    45: { f: 11, t: 11, c: ['cd', 'cf', 'cv', 'dj', 'et', 'km', 'lr', 'na', 'rw', 'so', 'ss'] },
+  });
+  assert.equal(changed, true);
+  assert.equal(scores[45].f, 12);
+  assert.equal(scores[45].t, 12);
+  assert.ok(scores[45].c.includes('gq'));
+});
+
+test('applyScoreMigrations: gq_add_star moves gq from the wrong list to the found list', () => {
+  // The player DID type Equatorial Guinea and was told it was wrong. That
+  // rejection is the bug; the guess was right. It must not stay recorded as
+  // a mistake, or the result screen keeps calling a correct answer wrong.
+  const { scores } = applyScoreMigrations({
+    45: { f: 3, t: 11, c: ['cd', 'cf', 'cv'], w: ['pl', 'gq', 'de'] },
+  });
+  assert.equal(scores[45].f, 4);
+  assert.equal(scores[45].t, 12);
+  assert.ok(scores[45].c.includes('gq'));
+  assert.deepEqual(scores[45].w, ['pl', 'de'], 'gq must be gone from the wrong list');
+});
+
+test('applyScoreMigrations: gq_add_star preserves the rest of the wrong list', () => {
+  const { scores } = applyScoreMigrations({
+    13: { f: 2, t: 15, c: ['bf', 'cf'], w: ['fr', 'it'] },
+  });
+  assert.equal(scores[13].t, 16);
+  assert.deepEqual(scores[13].w, ['fr', 'it']);
+});
+
+test('applyScoreMigrations: gq_add_star covers puzzle #13 as well as #45', () => {
+  const { scores, changed } = applyScoreMigrations({ 13: { f: 15, t: 15, c: ['bf'] } });
+  assert.equal(changed, true);
+  assert.equal(scores[13].f, 16);
+  assert.equal(scores[13].t, 16);
+});
+
+test('applyScoreMigrations: gq_add_star is idempotent — a migrated record is left alone', () => {
+  const already = { 45: { f: 12, t: 12, c: ['gq'], w: ['pl'] } };
+  const { scores, changed } = applyScoreMigrations(already);
+  assert.equal(changed, false);
+  assert.equal(scores[45].f, 12);
+  assert.equal(scores[45].t, 12);
+});
+
+test('applyScoreMigrations: gq_add_star ignores puzzles it does not own', () => {
+  const { changed } = applyScoreMigrations({ 44: { f: 5, t: 11, c: ['so'] } });
+  assert.equal(changed, false);
+});
