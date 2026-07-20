@@ -80,6 +80,40 @@ test('draft start: opens a Flags round, sizes the game from the seat count', asy
   assert.equal(q.answer, undefined, 'the answer never rides the broadcast');
 });
 
+test('draft start: the host armed opener veil reaches the opening round', async () => {
+  // The opening round is dealt, not picked, so its veil comes in through
+  // applyStart's tricky argument rather than a segment the picker armed. The
+  // question broadcast carries room.tricky, so an armed opener shows tricky:true.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'setOpener', opener: 'flags-all', veil: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(srv.room.tricky, true, 'the opening round is veiled');
+  assert.equal(conn.last('question').tricky, true, 'and the tiles know it');
+});
+
+test('draft start: an armed opener veil applies to spot-the-flag too', async () => {
+  // The whole point of the change: spot-flag is now veilable, so a host who
+  // opens on it and arms the veil gets a veiled opener rather than the veil
+  // being silently dropped (canVeilMode used to refuse it).
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'setOpener', opener: 'spot-flag', veil: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(conn.last('question').questionId, 'spotFlag', 'opened on spot-the-flag');
+  assert.equal(srv.room.tricky, true, 'and it is veiled');
+});
+
+test('draft start: no opener veil leaves the opening round clear', async () => {
+  const { srv, conn } = await startSoloDraft();
+  assert.equal(srv.room.tricky, false);
+  assert.equal(conn.last('question').tricky, false);
+});
+
 test('draft start: the host length choice sets the round count', async () => {
   const a = mockConn('a'), b = mockConn('b');
   const srv = new PartyGameServer(mockParty([a, b]));

@@ -26,6 +26,9 @@
  *   learned the same way as `length` and painted by every seat. Defaults to the
  *   Flags opener that was fixed before the host could choose, so a client talking
  *   to a server that never sends it behaves exactly as it used to.
+ * @property {boolean} openerVeil  whether the host armed the veil on the opening
+ *   round, painted beside the opener control (host toggles it, guests see it).
+ *   Defaults off, and an older server never sends it, so it simply stays off.
  * @property {string} length  the host's game-length choice, learned from the
  *   server. Every seat renders it in the lobby — the host as a control, everyone
  *   else read-only — so a guest can see what they are in for before it starts.
@@ -77,6 +80,7 @@ export function initialPartyClientState() {
     tricky: false,
     length: DEFAULT_GAME_LENGTH,
     opener: OPENING_MODE_ID,
+    openerVeil: false,
     question: null,
     buzzedCount: 0,
     seatCount: 0,
@@ -163,6 +167,7 @@ function reduceOne(state, message) {
           // over whatever the host had already told us.
           length: message.length ?? state.length,
           opener: message.opener ?? state.opener,
+          openerVeil: message.openerVeil ?? state.openerVeil,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
           // A reconnect mid-pick resumes the draft turn (picker + hand ride the
@@ -201,6 +206,7 @@ function reduceOne(state, message) {
           ...state,
           length: message.length ?? state.length,
           opener: message.opener ?? state.opener,
+          openerVeil: message.openerVeil ?? state.openerVeil,
         },
         effects: [],
       };
@@ -214,6 +220,7 @@ function reduceOne(state, message) {
           roster: message.roster ?? state.roster,
           length: message.length ?? state.length,
           opener: message.opener ?? state.opener,
+          openerVeil: message.openerVeil ?? state.openerVeil,
           isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
           question: null,
           reveal: null,

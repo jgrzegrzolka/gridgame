@@ -131,6 +131,14 @@ test('veilActive: never veils a statistics question, even with tricky on', () =>
   }
 });
 
+test('veilActive: spot-the-flag veils when armed (reversed 2026-07-21)', () => {
+  // spotFlag used to be excluded like the metrics above. It no longer is: it is
+  // the easiest recognition round, and the veil is the difficulty it wanted. Off
+  // by default (opt-in per round / on the opener), on when armed.
+  assert.equal(veilActive(true, 'spotFlag'), true, 'armed → veiled');
+  assert.equal(veilActive(false, 'spotFlag'), false, 'unarmed → clear');
+});
+
 test('veilActive: nothing else can turn the veil on', () => {
   // Regression pin: the final round used to veil regardless of the setting, so a
   // host who never enabled tricky still got a veiled finale, and draft (which

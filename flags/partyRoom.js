@@ -59,6 +59,10 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateOpenerMode } from './p
  *   So null here means only "nobody has chosen yet", and the fallback is the
  *   Flags round that was the fixed opener before the host could choose at all.
  *   It counts as the host's first pick, so `applyStart` seeds `pickedBy`.
+ * @property {boolean} openerVeil  whether the host armed the veil on the opening
+ *   round. Every opener mode can be veiled (the picture trio and spot-the-flag),
+ *   so it is a single flag independent of which opener is chosen. Reaches the
+ *   opening round as `applyStart`'s `tricky` argument.
  * @property {number} questionIndex  0-based index of the current question.
  * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
  *   veil each tile (grey + blur + panel wipe) and clear it over the question
@@ -145,6 +149,11 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     // hosted by a pre-setOpener build must be distinguishable from one whose host
     // deliberately chose Flags.
     opener: null,
+    // Whether the host armed the veil on the opening round (any opener mode can
+    // be veiled — the picture trio and spot-the-flag). A plain boolean, not
+    // null: unlike `opener`/`length` there is nothing to distinguish from an old
+    // client, and "off" is the honest default for a room nobody has touched.
+    openerVeil: false,
     questionIndex: 0,
     tricky: false,
     reveal: null,
@@ -552,6 +561,7 @@ function resetToLobby(room) {
         // again, so a room that liked its setup does not re-choose it every game.
         length: nextRoom.length,
         opener: nextRoom.opener,
+        openerVeil: nextRoom.openerVeil,
       },
     }],
   };
@@ -651,20 +661,32 @@ export function applyRepick(room, picker) {
  * {@link applyStart}, which seeds `pickedBy` with them, not here: until the game
  * starts there is no rotation for it to count against.
  *
+ * The veil rides the same message: the host arms (or disarms) hiding the opening
+ * round's tiles. It is a plain boolean and applies to whatever opener is chosen,
+ * since every opener mode is veilable. Coerced to a boolean here so a missing
+ * field (an older host that only sends `opener`) reads as "off" rather than
+ * blanking a value the room might already hold — the caller passes
+ * `room.openerVeil` through when it only means to change the mode.
+ *
+ * Nothing broadcasts unless the mode OR the veil actually changed, so toggling
+ * the veil alone still fans out, but a no-op setOpener stays silent.
+ *
  * @param {Room} room
  * @param {string} playerId
  * @param {unknown} opener  a picture mode id; anything else coerces to Flags
+ * @param {boolean} [veil]  whether the opening round is veiled; omit to keep
  * @returns {ApplyResult}
  */
-export function applySetOpener(room, playerId, opener) {
+export function applySetOpener(room, playerId, opener, veil) {
   if (room.phase !== 'lobby') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   const next = validateOpenerMode(opener);
-  if (next === room.opener) return { room, broadcasts: [] };
-  const nextRoom = { ...room, opener: next };
+  const nextVeil = typeof veil === 'boolean' ? veil : room.openerVeil;
+  if (next === room.opener && nextVeil === room.openerVeil) return { room, broadcasts: [] };
+  const nextRoom = { ...room, opener: next, openerVeil: nextVeil };
   return {
     room: nextRoom,
-    broadcasts: [{ to: 'all', message: { type: 'settings', opener: next } }],
+    broadcasts: [{ to: 'all', message: { type: 'settings', opener: next, openerVeil: nextVeil } }],
   };
 }
 
@@ -920,6 +942,7 @@ function welcomeBroadcast(room, playerId) {
       // host to happen to change it. Same for the opening round.
       length: room.length,
       opener: room.opener,
+      openerVeil: room.openerVeil,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
@@ -952,6 +975,7 @@ export function serializeRoom(room) {
     plan: room.plan,
     length: room.length,
     opener: room.opener,
+    openerVeil: room.openerVeil,
     questionIndex: room.questionIndex,
     tricky: room.tricky,
     reveal: room.reveal,
@@ -984,6 +1008,7 @@ export function deserializeRoom(snapshot) {
     // this" — rather than being given a default nobody chose.
     length: snapshot.length ?? null,
     opener: snapshot.opener ?? null,
+    openerVeil: snapshot.openerVeil ?? false,
     questionIndex: snapshot.questionIndex ?? 0,
     tricky: snapshot.tricky ?? false,
     reveal: snapshot.reveal ?? null,

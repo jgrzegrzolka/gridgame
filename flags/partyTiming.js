@@ -411,15 +411,17 @@ export function veilProgress(deadlineMs, nowMs, totalMs, clearFrac) {
  * @returns {boolean}
  */
 export function veilActive(tricky, questionId) {
+  // Statistics questions never veil: the flag is incidental there (the question
+  // is the number), those rounds already run hard, and hiding the flag only
+  // withholds a cue that wasn't the point. That exclusion stays.
   if (isMetricQuestion(questionId)) return false;
-  // - **never on a spot-the-flag question.** Its criteria are colours and
-  //   motifs, and the veil's whole job is to withhold exactly those. Veiled,
-  //   the round stops being "look carefully" and becomes "wait for the veil to
-  //   clear, then look" -- the clock spent on the interesting part instead.
-  //   Same principle as the metric exclusion above: hiding the flag tests the
-  //   wrong skill, it just fails in the opposite direction (there the flag is
-  //   incidental, here it is the entire question).
-  if (questionId === 'spotFlag') return false;
+  // Spot-the-flag DOES veil now, by an explicit product call (2026-07-21). It
+  // used to be excluded on the reasoning that the veil withholds the colours and
+  // motifs the question asks you to read -- but spot-the-flag is the gentlest
+  // recognition round in the show, and the veil clearing over the clock is
+  // exactly the extra difficulty it wanted. It is opt-in either way (a picker
+  // arms it per round, or the host arms the opener), never forced. Reversal noted
+  // in PARTY.md; the metric exclusion above is a different case and is unchanged.
   return tricky === true;
 }
 

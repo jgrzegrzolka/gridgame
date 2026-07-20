@@ -148,6 +148,14 @@
               <span class="dl-lab" data-i18n="party.modeShort.spotFlag">Spot</span>
             </button>
           </span>
+          <!-- Host-only veil toggle for the opening round. Every opener mode is
+               veilable, so it is one toggle rather than a per-button chip. Reuses
+               the pick-card veil glyph + hint so the "start hidden, clears on the
+               clock" idea reads the same here as on the draft pick cards. -->
+          <button type="button" class="opener-veil hover-tip" id="draft-opener-veil" aria-pressed="false" data-i18n-attr="data-tip:party.veilOpenerHint" data-tip="Veil the opening round: the tiles start hidden and clear as the clock runs" hidden>
+            <span class="veil-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="opener-veil-lab" data-i18n="party.veilOpener">Hidden start</span>
+          </button>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">
