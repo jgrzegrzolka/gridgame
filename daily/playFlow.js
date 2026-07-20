@@ -18,7 +18,7 @@
  *
  * DOM contract: every page that imports this module must include the
  * same set of element IDs in its HTML — `daily-state`, `game`, `result`,
- * `daily-desc`, `find-cat`, `find-count`, `find-input`, `find-suggestions`,
+ * `daily-desc`, `find-cat`, `find-count`, `daily-lives`, `find-input`, `find-suggestions`,
  * `find-found`, `give-up`, `final-score-prefix`, `final-score-fraction`,
  * `final-found`, `final-total`, `final-score-line`, `find-result-found`,
  * `found-title`, `find-missed`, `missed-title`, and a `<dialog id="zoom">`
@@ -29,6 +29,8 @@
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
+import { createLives } from './lives.js';
+import { saveProgress, clearProgress } from './progress.js';
 import { renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
@@ -103,6 +105,16 @@ export function showReason(reason) {
 // look for SVGs under `daily/flags/svg/...` and 404. Resolving from the
 // module URL gives the same correct site-root path from every caller.
 const SVG_BASE = new URL('../flags/svg/', import.meta.url).href;
+
+/**
+ * Heart silhouette for the daily's wrong-guess budget, on a 24 × 22 grid.
+ * One constant, rendered filled while a life is available and as an
+ * outline once it's spent (see `heartSvg`) — so the two states can never
+ * describe different shapes.
+ */
+const HEART_PATH =
+  'M12 21C12 21 1.5 14.2 1.5 7.6 1.5 4.2 4.2 1.5 7.5 1.5c2 0 3.7 1 4.5 2.5' +
+  '.8-1.5 2.5-2.5 4.5-2.5 3.3 0 6 2.7 6 6.1C22.5 14.2 12 21 12 21z';
 
 /**
  * The active puzzle's per-answer "why" notes (`entry.notes`), keyed by
@@ -495,14 +507,25 @@ export function renderResult(targets, foundCodes, categoryLabel) {
  * sister pages (`daily/ideas/`, `daily/backlog/`) don't pass it, so
  * preview-renders stay event-free.
  *
- * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void, onFirstInteraction?: () => void }} [opts]
+ * `persistProgress` (optional) makes the run survive a reload: every
+ * guess is snapshotted to `daily.progress` and the record is dropped on
+ * finish. `resume` (optional) is the record a previous session left
+ * behind — pass what `loadProgress` returned to rebuild the board, the
+ * spent hearts, and the original start time. Only the live daily page
+ * opts in; the author preview pages must not touch a player's keys.
+ *
+ * @param {{ skipSave?: boolean, persistProgress?: boolean, resume?: import('./progress.js').DailyProgress | null, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void, onFirstInteraction?: () => void }} [opts]
  * @returns {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }}
  */
 export function startGame(n, category, targets, all, opts = {}) {
   const skipSave = opts.skipSave === true;
   const onFinish = typeof opts.onFinish === 'function' ? opts.onFinish : null;
   const onFirstInteraction = typeof opts.onFirstInteraction === 'function' ? opts.onFirstInteraction : null;
-  const startTime = Date.now();
+  // Opt-in, not derived from `skipSave`: the author preview pages must
+  // never write a player's progress key, and an explicit flag means a
+  // future caller can't acquire the behaviour by accident.
+  const persistProgress = opts.persistProgress === true;
+  const resume = opts.resume ?? null;
   // pool is rebuilt on a soft language switch (the suggestion matcher reads
   // each Country's `aliases`, which are baked at withLocalizedAliases time
   // and stale after the language flips). targetCodes is mutated in place
@@ -517,6 +540,29 @@ export function startGame(n, category, targets, all, opts = {}) {
   // Future stats UIs ("most-wrong-guessed today", "your distractors")
   // depend on this data being captured per submission from day one.
   const wrongCodes = new Set();
+  // Wrong-guess budget. Keyed on country code inside `lives`, so it can
+  // never disagree with `wrongCodes` above — both charge once per wrong
+  // country, however many times the player retypes it.
+  const lives = createLives();
+  // Rebuild an interrupted run. Both lists are re-validated against the
+  // live targets rather than trusted: a stored code that is no longer a
+  // target (catalog edit, tampering) must not award a found flag, and a
+  // code that *is* a target must not burn a heart.
+  if (resume) {
+    for (const code of resume.c) {
+      if (targetCodes.has(code)) foundCodes.add(code);
+    }
+    for (const code of resume.w) {
+      if (targetCodes.has(code)) continue;
+      wrongCodes.add(code);
+      lives.spend(code);
+    }
+  }
+  // A resumed run keeps its original start time, so reloading can't
+  // reset the clock any more than it can refund a heart. `s: 0` means
+  // the stored record had no usable timestamp — fall back to now rather
+  // than reporting a 56-year duration.
+  const startTime = resume && resume.s > 0 ? resume.s : Date.now();
   const state = { targetCodes, foundCodes };
 
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
@@ -526,6 +572,7 @@ export function startGame(n, category, targets, all, opts = {}) {
   const sugEl = /** @type {HTMLElement} */ (document.getElementById('find-suggestions'));
   const foundEl = /** @type {HTMLElement} */ (document.getElementById('find-found'));
   const giveUpEl = /** @type {HTMLElement} */ (document.getElementById('give-up'));
+  const livesEl = /** @type {HTMLElement} */ (document.getElementById('daily-lives'));
 
   // Filter-kind puzzles render their criteria as chips; a superlative / flag-
   // design manual leads its title with an icon; a plain manual keeps its title.
@@ -534,7 +581,16 @@ export function startGame(n, category, targets, all, opts = {}) {
   setCriteriaFilter(category.filter);
   setCriteriaLead(category.lead);
   paintCriteria(catEl, category.label);
+  // Re-paint the tiles a resumed run already earned. Walks `targets`
+  // rather than `resume.c` so the tiles come back in the catalog's own
+  // order and every code is backed by a real Country object.
+  if (resume) {
+    for (const c of targets) {
+      if (foundCodes.has(c.code)) appendFound(c);
+    }
+  }
   updateCount();
+  renderLives();
 
   /** @type {Country[]} */
   let matches = [];
@@ -543,6 +599,72 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   function updateCount() {
     countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
+  }
+  /* One heart per life, spent ones hollowed out left-to-right.
+   *
+   * Built in JS rather than as two CSS `mask-image` data URIs so the
+   * filled and outline forms share a single path constant — two copies
+   * of a hand-written heart path is exactly the kind of duplicate that
+   * drifts the first time someone nudges a curve.
+   *
+   * Colour comes from `currentColor`, so the stylesheet keeps ownership
+   * of the hue (`--secondary-color` on `.daily-life`) and this function
+   * only decides fill-vs-stroke. Stroke is 2.8 units in a 24-unit
+   * viewBox rendered at 13 px ≈ 1.5 px on screen: a 1 px-equivalent
+   * hairline in pink disappears into the page tint at this size, and
+   * anything under 1 px would round away entirely on standard-DPI
+   * displays.
+   *
+   * @param {boolean} spent
+   * @returns {SVGSVGElement}
+   */
+  function heartSvg(spent) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 22');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', HEART_PATH);
+    if (spent) {
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke-width', '2.8');
+      path.setAttribute('stroke-linejoin', 'round');
+    } else {
+      path.setAttribute('fill', 'currentColor');
+    }
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /* One heart per life, spent ones hollowed out left-to-right. Rebuilt
+   * wholesale rather than toggling a class on one dot because the row
+   * is at most `DAILY_LIVES` nodes and a full repaint keeps the
+   * language-switch path (which re-runs the label) trivially correct.
+   * On the last life the row pulses rather than turning red: red is
+   * `--wrong-color`, which this repo reserves for "that answer was
+   * wrong", and a dot meaning "one guess left" is a warning, not a
+   * verdict. The exact count stays spelled out in the aria-label. */
+  function renderLives() {
+    const left = lives.remaining();
+    livesEl.setAttribute(
+      'aria-label',
+      // Label-then-number, not "{n} guesses left": Polish agrees the noun
+      // with the count in three different ways (1 / 2-4 / 5+), so a counted
+      // noun would be wrong at both ends. This shape is correct at every n
+      // in both languages without a plural-rules table.
+      t('daily.guessesLeft', 'Wrong guesses left: {n}').replace('{n}', String(left)),
+    );
+    livesEl.classList.toggle('daily-lives--last', left === 1);
+    livesEl.innerHTML = '';
+    for (let i = 0; i < lives.max; i += 1) {
+      const li = document.createElement('li');
+      const spent = i >= left;
+      li.className = spent ? 'daily-life daily-life--spent' : 'daily-life';
+      li.appendChild(heartSvg(spent));
+      livesEl.appendChild(li);
+    }
   }
   /* Brief flash on each correct guess. Remove → force reflow → add
    * is the standard pattern for re-triggering a CSS animation on the
@@ -608,6 +730,19 @@ export function startGame(n, category, targets, all, opts = {}) {
     foundEl.insertBefore(flagTile(c, true), foundEl.firstChild);
   }
 
+  /* Snapshot the run after every guess that changes it. Cheap (a few
+   * hundred bytes, synchronous) and deliberately not debounced — the
+   * whole point is to survive a reload that can arrive between any two
+   * keystrokes. Cleared in `finish`, where the score record takes over. */
+  function persist() {
+    if (!persistProgress) return;
+    saveProgress(window.localStorage, n, {
+      found: Array.from(foundCodes),
+      wrong: Array.from(wrongCodes),
+      startedAt: startTime,
+    });
+  }
+
   /** @param {Country} c */
   function submitCountry(c) {
     const outcome = classifyGuess(state, c);
@@ -616,6 +751,7 @@ export function startGame(n, category, targets, all, opts = {}) {
       appendFound(c);
       updateCount();
       pulseCount();
+      persist();
       inputEl.value = '';
       matches = [];
       renderSuggestions();
@@ -628,10 +764,19 @@ export function startGame(n, category, targets, all, opts = {}) {
     }
     if (outcome.kind === 'wrong-category') {
       wrongCodes.add(c.code);
+      lives.spend(c.code);
+      renderLives();
+      persist();
       flashWrong();
       inputEl.value = '';
       matches = [];
       renderSuggestions();
+      // Out of lives ends the round on the same path as Give up: the
+      // result panel reveals what was missed and the score submits as
+      // it stands. Deliberately no separate "you lost" screen — the
+      // score is still `found / total`, and a player who found 9 of 12
+      // before running out did not lose, they stopped early.
+      if (lives.exhausted()) finish();
       return;
     }
     shakeInput();
@@ -682,6 +827,11 @@ export function startGame(n, category, targets, all, opts = {}) {
     finished = true;
     const found = foundCodes.size;
     const total = targetCodes.size;
+    // The run is over, so the unfinished-run record must go — otherwise
+    // a reload after finishing would resume a game that already has a
+    // score. Cleared before `saveScore` so that even if the save throws,
+    // we never leave both records alive at once.
+    if (persistProgress) clearProgress(window.localStorage, n);
     if (!skipSave) {
       saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes));
     }
@@ -700,6 +850,15 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   gameEl.hidden = false;
   if (!('ontouchstart' in window)) inputEl.focus();
+
+  // A resumed run that is already out of hearts should end, not sit at
+  // zero waiting for a guess it can't afford. Normally unreachable —
+  // `finish` clears the progress record — but a tab killed in the
+  // moment between the last heart going and the result rendering would
+  // leave exactly this state, and resuming into an unplayable board is
+  // worse than finishing it. Deliberately after every listener is wired
+  // and the game is visible, so `finish` runs against a complete DOM.
+  if (resume && lives.exhausted()) finish();
 
   return {
     /**
@@ -722,6 +881,9 @@ export function startGame(n, category, targets, all, opts = {}) {
       // plain-text fallback) needs the fresh translation.
       paintCriteria(catEl, next.label);
       refreshTileNames();
+      // The lives row is dots — nothing to re-translate visually — but its
+      // aria-label spells the count out in words, so it re-renders too.
+      renderLives();
       renderSuggestions();
       if (finished) renderResult(targets, foundCodes, next.label);
     },

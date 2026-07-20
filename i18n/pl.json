@@ -453,6 +453,7 @@
     "title": "Yet Another Quiz",
     "todaysPuzzle": "Dzisiejsza zagadka",
     "archive": "Poprzednie zagadki",
+    "guessesLeft": "Pozostało błędów: {n}",
     "archiveTitle": "Yet Another Quiz: Archiwum codziennych zagadek",
     "notFound": "Nie znaleziono zagadki.",
     "empty": "Brak zagadek.",

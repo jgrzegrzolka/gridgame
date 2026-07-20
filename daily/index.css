@@ -331,3 +331,60 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+/* ---- Wrong-guess budget (daily/lives.js) -------------------------------
+ * One dot per life, sitting between the puzzle header and the search
+ * input. Filled = still available, hollow = spent. Lives are a daily-only
+ * mechanic, so this stays in the daily sheet rather than the shared
+ * findFlag one; promote it if findFlag ever grows a budget of its own.
+ *
+ * Deliberately NOT --wrong-color. That token means "this answer was
+ * wrong" and the repo forbids borrowing it for emphasis; a dot that
+ * means "one guess left" is a warning, not a verdict on an answer. The
+ * last-life cue is motion + a lone filled dot instead, and the precise
+ * count is always in the row's aria-label. */
+.daily-lives {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+/* The hue lives here, not in the SVG: `heartSvg` paints with
+ * `currentColor`, so both the filled and the outline heart follow this
+ * one declaration. Spent hearts differ by fill only — same shape, same
+ * colour, so the row reads as one object with a filled portion rather
+ * than as two kinds of mark. */
+.daily-life {
+  display: block;
+  width: 13px;
+  height: 13px;
+  color: var(--secondary-color);
+}
+.daily-life svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Last life: the single remaining heart beats. Slow and shallow — this is
+ * a nudge to slow down, not an alarm. 1.15, not the 1.5 the 9px dot used:
+ * a heart is already the larger mark, and at 13px a half-again scale-up
+ * reads as a throb rather than a beat. */
+@keyframes daily-life-warn {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.daily-lives--last .daily-life:not(.daily-life--spent) {
+  animation: daily-life-warn 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* A static halo instead of the beat. `drop-shadow` follows the SVG's
+   * alpha channel, so it hugs the heart outline — `box-shadow` here would
+   * draw a rectangle around the li, which is what the dot version got
+   * away with only because the dot was a circle. */
+  .daily-lives--last .daily-life:not(.daily-life--spent) {
+    animation: none;
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--secondary-color) 55%, transparent));
+  }
+}

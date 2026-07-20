@@ -453,6 +453,7 @@
     "title": "Yet Another Quiz",
     "todaysPuzzle": "Today's puzzle",
     "archive": "Previous puzzles",
+    "guessesLeft": "Wrong guesses left: {n}",
     "archiveTitle": "Yet Another Quiz: Daily Archive",
     "notFound": "Puzzle not found.",
     "empty": "No puzzles yet.",

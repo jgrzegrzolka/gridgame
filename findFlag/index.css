@@ -196,12 +196,19 @@ body {
   border-color: var(--primary-color);
 }
 .find-input.wrong {
-  /* Red border, the site's one "that was wrong" signal (common.css). Was brand
-   * secondary; the old comment here pointed at `.feedback.shake-wrong` as the
-   * shared idiom, but no such rule has ever existed in the codebase — the real
-   * sibling is profile's `.profile-input.shake-wrong`. Used by both findFlag
-   * and the daily game, which loads this stylesheet too. */
-  border-color: var(--wrong-color);
+  /* Brand pink, deliberately NOT --wrong-color — reverting the part of #995
+   * that swept this border into the red pair. The distinction being drawn:
+   * red marks a *verdict that persists* on an answer you can look back at
+   * (a missed tile, a wrong cell, a map fill). This border is a transient
+   * nudge on a control — it says "that input didn't land", clears in 700ms,
+   * and never appears on the result screen. Pink keeps the running game
+   * feeling like feedback rather than judgement.
+   *
+   * Shared rule on purpose: findFlag and the daily both use `.find-input`,
+   * and the wrong-flash is the same mechanism in both, so it stays one rule
+   * rather than a daily-side override (CLAUDE.md, "same mechanism = same
+   * code"). Changing it here changes both, which is the intent. */
+  border-color: var(--secondary-color);
 }
 .find-input.shake {
   animation: find-shake 200ms ease;
