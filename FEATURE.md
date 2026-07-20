@@ -437,18 +437,29 @@ Both stages land within the 5 GB/month free tier at our traffic.
 
 **Why parked:** the secret is functionally correct under either name; the rename is pure hygiene. Real cost is one careful SWA deploy + a brief overlap window; real benefit is "future-me reading `syncClaimToken.js` doesn't have to think 'what's passkey doing here?'". Not urgent.
 
-### Cleanup: remove the puzzle #1 → Liechtenstein migration
+### Cleanup: retire the score migrations (Liechtenstein + Equatorial Guinea)
 
-**Status:** parked until ~2026-07-11. **Trigger to act:** ~30 days after 2026-06-11, once every active player has loaded the daily page at least once and had their `daily.scores` patched by `migrateScores()`.
+**Status:** parked until ~2026-08-19. Originally parked until ~2026-07-11 for the Liechtenstein migration alone; **that date passed unactioned, and the window then got extended by a second migration.** Both now live in the same `applyScoreMigrations` and share call sites, so the June cleanup can no longer be done in isolation.
 
-**What to remove:**
-- `applyScoreMigrations` + `migrateScores` in `daily/scores.js` (and the calls from `daily/page.js` + `daily/archive.js`).
-- The associated tests in `daily/scores.test.js`.
-- `scripts/backfill-puzzle1-add-li.cjs` + its test (one-shot Cosmos script that should already have been run with `--apply` by the time this cleanup happens).
+**The two migrations:**
 
-**What stays:** the puzzle data itself — `daily/daily_puzzles.json` #1 (10 answers including `li`), the `cross` motif on the 8 European COA-cross flags in `flags/countries.json`, and the `motif:!coat-of-arms` token on the #1 filter. Those are the durable change; the migration is just scaffolding for the trust transition.
+| Key | Landed | What it does |
+|---|---|---|
+| `puzzle1_add_li` | 2026-06-11 | Puzzle #1 grew 9 → 10 when Liechtenstein joined the European-cross set. Credits `li`, bumps the total. |
+| `gq_add_star` | 2026-07-20 | Equatorial Guinea gained `star-or-moon` (six emblem stars were missing from `countries.json`). Grew #13 15 → 16 and #45 11 → 12. Credits `gq`, bumps the total, **and moves `gq` out of `wrongCodes`** — it was a rejected-but-correct guess while the bug was live. |
 
-**Why parked:** a player who hasn't visited in a month is unlikely to come back and notice their score regress from "9/9" to "9/10". The migration is cheap to keep around but adds boot-time overhead and a test surface we don't need forever. Removing in a month gives long-tail returners a window without leaving the code permanently fatter.
+**Two different retirement clocks — don't conflate them:**
+
+1. **The one-shot Cosmos scripts can go now.** `scripts/backfill-puzzle1-add-li.cjs` and `scripts/backfill-gq-add-star.cjs` (plus tests). Both have been run with `--apply` against production; the gq one reports 13/13 rows already migrated on re-run. **These never shipped** — `deploy.yml` strips `scripts/` from the artifact, so they're repo clutter, not prod code. Deleting them is zero-risk.
+2. **The client migration needs a real window.** `applyScoreMigrations` + `migrateScores` in `daily/scores.js`, the calls from `daily/page.js` + `daily/archive.js`, and the tests in `daily/scores.test.js`. This *does* ship, and runs on every load of the daily and archive pages.
+
+**Why the client side can't be "a couple of days".** The migration patches a player's `daily.scores` the first time they return after the fix. Remove it before someone comes back and their local archive keeps the stale total forever — showing `5/11` on a puzzle the server now says is out of 12. Daily regulars are patched within a day; a weekly or monthly player isn't. 30 days is the same window the Liechtenstein entry originally chose, for the same reason.
+
+**Retire `puzzle1_add_li` early?** Tempting — it's ~10 weeks old by the August date and its block is independently removable. But the surrounding scaffolding (function, call sites, tests) has to stay for `gq_add_star` regardless, so removing just that block saves a few lines and costs a second edit. Simpler to drop both together.
+
+**What stays permanently:** the data itself. Puzzle #1's 10 answers and the `cross` motif on the 8 European COA-cross flags; the `star-or-moon` motif on `gq` and its `KNOWN_MOTIFS` pin; the corrected answer sets for #13 / #45 in the blob catalog. Those are the durable fix — the migrations are only scaffolding for the transition.
+
+**Lesson for next time:** this is the second one-shot migration in ten weeks, and the first one silently blew its retirement date. If a third lands before August, consider a single dated registry of migrations with one expiry check, rather than another hand-parked entry that depends on someone re-reading this file.
 
 ### Feature J: Platform decision — keep SWA Free, upgrade SWA, or migrate to CF Pages
 
