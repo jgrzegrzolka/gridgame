@@ -331,3 +331,52 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+/* ---- Wrong-guess budget (daily/lives.js) -------------------------------
+ * One dot per life, sitting between the puzzle header and the search
+ * input. Filled = still available, hollow = spent. Lives are a daily-only
+ * mechanic, so this stays in the daily sheet rather than the shared
+ * findFlag one; promote it if findFlag ever grows a budget of its own.
+ *
+ * Deliberately NOT --wrong-color. That token means "this answer was
+ * wrong" and the repo forbids borrowing it for emphasis; a dot that
+ * means "one guess left" is a warning, not a verdict on an answer. The
+ * last-life cue is motion + a lone filled dot instead, and the precise
+ * count is always in the row's aria-label. */
+.daily-lives {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.daily-life {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--secondary-color);
+}
+/* --muted-color, not --muted-soft-color: at 9px a #eee ring on the
+ * #fdfdfd page is effectively invisible, which makes the row read as
+ * "5 dots" instead of "5 of 7" and loses the whole point of the cue.
+ * The ring has to stay perceivable to show what's been spent. */
+.daily-life--spent {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--muted-color);
+}
+/* Last life: the single remaining dot breathes. Slow and small — this is
+ * a nudge to slow down, not an alarm. */
+@keyframes daily-life-warn {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+}
+.daily-lives--last .daily-life:not(.daily-life--spent) {
+  animation: daily-life-warn 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-lives--last .daily-life:not(.daily-life--spent) {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--secondary-color) 30%, transparent);
+  }
+}

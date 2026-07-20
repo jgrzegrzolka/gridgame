@@ -18,7 +18,7 @@
  *
  * DOM contract: every page that imports this module must include the
  * same set of element IDs in its HTML — `daily-state`, `game`, `result`,
- * `daily-desc`, `find-cat`, `find-count`, `find-input`, `find-suggestions`,
+ * `daily-desc`, `find-cat`, `find-count`, `daily-lives`, `find-input`, `find-suggestions`,
  * `find-found`, `give-up`, `final-score-prefix`, `final-score-fraction`,
  * `final-found`, `final-total`, `final-score-line`, `find-result-found`,
  * `found-title`, `find-missed`, `missed-title`, and a `<dialog id="zoom">`
@@ -29,6 +29,7 @@
 
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
+import { createLives } from './lives.js';
 import { renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
@@ -517,6 +518,10 @@ export function startGame(n, category, targets, all, opts = {}) {
   // Future stats UIs ("most-wrong-guessed today", "your distractors")
   // depend on this data being captured per submission from day one.
   const wrongCodes = new Set();
+  // Wrong-guess budget. Keyed on country code inside `lives`, so it can
+  // never disagree with `wrongCodes` above — both charge once per wrong
+  // country, however many times the player retypes it.
+  const lives = createLives();
   const state = { targetCodes, foundCodes };
 
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
@@ -526,6 +531,7 @@ export function startGame(n, category, targets, all, opts = {}) {
   const sugEl = /** @type {HTMLElement} */ (document.getElementById('find-suggestions'));
   const foundEl = /** @type {HTMLElement} */ (document.getElementById('find-found'));
   const giveUpEl = /** @type {HTMLElement} */ (document.getElementById('give-up'));
+  const livesEl = /** @type {HTMLElement} */ (document.getElementById('daily-lives'));
 
   // Filter-kind puzzles render their criteria as chips; a superlative / flag-
   // design manual leads its title with an icon; a plain manual keeps its title.
@@ -535,6 +541,7 @@ export function startGame(n, category, targets, all, opts = {}) {
   setCriteriaLead(category.lead);
   paintCriteria(catEl, category.label);
   updateCount();
+  renderLives();
 
   /** @type {Country[]} */
   let matches = [];
@@ -543,6 +550,32 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   function updateCount() {
     countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
+  }
+  /* One dot per life, spent ones hollowed out left-to-right. Rebuilt
+   * wholesale rather than toggling a class on one dot because the row
+   * is at most `DAILY_LIVES` nodes and a full repaint keeps the
+   * language-switch path (which re-runs the label) trivially correct.
+   * On the last life the row pulses rather than turning red: red is
+   * `--wrong-color`, which this repo reserves for "that answer was
+   * wrong", and a dot meaning "one guess left" is a warning, not a
+   * verdict. The exact count stays spelled out in the aria-label. */
+  function renderLives() {
+    const left = lives.remaining();
+    livesEl.setAttribute(
+      'aria-label',
+      // Label-then-number, not "{n} guesses left": Polish agrees the noun
+      // with the count in three different ways (1 / 2-4 / 5+), so a counted
+      // noun would be wrong at both ends. This shape is correct at every n
+      // in both languages without a plural-rules table.
+      t('daily.guessesLeft', 'Wrong guesses left: {n}').replace('{n}', String(left)),
+    );
+    livesEl.classList.toggle('daily-lives--last', left === 1);
+    livesEl.innerHTML = '';
+    for (let i = 0; i < lives.max; i += 1) {
+      const li = document.createElement('li');
+      li.className = i < left ? 'daily-life' : 'daily-life daily-life--spent';
+      livesEl.appendChild(li);
+    }
   }
   /* Brief flash on each correct guess. Remove → force reflow → add
    * is the standard pattern for re-triggering a CSS animation on the
@@ -628,10 +661,18 @@ export function startGame(n, category, targets, all, opts = {}) {
     }
     if (outcome.kind === 'wrong-category') {
       wrongCodes.add(c.code);
+      lives.spend(c.code);
+      renderLives();
       flashWrong();
       inputEl.value = '';
       matches = [];
       renderSuggestions();
+      // Out of lives ends the round on the same path as Give up: the
+      // result panel reveals what was missed and the score submits as
+      // it stands. Deliberately no separate "you lost" screen — the
+      // score is still `found / total`, and a player who found 9 of 12
+      // before running out did not lose, they stopped early.
+      if (lives.exhausted()) finish();
       return;
     }
     shakeInput();
@@ -722,6 +763,9 @@ export function startGame(n, category, targets, all, opts = {}) {
       // plain-text fallback) needs the fresh translation.
       paintCriteria(catEl, next.label);
       refreshTileNames();
+      // The lives row is dots — nothing to re-translate visually — but its
+      // aria-label spells the count out in words, so it re-renders too.
+      renderLives();
       renderSuggestions();
       if (finished) renderResult(targets, foundCodes, next.label);
     },
