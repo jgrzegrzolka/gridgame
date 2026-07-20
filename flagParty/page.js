@@ -498,7 +498,7 @@ export function bootFlagParty() {
   // (the question is judged server-side; the client only needs the numbers to show
   // the ranking after the answer is out). Fetched once at load, best-effort: a
   // missing metric just means that question's reveal shows no numbers.
-  /** @type {Record<string, { values: Record<string, number>, format: string, key: string, unit: string, year: number | null }>} */
+  /** @type {Record<string, { values: Record<string, number>, format: string, key: string, year: number | null }>} */
   const metricByQuestion = {};
 
   // ---- helpers ----
@@ -801,7 +801,7 @@ export function bootFlagParty() {
     // and rebuilding the chart mid-reveal replays its entrance cascade — so every
     // time anyone pressed, the thing they were trying to read would jump. Only
     // the status line changes, so only the status line is repainted.
-    if (msg.type === 'holding') { paintHoldStatus(); return; }
+    if (msg.type === 'holding') { syncAndPaintHold(); return; }
     if (msg.type === 'roster' && typeof msg.hostId === 'string') roomHostId = msg.hostId;
     if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
     for (const eff of effects) {
@@ -872,11 +872,14 @@ export function bootFlagParty() {
   // fires, exactly as it already does for the unfrozen clock. Small drift between
   // clients doesn't matter — they each render their own countdown already.
   //
-  // The arithmetic is the whole safety story. `heldMsAt` clamps at
-  // MAX_HOLD_SECONDS, so a player who never releases (finger down, tab
-  // backgrounded, laptop closed, network dropped) costs the room that many
-  // seconds and then the clock resumes underneath them. Nothing here expires a
-  // hold, and nothing needs to.
+  // Held time is UNBOUNDED — "hold to read" means what it says — so nothing here
+  // expires a hold and there is no allowance to run out. What makes that safe is
+  // that every way a hold can end is handled where it happens, rather than timed
+  // out centrally: let go (the pointer/key handlers below), the screen going away
+  // (`visibilitychange` / `pagehide`), the phase moving on (the client reducer
+  // clears holders), and — the one case this tab can never cover, because it is
+  // already gone — the socket dropping, which `party/partyGameServer.js` releases
+  // from `onClose`. Remove any one of those and a hold can get stuck for good.
   /** @type {import('../flags/partyTiming.js').HoldState} */
   let hold = initialHold();
   /** Whether THIS device's finger is currently down, so the local button state
@@ -896,9 +899,15 @@ export function bootFlagParty() {
     hold = anyone ? beginHold(hold, now) : endHold(hold, now);
   }
 
-  /** Repaint the button and the "who is reading" line. Deliberately cheap and
-   *  independent of render(), so a press never rebuilds the chart being read. */
-  function paintHoldStatus() {
+  /** Advance the hold clock, then repaint the button and the "who is reading"
+   *  line. Named for both halves because the first one is load-bearing and
+   *  invisible: `tickClock` relies on this call to keep held time accruing, so a
+   *  future reader who takes it for a pure repaint and moves it inside an
+   *  `if (changed)` would quietly stop the freeze from advancing.
+   *
+   *  Deliberately cheap and independent of render(), so a press never rebuilds
+   *  the chart being read. */
+  function syncAndPaintHold() {
     syncHoldAccounting();
     holdBtn.classList.toggle('held', holdPressed);
     holdBtnLabel.textContent = holdPressed
@@ -929,7 +938,7 @@ export function bootFlagParty() {
   function syncHoldControl(/** @type {boolean} */ visible) {
     if (!visible && holdPressed) setHoldPressed(false);
     holdReadEl.hidden = !visible;
-    if (visible) paintHoldStatus();
+    if (visible) syncAndPaintHold();
   }
 
   /** Tell the room this device is (or is no longer) holding. Idempotent locally
@@ -944,7 +953,7 @@ export function bootFlagParty() {
     if (!on) send({ type: 'hold', on: false });
     // Paint immediately rather than waiting for our own press to round-trip, so
     // the button responds to the finger, not to the network.
-    paintHoldStatus();
+    syncAndPaintHold();
   }
 
   // `preventDefault` on pointerdown plus `touch-action: none` in the CSS is what
@@ -1083,9 +1092,7 @@ export function bootFlagParty() {
     // Held time pushes the deadline out rather than pausing a counter, so the
     // freeze survives a tick the browser skips (a backgrounded tab, a slow
     // frame) — the clock is always derived from wall time, never accumulated.
-    // `heldMsAt` clamps, so once the allowance is spent the deadline stops moving
-    // and the countdown resumes even with a button still pressed.
-    if (mode === 'reveal' && !holdReadEl.hidden) paintHoldStatus();
+    if (mode === 'reveal' && !holdReadEl.hidden) syncAndPaintHold();
     const held = mode === 'reveal' ? heldNow() : 0;
     // The boundary answer beat rides the SAME held offset as the reveal deadline
     // below, so the chart never disappears out from under a hold. Re-rendering
@@ -2451,15 +2458,17 @@ export function bootFlagParty() {
       SUPERLATIVE_METRICS.forEach(({ questionId }, i) => {
         const m = metrics[i];
         // `key` and `year` are carried for the chart's scale line ("medals ·
-        // 2026"). The unit itself is NOT taken from the file: `m.unit` is English
-        // prose, so the line reads through `metricUnit.<key>` in i18n instead,
-        // with the file's own unit as the fallback.
+        // 2026"); `chartUnitLine` assembles it from them. The file's own `m.unit`
+        // is deliberately NOT carried: those strings are English, and several are
+        // less precise than their translations (the gdpPerCapita file says "US$"
+        // where the string says "US$/person"), so keeping one as a fallback would
+        // mislabel a per-capita chart rather than merely fail to translate it. An
+        // untranslated metric shows the year alone.
         if (m && m.values) {
           metricByQuestion[questionId] = {
             values: m.values,
             format: m.format || 'compact',
             key: String(m.key || ''),
-            unit: String(m.unit || ''),
             year: typeof m.year === 'number' ? m.year : null,
           };
         }

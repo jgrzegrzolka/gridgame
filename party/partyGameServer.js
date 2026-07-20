@@ -467,6 +467,12 @@ export default class PartyGameServer {
       // phase change (rather than in the `next` case alone) means a stale seat
       // can't linger here and earn a phantom release broadcast when it later
       // disconnects, whichever route the room took off the reveal.
+      //
+      // The CLIENT enforces the same rule over its own holders list
+      // (`flags/partyClient.js`, in the reducer wrapper). Two copies, different
+      // jobs -- that one keeps a clock from staying frozen, this one keeps a
+      // departed seat from unfreezing a hold nobody was holding -- but they must
+      // agree on WHEN a hold dies. Change one, change the other.
       if (result.room.phase !== phaseBefore) this.holders.clear();
       await this.saveRoom();
       this.dispatch(result.broadcasts);

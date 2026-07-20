@@ -456,7 +456,9 @@ test('holding: the clock stays frozen until the LAST holder lets go', () => {
 
 test('holding: a repeated press from one seat does not stack', () => {
   // A jittery pointer or a duplicated message would otherwise leave an entry a
-  // single release cannot clear, freezing the reveal until the cap bailed it out.
+  // single release cannot clear. Held time is unbounded, so nothing would come
+  // along to bail the room out -- the reveal would stay frozen until the phase
+  // changed, which it cannot do while the clock is held.
   let s = reduce(atReveal(), { type: 'holding', playerId: 'bob', on: true });
   s = reduce(s, { type: 'holding', playerId: 'bob', on: true });
   assert.deepEqual(s.holders, ['bob'], 'still one entry');

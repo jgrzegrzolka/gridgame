@@ -128,6 +128,12 @@ export function reducePartyMessage(state, message) {
   // means a hold cannot survive into the next question however the room got
   // there -- including the paths nobody thinks about, like the last question's
   // reveal jumping straight to the final board while a finger is still down.
+  //
+  // The SERVER enforces the same rule over its own holders set
+  // (`party/partyGameServer.js`, on any phase change). Two copies because they
+  // guard different things -- this one keeps a client's clock from staying
+  // frozen, that one keeps a departed seat from earning a phantom release -- but
+  // they must agree on WHEN a hold dies. Change one, change the other.
   if (next.state.phase !== state.phase && next.state.holders.length > 0) {
     return { ...next, state: { ...next.state, holders: [] } };
   }

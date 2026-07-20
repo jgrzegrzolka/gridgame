@@ -348,10 +348,15 @@ export function applyForceReveal(room, playerId) {
  * the press to everyone. Holds live for a few seconds inside a single reveal, so
  * putting them in room state would mean a field to serialize, deserialize,
  * migrate and clear on every phase change, to answer a question nobody asks
- * (a client joining mid-hold simply learns about the next one). It also means
- * there is nothing to clean up when a holder disconnects -- the client-side cap
- * in `partyTiming.heldMsAt` bounds a hold that never ends, so no seat can wedge
- * the reveal whether it releases or not.
+ * (a client joining mid-hold simply learns about the next one).
+ *
+ * Stateless here does **not** mean nobody tracks holders. Held time is unbounded
+ * (see `partyTiming`), so a seat that drops mid-hold would freeze the room for
+ * good if nothing released it -- and it cannot release itself, because its tab is
+ * gone. `party/partyGameServer.js` therefore keeps a transient holders set purely
+ * to emit that release from `onClose`. Do not "simplify" it away on the strength
+ * of this function being pure: the disconnect path is what keeps a room
+ * unfreezable, and it is pinned by tests in `party/partyGameServer.test.js`.
  *
  * Guarded on seat, phase, AND that this reveal actually draws a chart. The last
  * one matters because the guard is the only thing enforcing it: the button is
