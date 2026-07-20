@@ -141,6 +141,32 @@ export function revealSecondsFor(clean, chart = false) {
   return clean ? CLEAN_REVEAL_SECONDS : MISS_REVEAL_SECONDS;
 }
 
+/**
+ * Whether the countdown bar paints in this phase — the one rule for a bar that
+ * means two different things.
+ *
+ * During the **question** it is "time left to answer". During a **chart reveal**
+ * it is "time until the next question", and that second job is not decoration:
+ * hold-to-read asks the player to decide whether 5.5 s is enough for them, and
+ * until now they had nothing to decide with. A draining bar is what makes the
+ * choice informed, and a bar that visibly *stalls* (the held deadline pushes it
+ * out) is the only on-screen proof that a press actually froze the room — the
+ * button label alone claims a freeze it never shows.
+ *
+ * Everything else stays bar-less, for the reasons that made the reveal bar-less
+ * in the first place: a clean/miss reveal is short enough that a bar would just
+ * flicker, and the pick is deliberately untimed
+ * ({@link PICK_TIMEOUT_SECONDS} is an invisible anti-stall fallback, not a race).
+ *
+ * @param {'question' | 'reveal' | 'picking'} mode
+ * @param {boolean} [chart] the reveal draws the ranked chart (world facts)
+ * @returns {boolean}
+ */
+export function barPaints(mode, chart = false) {
+  if (mode === 'question') return true;
+  return mode === 'reveal' && chart;
+}
+
 /** Seconds before a draft **pick** auto-resolves. There is **no visible pick
  *  countdown** — choosing a category shouldn't feel rushed — so this is a long,
  *  invisible safety net: the host (authoritative for timing, like the reveal)

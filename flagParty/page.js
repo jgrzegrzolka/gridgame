@@ -6,7 +6,7 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
@@ -995,13 +995,14 @@ export function bootFlagParty() {
     // the room a second helping of reading time.
     hold = initialHold();
     holdPressed = false;
-    // Only the question phase shows the question bar. The reveal and the pick are
-    // bar-less (the reveal is sub-second; the pick shouldn't feel timed) — but
-    // bar-less by going invisible, not by leaving the layout, so answering does
+    // Which phases paint a bar is one rule, unit-pinned in partyTiming: the
+    // question, plus the chart reveal (where the bar is hold-to-read's missing
+    // feedback — see `barPaints`). The short reveal and the pick stay bar-less,
+    // but bar-less by going inert, not by leaving the layout, so answering does
     // not yank the prompt and the flags upward. `hidden` is cleared here in case
     // the update notice set it.
     timerEl.hidden = false;
-    timerEl.classList.toggle('is-idle', mode !== 'question');
+    timerEl.classList.toggle('is-idle', !barPaints(mode, chart));
     timerEl.setAttribute('data-mode', mode);
     if (!clockInterval) clockInterval = window.setInterval(tickClock, 200);
     tickClock();
@@ -1027,12 +1028,18 @@ export function bootFlagParty() {
       return;
     }
     const left = secondsLeft(clockDeadline + held, now);
-    // Only the question paints a bar; the reveal and the pick are bar-less (their
-    // clocks still run below — the reveal to advance the room, the pick as the
-    // invisible force-pick fallback).
-    if (mode === 'question') {
-      timerFill.style.width = `${remainingFraction(clockDeadline, now, clockTotalMs) * 100}%`;
-      timerEl.classList.toggle('low', left <= 5);
+    // The question and the chart reveal paint; the short reveal and the pick
+    // don't (`barPaints`). Both painted phases run the held offset through the
+    // fraction as well as the deadline, which is what makes a hold *stall* the
+    // bar rather than let it drain under a frozen room: while a finger is down,
+    // `held` grows in lockstep with `now`, so `deadline + held - now` — the
+    // remaining time — holds exactly still. That stall is the only on-screen
+    // proof a press landed. (`held` is zero outside the reveal.)
+    if (barPaints(mode, mode === 'reveal' && chartReveal())) {
+      timerFill.style.width = `${remainingFraction(clockDeadline + held, now, clockTotalMs) * 100}%`;
+      // Running-out urgency belongs to answering only. The chart reveal is a
+      // screen for reading, so its bar drains without ever pulsing at you.
+      timerEl.classList.toggle('low', mode === 'question' && left <= 5);
       timerLabel.textContent = String(left);
     }
     if (left <= 0 && !clockFired) {

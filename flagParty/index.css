@@ -156,12 +156,23 @@
    A control that greys out is quieter than one that disappears, and answering is
    already a busy moment.
 
-   `tickClock` only repaints the fill during the question, so an idle bar sits
-   frozen at whatever was left when the room answered — greying it reads as
-   "stopped there", which is true, rather than "empty". The seconds go: the
-   number would be stale, and its slot is reserved anyway so nothing shifts. */
-.question-timer.is-idle .question-timer-fill { background: var(--muted-color); }
+   An idle bar sits frozen at whatever was left when the room answered, and it
+   stays PINK. It used to recolour to `--muted-color` to read as "stopped there",
+   but #999 at full width is the darkest thing on the question screen at the
+   exact moment the tiles are trying to be the story. There is no lighter grey
+   available either: the track is already `--muted-soft-color`, so any quieter
+   fill dissolves into it and the bar reads as empty — which is the one thing a
+   frozen bar must not say. Freezing is the cue; recolouring was never carrying
+   its weight, since the tiles flipping to correct/wrong already announce that
+   answering is over far louder than 6px of grey.
+
+   The seconds go on every bar-less phase: the number would be stale. Its slot is
+   reserved anyway, so nothing shifts. */
 .question-timer.is-idle .question-timer-label { visibility: hidden; }
+/* The chart reveal paints a *running* bar (see `barPaints`) but still no digits.
+   A number counting down is pressure and that screen exists to be read; the bar
+   alone is ambient enough to inform a hold-to-read decision without rushing it. */
+.question-timer[data-mode="reveal"] .question-timer-label { visibility: hidden; }
 .question-timer-track {
   flex: 1;
   height: 6px;
@@ -184,8 +195,10 @@
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-/* Only the question phase shows a timer; the reveal is bar-less (the JS hides
-   `.question-timer` then, since a sub-second bar just flickered). */
+/* Two phases run a live bar: the question, and the chart reveal (5.5 s, and the
+   only screen in the show with something to read — its bar is what tells you
+   whether to hold, and stalls to confirm you did). Short reveals stay bar-less
+   because a sub-second bar just flickered. Rule lives in `barPaints`. */
 @media (prefers-reduced-motion: no-preference) {
   .question-timer-fill { transition: width 0.2s linear; }
   .question-timer.low .question-timer-label { animation: timer-pulse 1s ease-in-out infinite; }

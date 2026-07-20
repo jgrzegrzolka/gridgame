@@ -6,6 +6,7 @@ import {
   MISS_REVEAL_SECONDS,
   CHART_REVEAL_SECONDS,
   revealSecondsFor,
+  barPaints,
   secondsLeft,
   remainingFraction,
   NAME_REVEAL_SECONDS,
@@ -405,4 +406,26 @@ test('a clock that jumps backwards cannot rewind held time', () => {
   // reveal deadline IN, cutting the beat short for everyone.
   const h = beginHold(initialHold(), 10_000);
   assert.equal(heldMsAt(h, 9_000), 0, 'clamped at zero, never negative');
+});
+
+test('barPaints: the question always paints, and so does a chart reveal', () => {
+  // The countdown bar means two different things by phase. During the question
+  // it is "time to answer". During a CHART reveal it is "time until the next
+  // question" -- which is the signal hold-to-read was missing: you cannot judge
+  // whether to hold if you cannot see what is left, and a bar that visibly
+  // stalls is the only confirmation that your press actually froze the room.
+  assert.equal(barPaints('question', false), true);
+  assert.equal(barPaints('question', true), true, 'chart-ness is irrelevant while answering');
+  assert.equal(barPaints('reveal', true), true, 'the 5.5s readable chart earns a bar');
+});
+
+test('barPaints: short reveals and the pick stay bar-less', () => {
+  // A clean/miss reveal is a fraction of a chart reveal, so a bar there would
+  // just flicker -- the original reason the reveal was bar-less at all. The pick
+  // is deliberately untimed (PICK_TIMEOUT_SECONDS is an invisible anti-stall
+  // fallback, not a race), so painting it would invent pressure that the design
+  // spent effort removing.
+  assert.equal(barPaints('reveal', false), false);
+  assert.equal(barPaints('picking', false), false);
+  assert.equal(barPaints('picking', true), false, 'a pick is untimed even between chart questions');
 });
