@@ -346,37 +346,45 @@
 .daily-lives {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   list-style: none;
   margin: 0 0 12px;
   padding: 0;
 }
+/* The hue lives here, not in the SVG: `heartSvg` paints with
+ * `currentColor`, so both the filled and the outline heart follow this
+ * one declaration. Spent hearts differ by fill only — same shape, same
+ * colour, so the row reads as one object with a filled portion rather
+ * than as two kinds of mark. */
 .daily-life {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--secondary-color);
+  display: block;
+  width: 13px;
+  height: 13px;
+  color: var(--secondary-color);
 }
-/* --muted-color, not --muted-soft-color: at 9px a #eee ring on the
- * #fdfdfd page is effectively invisible, which makes the row read as
- * "5 dots" instead of "5 of 7" and loses the whole point of the cue.
- * The ring has to stay perceivable to show what's been spent. */
-.daily-life--spent {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--muted-color);
+.daily-life svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-/* Last life: the single remaining dot breathes. Slow and small — this is
- * a nudge to slow down, not an alarm. */
+/* Last life: the single remaining heart beats. Slow and shallow — this is
+ * a nudge to slow down, not an alarm. 1.15, not the 1.5 the 9px dot used:
+ * a heart is already the larger mark, and at 13px a half-again scale-up
+ * reads as a throb rather than a beat. */
 @keyframes daily-life-warn {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.5); }
+  50% { transform: scale(1.15); }
 }
 .daily-lives--last .daily-life:not(.daily-life--spent) {
   animation: daily-life-warn 1.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* A static halo instead of the beat. `drop-shadow` follows the SVG's
+   * alpha channel, so it hugs the heart outline — `box-shadow` here would
+   * draw a rectangle around the li, which is what the dot version got
+   * away with only because the dot was a circle. */
   .daily-lives--last .daily-life:not(.daily-life--spent) {
     animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--secondary-color) 30%, transparent);
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--secondary-color) 55%, transparent));
   }
 }

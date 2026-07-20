@@ -106,6 +106,16 @@ export function showReason(reason) {
 const SVG_BASE = new URL('../flags/svg/', import.meta.url).href;
 
 /**
+ * Heart silhouette for the daily's wrong-guess budget, on a 24 × 22 grid.
+ * One constant, rendered filled while a life is available and as an
+ * outline once it's spent (see `heartSvg`) — so the two states can never
+ * describe different shapes.
+ */
+const HEART_PATH =
+  'M12 21C12 21 1.5 14.2 1.5 7.6 1.5 4.2 4.2 1.5 7.5 1.5c2 0 3.7 1 4.5 2.5' +
+  '.8-1.5 2.5-2.5 4.5-2.5 3.3 0 6 2.7 6 6.1C22.5 14.2 12 21 12 21z';
+
+/**
  * The active puzzle's per-answer "why" notes (`entry.notes`), keyed by
  * country code. Set once per puzzle via `setZoomNotes` from the page boot
  * file; read by `openZoom` to decide whether a flag gets an explanation
@@ -551,7 +561,45 @@ export function startGame(n, category, targets, all, opts = {}) {
   function updateCount() {
     countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
   }
-  /* One dot per life, spent ones hollowed out left-to-right. Rebuilt
+  /* One heart per life, spent ones hollowed out left-to-right.
+   *
+   * Built in JS rather than as two CSS `mask-image` data URIs so the
+   * filled and outline forms share a single path constant — two copies
+   * of a hand-written heart path is exactly the kind of duplicate that
+   * drifts the first time someone nudges a curve.
+   *
+   * Colour comes from `currentColor`, so the stylesheet keeps ownership
+   * of the hue (`--secondary-color` on `.daily-life`) and this function
+   * only decides fill-vs-stroke. Stroke is 2.8 units in a 24-unit
+   * viewBox rendered at 13 px ≈ 1.5 px on screen: a 1 px-equivalent
+   * hairline in pink disappears into the page tint at this size, and
+   * anything under 1 px would round away entirely on standard-DPI
+   * displays.
+   *
+   * @param {boolean} spent
+   * @returns {SVGSVGElement}
+   */
+  function heartSvg(spent) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 22');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', HEART_PATH);
+    if (spent) {
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke-width', '2.8');
+      path.setAttribute('stroke-linejoin', 'round');
+    } else {
+      path.setAttribute('fill', 'currentColor');
+    }
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /* One heart per life, spent ones hollowed out left-to-right. Rebuilt
    * wholesale rather than toggling a class on one dot because the row
    * is at most `DAILY_LIVES` nodes and a full repaint keeps the
    * language-switch path (which re-runs the label) trivially correct.
@@ -573,7 +621,9 @@ export function startGame(n, category, targets, all, opts = {}) {
     livesEl.innerHTML = '';
     for (let i = 0; i < lives.max; i += 1) {
       const li = document.createElement('li');
-      li.className = i < left ? 'daily-life' : 'daily-life daily-life--spent';
+      const spent = i >= left;
+      li.className = spent ? 'daily-life daily-life--spent' : 'daily-life';
+      li.appendChild(heartSvg(spent));
       livesEl.appendChild(li);
     }
   }
