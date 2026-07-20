@@ -29,9 +29,11 @@
  * testing (Cosmos kept their first attempt; local showed their replay).
  */
 
+import { DAILY_LIVES } from './lives.js';
+
 export const STORAGE_KEY = 'daily.scores';
 
-/** @typedef {{ f: number, t: number, c?: string[], w?: string[], cap?: number }} DailyScore */
+/** @typedef {{ f: number, t: number, c?: string[], w?: string[] }} DailyScore */
 /** @typedef {Record<number, DailyScore>} DailyScores */
 
 /**
@@ -59,7 +61,6 @@ export function loadScores(store) {
       if (Array.isArray(obj.w) && obj.w.every((/** @type {unknown} */ x) => typeof x === 'string')) {
         score.w = [...obj.w];
       }
-      if (Number.isInteger(obj.cap) && obj.cap > 0) score.cap = obj.cap;
       scores[n] = score;
     }
     return scores;
@@ -87,11 +88,8 @@ export function loadScores(store) {
  * @param {number} total
  * @param {string[]} [foundCodes]
  * @param {string[]} [wrongCodes]
- * @param {number} [cap]  wrong-guess budget this run was played under.
- *   Omit for an uncapped run — its absence is the marker `livesFromRecord`
- *   reads to decide whether the revisit screen draws a heart row at all.
  */
-export function saveScore(store, n, found, total, foundCodes, wrongCodes, cap) {
+export function saveScore(store, n, found, total, foundCodes, wrongCodes) {
   try {
     const scores = loadScores(store);
     if (scores[n]) return; // first-attempt-only: never overwrite
@@ -99,10 +97,6 @@ export function saveScore(store, n, found, total, foundCodes, wrongCodes, cap) {
     const score = { f: found, t: total };
     if (Array.isArray(foundCodes)) score.c = [...foundCodes];
     if (Array.isArray(wrongCodes) && wrongCodes.length > 0) score.w = [...wrongCodes];
-    // Only capped runs carry `cap`. Its absence is what tells the revisit
-    // screen "this run had no heart budget, don't draw one" — see
-    // `livesFromRecord`.
-    if (Number.isInteger(cap) && /** @type {number} */ (cap) > 0) score.cap = cap;
     scores[n] = score;
     store.setItem(STORAGE_KEY, JSON.stringify(scores));
   } catch {
@@ -141,25 +135,19 @@ export function isCompleteRecord(score) {
  * run that genuinely had a budget. That is what players see most of the
  * time, because once today's puzzle is finished every visit is a revisit.
  *
- * **Why not just `DAILY_LIVES - w.length`.** Pre-cap runs have a `w` list
- * too, and those wrong guesses cost nothing — a perfect 13/13 that took 15
- * wrong guesses would render as "0 hearts", i.e. "you were cut off", about
- * a run that was never at risk. The `cap` field is the marker: absent means
- * uncapped, and uncapped runs draw no gauge at all. Nothing is inferred.
- *
- * The cap is read from the record rather than from the current
- * `DAILY_LIVES`, so changing the constant later can't retroactively rewrite
- * how an old run is drawn.
+ * **Derived at display time — nothing extra is stored.** `w` is the deduped
+ * wrong-guess list, and `lives.js` charges exactly once per wrong country
+ * code, so `DAILY_LIVES - w.length` *is* the hearts left. No new field, no
+ * migration, and it works on every record that already exists rather than
+ * only on runs finished after some marker shipped.
  *
  * @param {DailyScore | undefined} score
  * @returns {{ max: number, left: number } | null}
  */
 export function livesFromRecord(score) {
   if (!score) return null;
-  const max = score.cap;
-  if (!Number.isInteger(max) || /** @type {number} */ (max) <= 0) return null;
   const spent = Array.isArray(score.w) ? score.w.length : 0;
-  return { max: /** @type {number} */ (max), left: Math.max(0, /** @type {number} */ (max) - spent) };
+  return { max: DAILY_LIVES, left: Math.max(0, DAILY_LIVES - spent) };
 }
 
 /**
