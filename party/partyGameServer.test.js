@@ -105,6 +105,60 @@ test('draft start: a length outside the offered set falls back to medium', async
   }
 });
 
+test('setLength: the host sets it and everyone is told, before anything starts', async () => {
+  const a = mockConn('a'), b = mockConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+
+  await srv.onMessage(JSON.stringify({ type: 'setLength', length: 'long' }), a);
+  assert.equal(srv.room.length, 'long');
+  assert.equal(b.last('settings').length, 'long', 'the guest is told — that is the whole point');
+  assert.equal(a.last('settings').length, 'long', 'and so is the host');
+
+  // ...and the game it starts is the one everybody was looking at.
+  await srv.onMessage(JSON.stringify({ type: 'start' }), a);
+  assert.equal(srv.room.targetRounds, roundCountFor(2, 'long'));
+});
+
+test('setLength: a guest cannot change what the room is playing', async () => {
+  const a = mockConn('a'), b = mockConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+  await srv.onMessage(JSON.stringify({ type: 'setLength', length: 'short' }), a);
+  await srv.onMessage(JSON.stringify({ type: 'setLength', length: 'long' }), b);
+  assert.equal(srv.room.length, 'short', "the guest's attempt changed nothing");
+});
+
+// Deploy skew, both directions. PartyKit and the SWA site ship on separate
+// workflows, so each build has to survive meeting the other one.
+test('deploy skew: a client too old to send setLength still gets the length it picked', async () => {
+  // Nothing ever calls setLength, so the room's length stays null and the start
+  // message decides — exactly the pre-existing protocol.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), conn);
+  assert.equal(srv.room.targetRounds, roundCountFor(1, 'long'));
+});
+
+test('deploy skew: once a client has claimed the room, the room wins', async () => {
+  // A modern host always claims the room on entering the lobby, so a stale tab
+  // re-sending an old start payload cannot resize the game out from under the
+  // length every guest is looking at.
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'setLength', length: 'short' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), conn);
+  assert.equal(srv.room.targetRounds, roundCountFor(1, 'short'), 'the room, not the message');
+});
+
 test('draft start: tricky mode is forced off even if a stale client sends it', async () => {
   // Tricky is a Custom-setup option; the draft door never showed the toggle, so a
   // device that once enabled it in Custom used to veil every later draft game.
