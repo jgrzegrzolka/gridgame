@@ -32,6 +32,11 @@
  * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>,
  *   breakdown?: Record<string, { base: number, speed: number, solo: number, closeness: number }>,
  *   ranking?: string[] | null, values?: Record<string, number> | null } | null} reveal
+ * @property {string[]} holders  seats currently pressing "hold to read" on the
+ *   chart reveal, freezing everyone's countdown. A set rather than a boolean so
+ *   two players holding at once resume the clock only when BOTH let go, and so
+ *   the page can name who the room is waiting for. Always emptied when the phase
+ *   changes: holds belong to one reveal and never carry into the next.
  * @property {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
  * @property {string | null} picker  during the `picking` phase (draft mode), the
  *   seat whose turn it is to choose the next round; null otherwise.
@@ -72,6 +77,7 @@ export function initialPartyClientState() {
     seatCount: 0,
     myChoice: null,
     reveal: null,
+    holders: [],
     scoreboard: null,
     picker: null,
     youPick: false,
@@ -111,6 +117,24 @@ const REJECT_MESSAGES = {
  * @returns {{ state: PartyClientState, effects: Effect[] }}
  */
 export function reducePartyMessage(state, message) {
+  const next = reduceOne(state, message);
+  // Holds belong to the reveal they were pressed on. Clearing them here, on any
+  // phase change, rather than in each of the six cases that can move the phase,
+  // means a hold cannot survive into the next question however the room got
+  // there -- including the paths nobody thinks about, like the last question's
+  // reveal jumping straight to the final board while a finger is still down.
+  if (next.state.phase !== state.phase && next.state.holders.length > 0) {
+    return { ...next, state: { ...next.state, holders: [] } };
+  }
+  return next;
+}
+
+/**
+ * @param {PartyClientState} state
+ * @param {any} message
+ * @returns {{ state: PartyClientState, effects: Effect[] }}
+ */
+function reduceOne(state, message) {
   switch (message.type) {
     case 'welcome': {
       return {
@@ -277,6 +301,19 @@ export function reducePartyMessage(state, message) {
         },
         effects: [],
       };
+    }
+    case 'holding': {
+      // Someone pressed or released "hold to read". Tracked as a set so the
+      // clock resumes only when the LAST holder lets go, and so a repeated press
+      // from the same seat (a jittery pointer, a duplicated message) cannot
+      // stack up entries that a single release then fails to clear.
+      const id = String(message.playerId ?? '');
+      if (!id) return { state, effects: [] };
+      const on = message.on === true;
+      const has = state.holders.includes(id);
+      if (on === has) return { state, effects: [] };
+      const holders = on ? [...state.holders, id] : state.holders.filter((h) => h !== id);
+      return { state: { ...state, holders }, effects: [] };
     }
     case 'final': {
       return {

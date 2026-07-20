@@ -6,7 +6,7 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, holdBudgetFraction } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
@@ -414,7 +414,13 @@ export function bootFlagParty() {
   const promptEl = $('prompt');
   const promptLead = $('prompt-lead');
   const promptTarget = $('prompt-target');
+  const promptUnit = $('prompt-unit');
   const gridEl = $('flags-grid');
+  const holdReadEl = $('hold-read');
+  const holdBtn = /** @type {HTMLButtonElement} */ ($('hold-btn'));
+  const holdBtnLabel = $('hold-btn-label');
+  const holdBudgetFill = $('hold-budget-fill');
+  const holdWho = $('hold-who');
   const footEl = $('question-foot');
   const finalSub = $('final-sub');
   const finalBoard = $('final-board');
@@ -464,7 +470,7 @@ export function bootFlagParty() {
   // (the question is judged server-side; the client only needs the numbers to show
   // the ranking after the answer is out). Fetched once at load, best-effort: a
   // missing metric just means that question's reveal shows no numbers.
-  /** @type {Record<string, { values: Record<string, number>, format: string }>} */
+  /** @type {Record<string, { values: Record<string, number>, format: string, key: string, unit: string, year: number | null }>} */
   const metricByQuestion = {};
 
   // ---- helpers ----
@@ -717,6 +723,11 @@ export function bootFlagParty() {
     try { msg = JSON.parse(raw); } catch { return; }
     const { state: next, effects } = reducePartyMessage(state, msg);
     state = next;
+    // A hold press/release must NOT go through render(): that rebuilds the grid,
+    // and rebuilding the chart mid-reveal replays its entrance cascade — so every
+    // time anyone pressed, the thing they were trying to read would jump. Only
+    // the status line changes, so only the status line is repainted.
+    if (msg.type === 'holding') { paintHoldStatus(); return; }
     if (msg.type === 'roster' && typeof msg.hostId === 'string') roomHostId = msg.hostId;
     if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
     for (const eff of effects) {
@@ -775,6 +786,113 @@ export function bootFlagParty() {
     // Idle, not hidden: the bar keeps its slot so nothing below it moves.
     timerEl.classList.add('is-idle');
   }
+
+  // ---- hold to read ----
+  // The chart reveal's beat is a fixed guess, and sometimes it is wrong. Any seat
+  // can press and hold to freeze the countdown and let go when it has finished
+  // reading, so the room pays for what that player actually needed rather than a
+  // flat extension applied to every question.
+  //
+  // Every client runs this same accounting off the broadcast holders set, so all
+  // of them freeze together; the host's copy is the one that decides when `next`
+  // fires, exactly as it already does for the unfrozen clock. Small drift between
+  // clients doesn't matter — they each render their own countdown already.
+  //
+  // The arithmetic is the whole safety story. `heldMsAt` clamps at
+  // MAX_HOLD_SECONDS, so a player who never releases (finger down, tab
+  // backgrounded, laptop closed, network dropped) costs the room that many
+  // seconds and then the clock resumes underneath them. Nothing here expires a
+  // hold, and nothing needs to.
+  /** @type {import('../flags/partyTiming.js').HoldState} */
+  let hold = initialHold();
+  /** Whether THIS device's finger is currently down, so the local button state
+   *  doesn't wait for the server to echo our own press back. */
+  let holdPressed = false;
+
+  /** Total ms the current reveal has been frozen for, as of now. */
+  function heldNow() {
+    return heldMsAt(hold, Date.now());
+  }
+
+  /** Start / stop freezing, following the holders set. Called whenever it changes
+   *  and on every clock tick, so a cap reached mid-hold banks itself. */
+  function syncHoldAccounting() {
+    const now = Date.now();
+    const anyone = state.holders.length > 0;
+    hold = anyone ? beginHold(hold, now) : endHold(hold, now);
+  }
+
+  /** Repaint the button and the "who is reading" line. Deliberately cheap and
+   *  independent of render(), so a press never rebuilds the chart being read. */
+  function paintHoldStatus() {
+    syncHoldAccounting();
+    const now = Date.now();
+    const budget = holdBudgetFraction(hold, now);
+    holdBudgetFill.style.width = String(budget * 100) + '%';
+    // Out of allowance: the button goes inert rather than silently doing nothing,
+    // so a press that buys no time is visibly a press that buys no time.
+    const spent = budget <= 0;
+    holdBtn.disabled = spent;
+    holdBtn.classList.toggle('held', holdPressed && !spent);
+    holdBtnLabel.textContent = holdPressed && !spent
+      ? t('party.holdReadingYou', 'Reading…')
+      : t('party.holdToRead', 'Hold to read');
+    // A countdown that silently stops looks broken, so the freeze always names
+    // whose finger is on it. Others first: "you are holding" is already obvious
+    // from the button under your thumb.
+    const others = state.holders.filter((id) => id !== state.you);
+    if (others.length > 0 && !spent) {
+      const entry = state.roster.find((r) => r.playerId === others[0]);
+      const name = entry ? entry.nickname : '';
+      const extra = others.length - 1;
+      holdWho.textContent = fmt(t('party.holdReading', '{name} is reading…'), { name })
+        + (extra > 0 ? ` +${extra}` : '');
+    } else {
+      holdWho.textContent = '';
+    }
+  }
+
+  /** Show or hide the control as the chart comes and goes. */
+  function syncHoldControl(/** @type {boolean} */ visible) {
+    holdReadEl.hidden = !visible;
+    if (visible) paintHoldStatus();
+  }
+
+  /** Tell the room this device is (or is no longer) holding. Idempotent locally
+   *  so a pointercancel following a pointerup can't send a second release. */
+  function setHoldPressed(/** @type {boolean} */ on) {
+    if (holdPressed === on) return;
+    if (on && holdBudgetFraction(hold, Date.now()) <= 0) return;
+    holdPressed = on;
+    send({ type: 'hold', on });
+    // Paint immediately rather than waiting for our own press to round-trip, so
+    // the button responds to the finger, not to the network.
+    paintHoldStatus();
+  }
+
+  // `preventDefault` on pointerdown plus `touch-action: none` in the CSS is what
+  // stops a phone treating this as a long-press (text selection / context menu)
+  // instead of a hold. pointercancel and pointerleave both release: a finger that
+  // slides off the button, or a gesture the browser takes over, must not leave
+  // the room frozen waiting on a press this device no longer thinks is happening.
+  holdBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setHoldPressed(true); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
+    holdBtn.addEventListener(ev, () => setHoldPressed(false));
+  }
+  holdBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+  // Keyboard equivalent: space/enter held down repeat-fires keydown, and keyup
+  // ends it — the same press-and-hold shape without a pointer.
+  holdBtn.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setHoldPressed(true); }
+  });
+  holdBtn.addEventListener('keyup', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') setHoldPressed(false);
+  });
+  // Backgrounding the tab mid-hold releases locally so the room isn't held by a
+  // screen nobody is looking at. Belt-and-braces only: the cap already bounds it.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) setHoldPressed(false);
+  });
 
   // ---- question-phase reveal animation (tricky veil + world-facts names) ----
   // One rAF loop drives two independent time-based reveals over the same clock
@@ -858,6 +976,12 @@ export function bootFlagParty() {
     const secs = mode === 'picking' ? PICK_TIMEOUT_SECONDS : (mode === 'reveal' ? revealSecs : QUESTION_SECONDS);
     clockTotalMs = secs * 1000;
     clockDeadline = Date.now() + clockTotalMs;
+    // A fresh beat gets a fresh hold allowance. Reset here, on the token change,
+    // rather than on the phase change: this is the one place that already knows a
+    // genuinely new countdown has started, so a re-render mid-reveal can't hand
+    // the room a second helping of reading time.
+    hold = initialHold();
+    holdPressed = false;
     // Only the question phase shows the question bar. The reveal and the pick are
     // bar-less (the reveal is sub-second; the pick shouldn't feel timed) — but
     // bar-less by going invisible, not by leaving the layout, so answering does
@@ -873,7 +997,13 @@ export function bootFlagParty() {
   function tickClock() {
     const mode = clockMode();
     const now = Date.now();
-    const left = secondsLeft(clockDeadline, now);
+    // Held time pushes the deadline out rather than pausing a counter, so the
+    // freeze survives a tick the browser skips (a backgrounded tab, a slow
+    // frame) — the clock is always derived from wall time, never accumulated.
+    // `heldMsAt` clamps, so once the allowance is spent the deadline stops moving
+    // and the countdown resumes even with a button still pressed.
+    if (mode === 'reveal' && !holdReadEl.hidden) paintHoldStatus();
+    const left = secondsLeft(clockDeadline + (mode === 'reveal' ? heldNow() : 0), now);
     // Only the question paints a bar; the reveal and the pick are bar-less (their
     // clocks still run below — the reveal to advance the room, the pick as the
     // invisible force-pick fallback).
@@ -1280,8 +1410,17 @@ export function bootFlagParty() {
     gridEl.innerHTML = '';
     // The world-facts REVEAL is a ranking, not four tiles. Every other reveal,
     // and the world-facts question phase itself, still draws the grid.
-    gridEl.classList.toggle('as-chart', isReveal && chartReveal());
-    if (isReveal && state.reveal && chartReveal()) {
+    const drawsChart = isReveal && !!state.reveal && chartReveal();
+    gridEl.classList.toggle('as-chart', drawsChart);
+    // The chart's scale, under the title. Only on the chart itself: during the
+    // question no number is on screen for it to explain, and a unit hanging under
+    // an unanswered "Most Olympic medals" is noise at best and a hint at worst.
+    paintChartUnit(drawsChart ? metricData : null);
+    // The hold control comes and goes with the chart for the same reason: there
+    // is nothing to read on any other screen, and a pause button on a 0.9 s clean
+    // reveal would only ever be pressed by accident.
+    syncHoldControl(drawsChart);
+    if (drawsChart) {
       gridEl.appendChild(buildRankChart(/** @type {any} */ (state.reveal), metricData));
     } else
     for (const code of (state.question ? state.question.options : [])) {
@@ -1334,6 +1473,31 @@ export function bootFlagParty() {
   }
 
   /**
+   * The chart's scale line: what the numbers count, and as of when.
+   *
+   * Four bare numbers over four bars are close to unreadable without it — "8"
+   * says nothing until you know it counts medals, and the bars are normalised to
+   * the quartet's own range (`barFractions`), so their lengths carry no absolute
+   * meaning either. The unit reads through `metricUnit.<key>` so it translates;
+   * the metric file's own English `unit` is the fallback for a key that has not
+   * been translated yet, which beats showing no scale at all.
+   *
+   * @param {{ key: string, unit: string, year: number | null } | null} metricData
+   *   null on any screen that isn't a chart reveal, which hides the line.
+   */
+  function paintChartUnit(metricData) {
+    if (!metricData) {
+      promptUnit.hidden = true;
+      promptUnit.textContent = '';
+      return;
+    }
+    const unit = metricData.key ? t('metricUnit.' + metricData.key, metricData.unit) : metricData.unit;
+    const parts = [unit, metricData.year ? String(metricData.year) : ''].filter(Boolean);
+    promptUnit.textContent = parts.join(' · ');
+    promptUnit.hidden = parts.length === 0;
+  }
+
+  /**
    * The world-facts reveal: the four options as a ranked bar chart, best first,
    * each row carrying who picked it and what that pick paid.
    *
@@ -1360,6 +1524,15 @@ export function bootFlagParty() {
     // cases that fail silently here (a negative metric, identical values, a
     // missing value). See barFractions.
     const fracs = barFractions(ranking, values);
+    // Every column is a fixed width so the four rows share one vertical grid and
+    // the values line up (see index.css). The rail is the one track that can't be
+    // a constant — it holds one avatar per player who picked that row — so its
+    // width is stamped once here, from the BUSIEST row, rather than left to each
+    // row's own content. Sized like the CSS stacks them: 22px each, overlapping
+    // by 6px after the first.
+    const widestRail = Math.max(1, ...ranking.map(
+      (code) => Object.values(reveal.picks).filter((choice) => choice === code).length));
+    chart.style.setProperty('--rail-w', String(22 + (widestRail - 1) * 16) + 'px');
     ranking.forEach((code, rank) => {
       const row = el('div', 'rank-row');
       row.style.setProperty('--d', String(rank * 110) + 'ms');
@@ -1373,19 +1546,21 @@ export function bootFlagParty() {
       img.alt = '';
       fl.appendChild(img);
       row.appendChild(fl);
+      // Name over bar in the flexible column; the VALUE is its own fixed column
+      // beside it, not a caption sharing the name's baseline. It is the answer to
+      // the question the round asked, and as a 12px muted tail on the name it
+      // read as an annotation and sat at a different x on every row.
       const body = el('span', 'rank-body');
-      const cap = el('span', 'rank-cap');
       const c = byCode.get(code);
-      cap.appendChild(el('span', 'rank-name', c ? countryName(c) : code));
-      const v = values[code];
-      cap.appendChild(el('span', 'rank-val',
-        typeof v === 'number' && metricData ? formatValue(v, metricData.format) : ''));
-      body.appendChild(cap);
+      body.appendChild(el('span', 'rank-name', c ? countryName(c) : code));
       const track = el('span', 'rank-track');
       const fill = document.createElement('i');
       track.appendChild(fill);
       body.appendChild(track);
       row.appendChild(body);
+      const v = values[code];
+      row.appendChild(el('span', 'rank-val',
+        typeof v === 'number' && metricData ? formatValue(v, metricData.format) : ''));
       const rail = el('span', 'rank-rail');
       for (const [pid, choice] of Object.entries(reveal.picks)) {
         if (choice === code) rail.appendChild(buildAvatar(pid));
@@ -2134,7 +2309,19 @@ export function bootFlagParty() {
       for (const c of countries) byCode.set(c.code, c);
       SUPERLATIVE_METRICS.forEach(({ questionId }, i) => {
         const m = metrics[i];
-        if (m && m.values) metricByQuestion[questionId] = { values: m.values, format: m.format || 'compact' };
+        // `key` and `year` are carried for the chart's scale line ("medals ·
+        // 2026"). The unit itself is NOT taken from the file: `m.unit` is English
+        // prose, so the line reads through `metricUnit.<key>` in i18n instead,
+        // with the file's own unit as the fallback.
+        if (m && m.values) {
+          metricByQuestion[questionId] = {
+            values: m.values,
+            format: m.format || 'compact',
+            key: String(m.key || ''),
+            unit: String(m.unit || ''),
+            year: typeof m.year === 'number' ? m.year : null,
+          };
+        }
       });
       const roomParam = new URLSearchParams(location.search).get('room');
       if (roomParam && isValidRoomCode(roomParam.toUpperCase())) {

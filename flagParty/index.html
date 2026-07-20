@@ -141,7 +141,25 @@
           <span class="prompt-lead" id="prompt-lead"></span>
           <span class="prompt-target" id="prompt-target"></span>
         </div>
+        <!-- What the chart's numbers are counted in ("medals · 2026"). A sibling
+             of .prompt rather than a child, because .prompt turns into a flex ROW
+             on superlative questions and this has to sit under the whole line.
+             Only ever shown on a chart reveal — during the question there is no
+             number on screen for it to explain. -->
+        <p class="prompt-unit" id="prompt-unit" hidden></p>
         <div class="flags-grid" id="flags-grid"></div>
+        <!-- "Hold to read" on a chart reveal. It lives HERE, as a sibling of the
+             grid, rather than inside the chart the JS builds: the grid's
+             innerHTML is replaced on every re-render, and a button destroyed
+             mid-press would strand the hold with the finger still down. The pill
+             inside it drains to show the shared cap. -->
+        <div class="hold-read" id="hold-read" hidden>
+          <button type="button" class="hold-btn" id="hold-btn">
+            <span id="hold-btn-label" data-i18n="party.holdToRead">Hold to read</span>
+            <span class="hold-budget" aria-hidden="true"><i id="hold-budget-fill"></i></span>
+          </button>
+          <p class="hold-who" id="hold-who" aria-live="polite"></p>
+        </div>
         <div class="question-foot" id="question-foot"></div>
         <div class="actions-row">
           <button type="button" id="question-to-settings" data-i18n="party.backToSettings" hidden>Back to settings</button>
