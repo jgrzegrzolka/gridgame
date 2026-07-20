@@ -418,7 +418,6 @@ export function bootFlagParty() {
   const footEl = $('question-foot');
   const finalSub = $('final-sub');
   const finalBoard = $('final-board');
-  const breakPill = $('break-pill');
   const breakMvp = $('break-mvp');
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
@@ -1682,10 +1681,6 @@ export function bootFlagParty() {
     // `breakBuilt`. Leave the DOM as the animation left it.
     if (breakBuilt) return;
     breakBuilt = true;
-
-    const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
-    const endedRound = roundIndexAt(state.questionIndex) + 1;
-    breakPill.textContent = fmt(t('party.afterRound', 'After round {n} of {total}'), { n: endedRound, total: totalRounds });
 
     const board = state.scoreboard || [];
     const { rows, mvp } = roundBreak(prevBreakBoard, board);

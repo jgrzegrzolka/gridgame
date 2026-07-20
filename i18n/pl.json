@@ -642,7 +642,6 @@
       "superlativeWinterMedals": "Medale zimowe",
       "superlativeWinterMedalsPc": "Zimowe na mieszkańca"
     },
-    "afterRound": "Po rundzie {n} z {total}",
     "roundMvp": "Najlepszy w rundzie",
     "standings": "Klasyfikacja",
     "behind": "strata {n}",
