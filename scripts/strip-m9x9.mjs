@@ -36,7 +36,8 @@
  *   node scripts/strip-m9x9.mjs --apply
  *
  * One-shot: delete this script once it has been run with --apply (tracked as
- * a cleanup entry in FEATURE.md, same as scripts/backfill-puzzle1-add-li.cjs).
+ * a cleanup entry in FEATURE.md — the same lifecycle the two `backfill-*.cjs`
+ * scripts went through before being deleted on 2026-07-20).
  */
 
 import { execFileSync } from 'node:child_process';

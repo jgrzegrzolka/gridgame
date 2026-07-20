@@ -450,8 +450,8 @@ Both stages land within the 5 GB/month free tier at our traffic.
 
 **Two different retirement clocks — don't conflate them:**
 
-1. **The one-shot Cosmos scripts can go now.** `scripts/backfill-puzzle1-add-li.cjs` and `scripts/backfill-gq-add-star.cjs` (plus tests). Both have been run with `--apply` against production; the gq one reports 13/13 rows already migrated on re-run. **These never shipped** — `deploy.yml` strips `scripts/` from the artifact, so they're repo clutter, not prod code. Deleting them is zero-risk.
-2. **The client migration needs a real window.** `applyScoreMigrations` + `migrateScores` in `daily/scores.js`, the calls from `daily/page.js` + `daily/archive.js`, and the tests in `daily/scores.test.js`. This *does* ship, and runs on every load of the daily and archive pages.
+1. ~~**The one-shot Cosmos scripts.**~~ **Done 2026-07-20.** `scripts/backfill-puzzle1-add-li.cjs` and `scripts/backfill-gq-add-star.cjs` (plus tests) deleted. Both had been run with `--apply` against production — the gq one reported 13/13 rows already migrated on re-run — and neither ever shipped, since `deploy.yml` strips `scripts/` from the artifact. Recoverable from git history if a re-run is ever needed.
+2. **The client migration needs a real window — this is what's left.** `applyScoreMigrations` + `migrateScores` in `daily/scores.js`, the calls from `daily/page.js` + `daily/archive.js`, and the tests in `daily/scores.test.js`. This *does* ship, and runs on every load of the daily and archive pages.
 
 **Why the client side can't be "a couple of days".** The migration patches a player's `daily.scores` the first time they return after the fix. Remove it before someone comes back and their local archive keeps the stale total forever — showing `5/11` on a puzzle the server now says is out of 12. Daily regulars are patched within a day; a weekly or monthly player isn't. 30 days is the same window the Liechtenstein entry originally chose, for the same reason.
 
