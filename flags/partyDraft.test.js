@@ -9,6 +9,7 @@ import {
   isValidPick,
   OPENING_MODE_ID,
   REPEATABLE_MODE_IDS,
+  validateOpenerMode,
   MAX_DRAFT_ROUNDS,
   GAME_LENGTHS,
   DEFAULT_GAME_LENGTH,
@@ -133,24 +134,32 @@ test('validateGameLength: anything else falls back to the default, never guesses
 
 // ---- pickShareFor ----
 
-test('pickShareFor: splits the rotation across the seats', () => {
-  // 4 seats, medium -> 10 rounds -> 8 rotation picks -> 2 each, none left over.
-  assert.deepEqual(pickShareFor(roundCountFor(4, 'medium'), 4), { each: 2, extra: 0 });
-  // 5 seats, short -> 7 rounds -> 5 rotation picks -> 1 each.
-  assert.deepEqual(pickShareFor(roundCountFor(5, 'short'), 5), { each: 1, extra: 0 });
+test('pickShareFor: splits the picks across the seats', () => {
+  // Only the Decider sits outside the count now: the opener is the host's pick,
+  // chosen in the lobby, so it is a share like any other.
+  //
+  // This is where LENGTH_ROUNDS stops dividing evenly. Its cells were chosen so
+  // `rounds - 2` split cleanly, which is what let the hint say "you each pick 2"
+  // and be literally true; `rounds - 1` leaves a remainder almost everywhere, so
+  // the `extra` branch is now the normal case rather than a 7+-seat edge. Accepted
+  // deliberately -- re-picking the table would move every game's length.
+  // 4 seats, medium -> 10 rounds -> 9 picks -> 2 each with 1 player picking more.
+  assert.deepEqual(pickShareFor(roundCountFor(4, 'medium'), 4), { each: 2, extra: 1 });
+  // 5 seats, short -> 7 rounds -> 6 picks -> 1 each with 1 picking more.
+  assert.deepEqual(pickShareFor(roundCountFor(5, 'short'), 5), { each: 1, extra: 1 });
 });
 
 test('pickShareFor: past six seats somebody misses out, and that is the trade', () => {
-  // 8 seats, short -> 8 rounds -> 6 rotation picks over 8 seats. Two players do
-  // not pick at all. `pickerFor` hands picks to the lowest-ranked first, so the
-  // seats that miss out are the ones ahead — the deliberate cost of letting a
-  // big room still choose a short game.
-  assert.deepEqual(pickShareFor(roundCountFor(8, 'short'), 8), { each: 0, extra: 6 });
+  // `pickerFor` hands picks to the lowest-ranked first, so the seats that miss
+  // out are the ones ahead — the deliberate cost of letting a big room still
+  // choose a short game.
+  // 8 seats, short -> 8 rounds -> 7 picks over 8 seats. One player does not pick.
+  assert.deepEqual(pickShareFor(roundCountFor(8, 'short'), 8), { each: 0, extra: 7 });
 });
 
 test('pickShareFor: never returns a negative share for a degenerate round count', () => {
   assert.deepEqual(pickShareFor(0, 4), { each: 0, extra: 0 });
-  assert.deepEqual(pickShareFor(2, 4), { each: 0, extra: 0 });
+  assert.deepEqual(pickShareFor(1, 4), { each: 0, extra: 0 });
 });
 
 // ---- pickerFor ----
@@ -695,5 +704,26 @@ test('handFor never deals an Olympic member id as its own card', () => {
     }
     // And the card itself must never appear twice in one hand.
     assert.ok(hand.filter((c) => c === 'olympicMedals').length <= 1, `seed ${seed}: duplicate card`);
+  }
+});
+
+// ---- the opening round ----
+
+test('validateOpenerMode: picture modes pass, everything else falls back to Flags', () => {
+  // Picture modes only, and the restriction is the point rather than a shortcut:
+  // the opener is the warm-up everyone plays before any score exists, so it must
+  // be a round nobody has to think about. Opening a party on "Honey production"
+  // is a bad first impression.
+  for (const m of PICTURE_MODES) assert.equal(validateOpenerMode(m.id), m.id, `${m.id} allowed`);
+  for (const m of METRIC_MODES) {
+    assert.equal(validateOpenerMode(m.id), OPENING_MODE_ID, `${m.id} refused`);
+  }
+});
+
+test('validateOpenerMode: untrusted input coerces rather than throwing', () => {
+  // The value arrives over the wire. A client that predates the setting sends
+  // nothing at all, and must land on the Flags opener it was built against.
+  for (const bad of [undefined, null, '', 'no-such-mode', 42, {}, ['flags-all']]) {
+    assert.equal(validateOpenerMode(bad), OPENING_MODE_ID, `${JSON.stringify(bad)} -> default`);
   }
 });

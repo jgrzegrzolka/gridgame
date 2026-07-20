@@ -18,7 +18,7 @@ import { filterTitle, pillLabel } from '../flags/findFlag.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validateGameLength, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, validateOpenerMode, OPENING_MODE_ID, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { buildAvatar, shareUrl } from '../common.js';
@@ -40,6 +40,10 @@ const NICKNAME_KEY = 'gridgame.nickname';
 // comes from the players' picks and the veil timing is a fixed constant
 // (DEFAULT_REVEAL). Those five keys are dead for the same reason.
 const LENGTH_KEY = 'gridgame.party.gameLength';
+// The host's remembered opening round, carried into each room they host the same
+// way the length is. A host who always opens on Spot the flag should not re-pick
+// it every game.
+const OPENER_KEY = 'gridgame.party.opener';
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -452,6 +456,17 @@ export function bootFlagParty() {
     const icon = btn.querySelector('.dl-ic');
     if (icon) icon.innerHTML = lengthIconHtml(btn.dataset.length ?? '');
   }
+  const draftOpenerEl = $('draft-opener');
+  const draftOpenerGroup = $('draft-opener-group');
+  const draftOpenerBtns = /** @type {HTMLButtonElement[]} */ (
+    [...draftOpenerEl.querySelectorAll('.dl-pick')]);
+  // Each opener segment wears its own mode's artwork, so the row is recognisable
+  // before the labels are read — and it is the SAME icon the draft hand and the
+  // round card use for that mode, so a host learns one picture per round type.
+  for (const btn of draftOpenerBtns) {
+    const icon = btn.querySelector('.dl-ic');
+    if (icon) icon.innerHTML = modeIconHtml(btn.dataset.opener ?? '');
+  }
   const pickPill = $('pick-pill');
   const pickLead = $('pick-lead');
   const pickHand = $('pick-hand');
@@ -603,6 +618,20 @@ export function bootFlagParty() {
     return validateGameLength(state.length);
   }
 
+  function loadOpener() {
+    try {
+      return validateOpenerMode(window.localStorage.getItem(OPENER_KEY));
+    } catch { return OPENING_MODE_ID; }
+  }
+  function saveOpener(opener) {
+    try { window.localStorage.setItem(OPENER_KEY, opener); } catch { /* private mode */ }
+  }
+
+  /** The opening round to render: the room's, once it has told us one. */
+  function currentOpener() {
+    return validateOpenerMode(state.opener);
+  }
+
   /** Rooms this device has already pushed its remembered length into. */
   const seededRooms = new Set();
 
@@ -625,6 +654,9 @@ export function bootFlagParty() {
     // game from the start message instead" — so a modern host must always claim
     // the room, even when their choice happens to match the default.
     send({ type: 'setLength', length: loadLength() });
+    // Same one-shot claim for the opening round, and for the same reason: a room
+    // whose `opener` is still null is one the server sizes from its own default.
+    send({ type: 'setOpener', opener: loadOpener() });
   }
 
   /** Seats currently in the room — the other half of the length arithmetic. */
@@ -681,6 +713,40 @@ export function bootFlagParty() {
     }
     draftLengthGroup.classList.toggle('is-readonly', !mine);
     draftLengthHint.textContent = lengthHintText();
+  }
+
+  /**
+   * Paint the opening-round control. Same contract as the length above: guests see
+   * the host's choice in the same place, disabled but not dimmed, because the
+   * opening round is something they are told rather than something withheld.
+   */
+  function syncDraftOpener() {
+    const mine = state.isHost;
+    const opener = currentOpener();
+    for (const btn of draftOpenerBtns) {
+      const on = btn.dataset.opener === opener;
+      btn.setAttribute('aria-checked', String(on));
+      btn.disabled = !mine;
+      btn.tabIndex = mine && on ? 0 : -1;
+    }
+    draftOpenerGroup.classList.toggle('is-readonly', !mine);
+  }
+
+  /**
+   * Choose the opening round. Like the length, the host asks the room and repaints
+   * when the room agrees, rather than changing it locally and announcing it — so
+   * every seat paints one server-owned value.
+   */
+  function setOpener(next, focus) {
+    if (!state.isHost) return;
+    const opener = validateOpenerMode(next);
+    if (opener !== currentOpener()) {
+      saveOpener(opener);
+      send({ type: 'setOpener', opener });
+    }
+    if (!focus) return;
+    const active = draftOpenerBtns.find((b) => b.dataset.opener === opener);
+    if (active) active.focus();
   }
 
   /**
@@ -1389,6 +1455,10 @@ export function bootFlagParty() {
     // to be surprised by. `syncDraftLength` disables it for guests.
     draftLengthEl.hidden = !inLobby;
     syncDraftLength();
+    // The opening round is shown to everyone for the same reason as the length:
+    // it is the first thing they will play, so being told beats being surprised.
+    draftOpenerEl.hidden = !inLobby;
+    syncDraftOpener();
     seedHostLength();
   }
 
@@ -2319,6 +2389,22 @@ export function bootFlagParty() {
     if (e.key === 'End') return setGameLength(GAME_LENGTHS[GAME_LENGTHS.length - 1], true);
     const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
     setGameLength(GAME_LENGTHS[(i + step + GAME_LENGTHS.length) % GAME_LENGTHS.length], true);
+  });
+  for (const btn of draftOpenerBtns) {
+    btn.addEventListener('click', () => setOpener(btn.dataset.opener, false));
+  }
+  // Same roving-tabindex keyboard contract as the length group above.
+  draftOpenerGroup.addEventListener('keydown', (e) => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+    if (!keys.includes(e.key)) return;
+    if (!state.isHost) return;
+    e.preventDefault();
+    const ids = draftOpenerBtns.map((b) => b.dataset.opener ?? '');
+    const i = ids.indexOf(currentOpener());
+    if (e.key === 'Home') return setOpener(ids[0], true);
+    if (e.key === 'End') return setOpener(ids[ids.length - 1], true);
+    const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+    setOpener(ids[(i + step + ids.length) % ids.length], true);
   });
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
