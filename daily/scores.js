@@ -151,6 +151,28 @@ export function applyScoreMigrations(scores) {
     next[1] = { f: p1.f + 1, t: 10, c };
     changed = true;
   }
+  // gq_add_star (2026-07-20): Equatorial Guinea's six emblem stars were
+  // missing from countries.json, so it lacked `star-or-moon` and fell out
+  // of two star puzzles — #13 (15 → 16) and #45 (11 → 12). Same credit
+  // logic as puzzle1_add_li, plus one thing that migration never had to
+  // do: gq may already sit in the player's WRONG list, because it was a
+  // rejected guess right up until the fix. Leaving it there would keep
+  // the result screen calling a correct answer a mistake, so it moves
+  // across rather than merely being appended.
+  //
+  // `t` is its own idempotency marker, as with puzzle1_add_li: a migrated
+  // record carries the new total and never matches again.
+  for (const [n, oldTotal, newTotal] of [[13, 15, 16], [45, 11, 12]]) {
+    const rec = next[n];
+    if (!rec || rec.t !== oldTotal) continue;
+    const c = Array.isArray(rec.c) ? [...rec.c] : [];
+    if (!c.includes('gq')) c.push('gq');
+    /** @type {DailyScore} */
+    const patched = { f: rec.f + 1, t: newTotal, c };
+    if (Array.isArray(rec.w)) patched.w = rec.w.filter((code) => code !== 'gq');
+    next[n] = patched;
+    changed = true;
+  }
   return { scores: next, changed };
 }
 
