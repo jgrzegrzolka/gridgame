@@ -1,6 +1,6 @@
 import { scoreQuestionDetailed } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
-import { DEFAULT_GAME_LENGTH, validateGameLength } from './partyDraft.js';
+import { DEFAULT_GAME_LENGTH, validateGameLength, validateOpenerMode } from './partyDraft.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -50,6 +50,13 @@ import { DEFAULT_GAME_LENGTH, validateGameLength } from './partyDraft.js';
  *   what they are signing up for. **null means no client has ever set it**, which
  *   is how a room hosted by a pre-`setLength` build looks; the server reads that
  *   as permission to size the game from the start message instead.
+ * @property {string | null} opener  the host's chosen opening round (a picture
+ *   mode id), the second lobby-shared setting. Same null contract as `length`:
+ *   null means no client ever set it, which is how a room hosted by a build that
+ *   predates the setting looks, and readers coerce it through
+ *   `validateOpenerMode` — turning null into the Flags default that was the fixed
+ *   opener before the host could choose. It counts as the host's first pick, so
+ *   `applyStart` seeds `pickedBy` with them.
  * @property {number} questionIndex  0-based index of the current question.
  * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
  *   veil each tile (grey + blur + panel wipe) and clear it over the question
@@ -132,6 +139,10 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     // that just want a value run it through `validateGameLength`, which turns
     // null into the default.
     length: null,
+    // Same "nobody has said" null as `length` above, for the same reason: a room
+    // hosted by a pre-setOpener build must be distinguishable from one whose host
+    // deliberately chose Flags.
+    opener: null,
     questionIndex: 0,
     tricky: false,
     reveal: null,
@@ -259,7 +270,12 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
     totalQuestions: typeof totalQuestionsValue === 'number' ? totalQuestionsValue : room.totalQuestions,
     draft,
     targetRounds: draft && draftOpts && typeof draftOpts.targetRounds === 'number' ? draftOpts.targetRounds : 0,
-    pickedBy: [],
+    // The host chose the opening round in the lobby, so it IS their first pick and
+    // the rotation must skip them for a cycle. `pickerFor` counts picks per seat
+    // and serves the fewest first, so seeding the host here is the whole mechanism
+    // -- no special case anywhere downstream, and a solo host still picks every
+    // round because the minimum simply moves up with them.
+    pickedBy: draft ? [playerId] : [],
     picker: null,
     hand: null,
     decider: false,
@@ -524,8 +540,11 @@ function resetToLobby(room) {
         hostId: nextRoom.hostId,
         roster: rosterList(nextRoom),
         // Stated rather than left implicit: a client that reset its own state
-        // would otherwise repaint the lobby with a length nobody chose.
+        // would otherwise repaint the lobby with a length nobody chose. The
+        // opening round rides along for the same reason -- both survive Play
+        // again, so a room that liked its setup does not re-choose it every game.
         length: nextRoom.length,
+        opener: nextRoom.opener,
       },
     }],
   };
@@ -613,10 +632,40 @@ export function applyRepick(room, picker) {
 }
 
 /**
- * The host changes the game length from the lobby. The **only** reducer that
- * mutates the room before `start` — everything else the host once configured
- * rode on the start message and was never shared, so nothing about a lobby was
- * broadcast except who was in it.
+ * The host chooses the opening round from the lobby.
+ *
+ * The second of the two settings a room shares before it starts (see
+ * {@link applySetLength}). Same guards for the same reasons: refused off the
+ * lobby, refused from anyone but the host — checked here rather than at the call
+ * site so a second caller cannot forget them — and an unchanged value broadcasts
+ * nothing, so a mashed arrow key does not fan out to the whole room.
+ *
+ * The choice counts as the host's first pick. That is applied at
+ * {@link applyStart}, which seeds `pickedBy` with them, not here: until the game
+ * starts there is no rotation for it to count against.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @param {unknown} opener  a picture mode id; anything else coerces to Flags
+ * @returns {ApplyResult}
+ */
+export function applySetOpener(room, playerId, opener) {
+  if (room.phase !== 'lobby') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  const next = validateOpenerMode(opener);
+  if (next === room.opener) return { room, broadcasts: [] };
+  const nextRoom = { ...room, opener: next };
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'settings', opener: next } }],
+  };
+}
+
+/**
+ * The host changes the game length from the lobby. Was the **only** reducer that
+ * mutated the room before `start` — everything else the host once configured rode
+ * on the start message and was never shared, so nothing about a lobby was
+ * broadcast except who was in it. {@link applySetOpener} is now the second.
  *
  * Refused off the lobby (the length is fixed once a game is sized) and refused
  * from anyone but the host, checked here rather than at the call site so the
@@ -861,8 +910,9 @@ function welcomeBroadcast(room, playerId) {
       totalQuestions: room.totalQuestions,
       tricky: room.tricky,
       // So a joiner paints the length immediately instead of waiting for the
-      // host to happen to change it.
+      // host to happen to change it. Same for the opening round.
       length: room.length,
+      opener: room.opener,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
@@ -894,6 +944,7 @@ export function serializeRoom(room) {
     totalQuestions: room.totalQuestions,
     plan: room.plan,
     length: room.length,
+    opener: room.opener,
     questionIndex: room.questionIndex,
     tricky: room.tricky,
     reveal: room.reveal,
@@ -925,6 +976,7 @@ export function deserializeRoom(snapshot) {
     // A snapshot written before the lobby had a length stays null — "nobody set
     // this" — rather than being given a default nobody chose.
     length: snapshot.length ?? null,
+    opener: snapshot.opener ?? null,
     questionIndex: snapshot.questionIndex ?? 0,
     tricky: snapshot.tricky ?? false,
     reveal: snapshot.reveal ?? null,

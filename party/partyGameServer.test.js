@@ -345,8 +345,13 @@ test('the Decider: the closing pick goes to last place, not to the rotation', as
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), b);
 
   await playRoundWon(srv, conns, 'alice');          // bob's round -> pick 2
-  assert.equal(srv.room.picker, 'alice', 'the rotation reaches alice, its last unspent seat');
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-weird' }), a);
+  // bob again, and that is the opener counting. alice picked it in the lobby, so
+  // after bob's first pick the two are level at one each -- and a tie goes to the
+  // lowest-ranked, which is bob, who is losing every round. He draws level-plus-one
+  // before alice picks again, which is exactly the catch-up the seeding is for.
+  // (Before the host chose the opener, alice held zero picks here and went next.)
+  assert.equal(srv.room.picker, 'bob', 'tied on picks, so the lower-ranked seat goes');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-weird' }), b);
 
   // ...and however many rotation picks the length asks for after that, the last
   // boundary is the Decider's.
@@ -362,15 +367,19 @@ test('the Decider: the closing pick goes to last place, not to the rotation', as
   assert.equal(a.last('picking').decider, true, 'as is the watcher');
 });
 
-test('the Decider: the rotation is spent evenly, and the Decider spends no slot', async () => {
+test('the Decider: the picks are spent within one of each other, and the Decider spends no slot', async () => {
   const { srv, b } = await playToDeciderPick();
   const before = [...srv.room.pickedBy];
-  // Two seats, and the table guarantees the rotation divides evenly at every
-  // cell up to six, so both seats have picked the same number of times.
+  // This used to assert an exact tie: LENGTH_ROUNDS was built so `rounds - 2`
+  // divided evenly by the seat count. The opener is a pick now -- the host chose
+  // it in the lobby -- so the total is `rounds - 1`, which is odd at two seats and
+  // cannot tie. Within one is the strongest true statement, and it is what
+  // `pickShareFor` reports to the lobby as `extra`.
   const alice = before.filter((p) => p === 'alice').length;
   const bob = before.filter((p) => p === 'bob').length;
-  assert.equal(alice, bob, `rotation split evenly: ${JSON.stringify(before)}`);
-  assert.equal(alice + bob, srv.room.targetRounds - 2, 'every round but the opener and the Decider');
+  assert.ok(Math.abs(alice - bob) <= 1, `picks within one: ${JSON.stringify(before)}`);
+  assert.equal(alice + bob, srv.room.targetRounds - 1,
+    'every round but the Decider -- the opener counts now, as the host pick');
 
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), b);
   assert.deepEqual(srv.room.pickedBy, before, 'the Decider spent no rotation slot');

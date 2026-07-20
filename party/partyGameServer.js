@@ -3,11 +3,12 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
-import { roundCountFor, validateGameLength, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, validateOpenerMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
   applyStart,
+  applySetOpener,
   canStart,
   applyBuzz,
   applyForceReveal,
@@ -319,10 +320,22 @@ export default class PartyGameServer {
           // would otherwise silently get a medium game whatever it chose.
           const length = validateGameLength(this.room.length ?? parsed.length);
           const targetRounds = roundCountFor(this.room.present.size, length);
-          const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
-          this.usedModes.add(OPENING_MODE_ID);
-          const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, DEFAULT_REVEAL);
+          // The opening round is the host's choice now (lobby, `setOpener`), not a
+          // constant. `validateOpenerMode` turns the never-set null -- and anything
+          // a stale or malformed client sends -- back into Flags, which is exactly
+          // the fixed opener this used to hardcode, so an older client is unchanged.
+          const openerId = validateOpenerMode(this.room.opener);
+          const openerMode = MODE_BY_ID[openerId] ?? OPENING_MODE;
+          const openingPlan = [{ poolId: openerMode.poolId, questionId: openerMode.questionId, questions: ROUND_QUESTIONS }];
+          this.usedModes.add(usedIdForMode(openerId));
+          const question = this.generateForQuestion(openerMode.questionId, openerMode.poolId, DEFAULT_REVEAL);
           result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, false, DEFAULT_REVEAL, { draft: true, targetRounds });
+          break;
+        }
+        case 'setOpener': {
+          // Validated in the reducer (which owns the host and phase guards), so
+          // the raw value goes straight through -- same shape as setLength.
+          result = applySetOpener(this.room, playerId, parsed.opener);
           break;
         }
         case 'setLength': {

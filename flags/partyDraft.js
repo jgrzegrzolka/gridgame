@@ -140,8 +140,40 @@ export function validateGameLength(value) {
  */
 export function pickShareFor(rounds, playerCount) {
   const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
-  const rotation = Math.max(0, (Number.isFinite(rounds) ? Math.floor(rounds) : 0) - 2);
+  // `- 1`, not `- 2`: only the Decider sits outside the count now. The opener used
+  // to as well, because nobody chose it — it was always Flags. Now the host picks
+  // it in the lobby and it counts as their first pick, so it is a share like any
+  // other and the line would understate the total by one if it were still excluded.
+  //
+  // The cost is that the cells of LENGTH_ROUNDS were chosen so `rounds - 2` divided
+  // evenly by the seat count, which is what let this say "you each pick 2" and be
+  // literally true. `rounds - 1` does not divide, so the `extra` branch — built for
+  // 7+ seats and rare until now — becomes the normal case. Deliberate: re-picking
+  // the table would move every game's length, and the copy already handles it.
+  const rotation = Math.max(0, (Number.isFinite(rounds) ? Math.floor(rounds) : 0) - 1);
   return { each: Math.floor(rotation / seats), extra: rotation % seats };
+}
+
+/**
+ * Coerce a host-supplied opening-round id to a legal one, defaulting to
+ * {@link OPENING_MODE_ID}.
+ *
+ * **Picture modes only.** The opener exists to warm the room up before any score
+ * exists, and a niche statistic ("Honey production") is a poor first impression
+ * and a worse warm-up — the round everyone plays cold should be one everyone
+ * immediately understands. It is also what keeps the lobby control a four-segment
+ * row rather than a scrolling list of thirty.
+ *
+ * Untrusted like {@link validateGameLength}: the value arrives over the wire, so
+ * anything unrecognised falls back to the default rather than being guessed at.
+ * A client that predates this setting sends nothing and gets Flags, which is
+ * exactly the fixed opener it was built against.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function validateOpenerMode(value) {
+  return PICTURE_MODES.some((m) => m.id === value) ? /** @type {string} */ (value) : OPENING_MODE_ID;
 }
 
 /**

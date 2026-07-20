@@ -699,6 +699,18 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   line-height: 1.4;
   text-align: center;
 }
+/* The opening-round row's heading. The length control needs no heading (its three
+   labels say what it is), but once two segmented rows sit on top of each other
+   neither one's labels identify it any more. Muted and small so it names the
+   control without competing with the room code or the start button. */
+.dl-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  text-align: center;
+}
 .dl-step {
   display: flex;
   border: 1px solid var(--muted-soft-color);

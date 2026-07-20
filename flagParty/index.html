@@ -118,6 +118,37 @@
           </span>
           <span class="dl-hint" id="draft-length-hint"></span>
         </div>
+        <!-- Host-only: the opening round. Round 1 used to always be Flags, decided
+             by nobody; the host chooses it now, and the choice counts as their
+             first pick so the rotation skips them for a cycle. Picture modes only
+             — the opener is the warm-up everyone plays before any score exists, so
+             it should be a round nobody has to think about. Same radiogroup shape
+             as the length above, and it reuses that control's classes rather than
+             growing a parallel set. This one DOES carry a visible heading: with
+             two segmented rows stacked, "Short / Medium / Long" no longer says
+             which is which on its own. -->
+        <div class="draft-length" id="draft-opener" hidden>
+          <span class="dl-group-label" data-i18n="party.openingRound">Opening round</span>
+          <span class="dl-step" role="radiogroup" id="draft-opener-group"
+                data-i18n-attr="aria-label:party.openingRound" aria-label="Opening round">
+            <button type="button" class="dl-pick" role="radio" data-opener="flags-all" aria-checked="true" tabindex="0">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.modeShort.flagsAll">Flags</span>
+            </button>
+            <button type="button" class="dl-pick" role="radio" data-opener="flags-weird" aria-checked="false" tabindex="-1">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.modeShort.flagsWeird">Weird</span>
+            </button>
+            <button type="button" class="dl-pick" role="radio" data-opener="map-outlines" aria-checked="false" tabindex="-1">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.modeShort.mapOutlines">Maps</span>
+            </button>
+            <button type="button" class="dl-pick" role="radio" data-opener="spot-flag" aria-checked="false" tabindex="-1">
+              <span class="dl-ic" aria-hidden="true"></span>
+              <span class="dl-lab" data-i18n="party.modeShort.spotFlag">Spot</span>
+            </button>
+          </span>
+        </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">
           <button type="button" class="row-cta" id="start-game" data-i18n="party.startGame" hidden>Start game</button>

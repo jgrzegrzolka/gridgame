@@ -22,6 +22,10 @@
  * @property {number} questionIndex
  * @property {boolean} tricky  host's tricky-mode choice, learned from the server;
  *   when true the page veils each question tile and clears it over the clock.
+ * @property {string} opener  the host's chosen opening round (a picture mode id),
+ *   learned the same way as `length` and painted by every seat. Defaults to the
+ *   Flags opener that was fixed before the host could choose, so a client talking
+ *   to a server that never sends it behaves exactly as it used to.
  * @property {string} length  the host's game-length choice, learned from the
  *   server. Every seat renders it in the lobby — the host as a control, everyone
  *   else read-only — so a guest can see what they are in for before it starts.
@@ -59,7 +63,7 @@
  * @typedef {{ type: 'close' }} Effect
  */
 
-import { DEFAULT_GAME_LENGTH } from './partyDraft.js';
+import { DEFAULT_GAME_LENGTH, OPENING_MODE_ID } from './partyDraft.js';
 
 /** @returns {PartyClientState} */
 export function initialPartyClientState() {
@@ -72,6 +76,7 @@ export function initialPartyClientState() {
     questionIndex: 0,
     tricky: false,
     length: DEFAULT_GAME_LENGTH,
+    opener: OPENING_MODE_ID,
     question: null,
     buzzedCount: 0,
     seatCount: 0,
@@ -151,6 +156,7 @@ function reduceOne(state, message) {
           // field entirely, and falling back to the default would stamp 'medium'
           // over whatever the host had already told us.
           length: message.length ?? state.length,
+          opener: message.opener ?? state.opener,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
           // A reconnect mid-pick resumes the draft turn (picker + hand ride the
@@ -181,10 +187,15 @@ function reduceOne(state, message) {
       };
     }
     case 'settings': {
-      // The host changed a lobby setting. Only `length` today, and it is the
-      // only room state that moves while nobody is playing.
+      // The host changed a lobby setting -- `length` or `opener`, the two pieces
+      // of room state that move while nobody is playing. Each falls back to what
+      // we already hold, so a message naming only one does not blank the other.
       return {
-        state: { ...state, length: message.length ?? state.length },
+        state: {
+          ...state,
+          length: message.length ?? state.length,
+          opener: message.opener ?? state.opener,
+        },
         effects: [],
       };
     }
@@ -196,6 +207,7 @@ function reduceOne(state, message) {
           phase: 'lobby',
           roster: message.roster ?? state.roster,
           length: message.length ?? state.length,
+          opener: message.opener ?? state.opener,
           isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
           question: null,
           reveal: null,
