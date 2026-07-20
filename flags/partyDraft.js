@@ -23,10 +23,18 @@ export const OPENING_MODE_ID = 'flags-all';
  *  Flags is the game — the thing everyone came to play and the one round nobody
  *  is bored of — and it is also the fixed opener, so the no-repeat rule retired
  *  it before anyone got to choose it even once. Weird flags is the same game with
- *  a different pool. Everything else (outlines, the 30-odd statistics) still
- *  plays once per game, which is what keeps a draft varied; these two are the
- *  staple you are allowed to order twice. */
-export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird'];
+ *  a different pool.
+ *
+ *  Spot the flag joins them because a second helping of it is not a repeat: every
+ *  round is a freshly generated puzzle out of ~983 distinct specs, so playing it
+ *  twice is two different puzzles, not the same round again. That is what separates
+ *  it from outlines, which is one fixed game whatever order it comes in. The
+ *  no-repeat rule exists to keep a draft varied, and this mode supplies its own
+ *  variety.
+ *
+ *  Everything else (outlines, the 30-odd statistics) still plays once per game;
+ *  these three are the staples you are allowed to order twice. */
+export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird', 'spot-flag'];
 
 /** Hard ceiling on rounds in a draft — a backstop against a bad edit to
  *  {@link LENGTH_ROUNDS}, not a knob. It used to be reachable: length was
