@@ -417,7 +417,7 @@ Both stages land within the 5 GB/month free tier at our traffic.
 
 ### Cleanup: delete `scripts/strip-m9x9.mjs` and the `9x9` mode compat
 
-**Status:** parked, no deadline. The script **has been run** (2026-07-16, 24/24 rows); it is spent and now a no-op. Kept only so the run is auditable next to Feature U, same lifecycle as `scripts/backfill-puzzle1-add-li.cjs`.
+**Status:** parked, no deadline. The script **has been run** (2026-07-16, 24/24 rows); it is spent and now a no-op. Kept only so the run is auditable next to Feature U — the same lifecycle the two `backfill-*.cjs` scripts followed before being deleted on 2026-07-20 (see the score-migrations entry below). Worth noting those were deleted while this one is still parked: "run, then delete" is the norm, and keeping a spent script is the exception that needs the auditability reason above.
 
 **What to remove when this comes off the parking brake:**
 1. `scripts/strip-m9x9.mjs`.
