@@ -15,8 +15,10 @@ before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
 - **Round** — five questions of a single mode. The unit a drafter picks and the unit the
   standings break follows. Every round scores the same; the closing round (the **Decider**)
   is distinguished by *who chooses it*, not by what it pays.
-- **Game** — a sequence of rounds. Draft length is `players x picksPerPlayer + 1`, where the host
-  chooses `picksPerPlayer` from a fixed 1 / 2 / 3 / 4 and the `+1` is the opening Flags round.
+- **Game** — a sequence of rounds. The host chooses a **length** (Short / Medium / Long) and
+  `roundCountFor` reads the round total off a table keyed by length and seat count; the picks are
+  what falls out. Two of those rounds are fixed: the opening Flags round (dealt, never picked) and
+  the closing Decider.
 
 **Weird flags, not "others" (2026-07-18).** The non-sovereign picture mode is `flags-weird`
 (`party.mode.flagsWeird`), labelled "Weird flags" / "Dziwne flagi" to match `variant.weird` and
@@ -1719,6 +1721,49 @@ needs more tension; it was not taken now because removing the lie came first.
 index 0 was the strongest player — so it skewed the exact number under test and hid the
 fewer-questions effect entirely (24.3% vs 26.1%, i.e. "no effect"). With Fisher-Yates the same
 comparison reads 33.3% vs 18.9%. Any future scoring simulation should shuffle properly.
+
+## Iteration 14 — length is the input, not the output — SHIPPED (2026-07-20)
+
+The lobby's one host control said "Rounds each player picks" (1-4) and length fell out of
+`seats x picks + 2`. That names the *input* and hides the *output*, and it had two consequences
+nobody had measured:
+
+- **The cap silently ate the setting.** `MAX_DRAFT_ROUNDS = 25` clamped the total, so at 8 seats
+  buttons 3 and 4 produced the identical game, and at 12+ buttons 2, 3 and 4 all did. The host
+  pressed a different number and nothing changed.
+- **A big table could not play a short game.** The floor was `seats + 2` rounds, so 20 players
+  (`MAX_SEATS`) could not have anything under 22 rounds — 110 questions.
+
+And the same button meant roughly 7 minutes at two seats and 45 at ten, with the answer moving
+under the host every time somebody joined.
+
+**The trade, stated plainly.** Picks divide evenly exactly when `rounds = seats * k + 2`, which
+*is* the old formula — so "even picks" and "a length that means the same thing at every table
+size" cannot both be had. Length won: it is what the host is trying to control, and it is what
+ruins a party game when it is wrong.
+
+**What shipped.** `roundCountFor(seats, length)` reads a hand-picked table (`LENGTH_ROUNDS` in
+`flags/partyDraft.js`), 7+ seats reuse the 6-seat column, and `validateGameLength` replaces
+`validatePicksPerPlayer` on the wire (`start` carries `length`, not `picks`). Every cell still
+sits on the `seats * k + 2` lattice up to six seats, so the lobby hint can say "you each pick 2"
+and be telling the truth — pinned by a test, since a cell edited off the lattice makes that hint
+a lie with nothing else to catch it. Past six seats the rotation no longer reaches everyone
+(`pickShareFor` returns the split); the seats that miss out are the ones *ahead*, because
+`pickerFor` hands picks to the lowest-ranked first, which is the same comeback logic the Decider
+already runs on. Max is now 20 rounds, so `MAX_DRAFT_ROUNDS` is unreachable by construction.
+
+**The control.** A segmented `role="radiogroup"` — one bordered container, three flush segments,
+hairline dividers, arrow-key roving. It replaced a row of `aria-pressed` toggle buttons, which is
+the wrong pattern for a mutually exclusive choice: it announces each option as an independent
+on/off and gives no arrow-key navigation. The fill is **inverted** from the usual selected idiom:
+the chosen segment is the *light* one and the two still available are darker, so selecting takes
+colour away rather than adding it and the start button stays the loudest thing in the lobby. One,
+two or three pink strokes carry the length; the unselected two step back to 45% opacity rather
+than changing colour, so the trio still reads as one family.
+
+**Not done, deliberately.** No minutes in the UI. We modelled roughly 10 / 20 / 30 from the real
+timing constants, but never measured a game, and printing a number the engine has not earned is
+worse than three honest buckets. Time a real game before adding them.
 
 ## Out of scope (don't sweep in)
 

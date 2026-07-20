@@ -2,15 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   roundCountFor,
-  validatePicksPerPlayer,
+  validateGameLength,
+  pickShareFor,
   pickerFor,
   handFor,
   isValidPick,
   OPENING_MODE_ID,
   REPEATABLE_MODE_IDS,
   MAX_DRAFT_ROUNDS,
-  PICKS_PER_PLAYER_OPTIONS,
-  DEFAULT_PICKS_PER_PLAYER,
+  GAME_LENGTHS,
+  DEFAULT_GAME_LENGTH,
   HAND_SIZE,
   canVeilMode,
   isDeciderPick,
@@ -40,60 +41,116 @@ const board = (...ids) => ids.map((playerId) => ({ playerId }));
 
 // ---- roundCountFor ----
 
-test('roundCountFor: players x picks + 2', () => {
-  assert.equal(roundCountFor(3, 2), 8);   // 3 seats x 2 picks + opener + Decider
-  assert.equal(roundCountFor(2, 1), 4);
-  assert.equal(roundCountFor(4, 4), 18);
-  assert.equal(roundCountFor(1, 3), 5);
-});
-
-test('roundCountFor: every seat picks exactly picksPerPlayer times', () => {
-  // rounds - 2 (the fixed opener and the Decider, neither of which spends a
-  // rotation slot) is the number of rotation picks, split evenly. This is the
-  // promise the Decider was kept OUTSIDE the rotation to preserve.
-  for (const players of [1, 2, 3, 4]) {
-    for (const picks of PICKS_PER_PLAYER_OPTIONS) {
-      assert.equal(roundCountFor(players, picks) - 2, players * picks, `${players}p x ${picks}`);
+test('roundCountFor: the agreed table, cell for cell', () => {
+  // Length is now the INPUT and picks are derived, which is the whole point of
+  // the table: the host chooses how long the game runs and the seat count no
+  // longer changes the answer by 4x.
+  const EXPECTED = {
+    short:  { 2: 6,  3: 5,  4: 6,  5: 7,  6: 8  },
+    medium: { 2: 12, 3: 11, 4: 10, 5: 12, 6: 14 },
+    long:   { 2: 18, 3: 17, 4: 18, 5: 17, 6: 20 },
+  };
+  for (const length of GAME_LENGTHS) {
+    for (const [seats, rounds] of Object.entries(EXPECTED[length])) {
+      assert.equal(roundCountFor(Number(seats), length), rounds, `${length} @ ${seats}`);
     }
   }
 });
 
-test('roundCountFor: defaults to one pick each', () => {
-  assert.equal(roundCountFor(3), roundCountFor(3, DEFAULT_PICKS_PER_PLAYER));
-  assert.equal(roundCountFor(3), 5);
-});
-
-test('roundCountFor: a bad picks value falls back rather than throwing', () => {
-  assert.equal(roundCountFor(3, 99), 5);
-  assert.equal(roundCountFor(3, 0), 5);
-  assert.equal(roundCountFor(3, NaN), 5);
-});
-
-test('roundCountFor: junk seat count coerces to the two bookends alone', () => {
-  // Unreachable in play (`canStart` needs a seat); this is the input guard.
-  assert.equal(roundCountFor(0, 2), 2);
-  assert.equal(roundCountFor(-5, 2), 2);
-  assert.equal(roundCountFor(NaN, 2), 2);
-});
-
-test('roundCountFor: the ceiling is a backstop a normal room never reaches', () => {
-  // The worst offered combination in a 4-player room is well under the cap...
-  assert.ok(roundCountFor(4, 4) < MAX_DRAFT_ROUNDS);
-  // ...but an absurd room is still bounded.
-  assert.equal(roundCountFor(500, 4), MAX_DRAFT_ROUNDS);
-});
-
-// ---- validatePicksPerPlayer ----
-
-test('validatePicksPerPlayer: accepts exactly the offered set', () => {
-  for (const n of PICKS_PER_PLAYER_OPTIONS) assert.equal(validatePicksPerPlayer(n), n);
-});
-
-test('validatePicksPerPlayer: anything else falls back to the default, never clamps', () => {
-  // 5 is out of the set; falling back (not clamping to 4) keeps a buggy client visible.
-  for (const bad of [0, 5, 99, -1, 2.5, NaN, '2', null, undefined, {}]) {
-    assert.equal(validatePicksPerPlayer(bad), DEFAULT_PICKS_PER_PLAYER, String(bad));
+test('roundCountFor: seven or more seats reuse the six-seat column', () => {
+  // The table stops growing at 6 so a big room cannot force a 45-minute game.
+  for (const length of GAME_LENGTHS) {
+    const atSix = roundCountFor(6, length);
+    for (const seats of [7, 8, 12, 20, 500]) {
+      assert.equal(roundCountFor(seats, length), atSix, `${length} @ ${seats}`);
+    }
   }
+});
+
+test('roundCountFor: every cell divides the rotation evenly up to six seats', () => {
+  // rounds - 2 (the opener is dealt, the Decider sits outside the rotation) is
+  // the number of rotation picks. Every cell sits on `seats * k + 2` so the
+  // lobby can promise "you each pick N" and be telling the truth. This is the
+  // constraint the table was built around; a cell edited off the lattice makes
+  // that hint a lie, which is exactly what this pins.
+  for (const length of GAME_LENGTHS) {
+    for (const seats of [2, 3, 4, 5, 6]) {
+      const rotation = roundCountFor(seats, length) - 2;
+      assert.equal(rotation % seats, 0, `${length} @ ${seats} leaves ${rotation % seats} over`);
+    }
+  }
+});
+
+test('roundCountFor: length is ordered — longer is never shorter', () => {
+  for (const seats of [2, 3, 4, 5, 6, 9, 20]) {
+    assert.ok(roundCountFor(seats, 'short') < roundCountFor(seats, 'medium'), `short<medium @${seats}`);
+    assert.ok(roundCountFor(seats, 'medium') < roundCountFor(seats, 'long'), `medium<long @${seats}`);
+  }
+});
+
+test('roundCountFor: defaults to medium', () => {
+  assert.equal(roundCountFor(4), roundCountFor(4, DEFAULT_GAME_LENGTH));
+  assert.equal(roundCountFor(4), 10);
+});
+
+test('roundCountFor: a bad length falls back rather than throwing', () => {
+  for (const bad of ['huge', '', null, undefined, 3, {}]) {
+    assert.equal(roundCountFor(4, /** @type {any} */ (bad)), roundCountFor(4, DEFAULT_GAME_LENGTH), String(bad));
+  }
+});
+
+test('roundCountFor: junk seat count coerces to the smallest column', () => {
+  // Unreachable in play (`canStart` needs a seat); this is the input guard.
+  for (const junk of [0, 1, -5, NaN]) {
+    assert.equal(roundCountFor(/** @type {any} */ (junk), 'medium'), roundCountFor(2, 'medium'), String(junk));
+  }
+});
+
+test('roundCountFor: the old ceiling can no longer bite', () => {
+  // The table tops out at 20, so MAX_DRAFT_ROUNDS is now unreachable by
+  // construction rather than by a clamp. Before this change, 8+ seats collapsed
+  // several of the host's options onto the cap and they became the same game.
+  for (const length of GAME_LENGTHS) {
+    for (const seats of [2, 3, 4, 5, 6, 8, 20, 500]) {
+      assert.ok(roundCountFor(seats, length) < MAX_DRAFT_ROUNDS, `${length} @ ${seats}`);
+    }
+  }
+});
+
+// ---- validateGameLength ----
+
+test('validateGameLength: accepts exactly the offered set', () => {
+  for (const l of GAME_LENGTHS) assert.equal(validateGameLength(l), l);
+});
+
+test('validateGameLength: anything else falls back to the default, never guesses', () => {
+  // A stale client still sending the retired `picks` number lands here, and gets
+  // a medium game rather than a crash.
+  for (const bad of ['Short', 'huge', 0, 2, 99, NaN, null, undefined, {}, []]) {
+    assert.equal(validateGameLength(/** @type {any} */ (bad)), DEFAULT_GAME_LENGTH, String(bad));
+  }
+});
+
+// ---- pickShareFor ----
+
+test('pickShareFor: splits the rotation across the seats', () => {
+  // 4 seats, medium -> 10 rounds -> 8 rotation picks -> 2 each, none left over.
+  assert.deepEqual(pickShareFor(roundCountFor(4, 'medium'), 4), { each: 2, extra: 0 });
+  // 5 seats, short -> 7 rounds -> 5 rotation picks -> 1 each.
+  assert.deepEqual(pickShareFor(roundCountFor(5, 'short'), 5), { each: 1, extra: 0 });
+});
+
+test('pickShareFor: past six seats somebody misses out, and that is the trade', () => {
+  // 8 seats, short -> 8 rounds -> 6 rotation picks over 8 seats. Two players do
+  // not pick at all. `pickerFor` hands picks to the lowest-ranked first, so the
+  // seats that miss out are the ones ahead — the deliberate cost of letting a
+  // big room still choose a short game.
+  assert.deepEqual(pickShareFor(roundCountFor(8, 'short'), 8), { each: 0, extra: 6 });
+});
+
+test('pickShareFor: never returns a negative share for a degenerate round count', () => {
+  assert.deepEqual(pickShareFor(0, 4), { each: 0, extra: 0 });
+  assert.deepEqual(pickShareFor(2, 4), { each: 0, extra: 0 });
 });
 
 // ---- pickerFor ----
@@ -261,11 +318,12 @@ test('deciderPickerFor: a tie for last goes to the last-joined tied seat', () =>
 });
 
 test('isDeciderPick: the shortest real draft still has one', () => {
-  // Solo, one pick: opener + the seat's pick + the Decider.
-  const total = roundCountFor(1, 1) * 5;
-  assert.equal(total, 15);
-  assert.equal(isDeciderPick(4, total), false);
-  assert.equal(isDeciderPick(9, total), true);
+  // The smallest cell in the table: three seats, short — opener, one pick each,
+  // then the Decider.
+  const total = roundCountFor(3, 'short') * 5;
+  assert.equal(total, 25);
+  assert.equal(isDeciderPick(14, total), false); // the boundary one round earlier
+  assert.equal(isDeciderPick(19, total), true);  // the pick that opens the last round
 });
 
 // ---- handFor ----

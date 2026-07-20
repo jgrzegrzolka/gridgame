@@ -3,7 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
-import { roundCountFor, validatePicksPerPlayer, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -286,17 +286,22 @@ export default class PartyGameServer {
           this.usedCodes = new Set();
           this.usedModes = new Set();
           // Draft is the only way a game starts. The plan grows one round per
-          // pick: open with a single Flags round, then run one round per pick —
-          // every seated player picks `picks` times, so the length is
-          // `seats x picks + 2`, the bookends being that opening Flags round and
-          // the closing Decider. Question 0 comes from the opening round.
+          // pick: open with a single Flags round, then run one round per pick,
+          // with that opener and the closing Decider bookending the draft.
+          // Question 0 comes from the opening round.
+          //
+          // The host sends a LENGTH ('short' / 'medium' / 'long'), not a pick
+          // count: `roundCountFor` reads the round total off a table and the
+          // picks are what falls out. The other way round — which is what the
+          // retired `picks` field did — meant the same setting bought a 7-minute
+          // game at two seats and a 45-minute one at ten.
           //
           // The host's "Custom setup" door (a plan + a tricky toggle + per-category
           // reveal timing riding on this message) was retired. Tricky is now a
           // per-round choice the picker arms (`segment.veil`), not a game-wide
           // host flag, so start always applies false and lets the pick set it.
           // Reveal timing is the fixed DEFAULT_REVEAL constant.
-          const targetRounds = roundCountFor(this.room.present.size, validatePicksPerPlayer(parsed.picks));
+          const targetRounds = roundCountFor(this.room.present.size, validateGameLength(parsed.length));
           const openingPlan = [{ poolId: OPENING_MODE.poolId, questionId: OPENING_MODE.questionId, questions: ROUND_QUESTIONS }];
           this.usedModes.add(OPENING_MODE_ID);
           const question = this.generateForQuestion(OPENING_MODE.questionId, OPENING_MODE.poolId, DEFAULT_REVEAL);

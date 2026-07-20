@@ -28,65 +28,112 @@ export const OPENING_MODE_ID = 'flags-all';
  *  staple you are allowed to order twice. */
 export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird'];
 
-/** Hard ceiling on rounds in a draft — a backstop against an absurd room, not a
- *  knob. The host never hits it at 4 picks x 4 seats (17); it only bites in a
- *  very large room, and the lobby shows the real total either way so a long game
- *  is a visible choice rather than a silent truncation. */
+/** Hard ceiling on rounds in a draft — a backstop against a bad edit to
+ *  {@link LENGTH_ROUNDS}, not a knob. It used to be reachable: length was
+ *  `seats x picks + 2`, so at 8 seats two of the host's four options clamped to
+ *  this number and became the same game, and at 12+ three of them did. With
+ *  length as the input the table tops out at 20 and this can no longer bite. */
 export const MAX_DRAFT_ROUNDS = 25;
 
-/** The fixed set of picks-per-player the host chooses from. Each player picks
- *  this many rounds, so the game is `players x picks + 2` rounds — the fixed
- *  Flags opener and {@link isDeciderPick the Decider} bookending the draft.
- *  Expressing length as "how many rounds each of you picks" is what makes it
- *  legible: the old dial said "3" and left the player to work out what that
- *  bought them. */
-export const PICKS_PER_PLAYER_OPTIONS = [1, 2, 3, 4];
+/** @typedef {'short' | 'medium' | 'long'} GameLength */
 
-/** What a fresh host gets: one pick each — a short game everyone shapes once. */
-export const DEFAULT_PICKS_PER_PLAYER = 1;
+/** The three game lengths the host chooses from, shortest first. */
+export const GAME_LENGTHS = /** @type {const} */ (['short', 'medium', 'long']);
+
+/** What a fresh host gets. Medium is the middle of the table and the length that
+ *  divides evenly across the most seat counts. */
+export const DEFAULT_GAME_LENGTH = 'medium';
+
+/**
+ * Rounds per (length, seats). **A table, not a formula**, because the two things
+ * a formula has to trade off cannot both be had:
+ *
+ * - picks divide evenly exactly when `rounds = seats * k + 2` (the opener is
+ *   dealt and the Decider sits outside the rotation, so `rounds - 2` picks are
+ *   shared out), and
+ * - a length worth naming has to mean roughly the same wall-clock at every table
+ *   size.
+ *
+ * The old `seats x picks + 2` was the first of those, which is why a single
+ * setting meant 7 minutes at two players and 45 at ten. Every cell here sits on
+ * that same lattice — so "you each pick 2" stays literally true — while being
+ * hand-picked to land near 10 / 20 / 30 minutes rather than wherever the
+ * arithmetic fell. Pinned cell-for-cell by `partyDraft.test.js`.
+ *
+ * **Seven or more seats reuse the six-seat column.** Growing past that is what
+ * made a big room unable to play a short game at all: the old floor was
+ * `seats + 2` rounds, so twenty players could not have anything under 22 rounds.
+ * The cost is that past six seats the rotation no longer reaches everyone — see
+ * {@link pickShareFor}.
+ */
+/** @type {Record<GameLength, Record<number, number>>} */
+const LENGTH_ROUNDS = {
+  short:  { 2: 6,  3: 5,  4: 6,  5: 7,  6: 8  },
+  medium: { 2: 12, 3: 11, 4: 10, 5: 12, 6: 14 },
+  long:   { 2: 18, 3: 17, 4: 18, 5: 17, 6: 20 },
+};
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
  *  the picture modes and a good spread of statistics, still a glance not a form. */
 export const HAND_SIZE = 10;
 
 /**
- * How many rounds a draft runs: `players x picksPerPlayer + 2` — the rotation
- * plus the two fixed bookends.
+ * How many rounds a draft runs, from {@link LENGTH_ROUNDS}.
  *
  * The **opener** is a Flags round that closes the cold-start hole (no scores yet
  * means no last place means no picker) and gives everyone a warm-up before the
  * first choice. The **Decider** is the closing act (see {@link isDeciderPick}),
- * which sits outside the rotation so that "everyone picks exactly
- * `picksPerPlayer` times" stays true by construction rather than by a rule the
- * final round quietly breaks.
+ * which sits outside the rotation so the pick share stays predictable rather
+ * than being quietly bent by the final round.
  *
- * Capped at {@link MAX_DRAFT_ROUNDS} as a backstop only; at the offered pick
- * counts a normal room never reaches it.
+ * Seat counts below 2 read the 2-seat column (a solo host testing the flow) and
+ * 7+ read the 6-seat column.
  *
  * @param {number} playerCount
- * @param {number} picksPerPlayer
+ * @param {string} [length]  one of {@link GAME_LENGTHS}
  * @returns {number}
  */
-export function roundCountFor(playerCount, picksPerPlayer = DEFAULT_PICKS_PER_PLAYER) {
-  const seats = Number.isFinite(playerCount) ? Math.max(0, Math.floor(playerCount)) : 0;
-  const picks = validatePicksPerPlayer(picksPerPlayer);
-  return Math.max(1, Math.min(seats * picks + 2, MAX_DRAFT_ROUNDS));
+export function roundCountFor(playerCount, length = DEFAULT_GAME_LENGTH) {
+  const seats = Number.isFinite(playerCount) ? Math.floor(playerCount) : 0;
+  const column = Math.min(6, Math.max(2, seats));
+  return Math.min(LENGTH_ROUNDS[validateGameLength(length)][column], MAX_DRAFT_ROUNDS);
 }
 
 /**
- * Coerce a host-supplied picks-per-player to one of {@link PICKS_PER_PLAYER_OPTIONS}.
- * The value arrives over the wire, so it is untrusted: anything outside the fixed
- * set falls back to {@link DEFAULT_PICKS_PER_PLAYER} rather than being clamped to
- * the nearest option — a client sending `99` has a bug, and quietly dealing it 4
- * picks each would hide that.
+ * Coerce a host-supplied length to one of {@link GAME_LENGTHS}. The value arrives
+ * over the wire, so it is untrusted: anything else falls back to
+ * {@link DEFAULT_GAME_LENGTH} rather than being guessed at. A stale client still
+ * sending the retired `picks` number lands here too, and gets a medium game.
  *
  * @param {unknown} value
- * @returns {number}
+ * @returns {GameLength}
  */
-export function validatePicksPerPlayer(value) {
-  return PICKS_PER_PLAYER_OPTIONS.includes(/** @type {number} */ (value))
-    ? /** @type {number} */ (value)
-    : DEFAULT_PICKS_PER_PLAYER;
+export function validateGameLength(value) {
+  return /** @type {readonly string[]} */ (GAME_LENGTHS).includes(/** @type {string} */ (value))
+    ? /** @type {GameLength} */ (value)
+    : DEFAULT_GAME_LENGTH;
+}
+
+/**
+ * How the rotation picks split across the seats: `each` per player, with `extra`
+ * players getting one more. Purely for the lobby hint — the actual order is
+ * {@link pickerFor}'s job.
+ *
+ * Up to six seats every cell of {@link LENGTH_ROUNDS} divides evenly, so this
+ * returns `extra: 0` and the hint can say "you each pick N". Past six it cannot:
+ * a short game at eight seats has six rotation picks to share, so two players do
+ * not pick at all. That is the deliberate trade for letting a big room choose a
+ * short game, and it lands on the right people — {@link pickerFor} hands picks
+ * to the lowest-ranked first, so the seats that miss out are the ones ahead.
+ *
+ * @param {number} rounds
+ * @param {number} playerCount
+ * @returns {{ each: number, extra: number }}
+ */
+export function pickShareFor(rounds, playerCount) {
+  const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
+  const rotation = Math.max(0, (Number.isFinite(rounds) ? Math.floor(rounds) : 0) - 2);
+  return { each: Math.floor(rotation / seats), extra: rotation % seats };
 }
 
 /**
