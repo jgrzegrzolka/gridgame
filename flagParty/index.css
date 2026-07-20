@@ -245,11 +245,18 @@
    that meant a row's content sized its own columns: one avatar on the row you
    picked shoved that row's value and points inward, and the numbers came out
    ragged down the chart. The only variable is `--rail-w`, stamped once per chart
-   from the widest rail in it (page.js), so the avatars still fit whatever the
-   room size without letting a single row set its own geometry. */
+   from the widest rail in it (`railWidthPx` in flags/partyChart.js), so the
+   avatars still fit whatever the room size without letting a single row set its
+   own geometry.
+
+   The 58px value track fits the widest thing `formatValue` produces across every
+   metric -- 7 characters ("202,080" coastline, "19478.0" density, "522.62B" GDP).
+   It was 44px, sized to the 3-5 character values that happened to come up while
+   testing, and the long ones overflowed left onto the bar. Pinned by a test in
+   flagParty/rankChart.test.js rather than re-eyeballed. */
 .rank-row {
   display: grid;
-  grid-template-columns: 18px 34px 1fr 44px var(--rail-w, 22px) 26px;
+  grid-template-columns: 18px 34px 1fr 58px var(--rail-w, 22px) 26px;
   gap: 8px;
   align-items: center;
   padding: 6px 8px 6px 4px;
@@ -357,15 +364,6 @@
 /* Held reads as an ACTIVE control, so it takes the heavier selected grey rather
    than the casual hover wash -- same distinction the rest of the site draws. */
 .hold-btn.held { background: var(--selected-color); border-color: var(--secondary-color); }
-.hold-btn[disabled] { color: var(--muted-color); background: var(--selected-color); cursor: default; }
-/* The shared allowance, draining. Drawn inside the button so the cap is visible
-   before it bites: without it, a hold simply stops working mid-read and the
-   countdown restarting looks like a bug. */
-.hold-budget {
-  display: block; width: 34px; height: 5px; border-radius: 3px;
-  background: var(--muted-soft-color); overflow: hidden;
-}
-.hold-budget i { display: block; height: 100%; width: 100%; background: var(--secondary-color); }
 /* Who the room is waiting for. A countdown that silently stops looks broken, so
    the freeze always says whose finger is on it. Reserves its line either way so
    nothing below jumps as holds come and go. */

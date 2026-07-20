@@ -335,8 +335,13 @@ export function applyForceReveal(room, playerId) {
  * in `partyTiming.heldMsAt` bounds a hold that never ends, so no seat can wedge
  * the reveal whether it releases or not.
  *
- * Guarded on phase and seat so a stale or spoofed hold outside a reveal, or from
- * something that is not a player here, never reaches anyone's clock.
+ * Guarded on seat, phase, AND that this reveal actually draws a chart. The last
+ * one matters because the guard is the only thing enforcing it: the button is
+ * only ever shown on a chart, so no honest client sends a hold anywhere else,
+ * but a crafted one sending `{hold, on: true}` at every reveal would otherwise
+ * freeze the 0.9 s / 2.5 s flag reveals too -- for the whole room, every
+ * question, all game. `question.ranking` is exactly what the client's own
+ * `chartReveal()` keys on, so the two cannot drift apart.
  *
  * @param {Room} room
  * @param {string} playerId
@@ -346,6 +351,8 @@ export function applyForceReveal(room, playerId) {
 export function applyHold(room, playerId, on) {
   if (room.phase !== 'reveal') return { room, broadcasts: [] };
   if (!room.seats.has(playerId)) return { room, broadcasts: [] };
+  const ranking = room.question && room.question.ranking;
+  if (!Array.isArray(ranking) || ranking.length === 0) return { room, broadcasts: [] };
   return {
     room,
     broadcasts: [{ to: 'all', message: { type: 'holding', playerId, on: on === true } }],

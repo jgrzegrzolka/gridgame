@@ -44,3 +44,68 @@ export function barFractions(ranking, values) {
     return Math.max(0, Math.min(1, frac));
   });
 }
+
+/**
+ * Avatar-rail width in px for a whole chart, from its busiest row.
+ *
+ * Every column in a `.rank-row` is a fixed track so the four rows share one
+ * vertical grid and the values line up. The rail is the only track whose content
+ * genuinely varies -- one avatar per player who picked that row -- and letting it
+ * size itself was the bug this replaces: each row is its own CSS grid, so a
+ * single avatar on the row you picked sized THAT row's columns differently and
+ * shoved its value and points inward, leaving the numbers ragged down the chart.
+ * Measuring the busiest row once and pinning every row to it fixes the alignment
+ * while still fitting whatever the room size.
+ *
+ * The two constants mirror `.rank-rail .avatar` in `flagParty/index.css`: each
+ * avatar is {@link RAIL_AVATAR_PX} wide and every one after the first overlaps
+ * the last by {@link RAIL_AVATAR_OVERLAP_PX}. They are exported so the stylesheet
+ * and this arithmetic are pinned together by a test rather than silently drifting
+ * the next time someone resizes an avatar.
+ *
+ * @param {string[]} ranking  option codes, one per row
+ * @param {Record<string, string>} picks  playerId -> the code they picked
+ * @returns {number} width in px, never less than one avatar
+ */
+export function railWidthPx(ranking, picks) {
+  const codes = Array.isArray(ranking) ? ranking : [];
+  const chosen = Object.values(picks || {});
+  let busiest = 1;
+  for (const code of codes) {
+    const n = chosen.filter((choice) => choice === code).length;
+    if (n > busiest) busiest = n;
+  }
+  return RAIL_AVATAR_PX + (busiest - 1) * (RAIL_AVATAR_PX - RAIL_AVATAR_OVERLAP_PX);
+}
+
+/** Width of one avatar in the reveal chart's rail. Mirrors `.rank-rail .avatar`. */
+export const RAIL_AVATAR_PX = 22;
+/** How far each avatar after the first slides over the last. Mirrors
+ *  `.rank-rail .avatar + .avatar { margin-left: -6px }`. */
+export const RAIL_AVATAR_OVERLAP_PX = 6;
+
+/**
+ * The chart's scale line: what the numbers count, and as of when.
+ *
+ * Four bare numbers over four bars are close to unreadable without it -- "8" says
+ * nothing until you know it counts medals -- and the bars are normalised to the
+ * quartet's own range by {@link barFractions}, so bar LENGTH carries no absolute
+ * meaning either. Without the unit neither half of the chart says anything.
+ *
+ * The unit is looked up per metric so it translates. There is deliberately **no
+ * fallback to the metric file's own `unit`**: those are English, and several are
+ * also less precise than the translated ones (the `gdpPerCapita` file says
+ * "US$", the string says "US$/person"), so falling back would not merely fail to
+ * translate -- it would label a per-capita chart with an absolute unit. A missing
+ * translation shows the year alone, which is honest about knowing less.
+ *
+ * @param {{ key: string, year: number | null } | null | undefined} metric
+ * @param {(key: string, fallback: string) => string} t  translator
+ * @returns {string} the line, or '' when there is nothing worth saying
+ */
+export function chartUnitLine(metric, t) {
+  if (!metric) return '';
+  const unit = metric.key ? t('metricUnit.' + metric.key, '') : '';
+  const year = metric.year ? String(metric.year) : '';
+  return [unit, year].filter(Boolean).join(' · ');
+}
