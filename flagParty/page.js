@@ -1138,24 +1138,24 @@ export function bootFlagParty() {
     // whole room); guests just have Home. The adjacent `·` hides itself via CSS
     // when this button is hidden, so there's nothing else to toggle.
     questionToSettingsBtn.hidden = !state.isHost;
-    // The pill carries the act structure: which round of how many, and the question
-    // within the whole game. Makes the round boundaries legible during play, not
-    // just at the break.
-    const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
-    questionPill.textContent = fmt(t('party.roundQuestion', 'Round {b}/{rounds} · Question {n}/{total}'), {
-      b: roundIndexAt(state.questionIndex) + 1, rounds: totalRounds,
-      n: state.questionIndex + 1, total: state.totalQuestions,
-    });
-    // On the first question of a drafted round, name who chose it ("Zosia's pick").
-    if (state.lastPick) {
-      const seat = state.roster.find((r) => r.playerId === state.lastPick?.picker);
-      if (seat) {
-        questionPill.appendChild(el('span', 'pill-pick', ` · ${fmt(t('party.roundPick', "{name}'s pick"), { name: seat.nickname })}`));
-      }
+    // The pill used to carry "Round 1/6 · Question 1/30". Both are gone. The
+    // question total was the most alarming number on the screen and the least
+    // useful — it says the show is long, not where you are — and the round
+    // fraction was answering a question the round card has already answered, in
+    // a beat of its own, moments earlier.
+    //
+    // What survives is the only thing here a player cannot get elsewhere: who
+    // chose this round. That appears on the first question of a drafted round
+    // and nowhere else, so the pill is usually absent entirely rather than
+    // present-and-empty (an empty pill still paints its border and padding).
+    questionPill.textContent = '';
+    const picker = state.lastPick
+      ? state.roster.find((r) => r.playerId === state.lastPick?.picker)
+      : null;
+    if (picker) {
+      questionPill.textContent = fmt(t('party.roundPick', "{name}'s pick"), { name: picker.nickname });
     }
-    // The final round scores double and plays veiled — badge it so the stakes read.
-    if (isFinalRound(state.questionIndex, state.totalQuestions)) {
-    }
+    questionPill.hidden = !picker;
     const isReveal = state.phase === 'reveal' && state.reveal;
     const isMap = q.questionId === 'mapPick';
     const superCfg = superlativeMetricByQuestionId(q.questionId);

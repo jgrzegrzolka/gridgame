@@ -731,9 +731,6 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .pick-watch { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
 .pick-watch .avatar { width: 44px; height: 44px; border-radius: 8px; }
 .pick-watch-name { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary-color); text-align: center; }
-/* The "'s pick" attribution suffix on the question pill: quieter than the pill text. */
-.pill-pick { color: var(--muted-color); font-weight: 600; }
-
 /* ---- round title card: the beat that announces round 2..N before its first
    question (a big-card counterpart to the question pill's "X's pick" attribution). The
    metric hue on the icon is the same confined-to-setup colour exception the draft
