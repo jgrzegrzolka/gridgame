@@ -27,6 +27,12 @@ import {
   FINAL_ROW_STAGGER_MS,
   FINAL_WINNER_HOLD_MS,
   FINAL_ROW_ENTER_MS,
+  MAX_HOLD_SECONDS,
+  initialHold,
+  beginHold,
+  endHold,
+  heldMsAt,
+  holdBudgetFraction,
 } from './partyTiming.js';
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
@@ -339,4 +345,81 @@ test('the chart beat is not so long the round drags', () => {
     `chart reveal ${CHART_REVEAL_SECONDS}s x5 questions would stall the round`);
   assert.ok(CHART_REVEAL_SECONDS > MISS_REVEAL_SECONDS,
     'a chart reveal must outlast an ordinary missed reveal');
+});
+
+// ---- hold-to-read accounting ----
+// The cap is the only thing standing between "every seat gets a pause button"
+// and "one seat can freeze the show", and it is enforced by arithmetic rather
+// than by any timer or disconnect handler. These pin that it actually holds in
+// the cases that would otherwise wedge a reveal.
+
+test('a fresh reveal has held nothing and nobody holding', () => {
+  const h = initialHold();
+  assert.equal(heldMsAt(h, 1000), 0);
+  assert.equal(holdBudgetFraction(h, 1000), 1);
+});
+
+test('held time accrues while a hold is live and banks on release', () => {
+  let h = beginHold(initialHold(), 1000);
+  assert.equal(heldMsAt(h, 3000), 2000, 'two seconds into the hold, two seconds held');
+  h = endHold(h, 3000);
+  assert.equal(h.sinceMs, null);
+  assert.equal(heldMsAt(h, 99999), 2000, 'after release, held time stops growing');
+});
+
+test('a second holder does not restart the stretch the first one is holding', () => {
+  const first = beginHold(initialHold(), 1000);
+  const second = beginHold(first, 2500);
+  assert.deepEqual(second, first, 'begin is a no-op while a hold is already running');
+  assert.equal(heldMsAt(second, 3000), 2000, 'still measured from the first press');
+});
+
+test('held time is capped, so holding forever costs the room a bounded amount', () => {
+  // The wedge case: a player presses and never releases (or backgrounds the tab,
+  // or drops off the network). Nothing releases them, and nothing needs to --
+  // the clamp stops the deadline moving and the countdown resumes underneath.
+  const h = beginHold(initialHold(), 0);
+  const capMs = MAX_HOLD_SECONDS * 1000;
+  assert.equal(heldMsAt(h, capMs - 1), capMs - 1, 'accrues right up to the cap');
+  assert.equal(heldMsAt(h, capMs * 10), capMs, 'and never past it, however long the hold runs');
+  assert.equal(holdBudgetFraction(h, capMs * 10), 0);
+});
+
+test('hold and release repeatedly cannot accumulate past the cap', () => {
+  // Banking a clamped value (rather than the raw stretch) is what makes this
+  // hold: otherwise four 5-second holds would buy 20 seconds one release at a
+  // time while each individual hold looked legal.
+  let h = initialHold();
+  let t = 0;
+  for (let i = 0; i < 5; i += 1) {
+    h = beginHold(h, t);
+    t += 5000;
+    h = endHold(h, t);
+    t += 100;
+  }
+  assert.equal(heldMsAt(h, t), MAX_HOLD_SECONDS * 1000);
+});
+
+test('the hold budget drains linearly and is reported in [0, 1]', () => {
+  const h = beginHold(initialHold(), 0);
+  const capMs = MAX_HOLD_SECONDS * 1000;
+  assert.equal(holdBudgetFraction(h, 0), 1);
+  assert.equal(holdBudgetFraction(h, capMs / 2), 0.5, 'half the allowance spent, half the pill left');
+  assert.equal(holdBudgetFraction(h, capMs * 3), 0, 'clamped, never negative');
+});
+
+test('releasing without a live hold is a no-op', () => {
+  // Guests can send a stray hold-end (a pointerleave with no pointerdown, a
+  // late message after the reveal moved on); it must not bank a phantom stretch.
+  const h = initialHold();
+  assert.deepEqual(endHold(h, 5000), h);
+});
+
+test('the hold cap buys real reading time without doubling the beat', () => {
+  // Both directions of the same judgement, same shape as the CHART_REVEAL pins:
+  // long enough that holding is worth doing, short enough that the worst case
+  // (someone holds the whole allowance every single question) is survivable.
+  assert.ok(MAX_HOLD_SECONDS >= 5, 'a cap under 5s is not enough to finish reading a chart');
+  assert.ok(MAX_HOLD_SECONDS <= CHART_REVEAL_SECONDS * 2,
+    'a hold must extend the beat, not replace it with a differently-paced game');
 });

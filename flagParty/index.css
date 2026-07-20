@@ -214,6 +214,18 @@
 .prompt.superlative .prompt-lead svg { width: 18px; height: 18px; }
 .prompt.superlative .prompt-target { font-size: 18px; }
 
+/* The chart's scale, under the title: "medals · 2026", "km² · 2022". Four bare
+   numbers and four bars are unreadable without it -- "8" says nothing until you
+   know it counts medals, and the bars are normalised to the quartet's own range
+   (partyChart.barFractions), so their lengths mean nothing on their own either.
+   The unit and year come straight off the metric file, which already carries
+   both, so this costs no new data beyond translating the ~12 units that are
+   words rather than symbols. Muted and small: it is a legend, not a heading. */
+.prompt-unit {
+  margin: 2px 0 0; text-align: center;
+  font-size: 12px; color: var(--muted-color);
+}
+
 .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 /* The world-facts reveal swaps the 2x2 grid for a ranked chart, so the grid
    container drops its columns for that one beat. Toggled by `as-chart` in
@@ -228,9 +240,16 @@
    correct/wrong pair (common.css), because how you did is the one thing a
    ranking cannot show. */
 .rank-chart { display: flex; flex-direction: column; gap: 6px; }
+/* Every track is a FIXED width, so the four rows read as one grid with shared
+   vertical edges. They used to be `auto`, and because each row is its own grid
+   that meant a row's content sized its own columns: one avatar on the row you
+   picked shoved that row's value and points inward, and the numbers came out
+   ragged down the chart. The only variable is `--rail-w`, stamped once per chart
+   from the widest rail in it (page.js), so the avatars still fit whatever the
+   room size without letting a single row set its own geometry. */
 .rank-row {
   display: grid;
-  grid-template-columns: 18px 34px 1fr auto auto;
+  grid-template-columns: 18px 34px 1fr 44px var(--rail-w, 22px) 26px;
   gap: 8px;
   align-items: center;
   padding: 6px 8px 6px 4px;
@@ -251,21 +270,31 @@
 }
 .rank-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .rank-body { display: block; min-width: 0; }
-.rank-cap { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .rank-name {
   display: block; min-width: 0; font-size: 13px; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* The value is the answer to the question, so it gets its own column instead of
+   sharing the name's baseline as a caption. It was 12px muted, which read as an
+   annotation on the country rather than as the number the round was about -- the
+   fix is the SIZE and the COLOUR, not weight: bold here would out-shout the
+   country name and the ranking itself, both of which the chart also has to say. */
 .rank-val {
-  display: block; font-size: 12px; color: var(--muted-color);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
+  display: block; font-size: 15px; color: var(--primary-color);
+  font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right;
 }
 .rank-track {
   display: block; height: 6px; margin-top: 4px; border-radius: 3px;
   background: var(--muted-soft-color); overflow: hidden;
 }
+/* Pink, not grey. `--muted-color` is the site's caption / "you are here" grey and
+   was the wrong weight for the chart's main visual -- the bars are the thing the
+   screen is drawing. `--secondary-color` is already the fill on the question
+   countdown bar, so both bars in the game now speak the same language. Your own
+   row still overrides to correct / wrong below, which is the one judgement the
+   ranking itself cannot make. */
 .rank-track i {
-  display: block; height: 100%; border-radius: 3px; background: var(--muted-color);
+  display: block; height: 100%; border-radius: 3px; background: var(--secondary-color);
   /* Starts at 0 and is set to its real width next frame, so this animates. A
      min-width keeps the smallest country a visible nub rather than nothing --
      on a runaway quartet the fourth bar is ~2% of the first. */
@@ -275,7 +304,9 @@
 }
 .rank-row.you-right .rank-track i { background: var(--correct-color); }
 .rank-row.you-wrong .rank-track i { background: var(--wrong-color); }
-.rank-rail { display: flex; align-items: center; }
+/* Right-aligned inside its fixed track, so a row with one avatar and a row with
+   three both end at the same edge and the points column never shifts. */
+.rank-rail { display: flex; align-items: center; justify-content: flex-end; }
 .rank-rail .avatar {
   width: 22px; height: 22px; font-size: 9px;
   box-shadow: 0 0 0 2px var(--surface-color);
@@ -287,7 +318,7 @@
    ladder without shouting about rows that paid nobody. */
 .rank-pts {
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
-  color: var(--muted-color); min-width: 24px; text-align: right;
+  color: var(--muted-color); text-align: right;
 }
 .rank-pts.live { color: var(--primary-color); }
 /* The rows cascade in, top-down, on the same 110ms step the JS stamps as --d. */
@@ -299,6 +330,49 @@
   }
 }
 @keyframes rank-row-in { to { opacity: 1; transform: none; } }
+
+/* ---- hold to read ----
+   The chart is the one screen in the show with something to read, and its beat
+   is a fixed guess. Rather than lengthen it for everyone, any seat can press and
+   hold to freeze the room's countdown and let go when it's done -- so the cost
+   is what that player actually needed, not a flat extension.
+
+   `touch-action: none` + `user-select: none` + the JS's contextmenu swallow are
+   all load-bearing: without them a press-and-hold on a phone starts a text
+   selection or opens the long-press menu instead of holding. */
+.hold-read { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 12px; }
+/* Same trap as `.party section[hidden]` up top: this base `display:flex` would
+   outweigh the UA `[hidden]` rule, so `holdReadEl.hidden = true` would leave the
+   button sitting under every non-chart reveal. Pinned by hiddenGuards.test.js. */
+.hold-read[hidden] { display: none; }
+.hold-btn {
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  background: var(--surface-color); color: var(--primary-color);
+  border: 1px solid var(--muted-soft-color); border-radius: 999px;
+  padding: 9px 18px; display: inline-flex; align-items: center; gap: 9px;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.hold-btn:hover { background: var(--hover-color); }
+/* Held reads as an ACTIVE control, so it takes the heavier selected grey rather
+   than the casual hover wash -- same distinction the rest of the site draws. */
+.hold-btn.held { background: var(--selected-color); border-color: var(--secondary-color); }
+.hold-btn[disabled] { color: var(--muted-color); background: var(--selected-color); cursor: default; }
+/* The shared allowance, draining. Drawn inside the button so the cap is visible
+   before it bites: without it, a hold simply stops working mid-read and the
+   countdown restarting looks like a bug. */
+.hold-budget {
+  display: block; width: 34px; height: 5px; border-radius: 3px;
+  background: var(--muted-soft-color); overflow: hidden;
+}
+.hold-budget i { display: block; height: 100%; width: 100%; background: var(--secondary-color); }
+/* Who the room is waiting for. A countdown that silently stops looks broken, so
+   the freeze always says whose finger is on it. Reserves its line either way so
+   nothing below jumps as holds come and go. */
+.hold-who {
+  margin: 0; min-height: 1lh;
+  font-size: 12px; color: var(--muted-color);
+}
 .opt {
   position: relative;
   padding: 5px;

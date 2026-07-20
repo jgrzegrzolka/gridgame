@@ -11,6 +11,7 @@ import {
   canStart,
   applyBuzz,
   applyForceReveal,
+  applyHold,
   applyNext,
   applyPlayAgain,
   applyReturnToLobby,
@@ -331,6 +332,13 @@ export default class PartyGameServer {
         }
         case 'reveal':
           result = applyForceReveal(this.room, playerId);
+          break;
+        case 'hold':
+          // Any seat can freeze the reveal's countdown while it reads the chart.
+          // Pure relay — the reducer keeps no hold state, and the clients' own
+          // cap (partyTiming.MAX_HOLD_SECONDS) bounds a hold that never ends, so
+          // the server has nothing to expire and nothing to clean up on a drop.
+          result = applyHold(this.room, playerId, parsed.on === true);
           break;
         case 'next': {
           // In a draft, a `next` that lands on a round boundary opens a pick

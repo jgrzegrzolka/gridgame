@@ -424,3 +424,76 @@ test('reveal message: a server with no breakdown leaves an empty one, not undefi
   assert.deepEqual(state.reveal?.breakdown, {});
 });
 
+
+// ---- hold to read ----
+
+/** A room sitting on a chart reveal, which is the only place holds happen. */
+function atReveal() {
+  return /** @type {import('./partyClient.js').PartyClientState} */ ({
+    ...initialPartyClientState(), you, phase: 'reveal',
+    reveal: { answer: 'jp', picks: {}, points: {}, ranking: ['jp', 'kr'], values: { jp: 8, kr: 1 } },
+  });
+}
+
+test('holding: a press adds the seat, a release removes it', () => {
+  let s = reduce(atReveal(), { type: 'holding', playerId: 'bob', on: true });
+  assert.deepEqual(s.holders, ['bob']);
+  s = reduce(s, { type: 'holding', playerId: 'bob', on: false });
+  assert.deepEqual(s.holders, [], 'the clock is free again');
+});
+
+test('holding: the clock stays frozen until the LAST holder lets go', () => {
+  // Why holders is a set and not a boolean. Two players read at once; the first
+  // one to finish must not resume the countdown out from under the second.
+  let s = reduce(atReveal(), { type: 'holding', playerId: 'bob', on: true });
+  s = reduce(s, { type: 'holding', playerId: 'zosia', on: true });
+  assert.deepEqual(s.holders, ['bob', 'zosia']);
+  s = reduce(s, { type: 'holding', playerId: 'bob', on: false });
+  assert.deepEqual(s.holders, ['zosia'], 'still held by Zosia');
+  s = reduce(s, { type: 'holding', playerId: 'zosia', on: false });
+  assert.deepEqual(s.holders, []);
+});
+
+test('holding: a repeated press from one seat does not stack', () => {
+  // A jittery pointer or a duplicated message would otherwise leave an entry a
+  // single release cannot clear, freezing the reveal until the cap bailed it out.
+  let s = reduce(atReveal(), { type: 'holding', playerId: 'bob', on: true });
+  s = reduce(s, { type: 'holding', playerId: 'bob', on: true });
+  assert.deepEqual(s.holders, ['bob'], 'still one entry');
+  s = reduce(s, { type: 'holding', playerId: 'bob', on: false });
+  assert.deepEqual(s.holders, [], 'and one release clears it');
+});
+
+test('holding: a release for a seat that was not holding changes nothing', () => {
+  const before = atReveal();
+  const after = reduce(before, { type: 'holding', playerId: 'ghost', on: false });
+  assert.equal(after, before, 'same object — no pointless re-render');
+});
+
+test('holding: a message with no playerId is ignored', () => {
+  const before = atReveal();
+  assert.equal(reduce(before, { type: 'holding', on: true }), before);
+});
+
+test('a hold never survives into the next phase', () => {
+  // The finger can still be down when the reveal ends. If the hold carried over,
+  // the next question would open with a frozen clock and no way to unfreeze it
+  // (the release goes to a phase that ignores holds).
+  const held = reduce(atReveal(), { type: 'holding', playerId: 'bob', on: true });
+  assert.deepEqual(held.holders, ['bob']);
+  const nextQuestion = reduce(held, {
+    type: 'question', prompt: 'p', options: ['jp', 'kr', 'cn', 'th'], questionIndex: 1,
+  });
+  assert.equal(nextQuestion.phase, 'question');
+  assert.deepEqual(nextQuestion.holders, [], 'cleared by the phase change');
+});
+
+test('a hold on the last reveal does not survive into the final board', () => {
+  // The path that is easy to miss: reveal -> final skips the question case
+  // entirely, which is why clearing lives on the phase change rather than in
+  // each case that moves it.
+  const held = reduce(atReveal(), { type: 'holding', playerId: 'bob', on: true });
+  const final = reduce(held, { type: 'final', scoreboard: [] });
+  assert.equal(final.phase, 'final');
+  assert.deepEqual(final.holders, []);
+});

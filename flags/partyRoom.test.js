@@ -7,6 +7,7 @@ import {
   canStart,
   applyBuzz,
   applyForceReveal,
+  applyHold,
   applyNext,
   applyPlayAgain,
   applyReturnToLobby,
@@ -868,3 +869,49 @@ function createRoomWith2() {
   return applyHello(room, 'bob', 'Bob').room;
 }
 
+
+// ---- applyHold ----
+
+test('applyHold: a seated player at a reveal relays press and release to everyone', () => {
+  let room = startedTwoPlayer();
+  room = applyForceReveal(room, 'alice').room;
+  const down = applyHold(room, 'bob', true);
+  assert.deepEqual(down.broadcasts.map((b) => b.to), ['all'], 'the whole room freezes, not just the holder');
+  assert.deepEqual(msg(down, 'holding'), { type: 'holding', playerId: 'bob', on: true });
+  const up = applyHold(room, 'bob', false);
+  assert.deepEqual(msg(up, 'holding'), { type: 'holding', playerId: 'bob', on: false });
+});
+
+test('applyHold: changes nothing on the room', () => {
+  // Holds are a few seconds inside one reveal. Keeping them out of room state is
+  // what spares the snapshot a field to serialize, migrate and clear -- and is
+  // why no disconnect handler has to unwedge a holder who never releases.
+  let room = startedTwoPlayer();
+  room = applyForceReveal(room, 'alice').room;
+  assert.equal(applyHold(room, 'bob', true).room, room, 'same object, not merely equal');
+});
+
+test('applyHold: ignored outside a reveal', () => {
+  // A press that lands as the reveal ends, or a stray release arriving after the
+  // next question was dealt, must not reach anyone's clock.
+  const inQuestion = startedTwoPlayer();
+  assert.deepEqual(applyHold(inQuestion, 'bob', true).broadcasts, [], 'mid-question');
+  const inLobby = applyHello(createRoom(3), 'alice', 'Alice').room;
+  assert.deepEqual(applyHold(inLobby, 'alice', true).broadcasts, [], 'in the lobby');
+});
+
+test('applyHold: ignored from someone who is not a seat here', () => {
+  let room = startedTwoPlayer();
+  room = applyForceReveal(room, 'alice').room;
+  assert.deepEqual(applyHold(room, 'mallory', true).broadcasts, [], 'a spoofed id buys nobody time');
+});
+
+test('applyHold: coerces the flag, so a junk value cannot read as a press', () => {
+  // The `on` field comes off the wire. Anything that is not literally true is a
+  // release -- the failure mode that matters is a stuck freeze, not a lost pause.
+  let room = startedTwoPlayer();
+  room = applyForceReveal(room, 'alice').room;
+  for (const junk of [1, 'true', {}, undefined, null]) {
+    assert.equal(msg(applyHold(room, 'bob', /** @type {any} */ (junk)), 'holding').on, false, String(junk));
+  }
+});
