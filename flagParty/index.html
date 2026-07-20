@@ -96,8 +96,13 @@
              while giving no arrow-key roving. The JS owns `tabindex` and
              `aria-checked`. -->
         <div class="draft-length" id="draft-length" hidden>
-          <span class="dl-title" id="dl-title" data-i18n="party.gameLength">Game length</span>
-          <span class="dl-step" role="radiogroup" id="draft-length-group" aria-labelledby="dl-title">
+          <!-- No visible heading: the three labels say what this is, and a lobby
+               that already carries a room code, a player list and a start button
+               does not need a fourth thing shouting. The group still needs a
+               name for anyone not looking at it, so the same string rides in as
+               `aria-label` rather than being dropped. -->
+          <span class="dl-step" role="radiogroup" id="draft-length-group"
+                data-i18n-attr="aria-label:party.gameLength" aria-label="Game length">
             <button type="button" class="dl-pick" role="radio" data-length="short" aria-checked="false" tabindex="-1">
               <span class="dl-ic" aria-hidden="true"></span>
               <span class="dl-lab" data-i18n="party.lengthShort">Short</span>
