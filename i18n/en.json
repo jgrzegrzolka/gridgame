@@ -642,7 +642,6 @@
       "superlativeWinterMedals": "Winter medals",
       "superlativeWinterMedalsPc": "Winter per person"
     },
-    "afterRound": "After round {n} of {total}",
     "roundMvp": "Best of the round",
     "standings": "Standings",
     "behind": "{n} behind",

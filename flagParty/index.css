@@ -149,11 +149,19 @@
    whole question frame, so there is no layout to preserve. */
 .question-timer[hidden] { display: none; }
 /* Every other "no bar right now" — the reveal, the pick — goes through this
-   instead, which keeps the row's height. `hidden` was removing it from layout,
-   so answering a question made the bar vanish and pulled the prompt, the flags
-   and everything under them upward. The countdown is intermittent; its slot
-   should not be. */
-.question-timer.is-idle { visibility: hidden; }
+   instead. The bar STAYS ON SCREEN and goes inert: the track keeps its shape,
+   the fill and the seconds drop out. Two earlier passes both moved something at
+   the moment you answer — `hidden` removed the row from layout and yanked the
+   flags upward, then `visibility: hidden` left a hole where the bar had been.
+   A control that greys out is quieter than one that disappears, and answering is
+   already a busy moment.
+
+   `tickClock` only repaints the fill during the question, so an idle bar sits
+   frozen at whatever was left when the room answered — greying it reads as
+   "stopped there", which is true, rather than "empty". The seconds go: the
+   number would be stale, and its slot is reserved anyway so nothing shifts. */
+.question-timer.is-idle .question-timer-fill { background: var(--muted-color); }
+.question-timer.is-idle .question-timer-label { visibility: hidden; }
 .question-timer-track {
   flex: 1;
   height: 6px;
