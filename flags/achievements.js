@@ -87,18 +87,26 @@ function gridIcon(n) {
   let count = 0;
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
-      if (count < filled) {
-        const x = 0.5 + col * 4;
-        const y = 0.5 + row * 4;
-        cells.push(`<rect x="${x}" y="${y}" width="3" height="3"/>`);
-      }
+      const x = 0.5 + col * 4;
+      const y = 0.5 + row * 4;
+      // Every cell is drawn; the unearned ones are ghosted. Emitting only
+      // the filled cells (the original approach) made low counts look like
+      // a failed image rather than progress — `first-daily` was one square
+      // in the corner of an empty box, and `empty-slate` was the empty box
+      // alone. Ghosting gives both a grid to sit in, so "1 of 16" is
+      // legible at a glance and the zero state reads as "nothing yet"
+      // rather than "no icon".
+      const ghost = count < filled ? '' : ' opacity="0.2"';
+      cells.push(`<rect x="${x}" y="${y}" width="3" height="3"${ghost}/>`);
       count++;
     }
   }
-  // Frame the empty/zero state so Empty Slate reads as "you submitted
-  // a zero", not "no icon". For non-zero states the frame is invisible
-  // (under the filled cells) — same path either way for visual unity.
-  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="0" y="0" width="16" height="16" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.35"/>${cells.join('')}</svg>`;
+  // No outline: the ghosted cells already bound the shape. The old frame
+  // used stroke-width="0.5" on this 16-unit viewBox, which at the profile
+  // badge's 20px render is ~0.6px and rounds away on standard-DPI screens
+  // (the sub-pixel-hairline trap from PR #540 -> #541), so it was doing
+  // nothing there anyway.
+  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">${cells.join('')}</svg>`;
 }
 
 const ICON_CHECKMARK =
