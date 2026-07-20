@@ -6,6 +6,7 @@ import { sovereignPool } from '../flagPools.js';
 import {
   generate, isCorrect, buildPuzzle, randomSpec, filtersFor, failingClause,
   clausesFromPrompt, isSpottable, SPOT_COLORS, SPOT_MOTIFS, SPOT_CLAUSES,
+  missLabel, spotTitle,
 } from './spotFlag.js';
 import { matchesFilters } from '../flagsFilter.js';
 
@@ -190,6 +191,22 @@ test('clausesFromPrompt: rejects a spec naming anything this build cannot label'
   assert.equal(clausesFromPrompt(''), null, 'empty spec');
 });
 
+test('clausesFromPrompt: rejects a spec carrying a clause from outside the vocabulary', () => {
+  // The value guard was not enough. It walked only the color and motif groups, so
+  // a spec naming a group this mode does not use -- a continent, a statehood, a
+  // colour count -- had that clause SILENTLY DROPPED, and if three colour/motif
+  // clauses remained the guard still reported the question renderable. The room
+  // would then see a three-clause spec for a four-clause question: the tiles that
+  // "fail" look like they pass, everyone picks one, everyone is scored wrong.
+  //
+  // That is the precise failure this guard exists to prevent, so it must reject
+  // anything it cannot represent, not just anything it cannot label.
+  assert.equal(clausesFromPrompt('continent:Africa,color:red,color:!green,motif:cross'), null,
+    'a continent clause is outside this mode');
+  assert.equal(clausesFromPrompt('color:red,color:!green,motif:cross,status:un_member'), null,
+    'so is a statehood clause');
+});
+
 test('failingClause: names the clause a flag misses, null when it satisfies all', () => {
   const rng = seeded(11);
   const q = generate(POOL, undefined, rng);
@@ -228,4 +245,63 @@ test('generate: throws a named error when the pool cannot support a puzzle', () 
 test('isCorrect: only the answer code', () => {
   assert.equal(isCorrect({ answer: 'se' }, 'se'), true);
   assert.equal(isCorrect({ answer: 'se' }, 'no'), false);
+});
+
+// ---- the reveal's labels ----
+
+/** The identity translator: tests assert the English fallbacks, not a locale. */
+const tr = (/** @type {string} */ _key, /** @type {string} */ fallback) => fallback;
+
+test('missLabel: states what the flag IS, which is the inverse of the clause it broke', () => {
+  // The easy thing to get backwards, and the reason this lives in a tested module
+  // rather than in the reveal's DOM glue. A spec saying "no green" must label the
+  // offending tile "green" -- echoing the clause unchanged would print "not green"
+  // under a criteria line that already reads "not green", which tells the room
+  // nothing and reads as a bug.
+  const clauses = /** @type {any} */ ([
+    { group: 'color', value: 'green', sign: 'exclude' },   // spec: no green
+    { group: 'motif', value: 'cross', sign: 'include' },   // spec: has a cross
+  ]);
+  // Brazil: green, and no cross. It breaks the "no green" clause first.
+  assert.equal(missLabel(at('br'), clauses, tr), 'green',
+    'broke a no-X clause, so the tile says it HAS X');
+
+  const crossOnly = /** @type {any} */ ([{ group: 'motif', value: 'cross', sign: 'include' }]);
+  // Japan satisfies nothing here: no cross.
+  assert.equal(missLabel(at('jp'), crossOnly, tr), 'not cross',
+    'broke a has-X clause, so the tile says it has NOT X');
+});
+
+test('missLabel: a flag that satisfies the whole spec is labelled with nothing', () => {
+  // The answer broke no rule, so its tile carries a bare name.
+  const clauses = /** @type {any} */ ([{ group: 'color', value: 'red', sign: 'include' }]);
+  assert.equal(missLabel(at('jp'), clauses, tr), '', 'Japan is red, so nothing to say');
+});
+
+test('missLabel: every distractor of a generated puzzle gets a non-empty reason', () => {
+  // The mode's promise: you are told what you failed to notice. A silent strip
+  // would make a provably fair round read as arbitrary.
+  const rng = seeded(21);
+  for (let i = 0; i < 100; i += 1) {
+    const q = generate(POOL, undefined, rng);
+    const clauses = clausesOf(q.prompt);
+    for (const code of q.options) {
+      const label = missLabel(at(code), clauses, tr);
+      if (code === q.answer) assert.equal(label, '', `${code} is the answer`);
+      else assert.ok(label.length > 0, `${code} should say why it failed`);
+    }
+  }
+});
+
+test('spotTitle: renders the criteria in the findFlag pill language', () => {
+  const clauses = /** @type {any} */ ([
+    { group: 'color', value: 'red', sign: 'include' },
+    { group: 'color', value: 'green', sign: 'exclude' },
+    { group: 'motif', value: 'star-or-moon', sign: 'include' },
+  ]);
+  // The identity translator hands back raw fallbacks, so motifs read as their ids
+  // here; a real locale turns 'star-or-moon' into "star or moon". What this pins
+  // is the SHAPE findFlag gives a criteria line -- middot separators and a spelled
+  // "not" for a negated clause -- because that is what the party screen inherits.
+  assert.equal(spotTitle(clauses, tr), 'red · not green · star-or-moon');
 });

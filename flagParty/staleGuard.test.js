@@ -138,3 +138,45 @@ test('canRenderHand routes an unknown card to the same one-shot reload as a ques
   assert.equal(questionRenderAction(canRenderHand(['economy'], known), true), 'blocked');
   assert.equal(questionRenderAction(canRenderHand(['flags-all'], known), false), 'render');
 });
+
+// ---- spot-the-flag: the skew surface is the VOCABULARY, not the question id ----
+
+test('renderableQuestionIds: includes spotFlag', () => {
+  // Drop it and every spot round routes a compatible client through reload and
+  // then the update notice — the mode would look broken on a build that has it.
+  assert.ok(renderableQuestionIds([]).has('spotFlag'));
+});
+
+test('canRenderQuestion: a spot spec this build can label renders', () => {
+  const q = { questionId: 'spotFlag', prompt: 'color:red,color:!green,motif:star-or-moon' };
+  assert.equal(canRenderQuestion(q, KNOWN), true);
+});
+
+test('canRenderQuestion: a spot spec naming an unknown clause is a skew signal', () => {
+  // The failure this guard exists for, in its second form. Spot-the-flag carries
+  // its criteria IN the prompt, so a newer server that adds a colour or motif to
+  // the vocabulary deals a spec an older tab can only render with a clause
+  // MISSING — and a two-clause rendering of a three-clause question shows the room
+  // tiles that look like they satisfy it. The "wrong" answers look right, everyone
+  // picks one, and everyone is scored wrong with nothing on screen suggesting why.
+  // Silent mis-scoring, exactly like the superlative direction case above.
+  const unknownMotif = { questionId: 'spotFlag', prompt: 'color:red,color:!green,motif:coat-of-arms' };
+  assert.equal(canRenderQuestion(unknownMotif, KNOWN), false, 'a motif outside the mode');
+  const unknownColor = { questionId: 'spotFlag', prompt: 'color:violet,color:!green,motif:cross' };
+  assert.equal(canRenderQuestion(unknownColor, KNOWN), false, 'a colour outside the mode');
+});
+
+test('canRenderQuestion: a spot spec with the wrong clause count is a skew signal', () => {
+  // A future build changing SPOT_CLAUSES (three clauses, four tiles) reaches an old
+  // tab as a spec it would render short. Same silent-mis-scoring shape.
+  const twoClause = { questionId: 'spotFlag', prompt: 'color:red,motif:cross' };
+  assert.equal(canRenderQuestion(twoClause, KNOWN), false);
+});
+
+test('canRenderQuestion: a malformed spot prompt does not throw', () => {
+  // The prompt is off the wire, so it is untrusted. It must resolve to "reload",
+  // never to an exception that takes the whole render down.
+  for (const prompt of ['', 'garbage', ';;;', 'color:', 'not-a-group:red', '{}']) {
+    assert.equal(canRenderQuestion({ questionId: 'spotFlag', prompt }, KNOWN), false, `prompt ${prompt}`);
+  }
+});
