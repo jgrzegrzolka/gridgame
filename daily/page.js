@@ -5,6 +5,7 @@ import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCat
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
+import { loadProgress } from './progress.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../flags/populationRank.js';
 import { buildContinentNotes, mergeNotes } from '../flags/continentNotes.js';
@@ -878,6 +879,14 @@ export function bootDaily() {
       // glitch, network drop, etc) — the player can replay and
       // finally get their result counted.
       const game = startGame(n, category, result.targets, all, {
+        // Reaching startGame with `!isReplay` means no complete record
+        // exists for this puzzle (the revisit branch above would have
+        // caught it), so this is a scored first attempt and must survive
+        // a reload — otherwise refreshing refunds the wrong-guess budget
+        // and the cap becomes opt-in. Explicit replays stay resettable:
+        // they're unscored practice.
+        persistProgress: !isReplay,
+        resume: isReplay ? null : loadProgress(window.localStorage, n),
         onFinish: (info) => handleFinish(n, result.targets, all, info, isToday),
         // First focus on the search input fires `daily_start` — the
         // "intent to play" signal for Feature M Part B analytics.

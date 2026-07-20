@@ -30,6 +30,7 @@
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
 import { createLives } from './lives.js';
+import { saveProgress, clearProgress } from './progress.js';
 import { renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
@@ -506,14 +507,25 @@ export function renderResult(targets, foundCodes, categoryLabel) {
  * sister pages (`daily/ideas/`, `daily/backlog/`) don't pass it, so
  * preview-renders stay event-free.
  *
- * @param {{ skipSave?: boolean, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void, onFirstInteraction?: () => void }} [opts]
+ * `persistProgress` (optional) makes the run survive a reload: every
+ * guess is snapshotted to `daily.progress` and the record is dropped on
+ * finish. `resume` (optional) is the record a previous session left
+ * behind — pass what `loadProgress` returned to rebuild the board, the
+ * spent hearts, and the original start time. Only the live daily page
+ * opts in; the author preview pages must not touch a player's keys.
+ *
+ * @param {{ skipSave?: boolean, persistProgress?: boolean, resume?: import('./progress.js').DailyProgress | null, onFinish?: (info: { foundCodes: string[], wrongCodes: string[], totalCount: number, durationMs: number }) => void, onFirstInteraction?: () => void }} [opts]
  * @returns {{ refreshI18n: (next: { all: Country[], targets: Country[], label: string }) => void }}
  */
 export function startGame(n, category, targets, all, opts = {}) {
   const skipSave = opts.skipSave === true;
   const onFinish = typeof opts.onFinish === 'function' ? opts.onFinish : null;
   const onFirstInteraction = typeof opts.onFirstInteraction === 'function' ? opts.onFirstInteraction : null;
-  const startTime = Date.now();
+  // Opt-in, not derived from `skipSave`: the author preview pages must
+  // never write a player's progress key, and an explicit flag means a
+  // future caller can't acquire the behaviour by accident.
+  const persistProgress = opts.persistProgress === true;
+  const resume = opts.resume ?? null;
   // pool is rebuilt on a soft language switch (the suggestion matcher reads
   // each Country's `aliases`, which are baked at withLocalizedAliases time
   // and stale after the language flips). targetCodes is mutated in place
@@ -532,6 +544,25 @@ export function startGame(n, category, targets, all, opts = {}) {
   // never disagree with `wrongCodes` above — both charge once per wrong
   // country, however many times the player retypes it.
   const lives = createLives();
+  // Rebuild an interrupted run. Both lists are re-validated against the
+  // live targets rather than trusted: a stored code that is no longer a
+  // target (catalog edit, tampering) must not award a found flag, and a
+  // code that *is* a target must not burn a heart.
+  if (resume) {
+    for (const code of resume.c) {
+      if (targetCodes.has(code)) foundCodes.add(code);
+    }
+    for (const code of resume.w) {
+      if (targetCodes.has(code)) continue;
+      wrongCodes.add(code);
+      lives.spend(code);
+    }
+  }
+  // A resumed run keeps its original start time, so reloading can't
+  // reset the clock any more than it can refund a heart. `s: 0` means
+  // the stored record had no usable timestamp — fall back to now rather
+  // than reporting a 56-year duration.
+  const startTime = resume && resume.s > 0 ? resume.s : Date.now();
   const state = { targetCodes, foundCodes };
 
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
@@ -550,6 +581,14 @@ export function startGame(n, category, targets, all, opts = {}) {
   setCriteriaFilter(category.filter);
   setCriteriaLead(category.lead);
   paintCriteria(catEl, category.label);
+  // Re-paint the tiles a resumed run already earned. Walks `targets`
+  // rather than `resume.c` so the tiles come back in the catalog's own
+  // order and every code is backed by a real Country object.
+  if (resume) {
+    for (const c of targets) {
+      if (foundCodes.has(c.code)) appendFound(c);
+    }
+  }
   updateCount();
   renderLives();
 
@@ -691,6 +730,19 @@ export function startGame(n, category, targets, all, opts = {}) {
     foundEl.insertBefore(flagTile(c, true), foundEl.firstChild);
   }
 
+  /* Snapshot the run after every guess that changes it. Cheap (a few
+   * hundred bytes, synchronous) and deliberately not debounced — the
+   * whole point is to survive a reload that can arrive between any two
+   * keystrokes. Cleared in `finish`, where the score record takes over. */
+  function persist() {
+    if (!persistProgress) return;
+    saveProgress(window.localStorage, n, {
+      found: Array.from(foundCodes),
+      wrong: Array.from(wrongCodes),
+      startedAt: startTime,
+    });
+  }
+
   /** @param {Country} c */
   function submitCountry(c) {
     const outcome = classifyGuess(state, c);
@@ -699,6 +751,7 @@ export function startGame(n, category, targets, all, opts = {}) {
       appendFound(c);
       updateCount();
       pulseCount();
+      persist();
       inputEl.value = '';
       matches = [];
       renderSuggestions();
@@ -713,6 +766,7 @@ export function startGame(n, category, targets, all, opts = {}) {
       wrongCodes.add(c.code);
       lives.spend(c.code);
       renderLives();
+      persist();
       flashWrong();
       inputEl.value = '';
       matches = [];
@@ -773,6 +827,11 @@ export function startGame(n, category, targets, all, opts = {}) {
     finished = true;
     const found = foundCodes.size;
     const total = targetCodes.size;
+    // The run is over, so the unfinished-run record must go — otherwise
+    // a reload after finishing would resume a game that already has a
+    // score. Cleared before `saveScore` so that even if the save throws,
+    // we never leave both records alive at once.
+    if (persistProgress) clearProgress(window.localStorage, n);
     if (!skipSave) {
       saveScore(window.localStorage, n, found, total, Array.from(foundCodes), Array.from(wrongCodes));
     }
@@ -791,6 +850,15 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   gameEl.hidden = false;
   if (!('ontouchstart' in window)) inputEl.focus();
+
+  // A resumed run that is already out of hearts should end, not sit at
+  // zero waiting for a guess it can't afford. Normally unreachable —
+  // `finish` clears the progress record — but a tab killed in the
+  // moment between the last heart going and the result rendering would
+  // leave exactly this state, and resuming into an unplayable board is
+  // worse than finishing it. Deliberately after every listener is wired
+  // and the game is visible, so `finish` runs against a complete DOM.
+  if (resume && lives.exhausted()) finish();
 
   return {
     /**

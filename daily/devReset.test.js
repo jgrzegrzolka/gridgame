@@ -55,6 +55,7 @@ test('clearBrowserState removes every key in DEV_RESET_STORAGE_KEYS and leaves o
     'gridgame.deviceId': 'abc',
     'gridgame.submittedPuzzles': '[1,2]',
     'daily.scores': '{}',
+    'daily.progress': '{"12":{"c":["so"],"w":["pl"],"s":1}}',
     'gridgame.ideas.reviewed': '[5]',
     'gridgame.nickname': 'Alice',
     'unrelated.key': 'keep',
@@ -64,6 +65,17 @@ test('clearBrowserState removes every key in DEV_RESET_STORAGE_KEYS and leaves o
     assert.equal(s.getItem(k), null, `${k} should be cleared`);
   }
   assert.equal(s.getItem('unrelated.key'), 'keep');
+});
+
+test('the reset list covers every daily-flow key, progress included', () => {
+  // The loop above only proves the *listed* keys get cleared — it passes
+  // just as happily when a key is missing from the list entirely. This
+  // pins membership, which is the thing that actually regresses: an
+  // uncleared `daily.progress` leaves the dev resuming a half-played
+  // puzzle after a "Reset browser" that claimed to start them fresh.
+  for (const k of ['gridgame.deviceId', 'gridgame.submittedPuzzles', 'daily.scores', 'daily.progress', 'gridgame.nickname']) {
+    assert.ok(DEV_RESET_STORAGE_KEYS.includes(k), `${k} missing from DEV_RESET_STORAGE_KEYS`);
+  }
 });
 
 test('clearBrowserState swallows removeItem errors silently', () => {
