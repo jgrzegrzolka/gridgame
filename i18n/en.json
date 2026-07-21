@@ -383,6 +383,11 @@
     "quiz": {
       "prompt": "Poland"
     },
+    "party": {
+      "room": "Room · 7KQ2",
+      "round": "Round 3",
+      "you": "You"
+    },
     "ttt": {
       "result": "Pink wins!"
     },

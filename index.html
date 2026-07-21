@@ -128,18 +128,46 @@
           </a>
           <a class="game-tile" href="flagParty/">
             <span class="tile-preview">
-              <span class="quiz-preview">
-                <span class="quiz-prompt">Japan</span>
-                <span class="quiz-flags">
-                  <img class="quiz-flag" src="flags/svg/jp.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/fr.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/pl.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/ua.svg" alt="" />
+              <!-- Party preview: a live scoreboard — the standings everyone
+                   races to climb. Mirrors the game's own break / final board
+                   (rank · avatar · name · gain · score, leader highlighted),
+                   which is what makes this tile read as the multiplayer one
+                   rather than a twin of the 60s-Quiz tile beside it. Static,
+                   like every other tile preview: the three identicons are the
+                   real avatar art (flags/avatar.js palette), baked in as an
+                   illustrative example the same way the quiz tile hardcodes
+                   "Poland". Example player names (Ava / Ben) stay untranslated;
+                   only "You", the room chip and the round chip are i18n'd. -->
+              <span class="party-preview">
+                <span class="party-head">
+                  <span class="party-room" data-i18n="home.party.room">Room · 7KQ2</span>
+                  <span class="party-round" data-i18n="home.party.round">Round 3</span>
+                </span>
+                <span class="pp-row pp-lead">
+                  <span class="pp-rank">1</span>
+                  <span class="avatar"><svg viewBox='0 0 5 5' fill='#0e7490' shape-rendering='crispEdges' aria-hidden='true'><rect x='0' y='0' width='1' height='1'/><rect x='4' y='0' width='1' height='1'/><rect x='0' y='1' width='1' height='1'/><rect x='4' y='1' width='1' height='1'/><rect x='2' y='1' width='1' height='1'/><rect x='1' y='3' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='2' y='3' width='1' height='1'/><rect x='1' y='4' width='1' height='1'/><rect x='3' y='4' width='1' height='1'/></svg></span>
+                  <span class="pp-name">Ava</span>
+                  <span class="pp-gain">+2</span>
+                  <span class="pp-score">31</span>
+                </span>
+                <span class="pp-row">
+                  <span class="pp-rank">2</span>
+                  <span class="avatar"><svg viewBox='0 0 5 5' fill='#660033' shape-rendering='crispEdges' aria-hidden='true'><rect x='0' y='1' width='1' height='1'/><rect x='4' y='1' width='1' height='1'/><rect x='1' y='1' width='1' height='1'/><rect x='3' y='1' width='1' height='1'/><rect x='1' y='3' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='0' y='4' width='1' height='1'/><rect x='4' y='4' width='1' height='1'/><rect x='1' y='4' width='1' height='1'/><rect x='3' y='4' width='1' height='1'/><rect x='2' y='4' width='1' height='1'/></svg></span>
+                  <span class="pp-name" data-i18n="home.party.you">You</span>
+                  <span class="pp-gain">+1</span>
+                  <span class="pp-score">28</span>
+                </span>
+                <span class="pp-row">
+                  <span class="pp-rank">3</span>
+                  <span class="avatar"><svg viewBox='0 0 5 5' fill='#1d4ed8' shape-rendering='crispEdges' aria-hidden='true'><rect x='1' y='0' width='1' height='1'/><rect x='3' y='0' width='1' height='1'/><rect x='0' y='1' width='1' height='1'/><rect x='4' y='1' width='1' height='1'/><rect x='0' y='2' width='1' height='1'/><rect x='4' y='2' width='1' height='1'/><rect x='0' y='3' width='1' height='1'/><rect x='4' y='3' width='1' height='1'/><rect x='1' y='3' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='2' y='3' width='1' height='1'/><rect x='1' y='4' width='1' height='1'/><rect x='3' y='4' width='1' height='1'/></svg></span>
+                  <span class="pp-name">Ben</span>
+                  <span class="pp-gain"></span>
+                  <span class="pp-score">22</span>
                 </span>
               </span>
             </span>
             <span class="tile-label">
-              <span class="game-icon icon-quiz" aria-hidden="true"></span>
+              <span class="game-icon icon-party" aria-hidden="true"></span>
               <span class="game-name" data-i18n="tile.party">Flag Party</span>
             </span>
           </a>
