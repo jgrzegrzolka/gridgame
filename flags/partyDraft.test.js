@@ -46,9 +46,9 @@ test('roundCountFor: the agreed table, cell for cell', () => {
   // the table: the host chooses how long the game runs and the seat count no
   // longer changes the answer by 4x.
   const EXPECTED = {
-    short:  { 2: 6,  3: 5,  4: 6,  5: 7,  6: 8  },
-    medium: { 2: 12, 3: 11, 4: 10, 5: 12, 6: 14 },
-    long:   { 2: 18, 3: 17, 4: 18, 5: 17, 6: 20 },
+    short:  { 2: 5,  3: 4,  4: 5,  5: 6,  6: 7  },
+    medium: { 2: 11, 3: 10, 4: 9,  5: 11, 6: 13 },
+    long:   { 2: 17, 3: 16, 4: 17, 5: 16, 6: 19 },
   };
   for (const length of GAME_LENGTHS) {
     for (const [seats, rounds] of Object.entries(EXPECTED[length])) {
@@ -68,14 +68,14 @@ test('roundCountFor: seven or more seats reuse the six-seat column', () => {
 });
 
 test('roundCountFor: every cell divides the rotation evenly up to six seats', () => {
-  // rounds - 2 (the first pick is dealt, the Decider sits outside the rotation) is
-  // the number of rotation picks. Every cell sits on `seats * k + 2` so the
-  // lobby can promise "you each pick N" and be telling the truth. This is the
+  // rounds - 1 (round 1 is the host's own first pick, only the Decider sits outside
+  // the rotation) is the number of rotation picks. Every cell sits on `seats * k + 1`
+  // so the lobby can promise "you each pick k" and be telling the truth. This is the
   // constraint the table was built around; a cell edited off the lattice makes
   // that hint a lie, which is exactly what this pins.
   for (const length of GAME_LENGTHS) {
     for (const seats of [2, 3, 4, 5, 6]) {
-      const rotation = roundCountFor(seats, length) - 2;
+      const rotation = roundCountFor(seats, length) - 1;
       assert.equal(rotation % seats, 0, `${length} @ ${seats} leaves ${rotation % seats} over`);
     }
   }
@@ -90,7 +90,7 @@ test('roundCountFor: length is ordered — longer is never shorter', () => {
 
 test('roundCountFor: defaults to medium', () => {
   assert.equal(roundCountFor(4), roundCountFor(4, DEFAULT_GAME_LENGTH));
-  assert.equal(roundCountFor(4), 10);
+  assert.equal(roundCountFor(4), 9);
 });
 
 test('roundCountFor: a bad length falls back rather than throwing', () => {
@@ -108,12 +108,12 @@ test('roundCountFor: junk seat count coerces to the smallest column', () => {
 
 test('roundCountFor: a big room never runs away — the table itself is the ceiling', () => {
   // 7+ seats read the 6-seat column rather than growing without bound, so the
-  // longest game any room can start is the table's max (20). This used to be
-  // enforced by a `MAX_DRAFT_ROUNDS` clamp; the table now bounds itself, so the
+  // longest game any room can start is the table's max (19, long @ 6). This used to
+  // be enforced by a `MAX_DRAFT_ROUNDS` clamp; the table now bounds itself, so the
   // clamp is gone and this pins that the bound still holds by construction.
   for (const length of GAME_LENGTHS) {
     for (const seats of [2, 3, 4, 5, 6, 8, 20, 500]) {
-      assert.ok(roundCountFor(seats, length) <= 20, `${length} @ ${seats}`);
+      assert.ok(roundCountFor(seats, length) <= 19, `${length} @ ${seats}`);
     }
   }
 });
@@ -134,27 +134,22 @@ test('validateGameLength: anything else falls back to the default, never guesses
 
 // ---- pickShareFor ----
 
-test('pickShareFor: splits the picks across the seats', () => {
-  // Only the Decider sits outside the count now: the first pick is the host's pick,
-  // chosen in the lobby, so it is a share like any other.
-  //
-  // This is where LENGTH_ROUNDS stops dividing evenly. Its cells were chosen so
-  // `rounds - 2` split cleanly, which is what let the hint say "you each pick 2"
-  // and be literally true; `rounds - 1` leaves a remainder almost everywhere, so
-  // the `extra` branch is now the normal case rather than a 7+-seat edge. Accepted
-  // deliberately -- re-picking the table would move every game's length.
-  // 4 seats, medium -> 10 rounds -> 9 picks -> 2 each with 1 player picking more.
-  assert.deepEqual(pickShareFor(roundCountFor(4, 'medium'), 4), { each: 2, extra: 1 });
-  // 5 seats, short -> 7 rounds -> 6 picks -> 1 each with 1 picking more.
-  assert.deepEqual(pickShareFor(roundCountFor(5, 'short'), 5), { each: 1, extra: 1 });
+test('pickShareFor: splits the picks evenly across the seats', () => {
+  // Round 1 is the host's own first pick, so only the Decider sits outside the
+  // count. Every cell of LENGTH_ROUNDS sits on `seats * k + 1`, so `rounds - 1`
+  // divides evenly and the hint "you each pick k" is literally true.
+  // 4 seats, medium -> 9 rounds -> 8 picks -> 2 each, none left over.
+  assert.deepEqual(pickShareFor(roundCountFor(4, 'medium'), 4), { each: 2, extra: 0 });
+  // 5 seats, short -> 6 rounds -> 5 picks -> 1 each, none left over.
+  assert.deepEqual(pickShareFor(roundCountFor(5, 'short'), 5), { each: 1, extra: 0 });
 });
 
 test('pickShareFor: past six seats somebody misses out, and that is the trade', () => {
   // `pickerFor` hands picks to the lowest-ranked first, so the seats that miss
   // out are the ones ahead — the deliberate cost of letting a big room still
   // choose a short game.
-  // 8 seats, short -> 8 rounds -> 7 picks over 8 seats. One player does not pick.
-  assert.deepEqual(pickShareFor(roundCountFor(8, 'short'), 8), { each: 0, extra: 7 });
+  // 8 seats, short -> 7 rounds -> 6 picks over 8 seats. Two players do not pick.
+  assert.deepEqual(pickShareFor(roundCountFor(8, 'short'), 8), { each: 0, extra: 6 });
 });
 
 test('pickShareFor: never returns a negative share for a degenerate round count', () => {
@@ -330,9 +325,9 @@ test('isDeciderPick: the shortest real draft still has one', () => {
   // The smallest cell in the table: three seats, short: round 1, one pick each,
   // then the Decider.
   const total = roundCountFor(3, 'short') * 5;
-  assert.equal(total, 25);
-  assert.equal(isDeciderPick(14, total), false); // the boundary one round earlier
-  assert.equal(isDeciderPick(19, total), true);  // the pick that opens the last round
+  assert.equal(total, 20);
+  assert.equal(isDeciderPick(9, total), false);  // the boundary one round earlier
+  assert.equal(isDeciderPick(14, total), true);  // the pick that opens the last round
 });
 
 // ---- handFor ----

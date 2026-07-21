@@ -49,29 +49,29 @@ export const DEFAULT_GAME_LENGTH = 'medium';
  * Rounds per (length, seats). **A table, not a formula**, because the two things
  * a formula has to trade off cannot both be had:
  *
- * - picks divide evenly exactly when `rounds = seats * k + 2` (the first pick is
- *   dealt and the Decider sits outside the rotation, so `rounds - 2` picks are
- *   shared out), and
+ * - picks divide evenly exactly when `rounds = seats * k + 1` (round 1 is the
+ *   host's own first pick and the Decider sits outside the rotation, so `rounds - 1`
+ *   picks are shared out, `k` per seat), and
  * - a length worth naming has to mean roughly the same wall-clock at every table
  *   size.
  *
- * The old `seats x picks + 2` was the first of those, which is why a single
+ * The old `seats x picks + 1` was the first of those, which is why a single
  * setting meant 7 minutes at two players and 45 at ten. Every cell here sits on
- * that same lattice — so "you each pick 2" stays literally true — while being
+ * that same lattice — so "you each pick k" stays literally true — while being
  * hand-picked to land near 10 / 20 / 30 minutes rather than wherever the
  * arithmetic fell. Pinned cell-for-cell by `partyDraft.test.js`.
  *
  * **Seven or more seats reuse the six-seat column.** Growing past that is what
  * made a big room unable to play a short game at all: the old floor was
- * `seats + 2` rounds, so twenty players could not have anything under 22 rounds.
+ * `seats + 1` rounds, so twenty players could not have anything under 21 rounds.
  * The cost is that past six seats the rotation no longer reaches everyone — see
  * {@link pickShareFor}.
  */
 /** @type {Record<GameLength, Record<number, number>>} */
 const LENGTH_ROUNDS = {
-  short:  { 2: 6,  3: 5,  4: 6,  5: 7,  6: 8  },
-  medium: { 2: 12, 3: 11, 4: 10, 5: 12, 6: 14 },
-  long:   { 2: 18, 3: 17, 4: 18, 5: 17, 6: 20 },
+  short:  { 2: 5,  3: 4,  4: 5,  5: 6,  6: 7  },
+  medium: { 2: 11, 3: 10, 4: 9,  5: 11, 6: 13 },
+  long:   { 2: 17, 3: 16, 4: 17, 5: 16, 6: 19 },
 };
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
@@ -81,11 +81,12 @@ export const HAND_SIZE = 10;
 /**
  * How many rounds a draft runs, from {@link LENGTH_ROUNDS}.
  *
- * The **firstPick** is a Flags round that closes the cold-start hole (no scores yet
- * means no last place means no picker) and gives everyone a warm-up before the
- * first choice. The **Decider** is the closing act (see {@link isDeciderPick}),
- * which sits outside the rotation so the pick share stays predictable rather
- * than being quietly bent by the final round.
+ * **Round 1 is the host's own first pick** — chosen in the lobby, which is how the
+ * cold-start hole is closed (no scores yet means no last place means no rotation
+ * picker, so the host picks first by fiat). It is a share like any other, not a
+ * separate warm-up round on top. The **Decider** is the closing act (see
+ * {@link isDeciderPick}), which sits outside the rotation so the pick share stays
+ * predictable rather than being quietly bent by the final round.
  *
  * Seat counts below 2 read the 2-seat column (a solo host testing the flow) and
  * 7+ read the 6-seat column.
@@ -133,16 +134,12 @@ export function validateGameLength(value) {
  */
 export function pickShareFor(rounds, playerCount) {
   const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
-  // `- 1`, not `- 2`: only the Decider sits outside the count now. The firstPick used
-  // to as well, because nobody chose it — it was always Flags. Now the host picks
-  // it in the lobby and it counts as their first pick, so it is a share like any
-  // other and the line would understate the total by one if it were still excluded.
-  //
-  // The cost is that the cells of LENGTH_ROUNDS were chosen so `rounds - 2` divided
-  // evenly by the seat count, which is what let this say "you each pick 2" and be
-  // literally true. `rounds - 1` does not divide, so the `extra` branch — built for
-  // 7+ seats and rare until now — becomes the normal case. Deliberate: re-picking
-  // the table would move every game's length, and the copy already handles it.
+  // `- 1`: only the Decider sits outside the count. Round 1 is the host's own first
+  // pick (chosen in the lobby), so it is one of the shares, not a warm-up on top.
+  // Every cell of LENGTH_ROUNDS sits on `seats * k + 1`, so up to six seats
+  // `rounds - 1` divides evenly and `extra` is 0 — the hint says "you each pick k"
+  // and it is literally true. The `extra` branch only fires past six seats, where
+  // the six-seat column can't stretch to reach everyone (see the doc above).
   const rotation = Math.max(0, (Number.isFinite(rounds) ? Math.floor(rounds) : 0) - 1);
   return { each: Math.floor(rotation / seats), extra: rotation % seats };
 }
