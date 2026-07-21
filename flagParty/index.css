@@ -699,7 +699,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   line-height: 1.4;
   text-align: center;
 }
-/* The opening-round row's heading. The length control needs no heading (its three
+/* The first-round row's heading. The length control needs no heading (its three
    labels say what it is), but once two segmented rows sit on top of each other
    neither one's labels identify it any more. Muted and small so it names the
    control without competing with the room code or the start button. */
@@ -761,12 +761,12 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   .dl-pick { transition: none; }
 }
 
-/* The opening-round veil toggle: a single centred pill under the opener row.
+/* The first-round veil toggle: a single centred pill under the first-round row.
    Same "armed = selected grey + accent border + accent glyph" treatment as the
    pick-card veil chip (`.pick-card-veil[aria-pressed='true']`), so the two veil
    controls read as the same mechanic. Not a `.dl-pick`: it is a toggle, not a
    member of the radiogroup, so it must not borrow the segmented look. */
-.opener-veil {
+.first-pick-veil {
   align-self: center;
   margin-top: 8px;
   appearance: none;
@@ -783,10 +783,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   font-weight: 600;
   cursor: pointer;
 }
-.opener-veil:hover:not(:disabled) { background: var(--hover-color); border-color: var(--secondary-color); }
-.opener-veil:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
-.opener-veil:disabled { cursor: default; }
-.opener-veil[aria-pressed='true'] {
+.first-pick-veil:hover:not(:disabled) { background: var(--hover-color); border-color: var(--secondary-color); }
+.first-pick-veil:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
+.first-pick-veil:disabled { cursor: default; }
+.first-pick-veil[aria-pressed='true'] {
   background: var(--selected-color);
   border-color: var(--secondary-color);
   color: var(--secondary-color);

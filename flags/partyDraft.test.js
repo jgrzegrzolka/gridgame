@@ -7,10 +7,9 @@ import {
   pickerFor,
   handFor,
   isValidPick,
-  OPENING_MODE_ID,
+  DEFAULT_FIRST_PICK,
   REPEATABLE_MODE_IDS,
-  validateOpenerMode,
-  MAX_DRAFT_ROUNDS,
+  validateFirstPickMode,
   GAME_LENGTHS,
   DEFAULT_GAME_LENGTH,
   HAND_SIZE,
@@ -69,7 +68,7 @@ test('roundCountFor: seven or more seats reuse the six-seat column', () => {
 });
 
 test('roundCountFor: every cell divides the rotation evenly up to six seats', () => {
-  // rounds - 2 (the opener is dealt, the Decider sits outside the rotation) is
+  // rounds - 2 (the first pick is dealt, the Decider sits outside the rotation) is
   // the number of rotation picks. Every cell sits on `seats * k + 2` so the
   // lobby can promise "you each pick N" and be telling the truth. This is the
   // constraint the table was built around; a cell edited off the lattice makes
@@ -107,13 +106,14 @@ test('roundCountFor: junk seat count coerces to the smallest column', () => {
   }
 });
 
-test('roundCountFor: the old ceiling can no longer bite', () => {
-  // The table tops out at 20, so MAX_DRAFT_ROUNDS is now unreachable by
-  // construction rather than by a clamp. Before this change, 8+ seats collapsed
-  // several of the host's options onto the cap and they became the same game.
+test('roundCountFor: a big room never runs away — the table itself is the ceiling', () => {
+  // 7+ seats read the 6-seat column rather than growing without bound, so the
+  // longest game any room can start is the table's max (20). This used to be
+  // enforced by a `MAX_DRAFT_ROUNDS` clamp; the table now bounds itself, so the
+  // clamp is gone and this pins that the bound still holds by construction.
   for (const length of GAME_LENGTHS) {
     for (const seats of [2, 3, 4, 5, 6, 8, 20, 500]) {
-      assert.ok(roundCountFor(seats, length) < MAX_DRAFT_ROUNDS, `${length} @ ${seats}`);
+      assert.ok(roundCountFor(seats, length) <= 20, `${length} @ ${seats}`);
     }
   }
 });
@@ -135,7 +135,7 @@ test('validateGameLength: anything else falls back to the default, never guesses
 // ---- pickShareFor ----
 
 test('pickShareFor: splits the picks across the seats', () => {
-  // Only the Decider sits outside the count now: the opener is the host's pick,
+  // Only the Decider sits outside the count now: the first pick is the host's pick,
   // chosen in the lobby, so it is a share like any other.
   //
   // This is where LENGTH_ROUNDS stops dividing evenly. Its cells were chosen so
@@ -327,7 +327,7 @@ test('deciderPickerFor: a tie for last goes to the last-joined tied seat', () =>
 });
 
 test('isDeciderPick: the shortest real draft still has one', () => {
-  // The smallest cell in the table: three seats, short — opener, one pick each,
+  // The smallest cell in the table: three seats, short: round 1, one pick each,
   // then the Decider.
   const total = roundCountFor(3, 'short') * 5;
   assert.equal(total, 25);
@@ -350,7 +350,7 @@ test('handFor: surfaces the unused picture modes (they are few and characterful)
 });
 
 test('handFor: the staples stay on offer however often they are played', () => {
-  // Flags and Weird flags are the game itself, and Flags is the fixed opener --
+  // Flags and Weird flags are the game itself, and Flags is the fixed first round --
   // the no-repeat rule retired it before anyone could choose it even once.
   // Spot the flag is exempt for a different reason: it generates a fresh puzzle
   // every round, so a second helping is a different puzzle rather than a repeat.
@@ -389,10 +389,10 @@ test('handFor: the statistics below stay shuffled', () => {
 });
 
 test('handFor: fills the rest with statistics', () => {
-  // After the opener, all three picture modes are still on offer (the two
+  // After round 1, all three picture modes are still on offer (the two
   // repeatables plus the unplayed outlines), so statistics fill the remaining
   // seven of ten.
-  const hand = handFor([OPENING_MODE_ID], seeded(3));
+  const hand = handFor([DEFAULT_FIRST_PICK], seeded(3));
   // Metric cards are FAMILIES, not modes — for the 32 metrics without a sibling
   // those ids are identical, but `economy` is a card no mode id matches, so
   // counting mode ids here would undercount a hand that happened to contain it.
@@ -424,13 +424,13 @@ test('handFor: never empties, even with the whole catalog played', () => {
 });
 
 test('handFor: deterministic under a seeded rng', () => {
-  assert.deepEqual(handFor([OPENING_MODE_ID], seeded(42)), handFor([OPENING_MODE_ID], seeded(42)));
+  assert.deepEqual(handFor([DEFAULT_FIRST_PICK], seeded(42)), handFor([DEFAULT_FIRST_PICK], seeded(42)));
 });
 
 // ---- isValidPick ----
 
 test('isValidPick: a real, unused catalog mode passes', () => {
-  assert.equal(isValidPick('map-outlines', [OPENING_MODE_ID]), true);
+  assert.equal(isValidPick('map-outlines', [DEFAULT_FIRST_PICK]), true);
 });
 
 test('isValidPick: a repeatable mode passes however often it has been played', () => {
@@ -703,23 +703,23 @@ test('handFor never deals an Olympic member id as its own card', () => {
   }
 });
 
-// ---- the opening round ----
+// ---- the first round ----
 
-test('validateOpenerMode: picture modes pass, everything else falls back to Flags', () => {
+test('validateFirstPickMode: picture modes pass, everything else falls back to Flags', () => {
   // Picture modes only, and the restriction is the point rather than a shortcut:
-  // the opener is the warm-up everyone plays before any score exists, so it must
+  // the first pick is the warm-up everyone plays before any score exists, so it must
   // be a round nobody has to think about. Opening a party on "Honey production"
   // is a bad first impression.
-  for (const m of PICTURE_MODES) assert.equal(validateOpenerMode(m.id), m.id, `${m.id} allowed`);
+  for (const m of PICTURE_MODES) assert.equal(validateFirstPickMode(m.id), m.id, `${m.id} allowed`);
   for (const m of METRIC_MODES) {
-    assert.equal(validateOpenerMode(m.id), OPENING_MODE_ID, `${m.id} refused`);
+    assert.equal(validateFirstPickMode(m.id), DEFAULT_FIRST_PICK, `${m.id} refused`);
   }
 });
 
-test('validateOpenerMode: untrusted input coerces rather than throwing', () => {
+test('validateFirstPickMode: untrusted input coerces rather than throwing', () => {
   // The value arrives over the wire. A client that predates the setting sends
-  // nothing at all, and must land on the Flags opener it was built against.
+  // nothing at all, and must land on the Flags firstPick it was built against.
   for (const bad of [undefined, null, '', 'no-such-mode', 42, {}, ['flags-all']]) {
-    assert.equal(validateOpenerMode(bad), OPENING_MODE_ID, `${JSON.stringify(bad)} -> default`);
+    assert.equal(validateFirstPickMode(bad), DEFAULT_FIRST_PICK, `${JSON.stringify(bad)} -> default`);
   }
 });

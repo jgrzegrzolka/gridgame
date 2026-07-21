@@ -8,7 +8,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(HERE, 'index.css'), 'utf-8');
 const html = readFileSync(join(HERE, 'index.html'), 'utf-8');
 import { PICTURE_MODES } from '../flags/partyPlan.js';
-import { validateOpenerMode } from '../flags/partyDraft.js';
+import { validateFirstPickMode } from '../flags/partyDraft.js';
 const pageJs = readFileSync(join(HERE, 'page.js'), 'utf-8');
 
 /**
@@ -132,14 +132,14 @@ test('every interaction-disabling class page.js adds is also removed', () => {
   assert.deepEqual(stuck, [], `added but never removed: ${stuck.join(', ')}`);
 });
 
-// ---- the opening-round control must offer exactly what the server will accept ----
+// ---- the first-round control must offer exactly what the server will accept ----
 
-test('every picture mode has an opening-round segment, and vice versa', () => {
-  // `validateOpenerMode` accepts ANY picture mode, but the segments are written by
+test('every picture mode has an first-round segment, and vice versa', () => {
+  // `validateFirstPickMode` accepts ANY picture mode, but the segments are written by
   // hand in index.html, so the two can drift in both directions and each is a
   // silent failure:
   //
-  //  - a picture mode with no segment is a legal opener nobody can choose, and if
+  //  - a picture mode with no segment is a legal firstPick nobody can choose, and if
   //    a room ever holds it (a remembered preference, a future default) then
   //    `paintRadioGroup` leaves every segment aria-checked="false" and the control
   //    shows no selection at all;
@@ -148,17 +148,17 @@ test('every picture mode has an opening-round segment, and vice versa', () => {
   //
   // Same class of registration bug CLAUDE.md warns about for api/src/index.js, and
   // the reason the spot-flag mode needed four separate edits to become pickable.
-  const inHtml = [...html.matchAll(/data-opener="([^"]+)"/g)].map((m) => m[1]);
+  const inHtml = [...html.matchAll(/data-first-pick="([^"]+)"/g)].map((m) => m[1]);
   const inCatalog = PICTURE_MODES.map((m) => m.id);
   assert.deepEqual(inHtml, inCatalog,
-    'index.html opener segments must match PICTURE_MODES exactly, in catalog order');
+    'index.html firstPick segments must match PICTURE_MODES exactly, in catalog order');
 });
 
-test('every opening-round segment is a value the validator accepts', () => {
+test('every first-round segment is a value the validator accepts', () => {
   // The other half: the markup could name a real-looking id that is not a catalog
   // mode at all ('flags-weird' vs 'weird-flags'), which no deepEqual above would
   // catch if PICTURE_MODES were edited to match the typo.
-  for (const id of [...html.matchAll(/data-opener="([^"]+)"/g)].map((m) => m[1])) {
-    assert.equal(validateOpenerMode(id), id, `segment "${id}" is not a legal opener`);
+  for (const id of [...html.matchAll(/data-first-pick="([^"]+)"/g)].map((m) => m[1])) {
+    assert.equal(validateFirstPickMode(id), id, `segment "${id}" is not a legal firstPick`);
   }
 });

@@ -17,7 +17,7 @@ import { clausesFromPrompt, missLabel, spotTitle } from '../flags/partyQuestions
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validateGameLength, validateOpenerMode, OPENING_MODE_ID, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, validateFirstPickMode, DEFAULT_FIRST_PICK, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { nextRadioId, paintRadioGroup, RADIO_KEYS } from './radioGroup.js';
@@ -40,11 +40,11 @@ const NICKNAME_KEY = 'gridgame.nickname';
 // comes from the players' picks and the veil timing is a fixed constant
 // (DEFAULT_REVEAL). Those five keys are dead for the same reason.
 const LENGTH_KEY = 'gridgame.party.gameLength';
-// The host's remembered opening round, carried into each room they host the same
+// The host's remembered first round, carried into each room they host the same
 // way the length is. A host who always opens on Spot the flag should not re-pick
 // it every game.
-const OPENER_KEY = 'gridgame.party.opener';
-const OPENER_VEIL_KEY = 'gridgame.party.openerVeil';
+const FIRST_PICK_KEY = 'gridgame.party.opener';
+const FIRST_PICK_VEIL_KEY = 'gridgame.party.openerVeil';
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -358,37 +358,25 @@ export function modeSubLabel(id) {
  * Which catalog mode a round's title card should announce, resolved from what the
  * client actually knows about the round.
  *
- * - **Drafted round** (`lastPick` present) → the exact picked mode id, so a stat
- *   round names its specific metric ("Coffee production") and a flag round names
- *   its pool ("Flags: countries" vs "Flags: others"). This is the precise path,
- *   and the only one in a Draft game.
- * - **Opening round** (no `lastPick` — the server-dealt round every draft starts
- *   with, whose mode the host chose in the lobby) → derived from the question's
- *   `questionId`, which is 1:1 with a mode for the map question and every superlative
- *   metric (`superlative-coffee` etc.). The one exception is the two flag pools,
- *   which **share** `questionId: 'flagPick'` and so can't be told apart from the wire
- *   alone — resolved by the room's `opener`, which IS the opening round's mode, so a
- *   weird opener names "Weird flags" instead of the generic sovereign-Flags card.
- *   Absent (old server, opener unknown) → `null`, the caller's generic "Flags" cue.
- * - Unknown / unrenderable question id → `null` (generic), though the stale-build
- *   guard means such a question never reaches the card anyway.
+ * **Every round is a pick, round 1 included.** The host's lobby choice for round 1
+ * rides the wire as an ordinary `draftPick` (see `applyStart`), so `lastPick` is
+ * present for it too — the exact picked mode id, whether that is a specific metric
+ * ("Coffee production") or a flag pool ("Flags: countries" vs "Flags: others"). No
+ * firstPick special case: there is no such thing as an firstPick round any more.
+ *
+ * The `questionId` path below is the fallback for the one case `lastPick` can miss:
+ * a mid-round reconnect, whose resume snapshot has no `draftPick`. It is 1:1 with a
+ * mode for the map question and every superlative, so those resolve; the two flag
+ * pools share `flagPick` and can't be told apart from the wire alone → `null`, the
+ * caller's cue to show a generic "Flags" card. Unknown question id → `null` too.
  *
  * @param {{ picker: string, modeId: string } | null | undefined} lastPick
  * @param {string | undefined} questionId
- * @param {string} [opener]  the room's chosen opening mode; disambiguates the
- *   opening flag round's pool. Only consulted for an unpicked `flagPick` round.
  * @returns {string | null}  a PARTY_MODES mode id, or null for the generic case
  */
-export function roundModeId(lastPick, questionId, opener) {
+export function roundModeId(lastPick, questionId) {
   if (lastPick && lastPick.modeId && MODE_BY_ID[lastPick.modeId]) return lastPick.modeId;
-  if (questionId === 'flagPick') {
-    // Both flag pools share `flagPick`, so the opening round (no pick) can't be
-    // told apart from the wire. The opener is that round's mode — use it, but
-    // only when it is itself a flag round, so a mismatch falls back to generic
-    // rather than mislabelling. Unknown opener → generic.
-    const openerMode = opener ? MODE_BY_ID[opener] : null;
-    return openerMode && openerMode.questionId === 'flagPick' ? openerMode.id : null;
-  }
+  if (questionId === 'flagPick') return null; // ambiguous pool, no pick → generic Flags card
   const mode = PARTY_MODES.find((m) => m.questionId === questionId);
   return mode ? mode.id : null;
 }
@@ -468,17 +456,17 @@ export function bootFlagParty() {
     const icon = btn.querySelector('.dl-ic');
     if (icon) icon.innerHTML = lengthIconHtml(btn.dataset.length ?? '');
   }
-  const draftOpenerEl = $('draft-opener');
-  const draftOpenerGroup = $('draft-opener-group');
-  const draftOpenerVeil = /** @type {HTMLButtonElement} */ ($('draft-opener-veil'));
-  const draftOpenerBtns = /** @type {HTMLButtonElement[]} */ (
-    [...draftOpenerEl.querySelectorAll('.dl-pick')]);
-  // Each opener segment wears its own mode's artwork, so the row is recognisable
+  const draftFirstPickEl = $('draft-first-pick');
+  const draftFirstPickGroup = $('draft-first-pick-group');
+  const draftFirstPickVeil = /** @type {HTMLButtonElement} */ ($('draft-first-pick-veil'));
+  const draftFirstPickBtns = /** @type {HTMLButtonElement[]} */ (
+    [...draftFirstPickEl.querySelectorAll('.dl-pick')]);
+  // Each firstPick segment wears its own mode's artwork, so the row is recognisable
   // before the labels are read — and it is the SAME icon the draft hand and the
   // round card use for that mode, so a host learns one picture per round type.
-  for (const btn of draftOpenerBtns) {
+  for (const btn of draftFirstPickBtns) {
     const icon = btn.querySelector('.dl-ic');
-    if (icon) icon.innerHTML = modeIconHtml(btn.dataset.opener ?? '');
+    if (icon) icon.innerHTML = modeIconHtml(btn.dataset.firstPick ?? '');
   }
   const pickPill = $('pick-pill');
   const pickLead = $('pick-lead');
@@ -631,29 +619,29 @@ export function bootFlagParty() {
     return validateGameLength(state.length);
   }
 
-  function loadOpener() {
+  function loadFirstPick() {
     try {
-      return validateOpenerMode(window.localStorage.getItem(OPENER_KEY));
-    } catch { return OPENING_MODE_ID; }
+      return validateFirstPickMode(window.localStorage.getItem(FIRST_PICK_KEY));
+    } catch { return DEFAULT_FIRST_PICK; }
   }
-  function saveOpener(opener) {
-    try { window.localStorage.setItem(OPENER_KEY, opener); } catch { /* private mode */ }
+  function saveFirstPick(firstPick) {
+    try { window.localStorage.setItem(FIRST_PICK_KEY, firstPick); } catch { /* private mode */ }
   }
-  function loadOpenerVeil() {
-    try { return window.localStorage.getItem(OPENER_VEIL_KEY) === '1'; } catch { return false; }
+  function loadFirstPickVeil() {
+    try { return window.localStorage.getItem(FIRST_PICK_VEIL_KEY) === '1'; } catch { return false; }
   }
-  function saveOpenerVeil(/** @type {boolean} */ on) {
-    try { window.localStorage.setItem(OPENER_VEIL_KEY, on ? '1' : '0'); } catch { /* private mode */ }
-  }
-
-  /** The opening round to render: the room's, once it has told us one. */
-  function currentOpener() {
-    return validateOpenerMode(state.opener);
+  function saveFirstPickVeil(/** @type {boolean} */ on) {
+    try { window.localStorage.setItem(FIRST_PICK_VEIL_KEY, on ? '1' : '0'); } catch { /* private mode */ }
   }
 
-  /** Whether the opening round is veiled: the room's value, painted by every seat. */
-  function currentOpenerVeil() {
-    return state.openerVeil === true;
+  /** The first round to render: the room's, once it has told us one. */
+  function currentFirstPick() {
+    return validateFirstPickMode(state.firstPick);
+  }
+
+  /** Whether the first round is veiled: the room's value, painted by every seat. */
+  function currentFirstPickVeil() {
+    return state.firstPickVeil === true;
   }
 
   /** Rooms this device has already pushed its remembered length into. */
@@ -661,7 +649,7 @@ export function bootFlagParty() {
 
   /**
    * Carry this device's remembered lobby settings — the game length and the
-   * opening round — into a room it hosts, once. Without this the stored
+   * first round — into a room it hosts, once. Without this the stored
    * preferences would be unreachable: the room opens on its own defaults and
    * nothing would ever tell it otherwise, so a host who always plays Long, or
    * always opens on Spot the flag, would have to re-pick every single game.
@@ -679,15 +667,15 @@ export function bootFlagParty() {
     // game from the start message instead" — so a modern host must always claim
     // the room, even when their choice happens to match the default.
     send({ type: 'setLength', length: loadLength() });
-    // The opening round rides the same one-shot claim, but NOT for the same
+    // The first round rides the same one-shot claim, but NOT for the same
     // reason, and the difference is worth stating so nobody later "fixes" one to
     // match the other. A null room length is load-bearing — the server reads it
-    // as "size the game from the start message" — while a null opener is not,
-    // because `validateOpenerMode` maps null and 'flags-all' to the same round.
+    // as "size the game from the start message" — while a null first-round choice is not,
+    // because `validateFirstPickMode` maps null and 'flags-all' to the same round.
     // This send is symmetry plus remembered-preference delivery, not a protocol
     // requirement: it is what carries a host who always opens on Spot the flag
     // into their room without re-picking.
-    send({ type: 'setOpener', opener: loadOpener(), veil: loadOpenerVeil() });
+    send({ type: 'setFirstPick', firstPick: loadFirstPick(), veil: loadFirstPickVeil() });
   }
 
   /** Seats currently in the room — the other half of the length arithmetic. */
@@ -737,46 +725,46 @@ export function bootFlagParty() {
   }
 
   /**
-   * Paint the opening-round control. Same contract as the length above: guests see
+   * Paint the first-round control. Same contract as the length above: guests see
    * the host's choice in the same place, disabled but not dimmed, because the
-   * opening round is something they are told rather than something withheld.
+   * first round is something they are told rather than something withheld.
    */
-  function syncDraftOpener() {
-    paintRadioGroup(draftOpenerBtns, draftOpenerGroup, 'opener', currentOpener(), state.isHost);
+  function syncDraftFirstPick() {
+    paintRadioGroup(draftFirstPickBtns, draftFirstPickGroup, 'firstPick', currentFirstPick(), state.isHost);
     // The veil toggle: shown to everyone in the lobby (guests read it, like the
-    // opener buttons), but only the host may press it. Hidden entirely off the
+    // firstPick buttons), but only the host may press it. Hidden entirely off the
     // lobby. `disabled` for guests matches how the radiogroup treats them.
-    draftOpenerVeil.hidden = false;
-    draftOpenerVeil.disabled = !state.isHost;
-    draftOpenerVeil.setAttribute('aria-pressed', String(currentOpenerVeil()));
+    draftFirstPickVeil.hidden = false;
+    draftFirstPickVeil.disabled = !state.isHost;
+    draftFirstPickVeil.setAttribute('aria-pressed', String(currentFirstPickVeil()));
   }
 
   /**
-   * Choose the opening round. Like the length, the host asks the room and repaints
+   * Choose the first round. Like the length, the host asks the room and repaints
    * when the room agrees, rather than changing it locally and announcing it — so
-   * every seat paints one server-owned value. The veil rides every setOpener so a
+   * every seat paints one server-owned value. The veil rides every setFirstPick so a
    * mode change never drops the host's armed veil (the server keeps the last one
    * on an omitted field, but sending it is clearer than relying on that).
    */
-  function setOpener(next, focus) {
+  function setFirstPick(next, focus) {
     if (!state.isHost) return;
-    const opener = validateOpenerMode(next);
-    if (opener !== currentOpener()) {
-      saveOpener(opener);
-      send({ type: 'setOpener', opener, veil: loadOpenerVeil() });
+    const firstPick = validateFirstPickMode(next);
+    if (firstPick !== currentFirstPick()) {
+      saveFirstPick(firstPick);
+      send({ type: 'setFirstPick', firstPick, veil: loadFirstPickVeil() });
     }
     if (!focus) return;
-    const active = draftOpenerBtns.find((b) => b.dataset.opener === opener);
+    const active = draftFirstPickBtns.find((b) => b.dataset.firstPick === firstPick);
     if (active) active.focus();
   }
 
-  /** Arm or disarm the opening round's veil. Host-only, same ask-the-room pattern
-   *  as {@link setOpener}: send the change and let the broadcast repaint every
+  /** Arm or disarm the first round's veil. Host-only, same ask-the-room pattern
+   *  as {@link setFirstPick}: send the change and let the broadcast repaint every
    *  seat, rather than flipping local state and announcing it. */
-  function setOpenerVeil(on) {
-    if (!state.isHost || on === currentOpenerVeil()) return;
-    saveOpenerVeil(on);
-    send({ type: 'setOpener', opener: currentOpener(), veil: on });
+  function setFirstPickVeil(on) {
+    if (!state.isHost || on === currentFirstPickVeil()) return;
+    saveFirstPickVeil(on);
+    send({ type: 'setFirstPick', firstPick: currentFirstPick(), veil: on });
   }
 
   /**
@@ -1244,8 +1232,8 @@ export function bootFlagParty() {
 
   // ---- round title card ----
   // A short beat (ROUND_INTRO_SECONDS) announcing a round before its first
-  // question — every round, the opener included (its card names the host's chosen
-  // opening mode). It's a client-side hold: the question is already dealt, but we
+  // question — every round, the first pick included (its card names the host's chosen first-round
+  // mode). It's a client-side hold: the question is already dealt, but we
   // show the card first
   // and only start the question + clock + veil when the beat ends — so it costs no
   // answer time, and because every client (host included) holds the same beat it
@@ -1416,7 +1404,7 @@ export function bootFlagParty() {
         }
       }
       // Every round opens with a title-card beat before its first question — the
-      // opening round included, so it doubles as the synchronized "get ready" beat
+      // first round included, so it doubles as the synchronized "get ready" beat
       // at game start (the host who clicked Start doesn't see the first question
       // ahead of the other seats). The question is already dealt; we hold the card
       // and start the question + clock + veil only when the beat ends, so the card
@@ -1493,10 +1481,10 @@ export function bootFlagParty() {
     // to be surprised by. `syncDraftLength` disables it for guests.
     draftLengthEl.hidden = !inLobby;
     syncDraftLength();
-    // The opening round is shown to everyone for the same reason as the length:
+    // The first round is shown to everyone for the same reason as the length:
     // it is the first thing they will play, so being told beats being surprised.
-    draftOpenerEl.hidden = !inLobby;
-    syncDraftOpener();
+    draftFirstPickEl.hidden = !inLobby;
+    syncDraftFirstPick();
     seedHostSettings();
   }
 
@@ -1963,7 +1951,7 @@ export function bootFlagParty() {
   }
 
   /** The round title card: a short beat before each round's first question (the
-   *  opening round included — it doubles as the game's "get ready" beat), naming
+   *  first round included — it doubles as the game's "get ready" beat), naming
    *  the round number, its mode (icon + full label, metric hue on the icon),
    *  "5 questions", who picked it (draft), and the double-points stakes on the final
    *  round. Paints in `#pt-roundcard`; the question follows when the beat elapses
@@ -1999,15 +1987,15 @@ export function bootFlagParty() {
       }
     }
 
-    const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined, state.opener);
+    const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined);
     if (modeId) {
       roundCardIc.innerHTML = roundCardIconHtml(modeId);
       roundCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
       const label = modeFullLabel(modeId);
       roundCardName.textContent = t(label.key || '', label.fallback || '');
     } else {
-      // Only reached when the pool is genuinely unknowable — an opening flag round
-      // talking to a server too old to report its opener. Announce generically.
+      // Only reached when the pool is genuinely unknowable — a flag round whose pick
+      // attribution is missing (a mid-round reconnect). Announce generically.
       roundCardIc.innerHTML = deckIconHtml('flags', { className: 'roundcard-thumb' });
       roundCardIc.style.setProperty('--mc', 'currentColor');
       roundCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
@@ -2429,27 +2417,27 @@ export function bootFlagParty() {
     const next = nextRadioId([...GAME_LENGTHS], currentLength(), e.key);
     if (next) setGameLength(next, true);
   });
-  for (const btn of draftOpenerBtns) {
-    btn.addEventListener('click', () => setOpener(btn.dataset.opener, false));
+  for (const btn of draftFirstPickBtns) {
+    btn.addEventListener('click', () => setFirstPick(btn.dataset.firstPick, false));
   }
   // Same keyboard contract as the length group, through the same helper -- these
   // two rows were a copy of each other before `radioGroup.js` existed.
-  draftOpenerGroup.addEventListener('keydown', (e) => {
+  draftFirstPickGroup.addEventListener('keydown', (e) => {
     if (!RADIO_KEYS.includes(e.key)) return;
     if (!state.isHost) return;
     e.preventDefault();
-    const ids = draftOpenerBtns.map((b) => b.dataset.opener ?? '');
-    const next = nextRadioId(ids, currentOpener(), e.key);
-    if (next) setOpener(next, true);
+    const ids = draftFirstPickBtns.map((b) => b.dataset.firstPick ?? '');
+    const next = nextRadioId(ids, currentFirstPick(), e.key);
+    if (next) setFirstPick(next, true);
   });
-  draftOpenerVeil.addEventListener('click', () => setOpenerVeil(!currentOpenerVeil()));
+  draftFirstPickVeil.addEventListener('click', () => setFirstPickVeil(!currentFirstPickVeil()));
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
-    // plan (the server builds the opening round from the host's chosen opener and
+    // plan (the server builds the first round from the host's chosen firstPick and
     // sizes the game from the seat count) and no reveal config (the veil clear
     // timing is a fixed constant now — see DEFAULT_REVEAL). Both host inputs, the
-    // length and the opening round, already reached the room over `setLength` /
-    // `setOpener` during the lobby, so `length` rides along only as the legacy
+    // length and the first round, already reached the room over `setLength` /
+    // `setFirstPick` during the lobby, so `length` rides along only as the legacy
     // fallback described below.
     //
     // A `draft: true` flag rode along until the server that needed it was gone.

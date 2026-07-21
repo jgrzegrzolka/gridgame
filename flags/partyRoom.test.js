@@ -16,7 +16,7 @@ import {
   applyEnterPicking,
   applyRepick,
   applySetLength,
-  applySetOpener,
+  applySetFirstPick,
   applyPick,
   serializeRoom,
   deserializeRoom,
@@ -491,8 +491,8 @@ function draftRevealAtBoundary(questionIndex = 4, targetRounds = 3) {
   let room = createRoom(15);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyHello(room, 'bob', 'Bob').room;
-  const openingPlan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 5 }];
-  room = applyStart(room, 'alice', q('jp'), openingPlan, 15, false, null, { draft: true, targetRounds }).room;
+  const firstRoundPlan = [{ poolId: 'sovereign', questionId: 'flagPick', questions: 5 }];
+  room = applyStart(room, 'alice', q('jp'), firstRoundPlan, 15, false, null, { draft: true, targetRounds }).room;
   return { ...room, phase: /** @type {any} */ ('reveal'), questionIndex };
 }
 
@@ -504,14 +504,14 @@ test('applyStart: draft mode records draft + targetRounds and clears pick state'
   assert.equal(r.room.draft, true);
   assert.equal(r.room.targetRounds, 3);
   assert.equal(r.room.totalQuestions, 15);
-  // The host is seeded as having picked: they chose the opening round in the
+  // The host is seeded as having picked: they chose the first round in the
   // lobby, so it counts and the rotation must skip them for a cycle.
   assert.deepEqual(r.room.pickedBy, ['alice']);
   assert.equal(r.room.picker, null);
 });
 
 test('applyStart: only a draft seeds the host as having picked', () => {
-  // A non-draft game has no opener to choose and no rotation to count against.
+  // A non-draft game has no firstPick to choose and no rotation to count against.
   let room = createRoom(15);
   room = applyHello(room, 'alice', 'Alice').room;
   const r = applyStart(room, 'alice', q('jp'), null, 15, false, null, undefined);
@@ -622,69 +622,69 @@ test('applyEnterPicking: the Decider flag rides both the picker and the watcher 
   assert.equal(/** @type {any} */ (ordinary.broadcasts.find((b) => b.to === 'bob')?.message).decider, false);
 });
 
-// ---- applySetLength / applySetOpener ----
+// ---- applySetLength / applySetFirstPick ----
 // The two reducers that mutate the room during the lobby. Everything else the
 // host once configured rode on `start`, so these guards have no precedent to
 // inherit and are pinned individually.
 
-test('applySetOpener: the host sets it, and the whole room is told', () => {
+test('applySetFirstPick: the host sets it, and the whole room is told', () => {
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyHello(room, 'bob', 'Bob').room;
-  assert.equal(room.opener, null, 'a fresh room has not been told an opener by anyone');
+  assert.equal(room.firstPick, null, 'a fresh room has not been told a first-round mode by anyone');
 
-  const r = applySetOpener(room, 'alice', 'spot-flag');
-  assert.equal(r.room.opener, 'spot-flag');
-  assert.equal(r.room.openerVeil, false, 'veil defaults off and an opener-only change leaves it');
+  const r = applySetFirstPick(room, 'alice', 'spot-flag');
+  assert.equal(r.room.firstPick, 'spot-flag');
+  assert.equal(r.room.firstPickVeil, false, 'veil defaults off and an firstPick-only change leaves it');
   assert.equal(r.broadcasts.length, 1);
   assert.equal(r.broadcasts[0].to, 'all', 'a guest sees the round they will open on');
-  assert.deepEqual(r.broadcasts[0].message, { type: 'settings', opener: 'spot-flag', openerVeil: false });
+  assert.deepEqual(r.broadcasts[0].message, { type: 'settings', firstPick: 'spot-flag', firstPickVeil: false });
 });
 
-test('applySetOpener: the veil rides the same message and can change alone', () => {
+test('applySetFirstPick: the veil rides the same message and can change alone', () => {
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
 
   // Arm the veil without touching the mode: still fans out, since the veil changed.
-  const armed = applySetOpener(room, 'alice', room.opener, true);
-  assert.equal(armed.room.openerVeil, true);
-  assert.equal(msg(armed, 'settings').openerVeil, true);
+  const armed = applySetFirstPick(room, 'alice', room.firstPick, true);
+  assert.equal(armed.room.firstPickVeil, true);
+  assert.equal(msg(armed, 'settings').firstPickVeil, true);
   room = armed.room;
 
-  // An opener-only change (veil omitted) keeps the armed veil rather than blanking it.
-  const modeOnly = applySetOpener(room, 'alice', 'map-outlines');
-  assert.equal(modeOnly.room.opener, 'map-outlines');
-  assert.equal(modeOnly.room.openerVeil, true, 'omitting veil leaves it as-is');
+  // An firstPick-only change (veil omitted) keeps the armed veil rather than blanking it.
+  const modeOnly = applySetFirstPick(room, 'alice', 'map-outlines');
+  assert.equal(modeOnly.room.firstPick, 'map-outlines');
+  assert.equal(modeOnly.room.firstPickVeil, true, 'omitting veil leaves it as-is');
 
   // A true no-op (same mode, same veil) broadcasts nothing.
-  assert.equal(applySetOpener(modeOnly.room, 'alice', 'map-outlines', true).broadcasts.length, 0);
+  assert.equal(applySetFirstPick(modeOnly.room, 'alice', 'map-outlines', true).broadcasts.length, 0);
 });
 
-test('applySetOpener: guests cannot set it, and not once the game has started', () => {
+test('applySetFirstPick: guests cannot set it, and not once the game has started', () => {
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyHello(room, 'bob', 'Bob').room;
-  assert.equal(applySetOpener(room, 'bob', 'spot-flag').broadcasts.length, 0, 'a guest is refused');
-  assert.equal(applySetOpener(room, 'bob', 'spot-flag').room.opener, null);
+  assert.equal(applySetFirstPick(room, 'bob', 'spot-flag').broadcasts.length, 0, 'a guest is refused');
+  assert.equal(applySetFirstPick(room, 'bob', 'spot-flag').room.firstPick, null);
 
   const started = applyStart(room, 'alice', q('jp'), null, 15, false, null, { draft: true, targetRounds: 3 }).room;
-  assert.equal(applySetOpener(started, 'alice', 'spot-flag').broadcasts.length, 0,
-    'the opening round is fixed once the game is running');
+  assert.equal(applySetFirstPick(started, 'alice', 'spot-flag').broadcasts.length, 0,
+    'the first round is fixed once the game is running');
 });
 
-test('applySetOpener: an unchanged value says nothing to the room', () => {
+test('applySetFirstPick: an unchanged value says nothing to the room', () => {
   // Otherwise a mashed arrow key fans out to every seat.
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
-  const set = applySetOpener(room, 'alice', 'map-outlines').room;
-  assert.equal(applySetOpener(set, 'alice', 'map-outlines').broadcasts.length, 0);
+  const set = applySetFirstPick(room, 'alice', 'map-outlines').room;
+  assert.equal(applySetFirstPick(set, 'alice', 'map-outlines').broadcasts.length, 0);
 });
 
-test('applySetOpener: a metric mode is refused, coerced to the Flags opener', () => {
+test('applySetFirstPick: a metric mode is refused, coerced to the Flags firstPick', () => {
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
-  const r = applySetOpener(room, 'alice', 'superlative-coffee');
-  assert.equal(r.room.opener, 'flags-all', 'the warm-up stays a picture round');
+  const r = applySetFirstPick(room, 'alice', 'superlative-coffee');
+  assert.equal(r.room.firstPick, 'flags-all', 'the warm-up stays a picture round');
 });
 
 test('applySetLength: the host sets it, and the whole room is told', () => {
@@ -798,7 +798,7 @@ test('applyPick: the Decider does not spend a rotation slot', () => {
   room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true).room;
   const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
   const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
-  // Untouched, not empty: the host's opener sits in there from applyStart, and
+  // Untouched, not empty: the host's firstPick sits in there from applyStart, and
   // the Decider must not add to it.
   assert.deepEqual(r.room.pickedBy, ['alice'], 'the pick history is untouched');
   assert.equal(r.room.decider, false, 'and the flag is cleared with the rest of the pick state');
@@ -1013,45 +1013,45 @@ test('applyHold: the chart guard keys on the same field the client renders from'
   assert.deepEqual(applyHold(notAnArray, 'bob', true).broadcasts, [], 'nor is a junk ranking');
 });
 
-test('the opening round survives Play again — the host chose it for this room', () => {
+test('the first round survives Play again — the host chose it for this room', () => {
   // Twin of the length test above. The lobby broadcast states both explicitly, so
   // a client that reset its own state does not repaint a setup nobody chose; if
   // only one of them rode along, Play again would silently drop the other and the
   // two settings would behave differently despite the comment saying they do not.
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
-  room = applySetOpener(room, 'alice', 'spot-flag').room;
+  room = applySetFirstPick(room, 'alice', 'spot-flag').room;
   room = applyStart(room, 'alice', q('jp')).room;
   const back = applyPlayAgain({ ...room, phase: 'final' }, 'alice');
-  assert.equal(back.room.opener, 'spot-flag', 'not reset to the Flags default');
+  assert.equal(back.room.firstPick, 'spot-flag', 'not reset to the Flags default');
   const msg = back.broadcasts.find((b) => b.to === 'all');
-  assert.equal(/** @type {any} */ (msg?.message).opener, 'spot-flag', 'and the lobby broadcast says so');
+  assert.equal(/** @type {any} */ (msg?.message).firstPick, 'spot-flag', 'and the lobby broadcast says so');
 });
 
-test('a snapshot written before the lobby had an opening round stays unset', () => {
+test('a snapshot written before the lobby had an first round stays unset', () => {
   // Same null contract as `length`: it is what tells the server this room is
-  // hosted by a build that never learned to send `setOpener`, so the Flags
+  // hosted by a build that never learned to send `setFirstPick`, so the Flags
   // fallback applies rather than a value nobody chose.
   const old = serializeRoom(createRoom());
-  delete (/** @type {any} */ (old)).opener;
-  assert.equal(deserializeRoom(old).opener, null);
+  delete (/** @type {any} */ (old)).firstPick;
+  assert.equal(deserializeRoom(old).firstPick, null);
 });
 
-test('the opening round round-trips through persistence', () => {
+test('the first round round-trips through persistence', () => {
   // A PartyKit hibernation wake must not quietly reopen the room on Flags.
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
-  room = applySetOpener(room, 'alice', 'map-outlines').room;
-  assert.equal(deserializeRoom(serializeRoom(room)).opener, 'map-outlines');
+  room = applySetFirstPick(room, 'alice', 'map-outlines').room;
+  assert.equal(deserializeRoom(serializeRoom(room)).firstPick, 'map-outlines');
 });
 
-test('welcome carries the opening round, so a joiner paints it immediately', () => {
+test('welcome carries the first round, so a joiner paints it immediately', () => {
   // Without this a mid-lobby joiner shows Flags until the host happens to change
   // it — the same reason the length rides along.
   let room = createRoom();
   room = applyHello(room, 'alice', 'Alice').room;
-  room = applySetOpener(room, 'alice', 'flags-weird').room;
+  room = applySetFirstPick(room, 'alice', 'flags-weird').room;
   const r = applyHello(room, 'bob', 'Bob');
   const welcome = r.broadcasts.find((b) => b.to === 'bob');
-  assert.equal(/** @type {any} */ (welcome?.message).opener, 'flags-weird');
+  assert.equal(/** @type {any} */ (welcome?.message).firstPick, 'flags-weird');
 });

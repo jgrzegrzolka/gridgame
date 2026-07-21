@@ -1,8 +1,8 @@
 /**
  * The lobby's segmented radiogroups — the keyboard arithmetic, extracted.
  *
- * Flag Party's lobby has two of these now (game length, opening round) and they
- * behaved identically by copy rather than by construction: `syncDraftOpener` was a
+ * Flag Party's lobby has two of these now (game length, first round) and they
+ * behaved identically by copy rather than by construction: `syncDraftFirstPick` was a
  * line-for-line duplicate of `syncDraftLength`, and the two `keydown` handlers
  * differed only in which array they indexed. Copies of a named UI behaviour are
  * the thing `CLAUDE.md` calls a bug even while they are byte-identical, because
@@ -61,7 +61,7 @@ export function nextRadioId(ids, current, key) {
  *
  * @param {HTMLButtonElement[]} btns  the group's option buttons
  * @param {HTMLElement} groupEl  the element carrying `role="radiogroup"`
- * @param {string} dataKey  the dataset key holding each button's id ('length' / 'opener')
+ * @param {string} dataKey  the dataset key holding each button's id ('length' / 'firstPick')
  * @param {string} current  the option checked right now
  * @param {boolean} editable  whether this seat may change it (the host)
  */

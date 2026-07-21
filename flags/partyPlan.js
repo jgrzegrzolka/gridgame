@@ -90,7 +90,7 @@ export function isRoundBoundary(index, total) {
 /**
  * Whether a 0-based question is the **first question of a round** — the beat where the
  * client shows the round's title card. True for the first question of EVERY round,
- * **including the opening round (question 0)**: the card is also the synchronized
+ * **including the first round (question 0)**: the card is also the synchronized
  * "get ready" beat at game start, so the host who just clicked Start doesn't face
  * the first question a moment before the other seats have oriented (every client
  * holds the same card beat, and the question clock starts only after it). False for

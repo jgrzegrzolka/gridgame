@@ -123,12 +123,12 @@ test('isRoundBoundary: a single round never breaks (nothing follows it)', () => 
   }
 });
 
-test('isRoundStart: true on the first question of every round, including the opener', () => {
+test('isRoundStart: true on the first question of every round, including round 1', () => {
   // 15 questions = 3 rounds; round starts are the first question of rounds 1, 2 and 3.
   const starts = [];
   for (let i = 0; i < 15; i++) if (isRoundStart(i, 15)) starts.push(i);
   assert.deepEqual(starts, [0, 5, 10]);
-  // the opening round's first question (0) now gets the card too (the "get ready" beat)
+  // the first round's first question (0) now gets the card too (the "get ready" beat)
   assert.equal(isRoundStart(0, 15), true);
   // mid-round questions are never starts
   assert.equal(isRoundStart(6, 15), false);

@@ -1,6 +1,6 @@
 import { scoreQuestionDetailed } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
-import { DEFAULT_GAME_LENGTH, validateGameLength, validateOpenerMode } from './partyDraft.js';
+import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from './partyDraft.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -50,19 +50,19 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateOpenerMode } from './p
  *   what they are signing up for. **null means no client has ever set it**, which
  *   is how a room hosted by a pre-`setLength` build looks; the server reads that
  *   as permission to size the game from the start message instead.
- * @property {string | null} opener  the host's chosen opening round (a picture
+ * @property {string | null} firstPick  the host's chosen first round (a picture
  *   mode id), the second lobby-shared setting. Null is *shaped* like `length`'s
  *   null but is **not** load-bearing the way that one is: a null `length` tells
  *   the server "an old client is hosting, size the game from the start message
- *   instead", whereas every reader here runs the opener through
- *   `validateOpenerMode`, which maps null and `'flags-all'` to the same result.
+ *   instead", whereas every reader here runs the first pick through
+ *   `validateFirstPickMode`, which maps null and `'flags-all'` to the same result.
  *   So null here means only "nobody has chosen yet", and the fallback is the
- *   Flags round that was the fixed opener before the host could choose at all.
+ *   Flags round that was the fixed first round before the host could choose at all.
  *   It counts as the host's first pick, so `applyStart` seeds `pickedBy`.
- * @property {boolean} openerVeil  whether the host armed the veil on the opening
- *   round. Every opener mode can be veiled (the picture trio and spot-the-flag),
- *   so it is a single flag independent of which opener is chosen. Reaches the
- *   opening round as `applyStart`'s `tricky` argument.
+ * @property {boolean} firstPickVeil  whether the host armed the veil on the first
+ *   round. Every firstPick mode can be veiled (the picture trio and spot-the-flag),
+ *   so it is a single flag independent of which first pick is chosen. Reaches the
+ *   first round as `applyStart`'s `tricky` argument.
  * @property {number} questionIndex  0-based index of the current question.
  * @property {boolean} tricky  the host's tricky-mode choice: when true, clients
  *   veil each tile (grey + blur + panel wipe) and clear it over the question
@@ -146,14 +146,14 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     // null into the default.
     length: null,
     // Same "nobody has said" null as `length` above, for the same reason: a room
-    // hosted by a pre-setOpener build must be distinguishable from one whose host
+    // hosted by a pre-setFirstPick build must be distinguishable from one whose host
     // deliberately chose Flags.
-    opener: null,
-    // Whether the host armed the veil on the opening round (any opener mode can
+    firstPick: null,
+    // Whether the host armed the veil on the first round (any firstPick mode can
     // be veiled — the picture trio and spot-the-flag). A plain boolean, not
-    // null: unlike `opener`/`length` there is nothing to distinguish from an old
+    // null: unlike `firstPick`/`length` there is nothing to distinguish from an old
     // client, and "off" is the honest default for a room nobody has touched.
-    openerVeil: false,
+    firstPickVeil: false,
     questionIndex: 0,
     tricky: false,
     reveal: null,
@@ -249,9 +249,9 @@ export function canStart(room, playerId) {
  * server) and its `totalQuestions` ride along and are stored on the room; omit
  * them to keep whatever the room opened with.
  *
- * In **draft** mode the caller passes `draft: true` with the opening plan (a
- * single Flags round), `totalQuestionsValue = targetRounds * ROUND_QUESTIONS`, and
- * `targetRounds`; the plan then grows one round per pick (see {@link applyPick}).
+ * In **draft** mode the caller passes `draft: true` with the first-round plan (the
+ * host's chosen round-1 mode), `totalQuestionsValue = targetRounds * ROUND_QUESTIONS`,
+ * and `targetRounds`; the plan then grows one round per pick (see {@link applyPick}).
  *
  * @param {Room} room
  * @param {string} playerId
@@ -262,8 +262,10 @@ export function canStart(room, playerId) {
  *   room's current value.
  * @param {Room['reveal']} [reveal]  the host's per-category reveal timing; omit to
  *   keep the room's current value.
- * @param {{ draft?: boolean, targetRounds?: number }} [draftOpts]  draft-mode setup;
- *   omit for an ordinary setlist game.
+ * @param {{ draft?: boolean, targetRounds?: number, firstPickMode?: string }} [draftOpts]
+ *   draft-mode setup; omit for an ordinary setlist game. `firstPickMode` is the mode
+ *   the host chose for round 1 in the lobby — round 1 IS the host's first pick, so its
+ *   opening question carries the same `draftPick` attribution as any other picked round.
  * @returns {ApplyResult}
  */
 export function applyStart(room, playerId, question, plan, totalQuestionsValue, tricky, reveal, draftOpts) {
@@ -281,17 +283,26 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
     totalQuestions: typeof totalQuestionsValue === 'number' ? totalQuestionsValue : room.totalQuestions,
     draft,
     targetRounds: draft && draftOpts && typeof draftOpts.targetRounds === 'number' ? draftOpts.targetRounds : 0,
-    // The host chose the opening round in the lobby, so it IS their first pick and
-    // the rotation must skip them for a cycle. `pickerFor` counts picks per seat
-    // and serves the fewest first, so seeding the host here is the whole mechanism
-    // -- no special case anywhere downstream, and a solo host still picks every
-    // round because the minimum simply moves up with them.
+    // The host chose round 1 in the lobby, so it IS their first pick and the
+    // rotation must skip them for a cycle. `pickerFor` counts picks per seat and
+    // serves the fewest first, so seeding the host here is the whole mechanism --
+    // no special case anywhere downstream, and a solo host still picks every round
+    // because the minimum simply moves up with them.
     pickedBy: draft ? [playerId] : [],
     picker: null,
     hand: null,
     decider: false,
   };
-  return { room: nextRoom, broadcasts: questionBroadcasts(nextRoom) };
+  const bcs = questionBroadcasts(nextRoom);
+  // Round 1's first question carries the same `draftPick` attribution as any
+  // picked round (see `applyPick`) -- who picked (the host) and which mode. That
+  // is what lets the client treat round 1 as an ordinary pick (its title card,
+  // its mode name) with no firstPick special case. `firstPickMode` is the lobby
+  // choice, threaded in by the server.
+  if (draft && draftOpts && draftOpts.firstPickMode) {
+    for (const bc of bcs) /** @type {any} */ (bc.message).draftPick = { picker: playerId, modeId: draftOpts.firstPickMode };
+  }
+  return { room: nextRoom, broadcasts: bcs };
 }
 
 /**
@@ -557,11 +568,11 @@ function resetToLobby(room) {
         roster: rosterList(nextRoom),
         // Stated rather than left implicit: a client that reset its own state
         // would otherwise repaint the lobby with a length nobody chose. The
-        // opening round rides along for the same reason -- both survive Play
+        // first round rides along for the same reason -- both survive Play
         // again, so a room that liked its setup does not re-choose it every game.
         length: nextRoom.length,
-        opener: nextRoom.opener,
-        openerVeil: nextRoom.openerVeil,
+        firstPick: nextRoom.firstPick,
+        firstPickVeil: nextRoom.firstPickVeil,
       },
     }],
   };
@@ -649,7 +660,7 @@ export function applyRepick(room, picker) {
 }
 
 /**
- * The host chooses the opening round from the lobby.
+ * The host chooses the first round from the lobby.
  *
  * The second of the two settings a room shares before it starts (see
  * {@link applySetLength}). Same guards for the same reasons: refused off the
@@ -661,32 +672,32 @@ export function applyRepick(room, picker) {
  * {@link applyStart}, which seeds `pickedBy` with them, not here: until the game
  * starts there is no rotation for it to count against.
  *
- * The veil rides the same message: the host arms (or disarms) hiding the opening
- * round's tiles. It is a plain boolean and applies to whatever opener is chosen,
- * since every opener mode is veilable. Coerced to a boolean here so a missing
- * field (an older host that only sends `opener`) reads as "off" rather than
+ * The veil rides the same message: the host arms (or disarms) hiding the first
+ * round's tiles. It is a plain boolean and applies to whatever first-round mode is chosen,
+ * since every first-round mode is veilable. Coerced to a boolean here so a missing
+ * field (an older host that only sends `firstPick`) reads as "off" rather than
  * blanking a value the room might already hold — the caller passes
- * `room.openerVeil` through when it only means to change the mode.
+ * `room.firstPickVeil` through when it only means to change the mode.
  *
  * Nothing broadcasts unless the mode OR the veil actually changed, so toggling
- * the veil alone still fans out, but a no-op setOpener stays silent.
+ * the veil alone still fans out, but a no-op setFirstPick stays silent.
  *
  * @param {Room} room
  * @param {string} playerId
- * @param {unknown} opener  a picture mode id; anything else coerces to Flags
- * @param {boolean} [veil]  whether the opening round is veiled; omit to keep
+ * @param {unknown} firstPick  a picture mode id; anything else coerces to Flags
+ * @param {boolean} [veil]  whether the first round is veiled; omit to keep
  * @returns {ApplyResult}
  */
-export function applySetOpener(room, playerId, opener, veil) {
+export function applySetFirstPick(room, playerId, firstPick, veil) {
   if (room.phase !== 'lobby') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
-  const next = validateOpenerMode(opener);
-  const nextVeil = typeof veil === 'boolean' ? veil : room.openerVeil;
-  if (next === room.opener && nextVeil === room.openerVeil) return { room, broadcasts: [] };
-  const nextRoom = { ...room, opener: next, openerVeil: nextVeil };
+  const next = validateFirstPickMode(firstPick);
+  const nextVeil = typeof veil === 'boolean' ? veil : room.firstPickVeil;
+  if (next === room.firstPick && nextVeil === room.firstPickVeil) return { room, broadcasts: [] };
+  const nextRoom = { ...room, firstPick: next, firstPickVeil: nextVeil };
   return {
     room: nextRoom,
-    broadcasts: [{ to: 'all', message: { type: 'settings', opener: next, openerVeil: nextVeil } }],
+    broadcasts: [{ to: 'all', message: { type: 'settings', firstPick: next, firstPickVeil: nextVeil } }],
   };
 }
 
@@ -694,7 +705,7 @@ export function applySetOpener(room, playerId, opener, veil) {
  * The host changes the game length from the lobby. Was the **only** reducer that
  * mutated the room before `start` — everything else the host once configured rode
  * on the start message and was never shared, so nothing about a lobby was
- * broadcast except who was in it. {@link applySetOpener} is now the second.
+ * broadcast except who was in it. {@link applySetFirstPick} is now the second.
  *
  * Refused off the lobby (the length is fixed once a game is sized) and refused
  * from anyone but the host, checked here rather than at the call site so the
@@ -939,10 +950,10 @@ function welcomeBroadcast(room, playerId) {
       totalQuestions: room.totalQuestions,
       tricky: room.tricky,
       // So a joiner paints the length immediately instead of waiting for the
-      // host to happen to change it. Same for the opening round.
+      // host to happen to change it. Same for the first round.
       length: room.length,
-      opener: room.opener,
-      openerVeil: room.openerVeil,
+      firstPick: room.firstPick,
+      firstPickVeil: room.firstPickVeil,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
       scoreboard: scoreboardOf(room),
@@ -974,8 +985,8 @@ export function serializeRoom(room) {
     totalQuestions: room.totalQuestions,
     plan: room.plan,
     length: room.length,
-    opener: room.opener,
-    openerVeil: room.openerVeil,
+    firstPick: room.firstPick,
+    firstPickVeil: room.firstPickVeil,
     questionIndex: room.questionIndex,
     tricky: room.tricky,
     reveal: room.reveal,
@@ -1007,8 +1018,8 @@ export function deserializeRoom(snapshot) {
     // A snapshot written before the lobby had a length stays null — "nobody set
     // this" — rather than being given a default nobody chose.
     length: snapshot.length ?? null,
-    opener: snapshot.opener ?? null,
-    openerVeil: snapshot.openerVeil ?? false,
+    firstPick: snapshot.firstPick ?? null,
+    firstPickVeil: snapshot.firstPickVeil ?? false,
     questionIndex: snapshot.questionIndex ?? 0,
     tricky: snapshot.tricky ?? false,
     reveal: snapshot.reveal ?? null,
