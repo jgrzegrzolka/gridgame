@@ -303,7 +303,7 @@ export function finalBoardSchedule(rowCount = 0) {
 }
 
 /** Seconds the **round title card** holds before the first question of a new round
- *  begins (round 2..N — the opening round starts play straight away). A short
+ *  begins (round 2..N — the first round starts play straight away). A short
  *  beat announcing "Round 2 of 3 · Coffee · 5 questions" with who picked it; the
  *  question clock and veil start fresh *after* it, so it costs no answer time.
  *  Client-side and uniform — every client (host included) holds the same beat, so
@@ -420,7 +420,7 @@ export function veilActive(tricky, questionId) {
   // motifs the question asks you to read -- but spot-the-flag is the gentlest
   // recognition round in the show, and the veil clearing over the clock is
   // exactly the extra difficulty it wanted. It is opt-in either way (a picker
-  // arms it per round, or the host arms the opener), never forced. Reversal noted
+  // arms it per round, or the host arms round 1), never forced. Reversal noted
   // in PARTY.md; the metric exclusion above is a different case and is unchanged.
   return tricky === true;
 }

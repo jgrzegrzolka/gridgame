@@ -8,7 +8,7 @@ import { ROUND_QUESTIONS } from '../flags/partyPlan.js';
  * The party game server is otherwise the thin shell over the tested reducers
  * (`flags/partyRoom.js`) and draft helpers (`flags/partyDraft.js`); these tests
  * pin the one piece that lives only here — the **draft routing**: dealing the
- * opening round, opening a pick at a round boundary, and turning a pick (or a
+ * first round, opening a pick at a round boundary, and turning a pick (or a
  * forced pick) into the next round. Mirrors `ticTacToeServer.test.js`'s mocks.
  */
 
@@ -80,35 +80,36 @@ test('draft start: opens a Flags round, sizes the game from the seat count', asy
   assert.equal(q.answer, undefined, 'the answer never rides the broadcast');
 });
 
-test('draft start: the host armed opener veil reaches the opening round', async () => {
-  // The opening round is dealt, not picked, so its veil comes in through
-  // applyStart's tricky argument rather than a segment the picker armed. The
-  // question broadcast carries room.tricky, so an armed opener shows tricky:true.
+test('draft start: the host armed firstPick veil reaches the first round', async () => {
+  // applyStart deals round 0's question directly rather than routing it through
+  // applyPick, so its veil comes in through applyStart's tricky argument rather
+  // than a segment the picker armed. The question broadcast carries room.tricky,
+  // so an armed first-round veil shows tricky:true.
   const conn = mockConn('a');
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'setOpener', opener: 'flags-all', veil: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'setFirstPick', firstPick: 'flags-all', veil: true }), conn);
   await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
-  assert.equal(srv.room.tricky, true, 'the opening round is veiled');
+  assert.equal(srv.room.tricky, true, 'the first round is veiled');
   assert.equal(conn.last('question').tricky, true, 'and the tiles know it');
 });
 
-test('draft start: an armed opener veil applies to spot-the-flag too', async () => {
+test('draft start: an armed firstPick veil applies to spot-the-flag too', async () => {
   // The whole point of the change: spot-flag is now veilable, so a host who
-  // opens on it and arms the veil gets a veiled opener rather than the veil
+  // opens on it and arms the veil gets a veiled firstPick rather than the veil
   // being silently dropped (canVeilMode used to refuse it).
   const conn = mockConn('a');
   const srv = new PartyGameServer(mockParty([conn]));
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
-  await srv.onMessage(JSON.stringify({ type: 'setOpener', opener: 'spot-flag', veil: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'setFirstPick', firstPick: 'spot-flag', veil: true }), conn);
   await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
   assert.equal(conn.last('question').questionId, 'spotFlag', 'opened on spot-the-flag');
   assert.equal(srv.room.tricky, true, 'and it is veiled');
 });
 
-test('draft start: no opener veil leaves the opening round clear', async () => {
+test('draft start: no firstPick veil leaves the first round clear', async () => {
   const { srv, conn } = await startSoloDraft();
   assert.equal(srv.room.tricky, false);
   assert.equal(conn.last('question').tricky, false);
@@ -225,7 +226,7 @@ test('a non-host start mid-game leaves the no-repeat sets alone', async () => {
   const codes = new Set(srv.usedCodes);
   const modes = new Set(srv.usedModes);
   assert.ok(codes.size > 0, 'the game has dealt something to remember');
-  assert.ok(modes.size > 0, 'and has an opening mode on the board');
+  assert.ok(modes.size > 0, 'and has a first-round mode on the board');
   const questionIndex = srv.room.questionIndex;
 
   await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), b);
@@ -342,7 +343,7 @@ test('draft: a boundary where everyone has picked wraps the rotation, never free
 
 // ---- the Decider ----
 
-/** Two seats, one pick each: opener, alice's round, bob's round, the Decider. */
+/** Two seats, one pick each: round 1, alice's round, bob's round, the Decider. */
 async function startDuoDraft() {
   const a = mockConn('a'), b = mockConn('b');
   const srv = new PartyGameServer(mockParty([a, b]));
@@ -372,18 +373,18 @@ test('the Decider: the closing pick goes to last place, not to the rotation', as
   const { srv, a, b } = await startDuoDraft();
   const conns = [['alice', a], ['bob', b]];
 
-  await playRoundWon(srv, conns, 'alice');          // opener -> pick 1
+  await playRoundWon(srv, conns, 'alice');          // firstPick -> pick 1
   assert.equal(srv.room.phase, 'picking');
   assert.equal(srv.room.decider, false, 'a rotation pick, not the Decider');
   assert.equal(srv.room.picker, 'bob', 'bob is last, and has not picked');
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), b);
 
   await playRoundWon(srv, conns, 'alice');          // bob's round -> pick 2
-  // bob again, and that is the opener counting. alice picked it in the lobby, so
+  // bob again, and that is the first pick counting. alice picked it in the lobby, so
   // after bob's first pick the two are level at one each -- and a tie goes to the
   // lowest-ranked, which is bob, who is losing every round. He draws level-plus-one
   // before alice picks again, which is exactly the catch-up the seeding is for.
-  // (Before the host chose the opener, alice held zero picks here and went next.)
+  // (Before the host chose round 1, alice held zero picks here and went next.)
   assert.equal(srv.room.picker, 'bob', 'tied on picks, so the lower-ranked seat goes');
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-weird' }), b);
 
@@ -405,7 +406,7 @@ test('the Decider: the picks are spent within one of each other, and the Decider
   const { srv, b } = await playToDeciderPick();
   const before = [...srv.room.pickedBy];
   // This used to assert an exact tie: LENGTH_ROUNDS was built so `rounds - 2`
-  // divided evenly by the seat count. The opener is a pick now -- the host chose
+  // divided evenly by the seat count. The firstPick is a pick now -- the host chose
   // it in the lobby -- so the total is `rounds - 1`, which is odd at two seats and
   // cannot tie. Within one is the strongest true statement, and it is what
   // `pickShareFor` reports to the lobby as `extra`.
@@ -413,7 +414,7 @@ test('the Decider: the picks are spent within one of each other, and the Decider
   const bob = before.filter((p) => p === 'bob').length;
   assert.ok(Math.abs(alice - bob) <= 1, `picks within one: ${JSON.stringify(before)}`);
   assert.equal(alice + bob, srv.room.targetRounds - 1,
-    'every round but the Decider -- the opener counts now, as the host pick');
+    'every round but the Decider -- the first pick counts now, as the host pick');
 
   await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), b);
   assert.deepEqual(srv.room.pickedBy, before, 'the Decider spent no rotation slot');

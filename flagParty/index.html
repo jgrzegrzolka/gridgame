@@ -118,43 +118,43 @@
           </span>
           <span class="dl-hint" id="draft-length-hint"></span>
         </div>
-        <!-- Host-only: the opening round. Round 1 used to always be Flags, decided
-             by nobody; the host chooses it now, and the choice counts as their
-             first pick so the rotation skips them for a cycle. Picture modes only
-             — the opener is the warm-up everyone plays before any score exists, so
-             it should be a round nobody has to think about. Same radiogroup shape
-             as the length above, and it reuses that control's classes rather than
-             growing a parallel set. This one DOES carry a visible heading: with
-             two segmented rows stacked, "Short / Medium / Long" no longer says
-             which is which on its own. -->
-        <div class="draft-length" id="draft-opener" hidden>
-          <span class="dl-group-label" data-i18n="party.openingRound">Opening round</span>
-          <span class="dl-step" role="radiogroup" id="draft-opener-group"
-                data-i18n-attr="aria-label:party.openingRound" aria-label="Opening round">
-            <button type="button" class="dl-pick" role="radio" data-opener="flags-all" aria-checked="true" tabindex="0">
+        <!-- Host-only: the first round. Round 1 used to always be Flags, decided by
+             nobody; the host chooses it now, and it IS their first draft pick, so the
+             rotation skips them for a cycle. Picture modes only: the first round is
+             the warm-up everyone plays before any score exists, so it should be a
+             round nobody has to think about. Same radiogroup shape as the length
+             above, and it reuses that control's classes rather than growing a
+             parallel set. This one DOES carry a visible heading: with two segmented
+             rows stacked, "Short / Medium / Long" no longer says which is which on
+             its own. -->
+        <div class="draft-length" id="draft-first-pick" hidden>
+          <span class="dl-group-label" data-i18n="party.firstPickLabel">First round</span>
+          <span class="dl-step" role="radiogroup" id="draft-first-pick-group"
+                data-i18n-attr="aria-label:party.firstPickLabel" aria-label="First round">
+            <button type="button" class="dl-pick" role="radio" data-first-pick="flags-all" aria-checked="true" tabindex="0">
               <span class="dl-ic" aria-hidden="true"></span>
               <span class="dl-lab" data-i18n="party.modeShort.flagsAll">Flags</span>
             </button>
-            <button type="button" class="dl-pick" role="radio" data-opener="flags-weird" aria-checked="false" tabindex="-1">
+            <button type="button" class="dl-pick" role="radio" data-first-pick="flags-weird" aria-checked="false" tabindex="-1">
               <span class="dl-ic" aria-hidden="true"></span>
               <span class="dl-lab" data-i18n="party.modeShort.flagsWeird">Weird</span>
             </button>
-            <button type="button" class="dl-pick" role="radio" data-opener="map-outlines" aria-checked="false" tabindex="-1">
+            <button type="button" class="dl-pick" role="radio" data-first-pick="map-outlines" aria-checked="false" tabindex="-1">
               <span class="dl-ic" aria-hidden="true"></span>
               <span class="dl-lab" data-i18n="party.modeShort.mapOutlines">Maps</span>
             </button>
-            <button type="button" class="dl-pick" role="radio" data-opener="spot-flag" aria-checked="false" tabindex="-1">
+            <button type="button" class="dl-pick" role="radio" data-first-pick="spot-flag" aria-checked="false" tabindex="-1">
               <span class="dl-ic" aria-hidden="true"></span>
               <span class="dl-lab" data-i18n="party.modeShort.spotFlag">Spot</span>
             </button>
           </span>
-          <!-- Host-only veil toggle for the opening round. Every opener mode is
+          <!-- Host-only veil toggle for the first round. Every first-round mode is
                veilable, so it is one toggle rather than a per-button chip. Reuses
                the pick-card veil glyph + hint so the "start hidden, clears on the
                clock" idea reads the same here as on the draft pick cards. -->
-          <button type="button" class="opener-veil hover-tip" id="draft-opener-veil" aria-pressed="false" data-i18n-attr="data-tip:party.veilOpenerHint" data-tip="Veil the opening round: the tiles start hidden and clear as the clock runs" hidden>
+          <button type="button" class="first-pick-veil hover-tip" id="draft-first-pick-veil" aria-pressed="false" data-i18n-attr="data-tip:party.veilFirstPickHint" data-tip="Veil the first round: the tiles start hidden and clear as the clock runs" hidden>
             <span class="veil-glyph" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-            <span class="opener-veil-lab" data-i18n="party.veilOpener">Hidden start</span>
+            <span class="first-pick-veil-lab" data-i18n="party.veilFirstPick">Hidden start</span>
           </button>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>

@@ -15,13 +15,13 @@ import { veilActive } from './partyTiming.js';
 /** The round every draft opens with — establishes the loop before anyone picks,
  *  and closes the cold-start hole (no scores yet means no last place means no
  *  picker). */
-export const OPENING_MODE_ID = 'flags-all';
+export const DEFAULT_FIRST_PICK = 'flags-all';
 
 /** Modes exempt from the no-repeat rule: they stay in the hand and stay pickable
  *  however many times they have already been played.
  *
  *  Flags is the game — the thing everyone came to play and the one round nobody
- *  is bored of — and it is also the fixed opener, so the no-repeat rule retired
+ *  is bored of — and it is also the fixed first round, so the no-repeat rule retired
  *  it before anyone got to choose it even once. Weird flags is the same game with
  *  a different pool.
  *
@@ -36,13 +36,6 @@ export const OPENING_MODE_ID = 'flags-all';
  *  these three are the staples you are allowed to order twice. */
 export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird', 'spot-flag'];
 
-/** Hard ceiling on rounds in a draft — a backstop against a bad edit to
- *  {@link LENGTH_ROUNDS}, not a knob. It used to be reachable: length was
- *  `seats x picks + 2`, so at 8 seats two of the host's four options clamped to
- *  this number and became the same game, and at 12+ three of them did. With
- *  length as the input the table tops out at 20 and this can no longer bite. */
-export const MAX_DRAFT_ROUNDS = 25;
-
 /** @typedef {'short' | 'medium' | 'long'} GameLength */
 
 /** The three game lengths the host chooses from, shortest first. */
@@ -56,7 +49,7 @@ export const DEFAULT_GAME_LENGTH = 'medium';
  * Rounds per (length, seats). **A table, not a formula**, because the two things
  * a formula has to trade off cannot both be had:
  *
- * - picks divide evenly exactly when `rounds = seats * k + 2` (the opener is
+ * - picks divide evenly exactly when `rounds = seats * k + 2` (the first pick is
  *   dealt and the Decider sits outside the rotation, so `rounds - 2` picks are
  *   shared out), and
  * - a length worth naming has to mean roughly the same wall-clock at every table
@@ -88,7 +81,7 @@ export const HAND_SIZE = 10;
 /**
  * How many rounds a draft runs, from {@link LENGTH_ROUNDS}.
  *
- * The **opener** is a Flags round that closes the cold-start hole (no scores yet
+ * The **firstPick** is a Flags round that closes the cold-start hole (no scores yet
  * means no last place means no picker) and gives everyone a warm-up before the
  * first choice. The **Decider** is the closing act (see {@link isDeciderPick}),
  * which sits outside the rotation so the pick share stays predictable rather
@@ -104,7 +97,7 @@ export const HAND_SIZE = 10;
 export function roundCountFor(playerCount, length = DEFAULT_GAME_LENGTH) {
   const seats = Number.isFinite(playerCount) ? Math.floor(playerCount) : 0;
   const column = Math.min(6, Math.max(2, seats));
-  return Math.min(LENGTH_ROUNDS[validateGameLength(length)][column], MAX_DRAFT_ROUNDS);
+  return LENGTH_ROUNDS[validateGameLength(length)][column];
 }
 
 /**
@@ -140,7 +133,7 @@ export function validateGameLength(value) {
  */
 export function pickShareFor(rounds, playerCount) {
   const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
-  // `- 1`, not `- 2`: only the Decider sits outside the count now. The opener used
+  // `- 1`, not `- 2`: only the Decider sits outside the count now. The firstPick used
   // to as well, because nobody chose it — it was always Flags. Now the host picks
   // it in the lobby and it counts as their first pick, so it is a share like any
   // other and the line would understate the total by one if it were still excluded.
@@ -155,10 +148,10 @@ export function pickShareFor(rounds, playerCount) {
 }
 
 /**
- * Coerce a host-supplied opening-round id to a legal one, defaulting to
- * {@link OPENING_MODE_ID}.
+ * Coerce a host-supplied first-round id to a legal one, defaulting to
+ * {@link DEFAULT_FIRST_PICK}.
  *
- * **Picture modes only.** The opener exists to warm the room up before any score
+ * **Picture modes only.** The first round exists to warm the room up before any score
  * exists, and a niche statistic ("Honey production") is a poor first impression
  * and a worse warm-up — the round everyone plays cold should be one everyone
  * immediately understands. It is also what keeps the lobby control a four-segment
@@ -167,13 +160,13 @@ export function pickShareFor(rounds, playerCount) {
  * Untrusted like {@link validateGameLength}: the value arrives over the wire, so
  * anything unrecognised falls back to the default rather than being guessed at.
  * A client that predates this setting sends nothing and gets Flags, which is
- * exactly the fixed opener it was built against.
+ * exactly the fixed first round it was built against.
  *
  * @param {unknown} value
  * @returns {string}
  */
-export function validateOpenerMode(value) {
-  return PICTURE_MODES.some((m) => m.id === value) ? /** @type {string} */ (value) : OPENING_MODE_ID;
+export function validateFirstPickMode(value) {
+  return PICTURE_MODES.some((m) => m.id === value) ? /** @type {string} */ (value) : DEFAULT_FIRST_PICK;
 }
 
 /**

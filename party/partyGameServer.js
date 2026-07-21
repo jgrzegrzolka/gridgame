@@ -3,12 +3,12 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
-import { roundCountFor, validateGameLength, validateOpenerMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, OPENING_MODE_ID, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, validateFirstPickMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, DEFAULT_FIRST_PICK, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
   applyStart,
-  applySetOpener,
+  applySetFirstPick,
   canStart,
   applyBuzz,
   applyForceReveal,
@@ -65,8 +65,8 @@ function modeIdForSegment(seg) {
   return MODE_ID_BY_SEG[`${seg.questionId}|${seg.poolId}`];
 }
 
-/** The opening round every draft plays: one Flags round (see `partyDraft`). */
-const OPENING_MODE = MODE_BY_ID[OPENING_MODE_ID];
+/** The first round every draft plays: one Flags round (see `partyDraft`). */
+const DEFAULT_FIRST_PICK_MODE = MODE_BY_ID[DEFAULT_FIRST_PICK];
 
 /**
  * Flag Party durable object — the live show's room. Thin shell around the pure
@@ -298,9 +298,9 @@ export default class PartyGameServer {
           this.usedCodes = new Set();
           this.usedModes = new Set();
           // Draft is the only way a game starts. The plan grows one round per
-          // pick: open with a single Flags round, then run one round per pick,
-          // with that opener and the closing Decider bookending the draft.
-          // Question 0 comes from the opening round.
+          // pick: open with the host's chosen round-1 mode, then run one round per
+          // pick, with that first pick and the closing Decider bookending the draft.
+          // Question 0 comes from the first round.
           //
           // The host sends a LENGTH ('short' / 'medium' / 'long'), not a pick
           // count: `roundCountFor` reads the round total off a table and the
@@ -320,32 +320,33 @@ export default class PartyGameServer {
           // would otherwise silently get a medium game whatever it chose.
           const length = validateGameLength(this.room.length ?? parsed.length);
           const targetRounds = roundCountFor(this.room.present.size, length);
-          // The opening round is the host's choice now (lobby, `setOpener`), not a
-          // constant. `validateOpenerMode` turns the never-set null -- and anything
+          // The first round is the host's choice now (lobby, `setFirstPick`), not a
+          // constant. `validateFirstPickMode` turns the never-set null -- and anything
           // a stale or malformed client sends -- back into Flags, which is exactly
-          // the fixed opener this used to hardcode, so an older client is unchanged.
-          const openerId = validateOpenerMode(this.room.opener);
-          const openerMode = MODE_BY_ID[openerId] ?? OPENING_MODE;
-          // The host may veil the opening round (lobby toggle). Re-checked through
+          // the fixed first round this used to hardcode, so an older client is unchanged.
+          const firstPickId = validateFirstPickMode(this.room.firstPick);
+          const firstPickMode = MODE_BY_ID[firstPickId] ?? DEFAULT_FIRST_PICK_MODE;
+          // The host may veil the first round (lobby toggle). Re-checked through
           // `canVeilMode` rather than trusted, exactly as a draft pick's veil is:
-          // every opener mode is veilable today, but the guard keeps a future
-          // non-veilable opener from being armed by a stale client. It reaches the
+          // every first-round mode is veilable today, but the guard keeps a future
+          // non-veilable firstPick from being armed by a stale client. It reaches the
           // round two ways that must agree -- the segment's `veil` (so a stale
           // reload re-derives it) and `applyStart`'s `tricky` argument (which sets
-          // `room.tricky` for round 0, since the opener is dealt, not picked).
-          const openerVeil = this.room.openerVeil === true && canVeilMode(openerId);
-          const openingPlan = [{ poolId: openerMode.poolId, questionId: openerMode.questionId, questions: ROUND_QUESTIONS, ...(openerVeil ? { veil: true } : {}) }];
-          this.usedModes.add(usedIdForMode(openerId));
-          const question = this.generateForQuestion(openerMode.questionId, openerMode.poolId, DEFAULT_REVEAL);
-          result = applyStart(this.room, playerId, question, openingPlan, targetRounds * ROUND_QUESTIONS, openerVeil, DEFAULT_REVEAL, { draft: true, targetRounds });
+          // `room.tricky` for round 0, since `applyStart` deals question 0 directly
+          // rather than routing it through `applyPick` the way later rounds go).
+          const firstPickVeil = this.room.firstPickVeil === true && canVeilMode(firstPickId);
+          const firstRoundPlan = [{ poolId: firstPickMode.poolId, questionId: firstPickMode.questionId, questions: ROUND_QUESTIONS, ...(firstPickVeil ? { veil: true } : {}) }];
+          this.usedModes.add(usedIdForMode(firstPickId));
+          const question = this.generateForQuestion(firstPickMode.questionId, firstPickMode.poolId, DEFAULT_REVEAL);
+          result = applyStart(this.room, playerId, question, firstRoundPlan, targetRounds * ROUND_QUESTIONS, firstPickVeil, DEFAULT_REVEAL, { draft: true, targetRounds, firstPickMode: firstPickId });
           break;
         }
-        case 'setOpener': {
+        case 'setFirstPick': {
           // Validated in the reducer (which owns the host and phase guards), so
           // the raw values go straight through -- same shape as setLength. The
           // veil rides this message; `parsed.veil` is undefined from an older
           // host, which the reducer reads as "leave it".
-          result = applySetOpener(this.room, playerId, parsed.opener, parsed.veil);
+          result = applySetFirstPick(this.room, playerId, parsed.firstPick, parsed.veil);
           break;
         }
         case 'setLength': {

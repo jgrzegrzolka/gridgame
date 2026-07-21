@@ -22,12 +22,12 @@
  * @property {number} questionIndex
  * @property {boolean} tricky  host's tricky-mode choice, learned from the server;
  *   when true the page veils each question tile and clears it over the clock.
- * @property {string} opener  the host's chosen opening round (a picture mode id),
+ * @property {string} firstPick  the host's chosen first round (a picture mode id),
  *   learned the same way as `length` and painted by every seat. Defaults to the
- *   Flags opener that was fixed before the host could choose, so a client talking
+ *   Flags firstPick that was fixed before the host could choose, so a client talking
  *   to a server that never sends it behaves exactly as it used to.
- * @property {boolean} openerVeil  whether the host armed the veil on the opening
- *   round, painted beside the opener control (host toggles it, guests see it).
+ * @property {boolean} firstPickVeil  whether the host armed the veil on the first
+ *   round, painted beside the first pick control (host toggles it, guests see it).
  *   Defaults off, and an older server never sends it, so it simply stays off.
  * @property {string} length  the host's game-length choice, learned from the
  *   server. Every seat renders it in the lobby — the host as a control, everyone
@@ -66,7 +66,7 @@
  * @typedef {{ type: 'close' }} Effect
  */
 
-import { DEFAULT_GAME_LENGTH, OPENING_MODE_ID } from './partyDraft.js';
+import { DEFAULT_GAME_LENGTH, DEFAULT_FIRST_PICK } from './partyDraft.js';
 
 /** @returns {PartyClientState} */
 export function initialPartyClientState() {
@@ -79,8 +79,8 @@ export function initialPartyClientState() {
     questionIndex: 0,
     tricky: false,
     length: DEFAULT_GAME_LENGTH,
-    opener: OPENING_MODE_ID,
-    openerVeil: false,
+    firstPick: DEFAULT_FIRST_PICK,
+    firstPickVeil: false,
     question: null,
     buzzedCount: 0,
     seatCount: 0,
@@ -166,8 +166,8 @@ function reduceOne(state, message) {
           // field entirely, and falling back to the default would stamp 'medium'
           // over whatever the host had already told us.
           length: message.length ?? state.length,
-          opener: message.opener ?? state.opener,
-          openerVeil: message.openerVeil ?? state.openerVeil,
+          firstPick: message.firstPick ?? state.firstPick,
+          firstPickVeil: message.firstPickVeil ?? state.firstPickVeil,
           question: message.question ?? null,
           scoreboard: message.scoreboard ?? null,
           // A reconnect mid-pick resumes the draft turn (picker + hand ride the
@@ -198,15 +198,15 @@ function reduceOne(state, message) {
       };
     }
     case 'settings': {
-      // The host changed a lobby setting -- `length` or `opener`, the two pieces
+      // The host changed a lobby setting -- `length` or `firstPick`, the two pieces
       // of room state that move while nobody is playing. Each falls back to what
       // we already hold, so a message naming only one does not blank the other.
       return {
         state: {
           ...state,
           length: message.length ?? state.length,
-          opener: message.opener ?? state.opener,
-          openerVeil: message.openerVeil ?? state.openerVeil,
+          firstPick: message.firstPick ?? state.firstPick,
+          firstPickVeil: message.firstPickVeil ?? state.firstPickVeil,
         },
         effects: [],
       };
@@ -219,8 +219,8 @@ function reduceOne(state, message) {
           phase: 'lobby',
           roster: message.roster ?? state.roster,
           length: message.length ?? state.length,
-          opener: message.opener ?? state.opener,
-          openerVeil: message.openerVeil ?? state.openerVeil,
+          firstPick: message.firstPick ?? state.firstPick,
+          firstPickVeil: message.firstPickVeil ?? state.firstPickVeil,
           isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
           question: null,
           reveal: null,
