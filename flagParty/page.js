@@ -13,7 +13,8 @@ import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTal
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
-import { clausesFromPrompt, missLabel, spotTitle } from '../flags/partyQuestions/spotFlag.js';
+import { clausesFromPrompt, missLabel, filtersFor } from '../flags/partyQuestions/spotFlag.js';
+import { renderCriteriaInline } from '../flags/filterChips.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -1525,7 +1526,7 @@ export function bootFlagParty() {
     // cue was just extra reading. Superlative questions instead lead the criterion
     // label with the metric's icon (below) — a picture reads the stat faster than
     // the phrase alone. Reset both cues each render, then the branches opt in.
-    promptEl.classList.remove('superlative');
+    promptEl.classList.remove('superlative', 'criteria');
     delete promptEl.dataset.metric;
     promptEl.style.removeProperty('--mc');
     promptLead.hidden = true;
@@ -1552,14 +1553,18 @@ export function bootFlagParty() {
       promptTarget.textContent = t(label.key, label.fallback);
     } else if (isSpot) {
       // Spot-the-flag states its criteria instead of naming a target, and the
-      // SAME text stays up through the reveal: the criteria are what the answer
+      // SAME line stays up through the reveal: the criteria are what the answer
       // has to be read against, so removing them at the moment the answer lands
       // would take away the explanation just as it becomes useful.
       //
-      // `filterTitle` is findFlag's own criteria line ("red · not green · star or
-      // moon"), including the Polish genitive for negated clauses. Reused rather
-      // than reworded so one criterion reads identically on every surface.
-      promptTarget.textContent = spotTitle(spotClauses || [], t);
+      // Rendered through findFlag's own `renderCriteriaInline` — the identical
+      // colour swatch + flag glyph marks the findFlag / daily headers wear, off
+      // the same `filtersFor(clauses)` object — so one criterion reads (and now
+      // looks) identical on every surface, Polish genitive and all. The `criteria`
+      // class drops the 28px target size to a criteria-appropriate 20px so the
+      // line stops competing with the four flags it describes.
+      promptEl.classList.add('criteria');
+      promptTarget.replaceChildren(renderCriteriaInline(filtersFor(spotClauses || []), t));
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
       const country = byCode.get(targetCode);

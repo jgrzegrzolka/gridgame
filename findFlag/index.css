@@ -130,31 +130,17 @@ body {
   flex: 1;
   line-height: 1.5;
 }
-/* Inline criteria pieces (renderCriteriaInline). Each `.crit` is one criterion;
- * `.crit-sep` is the muted middot between them. A metric's own icon + the flag
- * glyph mark where a criterion starts, so the single-level dot separators never
- * blur into a metric's label (which drops its middot to a space here). */
-.find-cat .crit {
-  white-space: nowrap;
-}
-.find-cat .crit-sep {
-  color: var(--muted-color);
-  margin: 0 0.4em;
-  font-weight: 400;
-}
-/* Excluded value: the label spells it out ("not coat of arms" / "bez herbu"),
- * so it stays in ink like every other criterion — no pink, no strikethrough. A
- * struck word in a read-only title reads as "removed", not "excluded". The
- * `.crit-exclude` class is kept as a semantic hook (and for the flag-design
- * glyph it still carries); flagsdata's boxed chips keep their own strike idiom. */
-/* The metric-icon (`.crit-ic`) and flag-glyph (`.crit-flag`) sizing lives in
- * common.css now that the tic-tac-toe grid headers reuse the same marks (see
- * `categoryIconEl`). The colour swatch (common.css `.pill-swatch`) still needs a
- * small gap before its word inline here; the boxed `.pill`/`.filter-chip` get
- * this from their flex gap. */
-.find-cat .crit .pill-swatch {
-  margin-right: 0.3em;
-}
+/* The inline criteria pieces themselves — `.crit`, `.crit-sep`, and the colour
+ * swatch / metric-icon (`.crit-ic`) / flag-glyph (`.crit-flag`) marks built by
+ * renderCriteriaInline — are styled globally in common.css. Three surfaces render
+ * them (this header, the daily header, and the Flag Party spot-the-flag prompt),
+ * so the recipe lives in one place rather than scoped here. Only `.find-cat`'s own
+ * container size / flow stays in this file.
+ *
+ * Excluded values render the spelled-out label ("not coat of arms" / "bez herbu")
+ * in ink like every other criterion — no pink, no strikethrough (a struck word in
+ * a read-only title reads as "removed", not "excluded"). The `.crit-exclude` class
+ * is kept as a semantic hook; flagsdata's boxed chips keep their own strike idiom. */
 .find-count {
   font-size: 14px;
   color: var(--muted-color);
