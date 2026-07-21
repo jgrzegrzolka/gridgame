@@ -81,6 +81,8 @@ import {
   elevation,
   categoryFromId,
   hasStripesOnly,
+  colorCountStraddles,
+  colorCountAmbiguity,
 } from './engine.js';
 import { createCountry } from './group.js';
 
@@ -1771,6 +1773,47 @@ test('findPuzzleSolution finds a solution that requires an ambiguousColorCount f
   const sol = findPuzzleSolution(puzzle, [ki, oceaniaRed, oceaniaBlue, asiaC5, asiaRed, asiaBlue, africaC5, africaRed, africaBlue]);
   assert.ok(sol, 'expected a solution that places Kiribati in the (Oceania × colorCount:5) cell');
   assert.equal(sol[0][0].code, 'ki');
+});
+
+test('colorCountStraddles: true when a plausible count crosses the constraint, false for a clean or non-colorCount match', () => {
+  // Croatia-like: canonical 4, but contested 4/5.
+  const contested = country({ code: 'hr', name: 'Croatia', primaryColors: ['red', 'white', 'blue'], additionalColors: ['gold'], ambiguousColorCount: [4, 5] });
+  // A clean four-colour flag with no contested count.
+  const cleanFour = country({ code: 'x4', name: 'Four', primaryColors: ['red', 'white', 'blue', 'green'] });
+
+  assert.equal(colorCountStraddles(colorCount('=', 4), contested), true, '=4: 4 fits, 5 does not → straddles');
+  assert.equal(colorCountStraddles(colorCount('=', 5), contested), true, '=5: 5 fits, 4 does not → straddles');
+  assert.equal(colorCountStraddles(colorCount('>=', 3), contested), false, '>=3: both 4 and 5 satisfy → not contested');
+  assert.equal(colorCountStraddles(colorCount('<=', 3), contested), false, '<=3: neither 4 nor 5 satisfy → clean non-match, not contested');
+  assert.equal(colorCountStraddles(colorCount('=', 4), cleanFour), false, 'no ambiguousColorCount → never straddles');
+  assert.equal(colorCountStraddles(hasColor('red'), contested), false, 'non-colorCount category → false');
+  assert.equal(colorCountStraddles(null, contested), false, 'null category → false');
+});
+
+test('colorCountStraddles survives online rehydration (op/n restored via categoryFromId)', () => {
+  const contested = country({ code: 'hr', name: 'Croatia', primaryColors: ['red', 'white', 'blue', 'gold'], ambiguousColorCount: [4, 5] });
+  const rehydrated = categoryFromId('colorCount:4'); // as an online client rebuilds it off the wire
+  assert.ok(rehydrated);
+  assert.equal(colorCountStraddles(/** @type {any} */ (rehydrated), contested), true);
+});
+
+test('colorCountAmbiguity: flags a straddling cell only when the other axis also matches', () => {
+  const cc4 = colorCount('=', 4);
+  const europe = continent('Europe');
+  const asia = continent('Asia');
+  // Contested 4/5 European flag.
+  const contested = country({ code: 'hr', name: 'Croatia', continent: 'Europe', primaryColors: ['red', 'white', 'blue', 'gold'], ambiguousColorCount: [4, 5] });
+  const cleanEuro = country({ code: 'x4', name: 'Four', continent: 'Europe', primaryColors: ['red', 'white', 'blue', 'green'] });
+
+  // Cell = (=4 × Europe): the contested flag matches Europe AND straddles =4 → ambiguous.
+  assert.equal(colorCountAmbiguity([cc4, europe], contested), cc4);
+  // Same flag, but the cell's other axis is Asia — Croatia is European, so it is
+  // just a wrong pick, not an ambiguous one.
+  assert.equal(colorCountAmbiguity([cc4, asia], contested), null);
+  // A clean four-colour European flag is a plain valid pick.
+  assert.equal(colorCountAmbiguity([cc4, europe], cleanEuro), null);
+  // No colorCount axis at all → nothing to be ambiguous about.
+  assert.equal(colorCountAmbiguity([europe, hasColor('red')], contested), null);
 });
 
 test('colorCount carries exclusiveGroup so axesConflict rejects two different constraints', () => {

@@ -428,18 +428,25 @@ body.game-over .actions-row {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* A suggestion our data can't score against the active cell's metric axis
-   (e.g. a country with no population value on a population cell). Disabled +
-   muted with a "no data" tag so a data gap can't cost the player a cell —
-   every commit path also refuses it. */
+/* A suggestion the player shouldn't pick for the active cell. Two reasons, one
+   look: our data can't score it against a metric axis ("no data" — e.g. a
+   country with no population value on a population cell), OR its colour count is
+   genuinely contested for an exact-count cell ("ambiguous" — a straddler that
+   the lenient predicate would otherwise accept). Both are disabled + muted with
+   a tag, so neither a data gap nor a contested count can cost the player a cell;
+   every commit path also refuses them. */
 .picker-suggestions li.no-data,
 .picker-suggestions li.no-data:hover,
-.picker-suggestions li.no-data.selected {
+.picker-suggestions li.no-data.selected,
+.picker-suggestions li.ambiguous,
+.picker-suggestions li.ambiguous:hover,
+.picker-suggestions li.ambiguous.selected {
   cursor: not-allowed;
   color: var(--muted-color);
   background: none;
 }
-.picker-suggestions .suggestion-no-data {
+.picker-suggestions .suggestion-no-data,
+.picker-suggestions .suggestion-ambiguous {
   flex: 0 0 auto;
   font-size: 12px;
   font-style: italic;
@@ -509,6 +516,24 @@ body.picker-open {
  * `.flag-tile`'s hover-reveal. */
 .match-grid .flag-tile::after {
   opacity: 1;
+}
+/* An answer whose colour count is genuinely contested for this exact-count cell
+ * (the same flags the picker blocked as "ambiguous"). Badge it top-left with the
+ * same dark-strip-over-flag treatment the name strip uses (the documented rgba
+ * exception for text over a flag image), so it reads as a note on the flag
+ * without introducing a new colour. */
+.match-grid .flag-tile.is-ambiguous .match-ambiguous {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  background: rgba(28, 28, 28, 0.85);
+  color: var(--surface-color);
+  padding: 2px 4px;
+  font-size: 10px;
+  font-style: italic;
+  border-bottom-right-radius: 4px;
+  pointer-events: none;
 }
 
 /* ---- Advanced mode block in the "How to play" dialog ----

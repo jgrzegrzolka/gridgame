@@ -15,6 +15,7 @@
  */
 
 import { matchingCountriesForCell } from '../flags/ticTacToe.js';
+import { colorCountAmbiguity } from '../flags/engine.js';
 import { renderCategoryPair } from '../flags/filterChips.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
 
@@ -90,6 +91,17 @@ export function openMatchSheet(ctx) {
     li.className = 'flag-tile';
     const name = countryName(country);
     li.dataset.name = name; // renders the hover name-strip via .flag-tile::after
+    // A flag whose colour count is genuinely contested for this exact-count cell
+    // (the picker disabled it as "ambiguous"). It still fits under the lenient
+    // predicate, so keep it in the list but badge it — consistent with the pick
+    // having been blocked, and it teaches why the flag is borderline.
+    if (colorCountAmbiguity([rowCat, colCat], country)) {
+      li.classList.add('is-ambiguous');
+      const badge = document.createElement('span');
+      badge.className = 'match-ambiguous';
+      badge.textContent = t('ttt.ambiguous', 'ambiguous');
+      li.appendChild(badge);
+    }
     const img = document.createElement('img');
     img.src = `${svgBase}${country.code}.svg`;
     img.alt = name;
