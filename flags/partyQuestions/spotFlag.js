@@ -1,5 +1,5 @@
 import { emptyFilters, matchesFilters } from '../flagsFilter.js';
-import { serializeFilter, parseFilterString, pillLabel, filterTitle } from '../findFlag.js';
+import { serializeFilter, parseFilterString, pillLabel } from '../findFlag.js';
 
 /**
  * The "spot the flag" question: the criteria are SHOWN, and exactly one of the
@@ -593,19 +593,6 @@ export function missLabel(c, clauses, translate) {
   if (miss.group === 'country') return translate('party.spotRuledOut', 'ruled out');
   const inverted = miss.sign === 'exclude' ? 'include' : 'exclude';
   return pillLabel(miss.group, miss.value, inverted, translate);
-}
-
-/**
- * The criteria line shown above the tiles, and kept up through the reveal so the
- * answer can be read against it. findFlag's own title builder, so one criterion
- * reads identically on every surface of the site.
- *
- * @param {Clause[]} clauses
- * @param {(key: string, fallback: string) => string} translate
- * @returns {string}
- */
-export function spotTitle(clauses, translate) {
-  return filterTitle(filtersFor(clauses), translate);
 }
 
 /**
