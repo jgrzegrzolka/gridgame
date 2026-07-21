@@ -250,6 +250,31 @@ export function matchingCountriesForCell(puzzle, row, col, countries) {
 }
 
 /**
+ * What tapping a cell should do, from its state and whether the game is over.
+ * Shared by all three boards (solo, offline, online) so the dispatch can't
+ * drift — the inspection actions are the same everywhere; the caller applies
+ * its own turn gating on `'play'`.
+ *
+ * - `'matches'` — open the all-matches sheet. A give-up reveal cell (the example
+ *   flag is one of many) OR **any empty cell once the game is over**: a win ends
+ *   the board with cells still blank (a give-up fills them), so this is what lets
+ *   those intersections disclose what would have fit, the way solo already does.
+ * - `'zoom'` — a player-claimed cell; enlarge its single flag, over or not.
+ * - `'play'` — an empty, still-live cell; the caller opens the picker (online
+ *   first checks it's the tapper's turn).
+ *
+ * @param {{ country?: unknown, revealed?: unknown }} cell
+ * @param {boolean} isOver
+ * @returns {'matches' | 'zoom' | 'play'}
+ */
+export function cellTapAction(cell, isOver) {
+  if (cell.revealed) return 'matches';
+  if (cell.country) return 'zoom';
+  if (isOver) return 'matches';
+  return 'play';
+}
+
+/**
  * Two-player give-up. No-op when the game is already over
  * (winner/draw/already-gaveUp); otherwise reveals every empty cell and
  * freezes the board with gaveUp=true.

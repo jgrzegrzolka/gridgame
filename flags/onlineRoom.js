@@ -306,10 +306,7 @@ export function deserializeRoom(snapshot) {
   return {
     game: {
       ...snapshot.game,
-      puzzle: {
-        rows: snapshot.game.puzzle.rows.map(rehydrateCategory),
-        cols: snapshot.game.puzzle.cols.map(rehydrateCategory),
-      },
+      puzzle: rehydratePuzzle(snapshot.game.puzzle),
     },
     hostId: snapshot.hostId,
     roles: new Map(snapshot.roles),
@@ -327,6 +324,27 @@ export function deserializeRoom(snapshot) {
     // Getting this wrong would relabel a live room's chip and, worse, hand its
     // rematch the other pool.
     advanced: snapshot.advanced ?? snapshot.easy !== true,
+  };
+}
+
+/**
+ * Restore a stripped puzzle (categories as `{ id, label }`, predicates dropped
+ * by structured-clone / JSON) into one with working `.predicate`s. Used both
+ * server-side on snapshot load AND client-side on every received game — the
+ * WebSocket serializes the server's live puzzle to JSON, which drops the
+ * predicate functions, so a client that renders the board straight off the wire
+ * has no way to run `validateCell` (the match sheet's `matchingCountriesForCell`
+ * needs it). Re-running the factories via `categoryFromId` is the one decode
+ * path, total over the pool.
+ *
+ * @param {{ rows: any[], cols: any[] }} puzzle
+ * @returns {{ rows: Category[], cols: Category[] }}
+ */
+export function rehydratePuzzle(puzzle) {
+  return {
+    ...puzzle,
+    rows: puzzle.rows.map(rehydrateCategory),
+    cols: puzzle.cols.map(rehydrateCategory),
   };
 }
 

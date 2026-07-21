@@ -5,6 +5,7 @@ import {
   reduceServerMessage,
   canGiveUpOnline,
 } from './onlineClient.js';
+import { matchingCountriesForCell } from '../flags/ticTacToe.js';
 
 // Room-code / server-URL helpers moved to flags/roomNet.js — their tests live
 // in flags/roomNet.test.js now. This file covers the TTT-specific reducer.
@@ -20,6 +21,30 @@ test('reduceServerMessage: welcome sets myRole, game, peerPresent, peerId', () =
   assert.equal(r.state.peerPresent, true);
   assert.equal(r.state.peerId, 'alice');
   assert.deepEqual(r.effects, []);
+});
+
+test('reduceServerMessage: rehydrates the wire puzzle so match-sheet predicates work', () => {
+  // The server serializes its live puzzle to JSON over the WebSocket, which
+  // drops the category `.predicate` functions — the wire carries `{ id, label }`
+  // only. Without rehydration on receive, matchingCountriesForCell (the match
+  // sheet) throws "predicate is not a function". This is the bug behind
+  // "can't click the grid after an online round to see matching flags".
+  const wirePuzzle = {
+    rows: [{ id: 'continent:Europe', label: 'Europe' }, { id: 'hasColor:red', label: 'red' }, { id: 'hasColor:blue', label: 'blue' }],
+    cols: [{ id: 'hasColor:white', label: 'white' }, { id: 'hasColor:red', label: 'red' }, { id: 'continent:Asia', label: 'Asia' }],
+  };
+  const game = /** @type {any} */ ({ currentPlayer: 'X', winner: 'X', draw: false, puzzle: wirePuzzle });
+  const r = reduceServerMessage(initialClientState(), {
+    type: 'welcome', you: 'O', game, peerPresent: true, peerId: 'bob',
+  });
+  const restored = /** @type {any} */ (r.state.game);
+  assert.equal(typeof restored.puzzle.rows[0].predicate, 'function', 'row predicate restored');
+  assert.equal(typeof restored.puzzle.cols[0].predicate, 'function', 'col predicate restored');
+  // The whole point: the match-sheet primitive runs without throwing.
+  const fr = { code: 'fr', continent: 'Europe', colors: ['blue', 'white', 'red'] };
+  const de = { code: 'de', continent: 'Europe', colors: ['black', 'red', 'gold'] };
+  const matches = matchingCountriesForCell(restored.puzzle, 0, 0, /** @type {any} */ ([fr, de]));
+  assert.deepEqual(matches.map((c) => c.code), ['fr'], 'Europe × white → France, not Germany');
 });
 
 test('reduceServerMessage: welcome with no peer yet leaves peerId null', () => {

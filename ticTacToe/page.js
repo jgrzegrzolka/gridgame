@@ -18,7 +18,7 @@ import { ensureProfile } from '../flags/autoProfile.js';
 import { fetchProfile } from '../flags/profileFetch.js';
 import { renderMatchStrip } from './matchStrip.js';
 import { openMatchSheet, wireMatchSheetDismiss } from './matchSheet.js';
-import { shouldFireTicTacToeConfetti, newlyWinningCells, newlyClaimedCells, boardIsUntouched } from '../flags/ticTacToe.js';
+import { shouldFireTicTacToeConfetti, newlyWinningCells, newlyClaimedCells, boardIsUntouched, cellTapAction } from '../flags/ticTacToe.js';
 import { decideAdvancedToggleState } from './advancedToggle.js';
 import { isTttAdvanced, setTttAdvanced } from '../flags/tttSettings.js';
 import { trackEvent } from '../analytics/index.js';
@@ -464,22 +464,25 @@ function runOnline(countries) {
     const { game, myRole, peerPresent } = state;
     if (!game) return;
     const cell = game.cells[r][c];
-    // A give-up reveal cell opens the "all matches" sheet (the example flag is
-    // one of many); a player-claimed cell still zooms the single flag.
-    if (cell.revealed) {
+    const isOver = !!(game.winner || game.draw || game.gaveUp);
+    // Shared dispatch (flags/ticTacToe.js): a give-up reveal cell OR any empty
+    // cell once the game is over opens the "all matches" sheet; a player-claimed
+    // cell zooms its single flag; an empty, still-live cell is 'play'.
+    const action = cellTapAction(cell, isOver);
+    if (action === 'matches') {
       openMatchSheet({
         dialogEl: matchesEl, puzzle: game.puzzle, row: r, col: c, countries,
         svgBase: '../flags/svg/', t, countryName, tCat,
       });
       return;
     }
-    if (cell.country) {
+    if (action === 'zoom') {
       openZoom(cell.country);
       return;
     }
+    // 'play' — online adds turn gating before opening the picker.
     if (!myRole) return;
     if (!peerPresent) return;
-    if (game.winner || game.draw) return;
     if (game.currentPlayer !== myRole) return;
     openPicker(r, c);
   }
