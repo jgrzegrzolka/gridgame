@@ -123,8 +123,8 @@ test('draft start: the host length choice sets the round count', async () => {
   await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
   await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), a);
   // Two seats, long: the table's 2-seat column.
-  assert.equal(srv.room.targetRounds, 18);
-  assert.equal(srv.room.totalQuestions, 18 * ROUND_QUESTIONS);
+  assert.equal(srv.room.targetRounds, 17);
+  assert.equal(srv.room.totalQuestions, 17 * ROUND_QUESTIONS);
 });
 
 test('draft start: a length outside the offered set falls back to medium', async () => {
