@@ -37,8 +37,20 @@ on:
       - 'flags/contourPool.js'
       - 'flags/onlineRoom.js'
       - 'flags/ticTacToe.js'
+      # The findFlag filter engine, which the spot-the-flag question generator
+      # bundles (serialize/parse/match/pillLabel). Missing these meant a change to
+      # the filter format deployed the client but left the server on stale matching.
+      - 'flags/findFlag.js'
+      - 'flags/flagsFilter.js'
       # Flag Party engine + data (globs cover new helpers, rounds, metrics):
       - 'flags/party*.js'
+      # The server-side question GENERATORS (spot-the-flag, superlatives, flag/map
+      # pick). `flags/party*.js` above does NOT reach this subdirectory, so before
+      # this line a change to spotFlag.js / superlative*.js deployed the client and
+      # left the server generating the OLD questions — which is exactly how the
+      # spot-the-flag country clause and the yellow/orange fix shipped to the client
+      # but never to the server. Pinned by party/deployPaths.test.js.
+      - 'flags/partyQuestions/**'
       - 'flags/partyRounds/**'
       - 'flags/metrics.js'
       - 'flags/metrics/**'
