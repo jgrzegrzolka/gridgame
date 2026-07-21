@@ -54,6 +54,19 @@ import { serializeFilter, parseFilterString, pillLabel, filterTitle } from '../f
 export const SPOT_COLORS = ['red', 'blue', 'green', 'yellow', 'black', 'white', 'orange'];
 
 /**
+ * Colours that read as each other on a thumbnail. When a spec turns on one of a
+ * pair, the other is kept off every tile (see {@link buildPuzzle}) so no round
+ * comes down to "was that yellow or orange" rather than to the flags.
+ *
+ * Yellow/orange is the only such pair the tag vocabulary actually produces. Red +
+ * green is a different problem (colour blindness, not shade) and gets a stricter
+ * rule: they may never be co-clauses at all ({@link randomSpec}), because there
+ * the discrimination itself is what some players cannot make.
+ * @type {Record<string, string>}
+ */
+export const CONFUSABLE_COLOR = { yellow: 'orange', orange: 'yellow' };
+
+/**
  * Motifs a clause may name — deliberately NOT the full motif vocabulary.
  *
  * `coat-of-arms` is out because it is the contested tag (whether Oman's emblem
@@ -249,6 +262,10 @@ export function randomSpec(rng) {
     clauses.push({ group: 'color', value: v, sign: rng() < 0.45 ? 'exclude' : 'include' });
   }
   if (usedColors.has('red') && usedColors.has('green')) return null;
+  // Yellow and orange as the two colour clauses IS the misclassification trap, and
+  // it also can't be fixed at the tile level (the spec would demand a colour it
+  // also has to ban). Reject it here, the same way as red + green above.
+  if (usedColors.has('yellow') && usedColors.has('orange')) return null;
   return clauses;
 }
 
@@ -264,7 +281,18 @@ export function randomSpec(rng) {
 export function buildPuzzle(pool, rng, exclude) {
   const clauses = randomSpec(rng);
   if (!clauses) return null;
-  const eligible = pool.filter((c) => isSpottable(c) && !ambiguousUnder(c, clauses));
+  // Yellow and orange read alike at tile size; if the spec names one, keep the
+  // other off every tile (answer and distractors alike) so the round never turns
+  // on telling the two apart. Checked against the visible `primaryColors` — the
+  // same field colour includes match — because an orange buried in a crest is too
+  // small to be mistaken for yellow. `randomSpec` guarantees the spec never names
+  // both, so `banned` holds at most one colour and can't contradict the spec.
+  const banned = new Set();
+  for (const cl of clauses) {
+    if (cl.group === 'color' && CONFUSABLE_COLOR[cl.value]) banned.add(CONFUSABLE_COLOR[cl.value]);
+  }
+  const eligible = pool.filter((c) => isSpottable(c) && !ambiguousUnder(c, clauses)
+    && !c.primaryColors.some((col) => banned.has(col)));
 
   const all = filtersFor(clauses);
   let answers = eligible.filter((c) => matchesFilters(c, all, COLOR_FIELD));

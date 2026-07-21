@@ -130,6 +130,53 @@ test('generate: no puzzle can hinge on telling red from green', () => {
   }
 });
 
+test('generate: a yellow clause never puts an orange flag on the board, and vice versa', () => {
+  // Yellow and orange read alike on a thumbnail. If the spec turns on one of them,
+  // a tile visibly wearing the other invites "is that yellow or orange?" -- the
+  // player loses the round to our palette, not to the flags. So the confusable
+  // partner stays off every tile (checked against the visible `primaryColors`,
+  // the same field the spot mode matches colour includes against).
+  const rng = seeded(11);
+  let yellowSpecs = 0;
+  let orangeSpecs = 0;
+  for (let i = 0; i < 600; i += 1) {
+    const q = generate(POOL, undefined, rng);
+    const colors = clausesOf(q.prompt).filter((c) => c.group === 'color').map((c) => c.value);
+    if (colors.includes('yellow')) {
+      yellowSpecs += 1;
+      for (const code of q.options) {
+        assert.ok(!at(code).primaryColors.includes('orange'),
+          `yellow spec ${q.prompt} put an orange tile (${code})`);
+      }
+    }
+    if (colors.includes('orange')) {
+      orangeSpecs += 1;
+      for (const code of q.options) {
+        assert.ok(!at(code).primaryColors.includes('yellow'),
+          `orange spec ${q.prompt} put a yellow tile (${code})`);
+      }
+    }
+  }
+  // Guard the guard: a parse/data break that stopped producing yellow specs would
+  // make the assertions above vacuous. Yellow is common; some must have appeared.
+  assert.ok(yellowSpecs > 20, `expected many yellow specs in 600 draws, saw ${yellowSpecs}`);
+});
+
+test('randomSpec: yellow and orange never share a spec (the confusable pair as discriminators)', () => {
+  // The other half of the same rule, one level up: banning the partner from the
+  // tiles is impossible when BOTH are clauses (the spec would demand a colour it
+  // also bans), and a spec whose two colours are yellow and orange is itself the
+  // misclassification trap. Rejected at the source, exactly like red + green.
+  const rng = seeded(12);
+  for (let i = 0; i < 3000; i += 1) {
+    const spec = randomSpec(rng);
+    if (!spec) continue;
+    const colors = spec.filter((c) => c.group === 'color').map((c) => c.value);
+    assert.ok(!(colors.includes('yellow') && colors.includes('orange')),
+      'yellow and orange never share a spec');
+  }
+});
+
 test('generate: never asks about a flag whose motifs hide in a crest', () => {
   // The tag set records what is TRUE, not what is VISIBLE. Moldova really does
   // carry an animal, a bird and a cross -- all inside a small coat of arms that
