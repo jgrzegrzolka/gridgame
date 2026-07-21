@@ -362,22 +362,33 @@ export function modeSubLabel(id) {
  *   round names its specific metric ("Coffee production") and a flag round names
  *   its pool ("Flags: countries" vs "Flags: others"). This is the precise path,
  *   and the only one in a Draft game.
- * - **Opening round** (no `lastPick` — the server-dealt Flags round every draft
- *   starts with) → derived from the question's
+ * - **Opening round** (no `lastPick` — the server-dealt round every draft starts
+ *   with, whose mode the host chose in the lobby) → derived from the question's
  *   `questionId`, which is 1:1 with a mode for the map question and every superlative
  *   metric (`superlative-coffee` etc.). The one exception is the two flag pools,
  *   which **share** `questionId: 'flagPick'` and so can't be told apart from the wire
- *   alone → returns `null`, the caller's cue to show a generic "Flags" card.
+ *   alone — resolved by the room's `opener`, which IS the opening round's mode, so a
+ *   weird opener names "Weird flags" instead of the generic sovereign-Flags card.
+ *   Absent (old server, opener unknown) → `null`, the caller's generic "Flags" cue.
  * - Unknown / unrenderable question id → `null` (generic), though the stale-build
  *   guard means such a question never reaches the card anyway.
  *
  * @param {{ picker: string, modeId: string } | null | undefined} lastPick
  * @param {string | undefined} questionId
+ * @param {string} [opener]  the room's chosen opening mode; disambiguates the
+ *   opening flag round's pool. Only consulted for an unpicked `flagPick` round.
  * @returns {string | null}  a PARTY_MODES mode id, or null for the generic case
  */
-export function roundModeId(lastPick, questionId) {
+export function roundModeId(lastPick, questionId, opener) {
   if (lastPick && lastPick.modeId && MODE_BY_ID[lastPick.modeId]) return lastPick.modeId;
-  if (questionId === 'flagPick') return null; // ambiguous pool → generic Flags card
+  if (questionId === 'flagPick') {
+    // Both flag pools share `flagPick`, so the opening round (no pick) can't be
+    // told apart from the wire. The opener is that round's mode — use it, but
+    // only when it is itself a flag round, so a mismatch falls back to generic
+    // rather than mislabelling. Unknown opener → generic.
+    const openerMode = opener ? MODE_BY_ID[opener] : null;
+    return openerMode && openerMode.questionId === 'flagPick' ? openerMode.id : null;
+  }
   const mode = PARTY_MODES.find((m) => m.questionId === questionId);
   return mode ? mode.id : null;
 }
@@ -1232,9 +1243,10 @@ export function bootFlagParty() {
   let pickVeil = new Set();
 
   // ---- round title card ----
-  // A short beat (ROUND_INTRO_SECONDS) announcing a new round before its first
-  // question, on rounds 2..N (the opener starts play straight away). It's a
-  // client-side hold: the question is already dealt, but we show the card first
+  // A short beat (ROUND_INTRO_SECONDS) announcing a round before its first
+  // question — every round, the opener included (its card names the host's chosen
+  // opening mode). It's a client-side hold: the question is already dealt, but we
+  // show the card first
   // and only start the question + clock + veil when the beat ends — so it costs no
   // answer time, and because every client (host included) holds the same beat it
   // introduces no clock drift. `roundIntroToken` guards the once-per-round-start
@@ -1987,15 +1999,15 @@ export function bootFlagParty() {
       }
     }
 
-    const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined);
+    const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined, state.opener);
     if (modeId) {
       roundCardIc.innerHTML = roundCardIconHtml(modeId);
       roundCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
       const label = modeFullLabel(modeId);
       roundCardName.textContent = t(label.key || '', label.fallback || '');
     } else {
-      // The one ambiguous case: a custom-setup flag round, whose pool ('countries'
-      // vs 'others') isn't on the wire — announce it generically.
+      // Only reached when the pool is genuinely unknowable — an opening flag round
+      // talking to a server too old to report its opener. Announce generically.
       roundCardIc.innerHTML = deckIconHtml('flags', { className: 'roundcard-thumb' });
       roundCardIc.style.setProperty('--mc', 'currentColor');
       roundCardName.textContent = t('party.modeShort.flagsAll', 'Flags');
