@@ -172,6 +172,99 @@ body {
   transform: scale(1.08);
 }
 
+/* Party preview: a live scoreboard — a room/round chip over three ranked
+ * rows (rank · avatar · name · gain · score), the leader highlighted. It
+ * re-creates the game's own break / final board look (flagParty's
+ * `.scoreline`) as a bespoke, self-contained preview — the same convention
+ * every other tile here follows (`.quiz-preview`, `.ttt-preview` echo their
+ * games without importing the real components, since the game stylesheets
+ * aren't loaded on the home page). The identicon box is the ONE shared piece:
+ * it reuses common.css `.avatar`, resized here. Colours are all site tokens;
+ * pink (`--secondary-color`) marks the leader row and the speed gain, matching
+ * how the game itself paints the winning row and its speed chip. */
+.party-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 250px;
+}
+.party-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.party-room {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.party-round {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary-color);
+}
+.pp-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  font-size: 13px;
+}
+/* The leader row wears the same treatment the game gives the winning row:
+ * the heavier selected-grey fill + a pink border. */
+.pp-row.pp-lead {
+  background: var(--selected-color);
+  border-color: var(--secondary-color);
+}
+.pp-row .avatar {
+  /* Shrink the shared 24px `.avatar` (common.css) to match the row height —
+   * the game resizes it per context the same way (rank-rail 22, picks 20). */
+  width: 22px;
+  height: 22px;
+}
+.pp-rank {
+  width: 14px;
+  color: var(--muted-color);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pp-name {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+/* Pushed to the right edge; the pink echoes the game's speed bonus. Empty on
+ * rows that scored no speed points, so its slot still reserves the gap. */
+.pp-gain {
+  margin-left: auto;
+  min-width: 2ch;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--secondary-color);
+  font-variant-numeric: tabular-nums;
+}
+.pp-score {
+  margin-left: 9px;
+  min-width: 2ch;
+  text-align: right;
+  font-weight: 700;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+
 /* TTT preview: 3×3 grid with two players (pink = secondary, dark =
  * primary) and a winning diagonal highlighted for p1. */
 .ttt-preview {
@@ -313,6 +406,26 @@ body {
     grid-template-columns: repeat(4, 1fr);
     gap: 5px;
   }
+  /* Party: keep all three ranked rows (the leaderboard is the point), but
+   * drop the room/round chip and tighten every gap so the board fits the
+   * 138px mobile tile without pushing it taller than its siblings. The
+   * avatars + scores still carry "several players competing" on their own. */
+  .party-head {
+    display: none;
+  }
+  .party-preview {
+    gap: 4px;
+    max-width: 230px;
+  }
+  .pp-row {
+    gap: 7px;
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+  .pp-row .avatar {
+    width: 18px;
+    height: 18px;
+  }
   .ttt-preview {
     gap: 4px;
     max-width: 110px;
@@ -385,4 +498,10 @@ body {
 .icon-ttt {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");
+}
+/* Flag Party: a "people" glyph — the multiplayer signal that sets this tile
+ * apart from the 60s-Quiz clock (`.icon-quiz`) it used to share. */
+.icon-party {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
 }
