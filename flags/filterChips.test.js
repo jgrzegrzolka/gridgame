@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline, categoryIconEl, renderCategoryLabel, renderCategoryPair } from './filterChips.js';
+import { chipLabelText, buildFilterChip, renderCriteriaInline, renderSpotCriteria, renderMetricLeadInline, renderFlagLeadInline, categoryIconEl, renderCategoryLabel, renderCategoryPair } from './filterChips.js';
 import { emptyFilters } from './flagsFilter.js';
 import { continent, statehood, hasColor, hasMotif, colorCount, hasStripesOnly, population, CHARGE_MOTIFS } from './engine.js';
 
@@ -200,6 +200,30 @@ test('renderCriteriaInline: eu-member is a country fact (no flag glyph); real ch
   const uj = crits.find((/** @type {any} */ c) => c.children.some((/** @type {any} */ k) => k.textContent === 'union-jack'));
   assert.deepEqual(kids(eu), ['crit-label']); // no mark — reads as a country fact
   assert.ok(kids(uj).includes('crit-motif')); // a real charge gets its own motif icon
+});
+
+test('renderSpotCriteria: appends a text-only "not <country>" criterion, NO flag mark', () => {
+  // The flag thumbnail is deliberately absent: showing it would point straight at
+  // the tile to avoid, defeating the recognise-the-flag point of the clause.
+  const f = emptyFilters();
+  f.color.exclude.add('green');
+  f.motif.exclude.add('cross');
+  const frag = /** @type {any} */ (renderSpotCriteria(f, ['fr'], t, fakeDoc()));
+  const crits = frag.children.filter((/** @type {any} */ c) => c.className.split(' ').includes('crit'));
+  assert.equal(crits.length, 3, 'the two colour/motif criteria plus the country one');
+  const country = crits[crits.length - 1];
+  assert.match(country.className, /crit-exclude/);
+  const marks = country.children.map((/** @type {any} */ k) => k.className);
+  assert.deepEqual(marks, ['crit-label'], 'name only — no flag mark, swatch or glyph');
+  assert.equal(country.children[0].textContent, 'not fr', 'spelled out with the country name');
+});
+
+test('renderSpotCriteria: no country codes is just the colour/motif line', () => {
+  const f = emptyFilters();
+  f.color.include.add('red');
+  f.motif.include.add('star-or-moon');
+  const frag = /** @type {any} */ (renderSpotCriteria(f, [], t, fakeDoc()));
+  assert.equal(frag.children.filter((/** @type {any} */ c) => c.className.includes('crit-exclude')).length, 0);
 });
 
 test('renderCriteriaInline: empty filter yields nothing', () => {

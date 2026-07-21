@@ -666,6 +666,8 @@
     "veilChipHint": "Veil this round: the flags start hidden and clear as the clock runs",
     "veilFirstPick": "Covered start",
     "veilFirstPickHint": "Veil the first round: the tiles start hidden and clear as the clock runs",
+    "spotExcludeCountry": "not {c}",
+    "spotRuledOut": "ruled out",
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "roundPick": "{name}'s pick",

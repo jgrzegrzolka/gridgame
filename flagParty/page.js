@@ -14,7 +14,7 @@ import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
 import { clausesFromPrompt, missLabel, filtersFor } from '../flags/partyQuestions/spotFlag.js';
-import { renderCriteriaInline } from '../flags/filterChips.js';
+import { renderSpotCriteria } from '../flags/filterChips.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
@@ -1557,14 +1557,16 @@ export function bootFlagParty() {
       // has to be read against, so removing them at the moment the answer lands
       // would take away the explanation just as it becomes useful.
       //
-      // Rendered through findFlag's own `renderCriteriaInline` — the identical
-      // colour swatch + flag glyph marks the findFlag / daily headers wear, off
-      // the same `filtersFor(clauses)` object — so one criterion reads (and now
-      // looks) identical on every surface, Polish genitive and all. The `criteria`
-      // class drops the 28px target size to a criteria-appropriate 20px so the
-      // line stops competing with the four flags it describes.
+      // Rendered through `renderSpotCriteria`: the colour/motif half wears the
+      // identical swatch + motif marks the findFlag / daily headers use (off the
+      // same `filtersFor` object), and a country rule-out clause adds a "not
+      // France" criterion led by that flag's thumbnail. One criterion reads and
+      // looks the same on every surface, Polish genitive and all. The `criteria`
+      // class drops the 28px target to a criteria-appropriate 20px so the line
+      // stops competing with the four flags it describes.
       promptEl.classList.add('criteria');
-      promptTarget.replaceChildren(renderCriteriaInline(filtersFor(spotClauses || []), t));
+      const spotCountryCodes = (spotClauses || []).filter((c) => c.group === 'country').map((c) => c.value);
+      promptTarget.replaceChildren(renderSpotCriteria(filtersFor(spotClauses || []), spotCountryCodes, t));
     } else {
       const targetCode = isReveal && state.reveal ? state.reveal.answer : q.prompt;
       const country = byCode.get(targetCode);
