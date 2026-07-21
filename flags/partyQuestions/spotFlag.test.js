@@ -160,6 +160,32 @@ test('generate: an ambiguous colour is never a clause about that flag', () => {
   }
 });
 
+test('a flag whose colour is COA/additional never satisfies "not that colour" (Brazil regression)', () => {
+  // The reported bug: "x · y · not white" was dealt with Brazil as the answer.
+  // Brazil's white (the "Ordem e Progresso" band and its 27 stars) lives in
+  // additionalColors, so under the primaryColors view it vanished and "not white"
+  // wrongly passed -- but the flag plainly HAS white, so calling it "not white" is
+  // false. Excludes now consult the full palette, so Brazil can never answer a
+  // white-exclusion spec, while an include still ignores the same additional white.
+  const br = at('br');
+  assert.ok(br.colors.includes('white'), 'guards the premise: Brazil has white somewhere');
+  assert.ok(!br.primaryColors.includes('white'), 'guards the premise: its white is additional-only');
+
+  const excludeWhite = filtersFor([{ group: 'color', value: 'white', sign: 'exclude' }]);
+  assert.equal(
+    matchesFilters(br, excludeWhite, PRIMARY), false,
+    'Brazil must FAIL a "not white" clause -- it has white, additional or not',
+  );
+
+  // The asymmetry still holds the other way: an include of that additional-only
+  // white keeps ignoring it, so we never DEMAND a colour hidden at thumbnail size.
+  const includeWhite = filtersFor([{ group: 'color', value: 'white', sign: 'include' }]);
+  assert.equal(
+    matchesFilters(br, includeWhite, PRIMARY), false,
+    'Brazil must not satisfy "has white" under the room-readable view',
+  );
+});
+
 test('generate: honours the used-answers exclusion', () => {
   const rng = seeded(9);
   const first = generate(POOL, undefined, rng);
