@@ -158,6 +158,31 @@ test('matchesFilters: colorField "primaryColors" reads only the primaryColors bu
   );
 });
 
+test('matchesFilters: EXCLUDE always consults the full palette, even under primaryColors', () => {
+  // The colorField asymmetry: you must not DEMAND a colour the player cannot see,
+  // but you also must not DENY one that is genuinely there. Portugal has yellow
+  // (in its COA); an "additional-only" colour is still a real colour on the cloth.
+  // So "no yellow" must REJECT Portugal under both modes — claiming a flag is
+  // "not yellow" when yellow is present is simply false, regardless of how the
+  // data splits primary vs additional. Include stays colorField-aware (above);
+  // exclude never is.
+  const portugal = country({
+    code: 'pt',
+    primaryColors: ['green', 'red'],
+    additionalColors: ['yellow', 'blue', 'white'],
+  });
+  assert.equal(matchesFilters(portugal, filters({ color: { exclude: ['yellow'] } })), false);
+  assert.equal(
+    matchesFilters(portugal, filters({ color: { exclude: ['yellow'] } }), { colorField: 'primaryColors' }),
+    false,
+  );
+  // A colour absent everywhere is still a clean exclude under both modes.
+  assert.equal(
+    matchesFilters(portugal, filters({ color: { exclude: ['black'] } }), { colorField: 'primaryColors' }),
+    true,
+  );
+});
+
 test('matchesFilters: a flag with no additionalColors matches the same set under colors and primaryColors', () => {
   // Plain tricolours (no COA, no emblem) have additionalColors empty, so the
   // union equals primaryColors and both colorFields resolve identically.

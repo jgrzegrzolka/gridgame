@@ -403,7 +403,7 @@ export function createColorCountLock(filter) {
  * equal one of them. For array groups (colors, motifs) AND means the
  * country's array must contain every selected value.
  *
- * `colorField` picks which color list to match against:
+ * `colorField` picks which color list a color *include* matches against:
  *   - `'colors'` (default) — every color visible anywhere on the flag,
  *     including small emblem details. Used by findFlag's "browse" UI
  *     where the player can examine the flag up close. Resolves to the
@@ -412,6 +412,10 @@ export function createColorCountLock(filter) {
  *     (drops COA-only colors). Used by the daily-puzzle generator so
  *     "European flags with green" doesn't include Portugal-style flags
  *     where green only appears inside the coat of arms.
+ *
+ * Color *excludes* ignore `colorField` and always read the full palette:
+ * "not green" must reject a flag with green anywhere, since the flag really
+ * has green and calling it "not green" is false. See the exclude line below.
  *
  * @param {import('./group.js').Country} country
  * @param {Filters} filters
@@ -433,7 +437,14 @@ export function matchesFilters(country, filters, options = {}) {
   for (const c of filters.color.include) {
     if (!colors.includes(c)) return false;
   }
-  if (filters.color.exclude.size && colors.some((c) => filters.color.exclude.has(c))) return false;
+  // Exclusions always consult the FULL palette, never the colorField view. The
+  // asymmetry is deliberate: an include ("has yellow") reads the room-visible
+  // `primaryColors` so we never DEMAND a colour hidden in a crest — but an
+  // exclude ("not yellow") must fail for a flag that has yellow ANYWHERE, even
+  // as a COA / additional detail, because the flag genuinely has yellow and
+  // calling it "not yellow" is false. (In default `colors` mode this line is a
+  // no-op change: `colors === country.colors` already.)
+  if (filters.color.exclude.size && country.colors.some((c) => filters.color.exclude.has(c))) return false;
 
   // colorCount always checks the full palette (c.colors = primary + additional
   // union), not the colorField-selected view. Semantic: "the flag has N visible
