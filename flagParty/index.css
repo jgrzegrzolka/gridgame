@@ -226,6 +226,13 @@
 .prompt.superlative .prompt-lead { display: inline-flex; color: var(--mc); }
 .prompt.superlative .prompt-lead svg { width: 18px; height: 18px; }
 .prompt.superlative .prompt-target { font-size: 18px; }
+/* Spot-the-flag states a criteria line ("yellow · white · star or moon") rather
+   than a single country name, rendered with the same swatch / glyph marks as the
+   findFlag header (renderCriteriaInline). Like the superlative phrase above it
+   drops from the 28px name size — to 20px here — so the criteria stop competing
+   with the four flags they describe. The marks themselves are styled globally in
+   common.css (`.crit`, `.crit-sep`, swatch/glyph), shared with findFlag + daily. */
+.prompt.criteria .prompt-target { font-size: 20px; line-height: 1.35; }
 
 /* The chart's scale, under the title: "medals · 2026", "km² · 2022". Four bare
    numbers and four bars are unreadable without it -- "8" says nothing until you

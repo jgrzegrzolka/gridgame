@@ -941,6 +941,16 @@ body::after {
   width: 100%;
   height: 100%;
 }
+/* One criterion = one `.crit` span; `.crit-sep` is the muted middot between them,
+ * kept nowrap so a criterion never breaks across lines mid-phrase. Unscoped (not
+ * under `.find-cat`) because three surfaces render these through
+ * `renderCriteriaInline`: the findFlag + daily play-screen headers and the Flag
+ * Party spot-the-flag prompt. Same mechanism = same code, in one place. */
+.crit { white-space: nowrap; }
+.crit-sep { color: var(--muted-color); margin: 0 0.4em; font-weight: 400; }
+/* The colour swatch needs a small gap before its word when inline; the boxed
+ * `.pill` / `.filter-chip` get this from their flex gap instead. */
+.crit .pill-swatch { margin-right: 0.3em; }
 
 /* Applied-filter chip — ONE component, three consumers: flagsdata's filter bar
  * (interactive, with a removal ×), and the findFlag + daily play-screen criteria
