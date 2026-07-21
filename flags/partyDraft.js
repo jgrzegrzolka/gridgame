@@ -70,8 +70,8 @@ export const DEFAULT_GAME_LENGTH = 'medium';
 /** @type {Record<GameLength, Record<number, number>>} */
 const LENGTH_ROUNDS = {
   short:  { 2: 5,  3: 4,  4: 5,  5: 6,  6: 7  },
-  medium: { 2: 11, 3: 10, 4: 9,  5: 11, 6: 13 },
-  long:   { 2: 17, 3: 16, 4: 17, 5: 16, 6: 19 },
+  medium: { 2: 7,  3: 7,  4: 9,  5: 11, 6: 13 },
+  long:   { 2: 11, 3: 13, 4: 13, 5: 16, 6: 19 },
 };
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
