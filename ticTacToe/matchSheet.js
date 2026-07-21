@@ -59,7 +59,11 @@ export function openMatchSheet(ctx) {
   // Sort by the localized name so the set is scannable; the pure helper returns
   // source order, sorting is a display concern that belongs to the glue.
   const matches = matchingCountriesForCell(puzzle, row, col, countries)
-    .slice()
+    // Drop flags whose colour count is genuinely contested for this cell. The
+    // lenient predicate includes them, but the picker disabled them as
+    // "ambiguous" — they were never allowed picks, so this after-game "answers"
+    // list must not present them as valid ones.
+    .filter((country) => !colorCountAmbiguity([rowCat, colCat], country))
     .sort((a, b) => countryName(a).localeCompare(countryName(b)));
 
   dialogEl.setAttribute('aria-label', `${rowLabel} × ${colLabel}`);
@@ -91,17 +95,6 @@ export function openMatchSheet(ctx) {
     li.className = 'flag-tile';
     const name = countryName(country);
     li.dataset.name = name; // renders the hover name-strip via .flag-tile::after
-    // A flag whose colour count is genuinely contested for this exact-count cell
-    // (the picker disabled it as "ambiguous"). It still fits under the lenient
-    // predicate, so keep it in the list but badge it — consistent with the pick
-    // having been blocked, and it teaches why the flag is borderline.
-    if (colorCountAmbiguity([rowCat, colCat], country)) {
-      li.classList.add('is-ambiguous');
-      const badge = document.createElement('span');
-      badge.className = 'match-ambiguous';
-      badge.textContent = t('ttt.ambiguous', 'ambiguous');
-      li.appendChild(badge);
-    }
     const img = document.createElement('img');
     img.src = `${svgBase}${country.code}.svg`;
     img.alt = name;

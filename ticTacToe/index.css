@@ -517,24 +517,6 @@ body.picker-open {
 .match-grid .flag-tile::after {
   opacity: 1;
 }
-/* An answer whose colour count is genuinely contested for this exact-count cell
- * (the same flags the picker blocked as "ambiguous"). Badge it top-left with the
- * same dark-strip-over-flag treatment the name strip uses (the documented rgba
- * exception for text over a flag image), so it reads as a note on the flag
- * without introducing a new colour. */
-.match-grid .flag-tile.is-ambiguous .match-ambiguous {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  background: rgba(28, 28, 28, 0.85);
-  color: var(--surface-color);
-  padding: 2px 4px;
-  font-size: 10px;
-  font-style: italic;
-  border-bottom-right-radius: 4px;
-  pointer-events: none;
-}
 
 /* ---- Advanced mode block in the "How to play" dialog ----
  * The `?` dialog is the one surface with room to say what Advanced mode
