@@ -3,7 +3,7 @@ import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
-import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp, newlyClaimedCells, boardIsUntouched } from '../../flags/ticTacToe.js';
+import { newSoloGame, attemptSoloClaim, isSoloOver, applySoloGiveUp, newlyClaimedCells, boardIsUntouched, cellTapAction } from '../../flags/ticTacToe.js';
 import { isTttAdvanced } from '../../flags/tttSettings.js';
 import { wireAdvancedToggle } from '../advancedToggle.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
@@ -138,20 +138,23 @@ function runSolo({ puzzle, countries }) {
   /** @param {number} row @param {number} col */
   function onCellActivate(row, col) {
     const cell = state.cells[row][col];
-    // A give-up reveal cell opens the "all matches" sheet (the example flag is
-    // one of many); a player-claimed cell still zooms the single flag.
-    if (cell.revealed) {
+    // Shared dispatch (flags/ticTacToe.js): a give-up reveal cell opens the "all
+    // matches" sheet (the example flag is one of many); a player-claimed cell
+    // zooms its single flag. Solo has no empty cell once over (a solve fills the
+    // board, a give-up reveals it), so the empty→'matches' branch never fires
+    // here — the shared helper still keeps the dispatch identical across boards.
+    const action = cellTapAction(cell, isSoloOver(state));
+    if (action === 'matches') {
       openMatchSheet({
         dialogEl: matchesEl, puzzle, row, col, countries,
         svgBase: '../../flags/svg/', t, countryName, tCat,
       });
       return;
     }
-    if (cell.country) {
+    if (action === 'zoom') {
       openZoom(cell.country);
       return;
     }
-    if (isSoloOver(state)) return;
     openPicker(row, col);
   }
 

@@ -6,6 +6,23 @@
 // this module's existing callers — ticTacToe/page.js — keep
 // importing them from './onlineClient.js' unchanged.
 export { ROOM_ALPHABET, ROOM_LEN, generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
+import { rehydratePuzzle } from '../flags/onlineRoom.js';
+
+/**
+ * Restore predicates on a received game's puzzle. The server's live categories
+ * carry `.predicate` functions, but JSON over the WebSocket drops them, so a
+ * game straight off the wire has `{ id, label }`-only categories — enough to
+ * render headers, but `matchingCountriesForCell` (the match sheet) throws on the
+ * missing predicate. Rehydrate here, once on receive, so `state.game.puzzle`
+ * behaves like the offline/solo puzzles do. No-op on a game without a puzzle.
+ *
+ * @param {any} game
+ * @returns {any}
+ */
+function withRehydratedPuzzle(game) {
+  if (!game || !game.puzzle) return game;
+  return { ...game, puzzle: rehydratePuzzle(game.puzzle) };
+}
 
 /**
  * Reject-reason payload: an i18n key + English fallback, plus optional
@@ -104,7 +121,7 @@ export function reduceServerMessage(state, message) {
         state: {
           ...state,
           myRole: message.you,
-          game: message.game,
+          game: withRehydratedPuzzle(message.game),
           peerPresent: message.peerPresent,
           peerId: typeof message.peerId === 'string' ? message.peerId : null,
           advanced: message.advanced === true,
@@ -139,7 +156,7 @@ export function reduceServerMessage(state, message) {
         effects.push({ type: 'finished' });
       }
       const advanced = message.kind === 'advanced-changed' ? message.advanced === true : state.advanced;
-      return { state: { ...state, game: message.game, advanced }, effects };
+      return { state: { ...state, game: withRehydratedPuzzle(message.game), advanced }, effects };
     }
     case 'peer-joined': {
       // peerId arrives on the first peer-joined (when the room learns who

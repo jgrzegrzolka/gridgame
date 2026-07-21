@@ -3,7 +3,7 @@ import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
 import { metricDataGap } from '../../flags/metricTiers.js';
-import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells, newlyClaimedCells, boardIsUntouched } from '../../flags/ticTacToe.js';
+import { newGame, attemptClaim, isGameOver, applyGiveUp, shouldFireTicTacToeConfetti, newlyWinningCells, newlyClaimedCells, boardIsUntouched, cellTapAction } from '../../flags/ticTacToe.js';
 import { isTttAdvanced } from '../../flags/tttSettings.js';
 import { wireAdvancedToggle } from '../advancedToggle.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../../i18n.js';
@@ -157,20 +157,21 @@ function runTicTacToe({ puzzle, countries }) {
   /** @param {number} row @param {number} col */
   function onCellActivate(row, col) {
     const cell = state.cells[row][col];
-    // A give-up reveal cell opens the "all matches" sheet (the example flag is
-    // one of many); a player-claimed cell still zooms the single flag.
-    if (cell.revealed) {
+    // Shared dispatch (flags/ticTacToe.js): a give-up reveal cell OR any empty
+    // cell once the game is over opens the "all matches" sheet (a win leaves
+    // cells blank); a player-claimed cell zooms its single flag.
+    const action = cellTapAction(cell, isGameOver(state));
+    if (action === 'matches') {
       openMatchSheet({
         dialogEl: matchesEl, puzzle, row, col, countries,
         svgBase: '../../flags/svg/', t, countryName, tCat,
       });
       return;
     }
-    if (cell.country) {
+    if (action === 'zoom') {
       openZoom(cell.country);
       return;
     }
-    if (isGameOver(state)) return;
     openPicker(row, col);
   }
 

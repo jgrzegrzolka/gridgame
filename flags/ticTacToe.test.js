@@ -15,6 +15,7 @@ import {
   isSoloOver,
   applySoloGiveUp,
   matchingCountriesForCell,
+  cellTapAction,
   boardIsUntouched,
 } from './ticTacToe.js';
 import { createCountry } from './group.js';
@@ -560,6 +561,24 @@ test('matchingCountriesForCell returns [] when no country fits the intersection'
   // drop it and the intersection is empty.
   const pool = [FR, DE, IT, JP, KR, PK, KE, NG];
   assert.deepEqual(matchingCountriesForCell(PUZZLE, 2, 1, pool), []);
+});
+
+test('cellTapAction: a give-up reveal cell always opens the all-matches sheet', () => {
+  assert.equal(cellTapAction({ revealed: true }, false), 'matches');
+  assert.equal(cellTapAction({ revealed: true, country: FR }, true), 'matches');
+});
+
+test('cellTapAction: a claimed cell zooms its single flag, over or not', () => {
+  assert.equal(cellTapAction({ country: FR }, false), 'zoom');
+  assert.equal(cellTapAction({ country: FR }, true), 'zoom');
+});
+
+test('cellTapAction: an empty cell is playable while live, opens the sheet once over', () => {
+  // The bug this fixes: a win ends the board with cells still blank (unlike a
+  // give-up, which fills them). Before, tapping those did nothing; now they
+  // disclose what would have fit, matching the give-up reveal.
+  assert.equal(cellTapAction({}, false), 'play');
+  assert.equal(cellTapAction({}, true), 'matches');
 });
 
 test('boardIsUntouched: true for a fresh two-player and a fresh solo board', () => {
