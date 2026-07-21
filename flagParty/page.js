@@ -445,6 +445,7 @@ export function bootFlagParty() {
   const roundCardRing = $('roundcard-ring-fill');
   const roundCardName = $('roundcard-name');
   const roundCardPick = $('roundcard-pick');
+  const lobbySetupEl = $('lobby-setup');
   const draftLengthEl = $('draft-length');
   const draftLengthGroup = $('draft-length-group');
   const draftLengthHint = $('draft-length-hint');
@@ -458,7 +459,8 @@ export function bootFlagParty() {
   }
   const draftFirstPickEl = $('draft-first-pick');
   const draftFirstPickGroup = $('draft-first-pick-group');
-  const draftFirstPickVeil = /** @type {HTMLButtonElement} */ ($('draft-first-pick-veil'));
+  const draftFirstPickVeil = /** @type {HTMLInputElement} */ ($('draft-first-pick-veil'));
+  const draftFirstPickVeilLabel = /** @type {HTMLElement} */ (draftFirstPickVeil.closest('.scope-toggle'));
   const draftFirstPickBtns = /** @type {HTMLButtonElement[]} */ (
     [...draftFirstPickEl.querySelectorAll('.dl-pick')]);
   // Each firstPick segment wears its own mode's artwork, so the row is recognisable
@@ -731,12 +733,13 @@ export function bootFlagParty() {
    */
   function syncDraftFirstPick() {
     paintRadioGroup(draftFirstPickBtns, draftFirstPickGroup, 'firstPick', currentFirstPick(), state.isHost);
-    // The veil toggle: shown to everyone in the lobby (guests read it, like the
-    // firstPick buttons), but only the host may press it. Hidden entirely off the
-    // lobby. `disabled` for guests matches how the radiogroup treats them.
-    draftFirstPickVeil.hidden = false;
+    // The veil switch: shown to everyone in the lobby (guests read it, like the
+    // firstPick buttons), but only the host may flip it. A guest's copy wears the
+    // shared read-only treatment (`.is-disabled`) and a truly-disabled checkbox, so
+    // it reports its value the same way the radiogroup reports the host's choice.
+    draftFirstPickVeilLabel.classList.toggle('is-disabled', !state.isHost);
     draftFirstPickVeil.disabled = !state.isHost;
-    draftFirstPickVeil.setAttribute('aria-pressed', String(currentFirstPickVeil()));
+    draftFirstPickVeil.checked = currentFirstPickVeil();
   }
 
   /**
@@ -1476,14 +1479,12 @@ export function bootFlagParty() {
     // greys out the impossible empty-roster case.
     startBtn.disabled = state.roster.filter((r) => r.present).length < 1;
     waitEl.hidden = !(!state.isHost && inLobby);
-    // Everyone in the lobby sees the length, not just the host — it decides how
-    // long they are staying, so it is something to be told rather than something
-    // to be surprised by. `syncDraftLength` disables it for guests.
-    draftLengthEl.hidden = !inLobby;
+    // The whole setup card shows to everyone in the lobby, not just the host — the
+    // length decides how long they are staying and the first round is what they
+    // play first, so both are things to be told rather than surprised by.
+    // `syncDraftLength` / `syncDraftFirstPick` disable the controls for guests.
+    lobbySetupEl.hidden = !inLobby;
     syncDraftLength();
-    // The first round is shown to everyone for the same reason as the length:
-    // it is the first thing they will play, so being told beats being surprised.
-    draftFirstPickEl.hidden = !inLobby;
     syncDraftFirstPick();
     seedHostSettings();
   }
@@ -2430,7 +2431,7 @@ export function bootFlagParty() {
     const next = nextRadioId(ids, currentFirstPick(), e.key);
     if (next) setFirstPick(next, true);
   });
-  draftFirstPickVeil.addEventListener('click', () => setFirstPickVeil(!currentFirstPickVeil()));
+  draftFirstPickVeil.addEventListener('change', () => setFirstPickVeil(draftFirstPickVeil.checked));
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
     // plan (the server builds the first round from the host's chosen firstPick and

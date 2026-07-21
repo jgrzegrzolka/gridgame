@@ -70,7 +70,7 @@ test('PARTY_MODES: every DEFAULT_PLAN segment maps to a catalog mode', () => {
 // ---- grouped setup: picture trio vs the world-metric family ----
 
 test('PARTY_MODES: split into the fixed picture group and the metric family', () => {
-  assert.deepEqual(PICTURE_MODES.map((m) => m.id), ['flags-all', 'flags-weird', 'map-outlines', 'spot-flag']);
+  assert.deepEqual(PICTURE_MODES.map((m) => m.id), ['flags-all', 'flags-weird', 'spot-flag', 'map-outlines']);
   assert.deepEqual(METRIC_MODES.map((m) => m.id), ['superlative-pop', 'superlative-area', 'superlative-density', 'superlative-gdp', 'superlative-gdppc', 'superlative-coffee', 'superlative-wine', 'superlative-cocoa', 'superlative-banana', 'superlative-apple', 'superlative-elevation', 'superlative-coastline', 'superlative-forest', 'superlative-oil', 'superlative-rice', 'superlative-coal', 'superlative-sheep', 'superlative-cattle', 'superlative-beer', 'superlative-tea', 'superlative-sugarcane', 'superlative-gold', 'superlative-alcohol', 'superlative-meat', 'superlative-borders', 'superlative-olive-oil', 'superlative-honey', 'superlative-temperature', 'superlative-happiness', 'superlative-corruption', 'superlative-tourism', 'superlative-electricity', 'superlative-mcdonalds', 'superlative-nobel', 'superlative-nobel-pc', 'superlative-summer-medals', 'superlative-summer-medals-pc', 'superlative-winter-medals', 'superlative-winter-medals-pc']);
   for (const m of PICTURE_MODES) assert.equal(m.group, 'picture');
   for (const m of METRIC_MODES) assert.equal(m.group, 'metric');

@@ -184,8 +184,11 @@ export function questionIdAt(plan, index) {
 export const PARTY_MODES = [
   { id: 'flags-all', questionId: 'flagPick', poolId: 'sovereign', group: 'picture' },
   { id: 'flags-weird', questionId: 'flagPick', poolId: 'nonSovereign', group: 'picture' },
-  { id: 'map-outlines', questionId: 'mapPick', poolId: 'sovereign', group: 'picture' },
   { id: 'spot-flag', questionId: 'spotFlag', poolId: 'sovereign', group: 'picture' },
+  // Maps last in catalog order, so it sits last in the lobby's first-round row and
+  // last among the picture cards in a draft hand — the map outline is the odd one
+  // out of the picture modes (a contour, not a flag), so it reads as the tail.
+  { id: 'map-outlines', questionId: 'mapPick', poolId: 'sovereign', group: 'picture' },
   { id: 'superlative-pop', questionId: 'superlative', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-area', questionId: 'superlative-area', poolId: 'sovereign', group: 'metric' },
   { id: 'superlative-density', questionId: 'superlative-density', poolId: 'sovereign', group: 'metric' },
