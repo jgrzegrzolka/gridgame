@@ -90,8 +90,23 @@ test('roundModeId: a custom round derives the mode from the question id', () => 
   assert.equal(roundModeId(null, 'superlative'), 'superlative-pop');
 });
 
-test('roundModeId: an unpicked flag round is generic (the two pools share one question id)', () => {
+test('roundModeId: an unpicked flag round is generic when the opener is unknown', () => {
+  // Old server / never-told opener: the two pools share `flagPick`, so with
+  // nothing else to go on the round card announces generically.
   assert.equal(roundModeId(null, 'flagPick'), null);
+  assert.equal(roundModeId(null, 'flagPick', undefined), null);
+});
+
+test('roundModeId: the opening round resolves its flag pool from the room opener', () => {
+  // The opener carries no lastPick and both flag pools share `flagPick`; the
+  // host's chosen opener is what tells "Weird flags" from "Flags: countries",
+  // so a weird opener stops rendering the generic sovereign-Flags card.
+  assert.equal(roundModeId(null, 'flagPick', 'flags-weird'), 'flags-weird');
+  assert.equal(roundModeId(null, 'flagPick', 'flags-all'), 'flags-all');
+  // A non-flag opener never gets pinned onto a flag round (defensive: the two
+  // can't co-occur, but a mismatch must fall back to generic, not mislabel).
+  assert.equal(roundModeId(null, 'flagPick', 'map-outlines'), null);
+  assert.equal(roundModeId(null, 'flagPick', 'no-such-mode'), null);
 });
 
 test('roundModeId: an unknown / missing question id is generic', () => {
