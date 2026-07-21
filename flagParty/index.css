@@ -685,32 +685,61 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    (surface) and the two still available are darker (hover). Selecting by taking
    colour away rather than adding it keeps the accent free for the start button,
    which should stay the loudest thing in the lobby. */
+/* The host's game-setup card: the two setup fields (first round + length) grouped
+   in one bordered panel so they read as one thing, not two look-alike segmented
+   strips. No heading — each field's own label names it (see `.dl-fieldhead`). */
+.lobby-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 14px;
+  background: var(--surface-color);
+  padding: 14px;
+}
+/* `.lobby-setup` sets `display: flex`, which outweighs the UA `[hidden]` rule, so
+   the card would still show when `hidden`. Spell out the hide (same trap as
+   `.pick-hand[hidden]` below). */
+.lobby-setup[hidden] { display: none; }
+/* Each field's header line: label on the left, its companion on the right — the
+   veil switch for the first round, the rounds summary for the length. The two
+   rows share this shape so the card reads as one tidy panel. */
+.dl-fieldhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+}
 .draft-length {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 .draft-length[hidden] { display: none; }
-/* Centred under the control it describes, and a step quieter than the segment
-   labels so it reads as the consequence of the choice rather than part of it. */
+/* Right-aligned on the length field's header line, opposite its label. Deliberately
+   the SAME size / weight / colour as the veil switch's label on the first-round
+   header row (`.veil-toggle` → `.scope-toggle` text: 12px, primary), so the two
+   header rows read as a matched pair rather than one loud and one faint. */
 .dl-hint {
-  font-size: 11.5px;
-  color: var(--muted-color);
+  font-size: 12px;
+  color: var(--primary-color);
   line-height: 1.4;
-  text-align: center;
+  text-align: right;
 }
-/* The first-round row's heading. The length control needs no heading (its three
-   labels say what it is), but once two segmented rows sit on top of each other
-   neither one's labels identify it any more. Muted and small so it names the
-   control without competing with the room code or the start button. */
+/* Each field's heading, on the left of its `.dl-fieldhead` row. Muted and small so
+   it names the control without competing with the room code or the start button. */
 .dl-group-label {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--muted-color);
-  text-align: center;
 }
+/* The veil switch is the shared `.scope-toggle` (common.css). Only tweak: sit it
+   compactly on the header row — a hair smaller and a tighter gap than the burger's
+   full-width menu row, so it balances the 11px uppercase field label beside it. */
+.veil-toggle { font-size: 12px; gap: 8px; }
 .dl-step {
   display: flex;
   border: 1px solid var(--muted-soft-color);
@@ -759,37 +788,6 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 
 @media (prefers-reduced-motion: reduce) {
   .dl-pick { transition: none; }
-}
-
-/* The first-round veil toggle: a single centred pill under the first-round row.
-   Same "armed = selected grey + accent border + accent glyph" treatment as the
-   pick-card veil chip (`.pick-card-veil[aria-pressed='true']`), so the two veil
-   controls read as the same mechanic. Not a `.dl-pick`: it is a toggle, not a
-   member of the radiogroup, so it must not borrow the segmented look. */
-.first-pick-veil {
-  align-self: center;
-  margin-top: 8px;
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--muted-soft-color);
-  background: var(--surface-color);
-  color: var(--muted-color);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.first-pick-veil:hover:not(:disabled) { background: var(--hover-color); border-color: var(--secondary-color); }
-.first-pick-veil:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
-.first-pick-veil:disabled { cursor: default; }
-.first-pick-veil[aria-pressed='true'] {
-  background: var(--selected-color);
-  border-color: var(--secondary-color);
-  color: var(--secondary-color);
 }
 
 /* ---- draft: the pick screen (no countdown — picking isn't a race) ---- */
