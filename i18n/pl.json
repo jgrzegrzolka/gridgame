@@ -666,6 +666,8 @@
     "veilChipHint": "Zasłoń tę rundę: flagi zaczynają ukryte i wyostrzają się z upływem czasu",
     "veilFirstPick": "Zakryty start",
     "veilFirstPickHint": "Zasłoń pierwszą rundę: kafelki zaczynają ukryte i wyostrzają się z upływem czasu",
+    "spotExcludeCountry": "nie {c}",
+    "spotRuledOut": "wykluczono",
     "isChoosing": "{name} wybiera…",
     "aPlayer": "Gracz",
     "roundPick": "wybór: {name}",

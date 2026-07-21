@@ -348,6 +348,49 @@ export function renderCriteriaInline(filters, t, doc = document) {
   return frag;
 }
 
+/** The muted middot between two criteria. @param {Document} doc */
+function critSepEl(doc) {
+  const sep = doc.createElement('span');
+  sep.className = 'crit-sep';
+  sep.textContent = '·';
+  return sep;
+}
+
+/**
+ * Criteria header for a Flag Party spot-the-flag spec: the colour/motif half through
+ * {@link renderCriteriaInline} (identical swatch / motif marks to every other
+ * criteria surface), then a text-only "not <country>" criterion per country rule-out
+ * clause. Country clauses are spot-only and are NOT a Filters group, so they arrive
+ * as bare codes rather than inside `filters`.
+ *
+ * **No flag mark, deliberately.** A thumbnail beside "not France" would hand the room
+ * the exact tile to avoid, and the whole point of the clause is that you must
+ * RECOGNISE the flag among the four yourself — it renders like a country fact
+ * (continent / statehood), name only.
+ *
+ * @param {Filters} filters  the colour/motif half of the spec
+ * @param {string[]} countryCodes  countries to rule out, rendered "not <name>"
+ * @param {(key: string, fallback: string) => string} t
+ * @param {Document} [doc]
+ * @returns {DocumentFragment}
+ */
+export function renderSpotCriteria(filters, countryCodes, t, doc = document) {
+  const frag = renderCriteriaInline(filters, t, doc);
+  for (const code of countryCodes) {
+    if (frag.children.length) frag.appendChild(critSepEl(doc));
+    const crit = doc.createElement('span');
+    crit.className = 'crit crit-exclude';
+    const label = doc.createElement('span');
+    label.className = 'crit-label';
+    // Spelled out in ink like every other exclude ("not France" / "nie Francja"),
+    // with the country's own name from the shared `country.<code>` i18n keys.
+    label.textContent = t('party.spotExcludeCountry', 'not {c}').replace('{c}', t(`country.${code}`, code));
+    crit.appendChild(label);
+    frag.appendChild(crit);
+  }
+  return frag;
+}
+
 /**
  * Inline criteria header for a SUPERLATIVE puzzle — the ranking metric's
  * hue-tinted icon leading the hand-written title. A superlative ranks by a

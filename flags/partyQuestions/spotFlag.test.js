@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import { loadCountries } from '../group.js';
 import { sovereignPool } from '../flagPools.js';
 import {
-  generate, isCorrect, buildPuzzle, randomSpec, filtersFor, failingClause,
-  clausesFromPrompt, isSpottable, SPOT_COLORS, SPOT_MOTIFS, SPOT_CLAUSES,
-  missLabel, spotTitle,
+  generate, isCorrect, buildPuzzle, buildCountryPuzzle, randomSpec, filtersFor, failingClause,
+  clausesFromPrompt, serializeSpec, matchesSpec, isSpottable, SPOT_COLORS, SPOT_MOTIFS, SPOT_CLAUSES,
+  COUNTRY_DECOYS, FORCE_COUNTRY_RATE, missLabel, spotTitle,
 } from './spotFlag.js';
 import { matchesFilters } from '../flagsFilter.js';
 
@@ -49,8 +49,8 @@ test('generate: exactly one option satisfies the whole spec', () => {
   const rng = seeded(1);
   for (let i = 0; i < 300; i += 1) {
     const q = generate(POOL, undefined, rng);
-    const all = filtersFor(clausesOf(q.prompt));
-    const matching = q.options.filter((code) => matchesFilters(at(code), all, PRIMARY));
+    const clauses = clausesOf(q.prompt);
+    const matching = q.options.filter((code) => matchesSpec(at(code), clauses));
     assert.deepEqual(matching, [q.answer],
       `exactly one match, and it is the answer (spec ${q.prompt}, options ${q.options})`);
   }
@@ -66,7 +66,7 @@ test('generate: each wrong flag fails exactly one clause, all different', () => 
     const wrong = q.options.filter((c) => c !== q.answer);
     const failed = wrong.map((code) => {
       const c = at(code);
-      const misses = clauses.filter((cl) => !matchesFilters(c, filtersFor([cl]), PRIMARY));
+      const misses = clauses.filter((cl) => !matchesSpec(c, [cl]));
       assert.equal(misses.length, 1, `${code} should fail exactly one clause of ${q.prompt}`);
       return `${misses[0].sign}:${misses[0].group}:${misses[0].value}`;
     });
@@ -248,7 +248,8 @@ test('generate: the vocabulary stays inside what the client can label', () => {
   for (let i = 0; i < 300; i += 1) {
     const clauses = clausesOf(generate(POOL, undefined, rng).prompt);
     for (const cl of clauses) {
-      const known = cl.group === 'color' ? SPOT_COLORS : SPOT_MOTIFS;
+      const known = cl.group === 'color' ? SPOT_COLORS
+        : cl.group === 'motif' ? SPOT_MOTIFS : COUNTRY_DECOYS;
       assert.ok(known.includes(cl.value), `${cl.value} is outside the vocabulary`);
     }
   }
@@ -288,8 +289,92 @@ test('failingClause: names the clause a flag misses, null when it satisfies all'
   for (const code of q.options.filter((c) => c !== q.answer)) {
     const miss = failingClause(at(code), clauses);
     assert.ok(miss, `${code} should fail something`);
-    assert.ok(!matchesFilters(at(code), filtersFor([miss]), PRIMARY));
+    assert.ok(!matchesSpec(at(code), [miss]));
   }
+});
+
+// ---- country rule-out clauses ----
+
+test('COUNTRY_DECOYS: every entry is a spottable flag in the pool, no duplicates', () => {
+  for (const code of COUNTRY_DECOYS) {
+    const c = byCode.get(code);
+    assert.ok(c, `decoy ${code} is not in the sovereign pool`);
+    assert.ok(isSpottable(c), `decoy ${code} carries a coat of arms — it can never be a tile`);
+  }
+  assert.equal(new Set(COUNTRY_DECOYS).size, COUNTRY_DECOYS.length, 'no duplicate decoys');
+});
+
+test('generate: forces a country rule-out clause about half the time', () => {
+  const rng = seeded(21);
+  const N = 2000;
+  let country = 0;
+  for (let i = 0; i < N; i += 1) {
+    if (clausesOf(generate(POOL, undefined, rng).prompt).some((c) => c.group === 'country')) country += 1;
+  }
+  const rate = country / N;
+  assert.ok(rate > 0.4 && rate < 0.6,
+    `country rate ${rate.toFixed(2)} should sit near FORCE_COUNTRY_RATE (${FORCE_COUNTRY_RATE})`);
+});
+
+test('buildCountryPuzzle: the decoy clears every visible clause and loses only to the rule', () => {
+  const rng = seeded(22);
+  let built = 0;
+  for (let i = 0; i < 500; i += 1) {
+    const p = buildCountryPuzzle(POOL, rng);
+    if (!p) continue;
+    built += 1;
+    const country = p.clauses.find((c) => c.group === 'country');
+    assert.ok(country, 'a country puzzle carries a country clause');
+    const codes = [p.answer.code, ...p.distractors.map((c) => c.code)];
+    assert.ok(codes.includes(country.value), 'the decoy country sits as a tile');
+    // exactly the answer clears the whole spec (the country clause included)
+    const matching = codes.filter((code) => matchesSpec(at(code), p.clauses));
+    assert.deepEqual(matching, [p.answer.code], `only the answer clears ${serializeSpec(p.clauses)}`);
+    // the decoy fails ONLY the country clause — every colour/motif criterion passes
+    const decoyMisses = p.clauses.filter((cl) => !matchesSpec(at(country.value), [cl]));
+    assert.deepEqual(decoyMisses.map((c) => c.group), ['country'],
+      `the decoy ${country.value} must fail only the country rule of ${serializeSpec(p.clauses)}`);
+  }
+  assert.ok(built > 150, `expected many country puzzles to build, got ${built}`);
+});
+
+test('serializeSpec / clausesFromPrompt: a country spec round-trips', () => {
+  const spec = /** @type {any} */ ([
+    { group: 'color', value: 'green', sign: 'exclude' },
+    { group: 'motif', value: 'cross', sign: 'exclude' },
+    { group: 'country', value: 'fr', sign: 'exclude' },
+  ]);
+  const prompt = serializeSpec(spec);
+  assert.match(prompt, /(^|,)not:fr($|,)/, 'the country clause serializes as a not: token');
+  const back = clausesFromPrompt(prompt);
+  assert.ok(back && back.length === 3);
+  assert.ok(back.some((c) => c.group === 'country' && c.value === 'fr' && c.sign === 'exclude'));
+});
+
+test('clausesFromPrompt: an unknown decoy code is a skew signal (null)', () => {
+  // A newer server adding a decoy this build lacks must reload us, not render a
+  // "not <unknown>" clause it cannot show or match.
+  assert.equal(clausesFromPrompt('color:!green,motif:!cross,not:zz'), null);
+});
+
+test('clausesFromPrompt: a pre-country build reloads a country round via the count guard', () => {
+  // A build without country support never parses the not: token, so it decodes only
+  // the two colour/motif clauses of a country round. Two clauses !== SPOT_CLAUSES, so
+  // it returns null and reloads rather than dealing a spec a clause short. This asserts
+  // the guard that makes the wire format backward-safe.
+  assert.equal(clausesFromPrompt('color:!green,motif:!cross'), null, 'two clauses alone are too few');
+});
+
+test('missLabel: a ruled-out country tile is labelled ruled-out', () => {
+  const clauses = /** @type {any} */ ([
+    { group: 'color', value: 'green', sign: 'exclude' },
+    { group: 'motif', value: 'cross', sign: 'exclude' },
+    { group: 'country', value: 'fr', sign: 'exclude' },
+  ]);
+  const echo = (/** @type {string} */ _k, /** @type {string} */ fb) => fb;
+  // France is blue/white/red with no cross, so it clears the two visible clauses and
+  // loses only for being France.
+  assert.equal(missLabel(at('fr'), clauses, echo), 'ruled out');
 });
 
 test('randomSpec: three clauses, at least one motif, distinct values', () => {
