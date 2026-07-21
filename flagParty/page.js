@@ -1559,11 +1559,11 @@ export function bootFlagParty() {
       //
       // Rendered through `renderSpotCriteria`: the colour/motif half wears the
       // identical swatch + motif marks the findFlag / daily headers use (off the
-      // same `filtersFor` object), and a country rule-out clause adds a "not
-      // France" criterion led by that flag's thumbnail. One criterion reads and
-      // looks the same on every surface, Polish genitive and all. The `criteria`
-      // class drops the 28px target to a criteria-appropriate 20px so the line
-      // stops competing with the four flags it describes.
+      // same `filtersFor` object). A country rule-out clause renders as a plain
+      // "not France" — NAME ONLY, NO flag thumbnail, deliberately: a flag beside it
+      // would point straight at the tile to reject and defeat the recognise-the-flag
+      // point of the clause (see renderSpotCriteria). The `criteria` class drops the
+      // 28px target to 20px so the line stops competing with the four flags.
       promptEl.classList.add('criteria');
       const spotCountryCodes = (spotClauses || []).filter((c) => c.group === 'country').map((c) => c.value);
       promptTarget.replaceChildren(renderSpotCriteria(filtersFor(spotClauses || []), spotCountryCodes, t));

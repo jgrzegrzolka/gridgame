@@ -337,12 +337,7 @@ export function renderCategoryPair(el, rowCat, colCat, rowLabel, colLabel, doc =
 export function renderCriteriaInline(filters, t, doc = document) {
   const frag = doc.createDocumentFragment();
   activeFilterChips(filters).forEach((ref, i) => {
-    if (i > 0) {
-      const sep = doc.createElement('span');
-      sep.className = 'crit-sep';
-      sep.textContent = '·';
-      frag.appendChild(sep);
-    }
+    if (i > 0) frag.appendChild(critSepEl(doc));
     frag.appendChild(buildCriterionInline(ref, filters, t, doc));
   });
   return frag;

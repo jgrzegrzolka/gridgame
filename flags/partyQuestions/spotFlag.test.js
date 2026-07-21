@@ -6,7 +6,7 @@ import { sovereignPool } from '../flagPools.js';
 import {
   generate, isCorrect, buildPuzzle, buildCountryPuzzle, randomSpec, filtersFor, failingClause,
   clausesFromPrompt, serializeSpec, matchesSpec, isSpottable, SPOT_COLORS, SPOT_MOTIFS, SPOT_CLAUSES,
-  COUNTRY_DECOYS, FORCE_COUNTRY_RATE, missLabel, spotTitle,
+  COUNTRY_DECOYS, FORCE_COUNTRY_RATE, missLabel,
 } from './spotFlag.js';
 import { matchesFilters } from '../flagsFilter.js';
 
@@ -451,15 +451,9 @@ test('missLabel: every distractor of a generated puzzle gets a non-empty reason'
   }
 });
 
-test('spotTitle: renders the criteria in the findFlag pill language', () => {
-  const clauses = /** @type {any} */ ([
-    { group: 'color', value: 'red', sign: 'include' },
-    { group: 'color', value: 'green', sign: 'exclude' },
-    { group: 'motif', value: 'star-or-moon', sign: 'include' },
-  ]);
-  // The identity translator hands back raw fallbacks, so motifs read as their ids
-  // here; a real locale turns 'star-or-moon' into "star or moon". What this pins
-  // is the SHAPE findFlag gives a criteria line -- middot separators and a spelled
-  // "not" for a negated clause -- because that is what the party screen inherits.
-  assert.equal(spotTitle(clauses, tr), 'red · not green · star-or-moon');
+test('buildCountryPuzzle: returns null when the pool has no usable decoy', () => {
+  const rng = seeded(23);
+  assert.equal(buildCountryPuzzle([], rng), null, 'an empty pool has no decoy');
+  const noDecoys = POOL.filter((c) => !COUNTRY_DECOYS.includes(c.code));
+  assert.equal(buildCountryPuzzle(noDecoys, rng), null, 'a pool with no decoy country builds nothing');
 });
