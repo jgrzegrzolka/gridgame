@@ -46,6 +46,32 @@ import { makeColorSwatch } from '../common.js';
 const FLAG_GLYPH =
   '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="1.8" fill="#2a9d8f"/><rect x="7.6" y="4" width="3" height="16" fill="#f4efe6"/><rect x="2" y="10.5" width="20" height="3" fill="#f4efe6"/></svg>';
 
+/**
+ * A distinct little coloured icon per charge motif, so a criterion reads by its
+ * picture as well as its word — "star or moon" wears a crescent + star, "cross" a
+ * red cross — instead of every motif sharing the one generic {@link FLAG_GLYPH}.
+ * Rendered on every criteria surface (findFlag / daily headers, the Flag Party
+ * spot-the-flag prompt, the tic-tac-toe grid marks) through {@link motifIconEl},
+ * so a motif looks the same everywhere.
+ *
+ * These are small illustrations, not palette-bound chrome: like the flag
+ * thumbnail (`FLAG_GLYPH` above) and the metric icons, they carry their own
+ * illustrative colour rather than the eight CSS tokens. Keyed by motif value
+ * (engine `CHARGE_MOTIFS`); a charge without an entry falls back to the glyph.
+ * `animal` is a paw standing in for "some creature" — a flag's actual lion or
+ * eagle can't survive the shrink to ~1em.
+ * @type {Record<string, string>}
+ */
+const MOTIF_ICONS = {
+  cross: '<svg viewBox="0 0 24 24" fill="#cf2b2b"><rect x="1.5" y="10" width="21" height="4" rx="0.5"/><rect x="7" y="2.5" width="4" height="19" rx="0.5"/></svg>',
+  'star-or-moon': '<svg viewBox="0 0 24 24" fill="#e0b400"><path d="M14.8 12.6a5.4 5.4 0 1 1-4-6.9 4.3 4.3 0 1 0 4 6.9z"/><path d="M18.6 4.4l.85 2.1 2.25.2-1.7 1.5.55 2.2-1.95-1.2-1.95 1.2.55-2.2-1.7-1.5 2.25-.2z"/></svg>',
+  'union-jack': '<svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1.4" fill="#2d5fa8"/><path d="M3.4 6.7L20.6 17.3M20.6 6.7L3.4 17.3" stroke="#fff" stroke-width="2.6"/><path d="M3.4 6.7L20.6 17.3M20.6 6.7L3.4 17.3" stroke="#c0392b" stroke-width="1.1"/><path d="M12 6V18M2.5 12H21.5" stroke="#fff" stroke-width="4"/><path d="M12 6V18M2.5 12H21.5" stroke="#c0392b" stroke-width="2.2"/></svg>',
+  bird: '<svg viewBox="0 0 24 24" fill="#3c4650"><ellipse cx="12.6" cy="13.6" rx="5.3" ry="4.3"/><circle cx="8" cy="8.9" r="3"/><path d="M5.2 8.3L2 7.4l3 2z"/><path d="M16.6 12.4l5.4-1.4-4.1 4.6z"/><path d="M9 11.4c1.9.2 3.3 1.2 4 2.9-1.7.6-3.3.6-4.9-.1z" fill="#2b333b"/><circle cx="7.1" cy="8.5" r="0.75" fill="#fff"/></svg>',
+  animal: '<svg viewBox="0 0 24 24" fill="#7a5230"><ellipse cx="8" cy="7.5" rx="2.1" ry="2.7"/><ellipse cx="14.2" cy="6.6" rx="2.1" ry="2.7"/><ellipse cx="4" cy="12.6" rx="1.9" ry="2.4"/><ellipse cx="18.2" cy="12.6" rx="1.9" ry="2.4"/><path d="M11.2 12.4c3 0 5.3 2.1 5.3 4.7S13.9 21.4 11.2 21.4 5.9 19.8 5.9 17.1 8.2 12.4 11.2 12.4z"/></svg>',
+  weapon: '<svg viewBox="0 0 24 24"><path d="M12 2.2L13.3 6V15H10.7V6z" fill="#9aa2ab"/><path d="M12 2.2L13.3 6h-1.3z" fill="#c3ccd4"/><rect x="7.3" y="15" width="9.4" height="2.3" rx="1.1" fill="#c8a02e"/><rect x="11" y="17.2" width="2" height="3.1" fill="#7a5230"/><circle cx="12" cy="21" r="1.5" fill="#c8a02e"/></svg>',
+  'coat-of-arms': '<svg viewBox="0 0 24 24"><path d="M12 2.5l7.5 2.3v6.4c0 4.9-3.2 8.2-7.5 9.8-4.3-1.6-7.5-4.9-7.5-9.8V4.8z" fill="#c8a02e"/><path d="M12 5.4l4.6 1.4v4.3c0 3-1.9 5-4.6 6z" fill="#c0392b"/></svg>',
+};
+
 const CHARGE_MOTIF_SET = new Set(CHARGE_MOTIFS);
 
 /**
@@ -173,10 +199,11 @@ function buildCriterionInline(ref, filters, t, doc) {
   if (ref.kind === 'pill' && ref.group === 'color') {
     crit.appendChild(makeColorSwatch(ref.value, doc));
   } else if (isFlagDesignCriterion(ref)) {
-    // Charge motifs / stripes-only / colour-count describe what's ON the flag,
-    // so they get the flag glyph. eu-member (political, not a charge) falls
-    // through to no mark, reading as a country fact like continent / status.
-    crit.appendChild(flagGlyphEl(doc));
+    // A charge motif wears its own icon; stripes-only / colour-count are
+    // structural design properties (not a motif), so they keep the generic flag
+    // glyph. eu-member (political, not a charge) falls through to no mark, reading
+    // as a country fact like continent / status.
+    crit.appendChild(ref.group === 'motif' ? motifIconEl(ref.value, doc) : flagGlyphEl(doc));
   } else if (ref.kind === 'scalar') {
     // World-fact metric: the icon carries the hue (words stay in ink so every
     // metric reads at title size — some hues are too light for text).
@@ -198,6 +225,19 @@ function flagGlyphEl(doc) {
   const el = doc.createElement('span');
   el.className = 'crit-flag';
   el.innerHTML = FLAG_GLYPH;
+  return el;
+}
+
+/** The mark for a motif criterion: its own {@link MOTIF_ICONS} icon, or the
+ *  generic flag glyph for a charge we haven't drawn one for. `.crit-motif` sizes
+ *  it in common.css exactly like `.crit-flag`, so it drops into the same slot.
+ *  @param {string} motif @param {Document} doc */
+function motifIconEl(motif, doc) {
+  const svg = MOTIF_ICONS[motif];
+  if (!svg) return flagGlyphEl(doc);
+  const el = doc.createElement('span');
+  el.className = 'crit-motif';
+  el.innerHTML = svg;
   return el;
 }
 
@@ -227,7 +267,7 @@ export function categoryIconEl(category, doc = document) {
   const value = sep === -1 ? '' : id.slice(sep + 1);
   if (kind === 'hasColor') return makeColorSwatch(value, doc);
   if (kind === 'colorCount' || kind === 'stripesOnly') return flagGlyphEl(doc);
-  if (kind === 'hasMotif') return CHARGE_MOTIF_SET.has(value) ? flagGlyphEl(doc) : null;
+  if (kind === 'hasMotif') return CHARGE_MOTIF_SET.has(value) ? motifIconEl(value, doc) : null;
   if (Object.prototype.hasOwnProperty.call(METRIC_HUES, kind)) {
     const ic = metricIconSpan(kind, 'crit-ic', doc);
     ic.style.color = METRIC_HUES[kind] || 'currentColor';

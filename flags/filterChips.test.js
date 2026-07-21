@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { chipLabelText, buildFilterChip, renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline, categoryIconEl, renderCategoryLabel, renderCategoryPair } from './filterChips.js';
 import { emptyFilters } from './flagsFilter.js';
-import { continent, statehood, hasColor, hasMotif, colorCount, hasStripesOnly, population } from './engine.js';
+import { continent, statehood, hasColor, hasMotif, colorCount, hasStripesOnly, population, CHARGE_MOTIFS } from './engine.js';
 
 /** Echo the fallback — renders every label in its English default. */
 const t = (/** @type {string} */ _k, /** @type {string} */ fb) => fb;
@@ -165,7 +165,7 @@ test('renderCriteriaInline: each token gets exactly the right leading mark', () 
   const f = emptyFilters();
   f.continent.include.add('Africa'); // country fact: no mark
   f.color.include.add('red'); // colour: swatch
-  f.motif.exclude.add('cross'); // flag-design + exclude: flag glyph, spelled "not cross"
+  f.motif.exclude.add('cross'); // flag-design + exclude: motif icon, spelled "not cross"
   f.coffee = { op: '>=', n: 10000 }; // metric: hued icon
   const crits = /** @type {any} */ (renderCriteriaInline(f, t, fakeDoc())).children
     .filter((/** @type {any} */ c) => c.className.split(' ').includes('crit'));
@@ -174,7 +174,7 @@ test('renderCriteriaInline: each token gets exactly the right leading mark', () 
 
   assert.deepEqual(kids(africa), ['crit-label']); // no leading mark for a country fact
   assert.ok(kids(red).includes('pill-swatch'));
-  assert.ok(kids(cross).includes('crit-flag'));
+  assert.ok(kids(cross).includes('crit-motif')); // a charge motif wears its own icon
   assert.match(cross.className, /crit-exclude/);
   // Inline exclude is spelled out in ink, not struck.
   const crossLabel = cross.children.find((/** @type {any} */ k) => k.className === 'crit-label');
@@ -198,8 +198,8 @@ test('renderCriteriaInline: eu-member is a country fact (no flag glyph); real ch
   // echo-t returns the motif's value as the fallback, so labels read 'eu-member' / 'union-jack'.
   const eu = crits.find((/** @type {any} */ c) => c.children.some((/** @type {any} */ k) => k.textContent === 'eu-member'));
   const uj = crits.find((/** @type {any} */ c) => c.children.some((/** @type {any} */ k) => k.textContent === 'union-jack'));
-  assert.deepEqual(kids(eu), ['crit-label']); // no glyph — reads as a country fact
-  assert.ok(kids(uj).includes('crit-flag')); // a real charge keeps the glyph
+  assert.deepEqual(kids(eu), ['crit-label']); // no mark — reads as a country fact
+  assert.ok(kids(uj).includes('crit-motif')); // a real charge gets its own motif icon
 });
 
 test('renderCriteriaInline: empty filter yields nothing', () => {
@@ -247,10 +247,20 @@ test('categoryIconEl: colour category gets the pill swatch', () => {
   assert.equal(el.dataset.value, 'red');
 });
 
-test('categoryIconEl: charge motif gets the flag glyph', () => {
+test('categoryIconEl: charge motif gets its own motif icon', () => {
   const el = /** @type {any} */ (categoryIconEl(hasMotif('animal'), fakeDoc()));
-  assert.equal(el.className, 'crit-flag');
-  assert.ok(el.innerHTML.length > 0, 'glyph carries the flag SVG');
+  assert.equal(el.className, 'crit-motif');
+  assert.ok(el.innerHTML.length > 0, 'the icon span carries the motif SVG');
+});
+
+test('every charge motif has a dedicated icon — none falls back to the generic glyph', () => {
+  // A motif without its own icon would render `.crit-flag` next to siblings wearing
+  // `.crit-motif`, so a criteria line would look half-iconed. Adding a motif to the
+  // engine vocabulary must come with its MOTIF_ICONS entry; this pins that pairing.
+  for (const m of CHARGE_MOTIFS) {
+    const el = /** @type {any} */ (categoryIconEl(hasMotif(m), fakeDoc()));
+    assert.equal(el && el.className, 'crit-motif', `motif "${m}" has no dedicated icon`);
+  }
 });
 
 test('categoryIconEl: colour-count and stripes-only get the flag glyph (a design property)', () => {
