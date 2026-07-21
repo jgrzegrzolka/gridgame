@@ -919,7 +919,8 @@ body::after {
  * in one feature stylesheet ("same mechanism = same code"). The hue differs per
  * mark and is set inline by the JS; the swatch (`.pill-swatch`) is above. */
 .crit-ic,
-.crit-flag {
+.crit-flag,
+.crit-motif {
   display: inline-block;
 }
 .crit-ic {
@@ -928,16 +929,20 @@ body::after {
   margin-right: 0.26em;
   vertical-align: -0.13em;
 }
-.crit-flag {
-  /* Landscape flag mark: fills its box less top-to-bottom than the metric
-     icon, so it's set a touch larger to read at the same weight. */
+/* The flag glyph and the per-motif icons (`.crit-motif`) share one box: both are
+   ~square marks that sit in the same criterion slot, so a motif's own icon drops
+   in exactly where the generic glyph was. A touch larger than the metric icon so
+   it reads at the same weight. */
+.crit-flag,
+.crit-motif {
   width: 1.05em;
   height: 1.05em;
   margin-right: 0.24em;
   vertical-align: -0.2em;
 }
 .crit-ic svg,
-.crit-flag svg {
+.crit-flag svg,
+.crit-motif svg {
   width: 100%;
   height: 100%;
 }
