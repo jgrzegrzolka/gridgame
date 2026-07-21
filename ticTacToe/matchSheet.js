@@ -15,6 +15,7 @@
  */
 
 import { matchingCountriesForCell } from '../flags/ticTacToe.js';
+import { colorCountAmbiguity } from '../flags/engine.js';
 import { renderCategoryPair } from '../flags/filterChips.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
 
@@ -58,7 +59,11 @@ export function openMatchSheet(ctx) {
   // Sort by the localized name so the set is scannable; the pure helper returns
   // source order, sorting is a display concern that belongs to the glue.
   const matches = matchingCountriesForCell(puzzle, row, col, countries)
-    .slice()
+    // Drop flags whose colour count is genuinely contested for this cell. The
+    // lenient predicate includes them, but the picker disabled them as
+    // "ambiguous" — they were never allowed picks, so this after-game "answers"
+    // list must not present them as valid ones.
+    .filter((country) => !colorCountAmbiguity([rowCat, colCat], country))
     .sort((a, b) => countryName(a).localeCompare(countryName(b)));
 
   dialogEl.setAttribute('aria-label', `${rowLabel} × ${colLabel}`);

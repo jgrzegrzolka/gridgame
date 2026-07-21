@@ -1,4 +1,4 @@
-import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../flags/engine.js';
+import { suggest, exactSingleMatch, pulseShake, translateCategoryLabel, colorCountAmbiguity } from '../flags/engine.js';
 import { renderCategoryLabel, renderCategoryPair } from '../flags/filterChips.js';
 import {
   generateCode,
@@ -562,9 +562,10 @@ function runOnline(countries) {
     selectedIndex = 0;
     renderSuggestions();
     const auto = exactSingleMatch(currentMatches, query);
-    // Don't auto-submit a data-gap match — leave it visible as "no data". A
-    // deliberate Enter/click still routes through the pickCountry guard.
-    if (auto && !activeCellDataGap(auto)) pickCountry(auto);
+    // Don't auto-submit a blocked match (no-data or ambiguous) — leave it visible
+    // with its tag. A deliberate Enter/click still routes through the pickCountry
+    // guard.
+    if (auto && !pickBlockReason(auto)) pickCountry(auto);
   }
 
   /**
@@ -578,6 +579,21 @@ function runOnline(countries) {
     return metricDataGap([g.puzzle.rows[activeCell.row], g.puzzle.cols[activeCell.col]], country);
   }
 
+  /**
+   * Why the active cell must refuse `country`: `'no-data'` (a metric axis we
+   * can't score) or `'ambiguous'` (a contested colour count the lenient
+   * colorCount predicate would otherwise accept), else null. Both disable the
+   * suggestion with a tag and shake on a forced pick. Relies on the rehydrated
+   * puzzle carrying real predicates (see onlineClient.js).
+   * @param {Country} country
+   */
+  function pickBlockReason(country) {
+    if (activeCellDataGap(country)) return 'no-data';
+    const g = state.game;
+    if (activeCell && g && colorCountAmbiguity([g.puzzle.rows[activeCell.row], g.puzzle.cols[activeCell.col]], country)) return 'ambiguous';
+    return null;
+  }
+
   function renderSuggestions() {
     pickerSuggestionsEl.innerHTML = '';
     currentMatches.forEach((country, i) => {
@@ -586,14 +602,16 @@ function runOnline(countries) {
       const name = document.createElement('span');
       name.textContent = countryName(country);
       li.appendChild(name);
-      // No population value on a population cell → disable it with a "no data"
-      // tag rather than let the player lose the cell to a data gap. Every commit
-      // path also refuses it.
-      if (activeCellDataGap(country)) {
-        li.classList.add('no-data');
+      // Blocked picks are shown disabled with a tag rather than let the player
+      // lose the cell on something they couldn't judge: 'no-data' (our data
+      // can't score a metric axis) or 'ambiguous' (a contested colour count on
+      // an exact-count cell). Every commit path also refuses them.
+      const block = pickBlockReason(country);
+      if (block) {
+        li.classList.add(block);
         const tag = document.createElement('span');
-        tag.className = 'suggestion-no-data';
-        tag.textContent = t('ttt.noData', 'no data');
+        tag.className = `suggestion-${block}`;
+        tag.textContent = block === 'ambiguous' ? t('ttt.ambiguous', 'ambiguous') : t('ttt.noData', 'no data');
         li.appendChild(tag);
       } else {
         li.addEventListener('mousedown', (e) => { e.preventDefault(); pickCountry(country); });
@@ -638,10 +656,12 @@ function runOnline(countries) {
   /** @param {Country} country */
   function pickCountry(country) {
     if (!activeCell || !ws) return;
-    // Refuse a country with no data for a metric axis of this cell (also
+    // Refuse a blocked pick (no-data metric gap or ambiguous colour count; also
     // reached via Enter / exact-name auto-submit) — shake instead of sending a
-    // claim the server would only reject, so a data gap can't cost the round.
-    if (activeCellDataGap(country)) {
+    // claim, so a data gap or a contested count can't cost the round. (An
+    // ambiguous pick would actually be ACCEPTED by the lenient server predicate,
+    // so this client guard is what enforces "pick a clear flag".)
+    if (pickBlockReason(country)) {
       pulseShake(pickerInputEl);
       return;
     }

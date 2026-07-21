@@ -1,4 +1,4 @@
-import { generateRandomPuzzle, buildFlagCategoryPool, suggest, exactSingleMatch, pulseShake, translateCategoryLabel } from '../../flags/engine.js';
+import { generateRandomPuzzle, buildFlagCategoryPool, suggest, exactSingleMatch, pulseShake, translateCategoryLabel, colorCountAmbiguity } from '../../flags/engine.js';
 import { renderCategoryLabel, renderCategoryPair } from '../../flags/filterChips.js';
 import { loadCountries, attachMetrics } from '../../flags/group.js';
 import { METRIC_FILES } from '../../flags/metrics/index.js';
@@ -245,10 +245,10 @@ function runTicTacToe({ puzzle, countries }) {
     selectedIndex = 0;
     renderSuggestions();
     const auto = exactSingleMatch(currentMatches, query);
-    // Don't auto-submit a data-gap match — leave it visible as "no data" rather
-    // than shaking mid-type. A deliberate Enter/click still routes through the
-    // pickCountry guard.
-    if (auto && !activeCellDataGap(auto)) pickCountry(auto);
+    // Don't auto-submit a blocked match (no-data or ambiguous) — leave it visible
+    // with its tag rather than shaking mid-type. A deliberate Enter/click still
+    // routes through the pickCountry guard.
+    if (auto && !pickBlockReason(auto)) pickCountry(auto);
   }
 
   /**
@@ -262,6 +262,19 @@ function runTicTacToe({ puzzle, countries }) {
     return metricDataGap([puzzle.rows[activeCell.row], puzzle.cols[activeCell.col]], country);
   }
 
+  /**
+   * Why the active cell must refuse `country`: `'no-data'` (a metric axis we
+   * can't score) or `'ambiguous'` (a contested colour count the lenient
+   * colorCount predicate would otherwise accept), else null. Both disable the
+   * suggestion with a tag and shake on a forced pick. Drives every commit path.
+   * @param {Country} country
+   */
+  function pickBlockReason(country) {
+    if (activeCellDataGap(country)) return 'no-data';
+    if (activeCell && colorCountAmbiguity([puzzle.rows[activeCell.row], puzzle.cols[activeCell.col]], country)) return 'ambiguous';
+    return null;
+  }
+
   function renderSuggestions() {
     pickerSuggestionsEl.innerHTML = '';
     currentMatches.forEach((country, i) => {
@@ -270,14 +283,16 @@ function runTicTacToe({ puzzle, countries }) {
       const name = document.createElement('span');
       name.textContent = countryName(country);
       li.appendChild(name);
-      // No population value on a population cell → the player can't know our
-      // data lacks it, so show it disabled with a "no data" tag rather than let
-      // them pick it and lose the cell. Every commit path also refuses it.
-      if (activeCellDataGap(country)) {
-        li.classList.add('no-data');
+      // Blocked picks are shown disabled with a tag rather than let the player
+      // lose the cell on something they couldn't judge: 'no-data' (our data
+      // can't score a metric axis) or 'ambiguous' (a contested colour count on
+      // an exact-count cell). Every commit path also refuses them.
+      const block = pickBlockReason(country);
+      if (block) {
+        li.classList.add(block);
         const tag = document.createElement('span');
-        tag.className = 'suggestion-no-data';
-        tag.textContent = t('ttt.noData', 'no data');
+        tag.className = `suggestion-${block}`;
+        tag.textContent = block === 'ambiguous' ? t('ttt.ambiguous', 'ambiguous') : t('ttt.noData', 'no data');
         li.appendChild(tag);
       } else {
         li.addEventListener('mousedown', (e) => {
@@ -345,10 +360,10 @@ function runTicTacToe({ puzzle, countries }) {
   /** @param {Country} country */
   function pickCountry(country) {
     if (!activeCell) return;
-    // Refuse a country with no data for a metric axis of this cell (also
-    // reached via Enter / exact-name auto-submit) — a shake signals "not a
-    // valid pick here" instead of flipping the turn on a data gap.
-    if (activeCellDataGap(country)) {
+    // Refuse a blocked pick (no-data metric gap or ambiguous colour count; also
+    // reached via Enter / exact-name auto-submit) — a shake signals "not a valid
+    // pick here" instead of flipping the turn on it.
+    if (pickBlockReason(country)) {
       pulseShake(pickerInputEl);
       return;
     }

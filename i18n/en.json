@@ -534,7 +534,8 @@
       "missingPlayerId": "Connection error, please reload the page",
       "fallback": "Rejected: {reason}"
     },
-    "noData": "no data"
+    "noData": "no data",
+    "ambiguous": "ambiguous"
   },
   "party": {
     "title": "Yet Another Quiz: Flag Party",

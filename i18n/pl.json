@@ -534,7 +534,8 @@
       "missingPlayerId": "Błąd połączenia, odśwież stronę",
       "fallback": "Odrzucono: {reason}"
     },
-    "noData": "brak danych"
+    "noData": "brak danych",
+    "ambiguous": "niejednoznaczne"
   },
   "party": {
     "title": "Yet Another Quiz: Flagowa impreza",

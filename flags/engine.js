@@ -27,6 +27,10 @@
  *   every charge motif (`hasMotif:cross`, `coat-of-arms`, etc.) because a
  *   pure-stripes flag has no overlay by definition, so those cells are
  *   always empty. Symmetric — axesConflict checks both directions.
+ * @property {'=' | '>=' | '<='} [op]
+ * @property {number} [n]
+ *   Only on `colorCount` categories: the raw constraint (`op` N), so
+ *   `colorCountStraddles` can test ambiguity without re-parsing the id.
  */
 
 /**
@@ -995,7 +999,65 @@ export function colorCount(op, n) {
     label,
     predicate,
     exclusiveGroup: 'colorCount',
+    // Carry the raw constraint so `colorCountStraddles` can test ambiguity
+    // without re-parsing the id. Survives online rehydration: `categoryFromId`
+    // rebuilds the category via this same factory, so a category off the wire
+    // gets op/n back too.
+    op,
+    n,
   };
+}
+
+/**
+ * Whether `country`'s colour count is genuinely contested *for this specific
+ * colorCount category* — some plausible count satisfies the constraint and
+ * another doesn't (the "straddle" rule from `ambiguityAudit.js`). Returns false
+ * for any non-colorCount category and for a flag with no `ambiguousColorCount`.
+ *
+ * The `colorCount` predicate is deliberately lenient (accepts a flag under *any*
+ * plausible read), so a straddler is silently counted correct. The TTT pickers
+ * use this to instead DISABLE such a pick with an "ambiguous" tag — the player
+ * chooses a clear flag rather than have a contested one judged either way.
+ * Daily / findFlag never encounter one (`ambiguityAudit.js` vetoes straddling
+ * puzzles at authoring time); this is the TTT-side equivalent, at pick time.
+ *
+ * @param {Category | null | undefined} category
+ * @param {Country} country
+ * @returns {boolean}
+ */
+export function colorCountStraddles(category, country) {
+  if (!category || category.exclusiveGroup !== 'colorCount') return false;
+  const op = /** @type {any} */ (category).op;
+  const n = /** @type {any} */ (category).n;
+  if (op == null || n == null) return false;
+  const ambig = /** @type {any} */ (country).ambiguousColorCount;
+  if (!Array.isArray(ambig) || ambig.length === 0) return false;
+  const canonical = country.colors.length;
+  /** @param {number} v */
+  const sat = (v) => (op === '>=' ? v >= n : op === '<=' ? v <= n : v === n);
+  const canonicalSat = sat(canonical);
+  return ambig.some((/** @type {number} */ v) => v !== canonical && sat(v) !== canonicalSat);
+}
+
+/**
+ * Mirror of `metricDataGap` for colour-count ambiguity. Given a cell's axis
+ * categories and a country, return the colorCount category whose constraint the
+ * country straddles (so the pick is contested, not clean), or null. Gated on the
+ * OTHER axes matching: a straddler that fails the perpendicular axis is just a
+ * wrong pick, not an ambiguous one, so it stays untagged.
+ *
+ * @param {Category[]} categories  the cell's [rowCat, colCat]
+ * @param {Country} country
+ * @returns {Category | null}
+ */
+export function colorCountAmbiguity(categories, country) {
+  for (let i = 0; i < categories.length; i++) {
+    const cat = categories[i];
+    if (!colorCountStraddles(cat, country)) continue;
+    const othersPass = categories.every((o, j) => j === i || o.predicate(country));
+    if (othersPass) return cat;
+  }
+  return null;
 }
 
 /**
