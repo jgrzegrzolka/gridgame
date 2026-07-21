@@ -788,11 +788,16 @@ export function bootFlagParty() {
     if (active) active.focus();
   }
 
-  // Thin `t()` wrappers over the pure resolvers (modeFullLabel / modeShortLabel
-  // above) — the id→label mapping lives up there so it can be pinned by
-  // flagParty/modeLabels.test.js; here we just localize the resolved key.
+  // Thin `t()` wrapper over the pure resolvers — the id→label mapping lives up
+  // there so it can be pinned by flagParty/modeLabels.test.js; here we just
+  // localize the resolved key. The picture modes resolve to their SHORT label, so
+  // a draft pick card reads the same word as the lobby's first-round row (Flags /
+  // Weird / Spot / Maps) — the two surfaces name the same round the same way.
+  // Only the picture modes carry a `shortKey`; metric cards keep their full name,
+  // which carries the "per capita" qualifiers a short form would drop.
   const modeLabel = (/** @type {string} */ id) => {
-    const { key, fallback } = modeFullLabel(id);
+    const ml = MODE_LABELS[id];
+    const { key, fallback } = ml && ml.shortKey ? modeShortLabel(id) : modeFullLabel(id);
     return t(key, fallback);
   };
 
