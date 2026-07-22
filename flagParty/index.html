@@ -255,9 +255,15 @@
         <!-- No "After round 1 of 6" here. The round card counts the rounds in
              dots, and the break is self-evidently the beat after a round — the
              line restated position nobody had asked about. -->
-        <div class="break-mvp" id="break-mvp" hidden></div>
         <p class="plabel" id="break-standings-label"></p>
+        <!-- The bucket-pass banner: names which scoring bucket the board is
+             currently banking (Correct / Speed / Only one / Close). Empty and
+             invisible between passes; aria-live so a screen reader hears each. -->
+        <div class="break-passbar"><span class="break-pass" id="break-pass" aria-live="polite"></span></div>
         <div class="break-board" id="break-board"></div>
+        <!-- MVP sits UNDER the standings and fades in only once the passes have
+             settled — the round's verdict after you've watched it play out. -->
+        <div class="break-mvp" id="break-mvp" hidden></div>
       </section>
 
       <!-- Final -->

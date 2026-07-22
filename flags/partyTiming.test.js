@@ -24,6 +24,11 @@ import {
   ledgerSchedule,
   LEDGER_ENTER_MS,
   LEDGER_ENTER_STAGGER_MS,
+  passLedgerSchedule,
+  LEDGER_PASS_HOLD_MS,
+  LEDGER_PASS_COUNT_MS,
+  LEDGER_PASS_SETTLE_MS,
+  LEDGER_PASS_SLIDE_MS,
   finalBoardSchedule,
   FINAL_ROW_STAGGER_MS,
   FINAL_WINNER_HOLD_MS,
@@ -229,6 +234,56 @@ test('ledgerSchedule: the whole sequence still fits inside the break with readin
   const s = ledgerSchedule(4);
   assert.ok(s.totalMs < ROUND_BREAK_SECONDS * 1000);
   assert.ok(ROUND_BREAK_SECONDS * 1000 - s.totalMs >= ROUND_BREAK_SECONDS * 1000 / 3);
+});
+
+test('passLedgerSchedule: passes run in order and never overlap', () => {
+  const s = passLedgerSchedule(4, 4);
+  assert.equal(s.steps.length, 4, 'one step per earned bucket');
+  for (let i = 0; i < s.steps.length; i += 1) {
+    assert.ok(s.steps[i].countAt < s.steps[i].slideAt, `pass ${i}: count before slide`);
+    if (i > 0) {
+      assert.ok(
+        s.steps[i - 1].slideAt < s.steps[i].countAt,
+        `pass ${i - 1} must fully settle before pass ${i} starts counting`,
+      );
+    }
+  }
+});
+
+test('passLedgerSchedule: a pass slides only AFTER its count finishes', () => {
+  const s = passLedgerSchedule(4, 2);
+  for (const step of s.steps) {
+    assert.equal(
+      step.slideAt - step.countAt,
+      LEDGER_PASS_COUNT_MS + LEDGER_PASS_SETTLE_MS,
+      'count then a settle beat, then the re-rank',
+    );
+  }
+});
+
+test('passLedgerSchedule: the MVP reveal lands as the last pass finishes sliding', () => {
+  const s = passLedgerSchedule(4, 3);
+  const last = s.steps[s.steps.length - 1];
+  assert.equal(s.settleAt, last.slideAt + LEDGER_PASS_SLIDE_MS);
+  assert.equal(s.totalMs, s.settleAt);
+});
+
+test('passLedgerSchedule: even a 4-pass, 8-row break fits inside the round break with reading time', () => {
+  for (const passes of [1, 2, 3, 4]) {
+    const s = passLedgerSchedule(8, passes);
+    assert.ok(s.totalMs < ROUND_BREAK_SECONDS * 1000, `${passes} passes @ 8 rows must finish before the host advances`);
+    assert.ok(
+      ROUND_BREAK_SECONDS * 1000 - s.totalMs >= 500,
+      `${passes} passes: at least half a second to read the settled board`,
+    );
+  }
+});
+
+test('passLedgerSchedule: a round nobody scored is just the hold', () => {
+  const s = passLedgerSchedule(4, 0);
+  assert.equal(s.steps.length, 0);
+  assert.equal(s.settleAt, s.enterMs + LEDGER_PASS_HOLD_MS);
+  assert.ok(s.totalMs > 0);
 });
 
 test('ledgerSchedule: the hold starts only once the last row has faded in', () => {
