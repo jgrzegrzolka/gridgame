@@ -7,6 +7,7 @@ import {
   pickPartyCelebration,
   isCleanReveal,
   isBlankReveal,
+  revealOrder,
 } from './partyClient.js';
 
 const you = 'me';
@@ -541,4 +542,40 @@ test('welcome: a server that sends neither setting leaves what we hold', () => {
   s = reduce(s, { type: 'welcome', you, hostId: 'h', phase: 'lobby', roster: [] });
   assert.equal(s.length, 'long');
   assert.equal(s.firstPick, 'spot-flag');
+});
+
+test('revealOrder: highest points this question on top, not cumulative leader', () => {
+  // Server sends the board descending by TOTAL: the leader (Ada) scored 0 this
+  // question, a trailing player (Dan) scored the most.
+  const scoreboard = [
+    { playerId: 'ada', nickname: 'Ada', score: 60 },
+    { playerId: 'ben', nickname: 'Ben', score: 40 },
+    { playerId: 'dan', nickname: 'Dan', score: 30 },
+  ];
+  const points = { ada: 0, ben: 3, dan: 8 };
+  const ordered = revealOrder(scoreboard, points).map((r) => r.playerId);
+  assert.deepEqual(ordered, ['dan', 'ben', 'ada'], 'biggest gain this question leads');
+});
+
+test('revealOrder: ties on points break by cumulative score then id, and it is stable', () => {
+  const scoreboard = [
+    { playerId: 'ada', nickname: 'Ada', score: 50 },
+    { playerId: 'ben', nickname: 'Ben', score: 55 },
+    { playerId: 'cara', nickname: 'Cara', score: 20 },
+  ];
+  const points = { ada: 5, ben: 5, cara: 0 };
+  const ordered = revealOrder(scoreboard, points).map((r) => r.playerId);
+  // ada & ben both +5 -> higher total (ben) first; cara scored 0 -> last.
+  assert.deepEqual(ordered, ['ben', 'ada', 'cara']);
+});
+
+test('revealOrder: missing points / empty board are safe and non-mutating', () => {
+  assert.deepEqual(revealOrder(null, null), []);
+  const board = [
+    { playerId: 'b', nickname: 'B', score: 10 },
+    { playerId: 'a', nickname: 'A', score: 10 },
+  ];
+  const out = revealOrder(board, undefined); // no points at all -> by score then id
+  assert.deepEqual(out.map((r) => r.playerId), ['a', 'b']);
+  assert.deepEqual(board.map((r) => r.playerId), ['b', 'a'], 'input array untouched');
 });
