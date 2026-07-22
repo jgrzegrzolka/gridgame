@@ -586,7 +586,12 @@ export function bootFlagParty() {
     reduced: prefersReducedMotion,
     // The finish board choreographs itself and therefore has to start when it is
     // actually on screen — `renderFinal` builds it during the out phase.
-    onShown: (which) => { if (which === 'final') startFinalReveal(); },
+    onShown: (which) => {
+      if (which === 'final') startFinalReveal();
+      // The break ledger measures row heights for its FLIP, so it can only run once
+      // the section is actually visible — see `startBreakLedger`.
+      else if (which === 'break') startBreakLedger();
+    },
   });
 
   function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'|null} */ which) {
@@ -595,7 +600,7 @@ export function bootFlagParty() {
     // swapper and keyed on the request (not on the swap completing): it is a
     // logical fact about where the show is, and delaying it by the out phase
     // would let a re-render rebuild the ledger during the fade.
-    if (which !== 'break') breakBuilt = false;
+    if (which !== 'break') { breakBuilt = false; breakLedgerPending = null; }
     swapper.to(which);
   }
 
@@ -1237,6 +1242,13 @@ export function bootFlagParty() {
   let breakAnimToken = null;
   /** Monotonic break counter, the value behind `breakAnimToken`. */
   let breakSeq = 0;
+  /** The built-but-not-yet-played break ledger, waiting for the section to actually
+   *  be on screen. `renderBreak` builds the rows synchronously (it runs ~SWAP_OUT_MS
+   *  before the swapper unhides the section), but the ledger's FLIP measures row
+   *  heights — a measurement that reads zero while the section is still display:none,
+   *  which flattened every rank-change slide. So the params are held here and played
+   *  from `onShown('break')`, the same beat the finish board starts from. */
+  let breakLedgerPending = /** @type {{ nodes: HTMLElement[], rows: import('../flags/partyBreak.js').BreakRow[], splits: Array<{ base: number, speed: number, solo: number, closeness: number }>, canPass: boolean, token: string } | null} */ (null);
   /** This round's running score breakdown, per player, for the break's chips.
    *  Reset when a round starts; added to once per question (the tokens below guard
    *  render()'s re-runs, which would otherwise count a question twice). */
@@ -2124,7 +2136,22 @@ export function bootFlagParty() {
     const canPass = rows.every((r, i) => r.roundGain === 0 || rowReconciles[i]);
     breakSeq += 1;
     breakAnimToken = String(breakSeq);
-    playLedger(rowNodes, rows, rowSplits, canPass, breakAnimToken);
+    // Hold the ledger until the section is on screen — measuring row heights while
+    // it is still display:none gives a zero stride and no rank-change slide. Runs
+    // now only if the break is already shown (a reconnect re-entering it); otherwise
+    // `onShown('break')` plays it. See `breakLedgerPending`.
+    breakLedgerPending = { nodes: rowNodes, rows, splits: rowSplits, canPass, token: breakAnimToken };
+    if (swapper.shown === 'break') startBreakLedger();
+  }
+
+  /** Play the break's ledger once, now that the section is actually visible.
+   *  Called from `onShown('break')` (the normal path) or immediately when the break
+   *  is already on screen. Idempotent: consuming the pending params stops a repeat. */
+  function startBreakLedger() {
+    const p = breakLedgerPending;
+    if (!p) return;
+    breakLedgerPending = null;
+    playLedger(p.nodes, p.rows, p.splits, p.canPass, p.token);
   }
 
   /**
