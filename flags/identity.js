@@ -76,6 +76,18 @@ const MIN_LEN = 8;
 const MAX_LEN = 64;
 
 /**
+ * The one deviceId shape gate, shared by the mint path and the restore path so
+ * the bound can't drift between them. Mirrors the server's
+ * `validate.js#validateDeviceIdParam` (8..64 char string).
+ *
+ * @param {unknown} v
+ * @returns {v is string}
+ */
+function isValidDeviceId(v) {
+  return typeof v === 'string' && v.length >= MIN_LEN && v.length <= MAX_LEN;
+}
+
+/**
  * @param {Store} store
  * @param {() => string} randomUUID
  * @returns {string}
@@ -84,7 +96,7 @@ export function getOrCreateDeviceId(store, randomUUID) {
   migrateLegacyPlayerId(store);
   try {
     const existing = store.getItem(STORAGE_KEY);
-    if (typeof existing === 'string' && existing.length >= MIN_LEN && existing.length <= MAX_LEN) {
+    if (isValidDeviceId(existing)) {
       return existing;
     }
   } catch {
@@ -98,6 +110,83 @@ export function getOrCreateDeviceId(store, randomUUID) {
     // for this session. Next page-load will mint another one.
   }
   return fresh;
+}
+
+/** Where /whoami restores the deviceId from the durable cookie (Feature W). */
+const WHOAMI_ENDPOINT = '/api/v1/whoami';
+
+/**
+ * Async deviceId resolution that survives localStorage eviction (Feature W).
+ *
+ * The plain `getOrCreateDeviceId` mints a brand-new UUID the moment
+ * localStorage is missing — which is exactly what happens after WebKit's
+ * 7-day storage eviction, orphaning all of the player's Cosmos history under
+ * the old id. This variant consults the durable server-set `gg_did` cookie
+ * (via GET /api/v1/whoami) *before* minting, so an evicted browser restores
+ * its **original** deviceId instead.
+ *
+ * Returns `{ deviceId, restored }`:
+ *   - `restored: false` — the id came from localStorage (fast path, no
+ *     network) or was freshly minted (new browser / cookies also cleared).
+ *   - `restored: true`  — localStorage was empty but the cookie brought the
+ *     original id back. This is the precise "localStorage was wiped" signal
+ *     the caller uses to decide whether to re-hydrate its local caches from
+ *     the server. It is deliberately NOT "the cache looks empty" — hydrate
+ *     overwrites, and we must never clobber local-only, not-yet-synced data.
+ *
+ * Never throws. A failed / unreachable /whoami degrades to minting a fresh id,
+ * exactly as today — the cookie is a recovery bonus, not a hard dependency.
+ *
+ * @param {Store} store
+ * @param {() => string} randomUUID
+ * @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ deviceId: string, restored: boolean }>}
+ */
+export async function restoreOrCreateDeviceId(store, randomUUID, fetchImpl = globalThis.fetch) {
+  migrateLegacyPlayerId(store);
+
+  // Fast path: a valid local id means no eviction happened — return it with
+  // zero network cost. This is the 99.9% case on every normal page load.
+  try {
+    const existing = store.getItem(STORAGE_KEY);
+    if (isValidDeviceId(existing)) {
+      return { deviceId: existing, restored: false };
+    }
+  } catch {
+    // localStorage unreadable (private mode) — fall through; /whoami still
+    // can't help persist, but a restore is harmless and a mint is the floor.
+  }
+
+  // No usable local id. Ask the durable cookie who we are before minting.
+  const fromCookie = await fetchWhoamiDeviceId(fetchImpl);
+  if (isValidDeviceId(fromCookie)) {
+    try { store.setItem(STORAGE_KEY, fromCookie); } catch { /* best-effort */ }
+    return { deviceId: fromCookie, restored: true };
+  }
+
+  // Truly new browser (or cookies were cleared too) — mint fresh. The next
+  // write endpoint plants a cookie so the next eviction is recoverable.
+  const fresh = randomUUID();
+  try { store.setItem(STORAGE_KEY, fresh); } catch { /* best-effort */ }
+  return { deviceId: fresh, restored: false };
+}
+
+/**
+ * GET /api/v1/whoami and return the cookie-restored deviceId, or null when
+ * there's no cookie / the request fails. Never throws.
+ *
+ * @param {typeof fetch} fetchImpl
+ * @returns {Promise<string | null>}
+ */
+async function fetchWhoamiDeviceId(fetchImpl) {
+  try {
+    const res = await fetchImpl(WHOAMI_ENDPOINT, { method: 'GET', headers: { accept: 'application/json' } });
+    if (!res || !res.ok) return null;
+    const json = await res.json();
+    return json && typeof json.deviceId === 'string' ? json.deviceId : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

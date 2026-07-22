@@ -44,8 +44,8 @@ import { mountNicknameMenuItem, shareUrl } from '../common.js';
 import { bumpShare, bumpQuiz60sDay, pushEngagementBlob } from '../flags/engagementCounters.js';
 import { warsawDayNumber } from '../flags/warsawDay.js';
 import { ensureProfile } from '../flags/autoProfile.js';
-import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
-import { trySyncDevices } from '../flags/syncHydrate.js';
+import { IDENTITY_STORAGE_KEY } from '../flags/identity.js';
+import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.js';
 import { quizRecordConfigKey } from '../flags/quizRecordConfigKey.js';
 import { submitQuizRecord } from '../flags/quizRecordSubmit.js';
 import {
@@ -125,7 +125,7 @@ import { attachZoomPan, regionalFrame } from './mapZoom.js';
 import { openFlagZoom, wireFlagZoomBackdropClose } from '../flags/flagZoom.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
 
-export function bootFlagQuiz() {
+export async function bootFlagQuiz() {
   const quizMenuEl = document.getElementById('quiz-menu');
   const gameEl = document.getElementById('game');
   const countryNameEl = document.getElementById('country-name');
@@ -164,7 +164,13 @@ export function bootFlagQuiz() {
   // cloud quiz-records doc. Same key as daily-puzzle submissions —
   // clearing localStorage resets both at once, which is the intended
   // identity model (zero PII, zero account).
-  const deviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
+  //
+  // Feature W: resolve it durably — restoring the original deviceId +
+  // rebuilding `flagquiz.best.*` from Cosmos if localStorage was evicted. Fast
+  // path (local id present) = no network. See resolveIdentityAndHydrate.
+  const deviceId = await resolveIdentityAndHydrate({
+    store: window.localStorage, randomUUID: () => window.crypto.randomUUID(),
+  });
 
   // Background sync for linked devices — refreshes `flagquiz.best.*`
   // from the server at most once per hour so the picker shows

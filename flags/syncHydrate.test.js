@@ -531,3 +531,82 @@ test('applyHydratePayload: non-string wrong codes are filtered out', () => {
   const blob = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
   assert.deepEqual(blob[43].w, ['ru', 'tr']);
 });
+
+// ---- Feature W: resolveIdentityAndHydrate (durable identity boot helper) ----
+
+import { resolveIdentityAndHydrate } from './syncHydrate.js';
+
+/**
+ * Fetch double routing by URL: /whoami returns { deviceId: whoami }, and
+ * /sync/hydrate returns the given payload. Records each URL hit.
+ *
+ * @param {{ whoami?: string | null, payload?: any }} [opts]
+ */
+function makeBootFetch({ whoami = null, payload = { daily: [], records: {}, nickname: null } } = {}) {
+  /** @type {string[]} */
+  const urls = [];
+  /** @type {typeof fetch} */
+  const fetchImpl = /** @type {any} */ (async (/** @type {string} */ url) => {
+    urls.push(url);
+    if (url.includes('/whoami')) {
+      return { ok: true, async json() { return { deviceId: whoami }; } };
+    }
+    if (url.includes('/sync/hydrate')) {
+      return { ok: true, async json() { return payload; } };
+    }
+    return { ok: false, async json() { return {}; } };
+  });
+  return { fetchImpl, urls };
+}
+
+test('resolveIdentityAndHydrate: fast path (local id present) returns it, no network', async () => {
+  const store = makeStore({ 'gridgame.deviceId': 'local-id-12345678' });
+  const { fetchImpl, urls } = makeBootFetch({ whoami: 'cookie-should-not-win' });
+  const id = await resolveIdentityAndHydrate({
+    store, randomUUID: () => 'fresh', fetchImpl, now: 1000,
+  });
+  assert.equal(id, 'local-id-12345678');
+  assert.equal(urls.length, 0, 'no /whoami, no /hydrate on the fast path');
+  assert.equal(store.getItem('gridgame.lastHydrateAt'), null, 'no hydrate stamp when not restored');
+});
+
+test('resolveIdentityAndHydrate: restored path adopts the cookie id AND rebuilds caches', async () => {
+  const store = makeStore(); // localStorage wiped
+  const { fetchImpl, urls } = makeBootFetch({
+    whoami: 'restored-device-id-1',
+    payload: {
+      daily: [{ puzzleId: 3, foundCodes: ['fr', 'de'], totalCount: 5 }],
+      records: { 'europe:60s': { score: 20, durationMs: 60000 } },
+      nickname: 'Restored Name',
+    },
+  });
+  const id = await resolveIdentityAndHydrate({
+    store, randomUUID: () => 'fresh-should-not-be-used', fetchImpl, now: 5000,
+  });
+  assert.equal(id, 'restored-device-id-1');
+  // deviceId written back
+  assert.equal(store.getItem('gridgame.deviceId'), 'restored-device-id-1');
+  // both endpoints hit, in order
+  assert.ok(urls[0].includes('/whoami'));
+  assert.ok(urls.some((u) => u.includes('/sync/hydrate')));
+  // caches rebuilt from the payload
+  const scores = JSON.parse(/** @type {string} */ (store.getItem('daily.scores')));
+  assert.deepEqual(scores[3], { f: 2, t: 5, c: ['fr', 'de'] });
+  assert.equal(store.getItem('flagquiz.best.europe.60s'), JSON.stringify({ score: 20, time: 60000 }));
+  assert.equal(store.getItem('gridgame.nickname'), 'Restored Name');
+  // hydrate throttle stamped so the ambient trySyncDevices won't re-fetch
+  assert.equal(store.getItem('gridgame.lastHydrateAt'), '5000');
+});
+
+test('resolveIdentityAndHydrate: no local id + no cookie mints fresh, no hydrate', async () => {
+  const store = makeStore();
+  const { fetchImpl, urls } = makeBootFetch({ whoami: null });
+  const id = await resolveIdentityAndHydrate({
+    store, randomUUID: () => 'freshly-minted-id-01', fetchImpl, now: 2000,
+  });
+  assert.equal(id, 'freshly-minted-id-01');
+  assert.equal(store.getItem('gridgame.deviceId'), 'freshly-minted-id-01');
+  assert.ok(urls[0].includes('/whoami'));
+  assert.ok(!urls.some((u) => u.includes('/sync/hydrate')), 'no hydrate when not restored');
+  assert.equal(store.getItem('gridgame.lastHydrateAt'), null);
+});

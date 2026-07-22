@@ -7,6 +7,7 @@ const { buildDailyResultDoc } = require('../lib/dailyResultDoc');
 const { isLocalRequestUrl } = require('../lib/requestHost');
 const { isReleased } = require('../lib/puzzleDate');
 const { warsawToday } = require('../lib/warsawTime');
+const { deviceCookieHeader } = require('../lib/deviceCookie');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'dailyResults';
@@ -95,9 +96,13 @@ app.http('dailyResult', {
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
 
-    if (result.ok) return { status: 204 };
+    // Feature W: both a fresh insert (204) and an already-submitted row (409)
+    // mean this is a real device with data worth restoring, so stamp the
+    // durable deviceId cookie on each.
+    const cookie = { 'Set-Cookie': deviceCookieHeader(body.deviceId) };
+    if (result.ok) return { status: 204, headers: cookie };
     if (result.error === 'conflict') {
-      return { status: 409, jsonBody: { error: 'already_submitted' } };
+      return { status: 409, headers: cookie, jsonBody: { error: 'already_submitted' } };
     }
     context.error('cosmos insert failed', result);
     return { status: 500, jsonBody: { error: 'server_error' } };

@@ -3,8 +3,8 @@ import { todayN, puzzleDate, formatPuzzleDate } from '../flags/daily.js';
 import { loadScores, migrateScores } from './scores.js';
 import { renderArchiveSquare, renderGhostSquare, refreshSquareCriteria } from './squares.js';
 import { mountDevReset } from './devReset.js';
-import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
-import { trySyncDevices } from '../flags/syncHydrate.js';
+import { IDENTITY_STORAGE_KEY } from '../flags/identity.js';
+import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.js';
 import { fetchCatalog } from './catalogSource.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
@@ -12,15 +12,26 @@ import { msUntilNextWarsawMidnight, formatCountdown } from '../flags/nextPuzzleC
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
 
-export function bootArchive() {
+export async function bootArchive() {
   mountDevReset();
+
+  // Feature W: resolve identity durably, restoring the original deviceId +
+  // rebuilding `daily.scores` from Cosmos if localStorage was evicted. Fast
+  // path (local id present) = no network. See resolveIdentityAndHydrate.
+  const deviceId = await resolveIdentityAndHydrate({
+    store: window.localStorage, randomUUID: () => window.crypto.randomUUID(),
+  });
+
+  // Migrations run after any hydrate so credited-answer fixups apply to
+  // hydrated rows too, not just ones this browser already had.
   migrateScores(window.localStorage);
+
   // Background sync for linked devices — refreshes `daily.scores`
   // from the server at most once per hour so the archive grid
   // reflects plays the other linked device made elsewhere. Unlinked
   // users exit on the identity gate without any network call.
   void trySyncDevices({
-    deviceId: getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID()),
+    deviceId,
     store: window.localStorage,
     identityKey: IDENTITY_STORAGE_KEY,
   });

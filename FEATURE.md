@@ -353,6 +353,73 @@ That table, not the data, is why Phase 1 is three PRs.
 
 ---
 
+### Feature W: Durable device identity — survive localStorage eviction
+
+**Status:** in progress (started 2026-07-22). Design authorised by Jan the same day. **Progress log lives at the bottom of this entry** — update it as each step lands.
+
+**The problem (a real user hit it).** A player on the same device + same browser lost his profile name after a >7-day gap. Root cause: our entire identity is a single UUID in `localStorage.gridgame.deviceId`, and localStorage is best-effort storage the browser is free to evict. The dominant cause is **WebKit/Safari's 7-day cap on script-writable storage** (localStorage, IndexedDB, and JS-set cookies) — evicted after 7 days without a first-party visit. Also: "clear on close" settings, privacy extensions, quota eviction, private mode.
+
+**The name is the canary, not the loss.** *Everything* keys off `deviceId` — daily streak, achievements, mastery, quiz personal-bests, the daily archive. When localStorage is evicted, `getOrCreateDeviceId` mints a **brand-new** UUID and all of it is orphaned in Cosmos under the old id. The user looks like a new person. The nickname reverting to a default "Quiet Otter" is just the one loss he happened to notice.
+
+**Two independent read models, and why that matters:**
+- **Cosmos-keyed reads** (streak, achievements, mastery, quiz counters) go through `GET /api/v1/daily/me` — they re-query the server by deviceId on every load. Restore the *same* deviceId and they reappear automatically.
+- **localStorage-only reads** — the **daily archive** (`daily.scores`, per-puzzle "5/9" + found/missed grids) and **flagQuiz personal-bests** (`flagquiz.best.*`) — are read straight from localStorage and never hit the server on display. Their facts *do* live in Cosmos (`dailyResults` rows, `quizRecords` doc, both keyed by deviceId) but nothing reads them back. After eviction they look permanently lost even though the data is safe on the server.
+
+**The insight that shrinks the work: the read-back engine already exists.** `GET /api/v1/sync/hydrate?deviceId=X` already returns `{ daily, records, nickname, syncBlob }` and `flags/syncHydrate.js#applyHydratePayload` already rebuilds `daily.scores` + `flagquiz.best.*` + nickname from it. Today it only fires for **linked (passkey) devices** — gated on `identityId` in `trySyncDevices`. And even if it fired for everyone, it's keyed to whatever deviceId the browser currently has — which eviction has already destroyed. So the hourly hydration does **not** help this case as-built, for two reasons: (1) the identity gate bails for the ~99% of unlinked users, and (2) the key it would hydrate against is the freshly-minted wrong one.
+
+**So the fix is two missing pieces, not a new subsystem:**
+1. **A durable deviceId.** The ITP 7-day cap targets *script-writable* storage; a cookie set by the **server** via the `Set-Cookie` response header is **exempt**. Plant an HttpOnly cookie carrying the deviceId, and add a `GET /api/v1/whoami` that reads it back. After eviction the localStorage id is gone but the cookie survives → restore the **same** deviceId.
+2. **Fire the existing hydrate on restore.** When boot restores the deviceId from the cookie (the precise "localStorage was wiped" signal), call `hydrateFromServer` once — bypassing the linked-only gate — to refill the archive + high-scores + nickname.
+
+The always-on profile row (`profileEnsure`, fired once per device on first real action) is *not* an alternative recovery anchor — it's keyed by deviceId too, so it's equally orphaned once the key is lost — but it **is** the natural place to stamp the cookie: a guaranteed, early, once-per-device server write. Synergy, not redundancy.
+
+**Honest limits (out of scope, unchanged by this):** clear-all-site-data (cookies included), private mode, or a genuinely new device still lose the local anchor → data orphaned. The only real recovery there is passkey linking (Feature C). A gentle "save your progress across devices" nudge is a future, separate piece.
+
+#### Cookie attributes (the contract)
+
+`gg_did=<deviceId>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=63072000` (2 years). HttpOnly so XSS can't exfiltrate it and so it's server-territory (JS never needs to read it — `/whoami` does). Secure = HTTPS only. SameSite=Lax is enough (our API is same-origin `/api/*`). Host-only on `www` (apex just redirects there — don't set `Domain=`). The value is an anonymous random UUID, the exact same datum as today's localStorage deviceId — no new PII, so the privacy page gains one line, not a consent banner.
+
+#### Restore flow (client boot)
+
+1. `restoreOrCreateDeviceId(store, fetch, randomUUID)`:
+   - localStorage id present → return it, `restored:false` (fast path, **no network**).
+   - absent → `GET /api/v1/whoami`: cookie hit → adopt the returned id, `restored:true`; miss → mint fresh, `restored:false`.
+2. If `restored` → `await hydrateFromServer({deviceId, store})` once (refills `daily.scores` + `flagquiz.best.*` + nickname). Gate on `restored`, **not** "cache looks empty" — `applyHydratePayload` overwrites, and we must never clobber a device's local-only, not-yet-synced data.
+3. Proceed with the resolved deviceId.
+
+#### Phase 1 — server: durable cookie + `/whoami` ✅
+
+- [x] `api/src/lib/deviceCookie.js` — pure `deviceCookieHeader(deviceId)` (the Set-Cookie string) + `parseDeviceCookie(cookieHeader)` (read `gg_did` back, mirroring `clientIp`'s both-shapes header tolerance). `deviceCookie.test.js`: attribute string, round-trip parse, malformed/absent, name-suffix trap. **9 tests.**
+- [x] Stamp the cookie on the three writes that create restorable data + already hold a validated deviceId: `profileEnsure.js` (200/201), `dailyResult.js` (204 *and* 409 already-submitted), `quizRecord.js` (204). Invariant: *if there's data worth restoring, the cookie exists.*
+- [x] `api/src/functions/whoami.js` — `GET /api/v1/whoami`, reads cookie via `parseDeviceCookie`, validates via `validateDeviceIdParam`, 200 `{deviceId}` (+ re-Set-Cookie to roll expiry) or 200 `{deviceId:null}`. Rate-limited 30/min/IP. **Registered in `api/src/index.js`.**
+- [x] Handler kept thin (no unit test needed) — all logic is in `deviceCookie.js` + `validate.js`, both tested. Matches the repo's thin-handler convention (`profileEnsure` etc. aren't unit-tested either).
+
+#### Phase 2 — client: restore + hydrate on boot ✅
+
+- [x] `restoreOrCreateDeviceId` in `flags/identity.js` (async; injected `store`/`randomUUID`/`fetchImpl`) + 7 tests in `flags/identity.test.js`: present → no fetch (fast path); absent+cookie → adopt + `restored:true`; absent+no-cookie → mint; network-error / non-2xx / too-short-cookie → mint; legacy `player.id` still migrates ahead of the cookie.
+- [x] Wired the boot of the three pages that read the vulnerable caches — `daily/page.js` (`bootDaily`), `daily/archive.js` (`bootArchive`), `flagQuiz/page.js` (`bootFlagQuiz`) — all now `async`, `await restoreOrCreateDeviceId(...)`, and fire `hydrateFromServer` when `restored`. `migrateScores` moved after any hydrate so credited-answer fixups apply to hydrated rows too. Sync `getOrCreateDeviceId` kept for the non-boot event-handler callers in `daily/page.js`.
+- [x] `npm run validate` green — **3337 client tests + 515 API tests, typecheck clean.**
+
+**Which endpoints stamp the cookie (and which deliberately don't).** Stamped: `dailyResult` (204 + 409), `profileEnsure` (200/201), `quizRecord` (204) — the writes that create per-device *restorable* data AND already hold a `validateDeviceIdParam`-validated id. **`tttResult` deliberately does NOT stamp**, because TTT is not in the restore set (its per-pair counters aren't among the hydrated caches). Stamping is per-handler on purpose, not centralized in `wrapHandler`: the wrapper only sees `body.deviceId` *raw and unvalidated* (fine for telemetry, wrong for a durable cookie) and can't know each handler's accept-policy (which status codes mean "real accepted device") — centralizing would stamp 2-year cookies with rejected/malformed ids. If a *new* write endpoint stores restorable per-device data, stamp it there too.
+
+#### Phase 3 — verify + document
+
+- [x] Playwright verify against the real SWA emulator (`:4285`). Cache-busted (56 modules walked; confirmed the served `identity.js`/`syncHydrate.js` carried the new exports). Simulated eviction — `localStorage.clear()` + a surviving `gg_did` cookie — reloaded `/daily/`, and boot **restored the original `verifyW-restore-01`** (not a fresh UUID) with `lastHydrateAt` stamped (proves the `restored` branch). `/flagQuiz/` boot verified too: dynamic menu built (14 els), burger nickname mounted, lang toggle wired — the HTML `bootFlagQuiz().then(...)` chain survives the async change — **0 console errors**. (The only errors on `/daily/` were a CORS artifact of testing on `:4285` while the blob catalog's `Access-Control-Allow-Origin` is pinned to `:4280`; unrelated to the feature, and the restore completed regardless.)
+- [x] `simplify` pass (4 agents: reuse / simplification / efficiency / altitude). Applied: **promoted the triplicated restore+hydrate boot block to `resolveIdentityAndHydrate` in `flags/syncHydrate.js`** (3 consumers = textbook promotion; the "hydrate iff restored" invariant now lives in one tested place), extracted `isValidDeviceId` in `identity.js` (was written 3×), and stamped `LAST_HYDRATE_KEY` on the restore-path hydrate so the ambient `trySyncDevices` can't double-fetch. Skipped (with reasons): centralizing cookie-stamping into `wrapHandler` (would stamp unvalidated ids — correctness regression), a `getJson`/`readHeader` util (no existing helper; single bespoke consumers), and reordering identity-independent boot fetches ahead of the restore await (real but only on the rare eviction path; restructures boot with risk).
+- [x] One line on the privacy page for the functional cookie (en + pl + HTML fallback; the old "no cookies" claim was now false).
+- [x] Progress log updated (below). Memory: covered by this FEATURE.md entry; no separate note added (derivable from code + this file).
+
+**Status: all three phases done and verified. Not yet committed — awaiting Jan's review / "commit it".**
+
+#### Progress log
+
+- **2026-07-22 (4)** — **Browser verify passed against the real emulator** — the one blocked item is done. Simulated Safari eviction (wipe localStorage, keep the `gg_did` cookie), reloaded `/daily/`, and boot restored the original deviceId via `/whoami` (not a fresh mint), taking the `restored` branch (`lastHydrateAt` stamped). `/flagQuiz/` async boot verified through its HTML `.then()` chain, 0 console errors. Feature W is complete end-to-end; awaiting Jan's review before commit.
+- **2026-07-22 (3)** — Simplify pass applied (see Phase 3). **Server side verified end-to-end through the real SWA emulator** (`swa start` on :4285, func 4.12.0): `whoami` registered correctly (`GET /api/v1/whoami` in the func route table — the #301 registration risk is closed); `curl` with no cookie → `{"deviceId":null}`; with a valid `gg_did` cookie → `{"deviceId":"…"}` **and** the response re-stamps `Set-Cookie: gg_did=…; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=63072000` (this also proves the Secure-cookie-on-localhost storage path and the exact header the three write endpoints emit, since they share `deviceCookieHeader`); a too-short cookie → `{"deviceId":null}` (validator rejects). **Blocked:** the client-restore browser check (wipe localStorage / keep cookie / reload / assert `bootDaily` restored the id) — the Playwright MCP browser profile was in use by another session; not forced. Left to run once the browser is free.
+- **2026-07-22 (2)** — Phases 1 + 2 built and green. Server: `deviceCookie.js` (test-first, red→green), cookie stamped on the 3 writes, `GET /api/v1/whoami` live + registered. Client: `restoreOrCreateDeviceId` + the 3 async boots + hydrate-on-restore. Full gate green (3337 + 515 tests, typecheck clean). Remaining: Phase 3 — Playwright end-to-end (wipe localStorage / keep cookie / reload / assert rehydrate), simplify pass, privacy-page line.
+- **2026-07-22 (1)** — FEATURE.md entry written. Investigation complete: confirmed no cookie is set anywhere in `api/` today; confirmed the archive + flagQuiz-best read paths are localStorage-only while `daily/me` is Cosmos-keyed; confirmed `sync/hydrate` already returns the full rebuild payload and is gated linked-only.
+
+---
+
 ## Backlog
 
 Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.

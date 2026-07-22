@@ -1,7 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getOrCreateDeviceId, LEGACY_PLAYER_ID_KEY } from './identity.js';
+import { getOrCreateDeviceId, restoreOrCreateDeviceId, LEGACY_PLAYER_ID_KEY } from './identity.js';
+
+/**
+ * Minimal fetch double. `whoami` is the deviceId /whoami should return, or
+ * null to simulate "no cookie". `throws` simulates a network error. Returns
+ * `{ fetchImpl, calls }` where `calls()` reports how many times it ran — so a
+ * test can assert the fast path never touched the network.
+ *
+ * @param {{ whoami?: string | null, ok?: boolean, throws?: boolean }} [opts]
+ */
+function fakeFetch({ whoami = null, ok = true, throws = false } = {}) {
+  const state = { count: 0 };
+  /** @type {typeof fetch} */
+  const fetchImpl = /** @type {any} */ (async (/** @type {string} */ _url) => {
+    state.count++;
+    if (throws) throw new Error('network down');
+    return { ok, async json() { return { deviceId: whoami }; } };
+  });
+  return { fetchImpl, calls: () => state.count };
+}
 
 function fakeStore(initial = {}) {
   /** @type {Map<string, string>} */
@@ -132,4 +151,61 @@ test('uses crypto.randomUUID-shaped id correctly (sanity check)', () => {
   const id = getOrCreateDeviceId(store, () => 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee');
   assert.equal(id, 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee');
   assert.equal(id.length, 36);
+});
+
+// ---- Feature W: restoreOrCreateDeviceId (durable identity) ----
+
+test('restore: existing local id is returned without hitting the network', async () => {
+  const store = fakeStore({ 'gridgame.deviceId': 'already-here-1234' });
+  const { fetchImpl, calls } = fakeFetch({ whoami: 'cookie-id-should-not-win' });
+  const res = await restoreOrCreateDeviceId(store, () => 'fresh', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'already-here-1234', restored: false });
+  assert.equal(calls(), 0); // fast path: never called /whoami
+});
+
+test('restore: no local id + cookie present → adopt the cookie id, restored:true', async () => {
+  const store = fakeStore();
+  const { fetchImpl, calls } = fakeFetch({ whoami: 'restored-from-cookie-1' });
+  const res = await restoreOrCreateDeviceId(store, () => 'fresh-should-not-be-used', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'restored-from-cookie-1', restored: true });
+  // Adopted id is written back to localStorage so later sync calls see it.
+  assert.equal(store._map.get('gridgame.deviceId'), 'restored-from-cookie-1');
+  assert.equal(calls(), 1);
+});
+
+test('restore: no local id + no cookie → mint fresh, restored:false', async () => {
+  const store = fakeStore();
+  const { fetchImpl } = fakeFetch({ whoami: null });
+  const res = await restoreOrCreateDeviceId(store, () => 'freshly-minted-uuid', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'freshly-minted-uuid', restored: false });
+  assert.equal(store._map.get('gridgame.deviceId'), 'freshly-minted-uuid');
+});
+
+test('restore: /whoami network error → mint fresh, never throws', async () => {
+  const store = fakeStore();
+  const { fetchImpl } = fakeFetch({ throws: true });
+  const res = await restoreOrCreateDeviceId(store, () => 'fresh-after-error', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'fresh-after-error', restored: false });
+});
+
+test('restore: /whoami non-2xx → mint fresh (cookie treated as absent)', async () => {
+  const store = fakeStore();
+  const { fetchImpl } = fakeFetch({ whoami: 'ignored-because-not-ok', ok: false });
+  const res = await restoreOrCreateDeviceId(store, () => 'fresh-on-500', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'fresh-on-500', restored: false });
+});
+
+test('restore: a too-short cookie id is rejected → mint fresh instead of adopting junk', async () => {
+  const store = fakeStore();
+  const { fetchImpl } = fakeFetch({ whoami: 'short' });
+  const res = await restoreOrCreateDeviceId(store, () => 'fresh-valid-uuid-aaaa', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'fresh-valid-uuid-aaaa', restored: false });
+});
+
+test('restore: legacy player.id still migrates ahead of the cookie path', async () => {
+  const store = fakeStore({ [LEGACY_PLAYER_ID_KEY]: 'legacy-player-id-uuid' });
+  const { fetchImpl, calls } = fakeFetch({ whoami: 'cookie-should-not-win' });
+  const res = await restoreOrCreateDeviceId(store, () => 'fresh', fetchImpl);
+  assert.deepEqual(res, { deviceId: 'legacy-player-id-uuid', restored: false });
+  assert.equal(calls(), 0); // legacy adopt = local hit, no network
 });

@@ -3,6 +3,7 @@ const { validateDeviceIdParam } = require('../lib/validate');
 const { insertDoc } = require('../lib/cosmos');
 const { createRateLimiter, clientIp } = require('../lib/rateLimit');
 const { buildProfileDoc, decideEnsureResponse } = require('../lib/profileDoc');
+const { deviceCookieHeader } = require('../lib/deviceCookie');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'profiles';
@@ -105,6 +106,14 @@ app.http('profileEnsure', {
     // require'd by any test and aren't in either tsconfig's include
     // glob). Hotfix #571.
     const { status, body: responseBody } = decideEnsureResponse(insertRes);
-    return { status, jsonBody: responseBody };
+    // Feature W: plant the durable deviceId cookie. `ensureProfile` is the
+    // guaranteed once-per-device write, so it's the natural place to leave a
+    // breadcrumb that survives localStorage eviction — GET /api/v1/whoami
+    // reads it back to restore the same identity.
+    return {
+      status,
+      jsonBody: responseBody,
+      headers: { 'Set-Cookie': deviceCookieHeader(deviceId) },
+    };
   },
 });
