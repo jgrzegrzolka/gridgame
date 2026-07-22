@@ -817,3 +817,108 @@ test('leaving the question phase cancels a bot buzz that had not fired', async (
   assert.equal(srv.room.phase, 'reveal');
   assert.equal(srv.botTimers.length, 0, 'pending bot buzz was cancelled on leaving the question');
 });
+
+// ---- bots: server-integration paths (cleanup PR) ----
+
+/** Flush microtasks so an async bot handler fired by a mock timer runs to completion. */
+async function settle() { for (let i = 0; i < 8; i++) await new Promise((r) => setImmediate(r)); }
+
+test('a bot can be the draft picker and starts its own round', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  const botId = conn.last('roster').roster.find((/** @type {any} */ r) => r.bot).playerId;
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  // Play round 1 (the host's Flags round): host buzzes, the bot buzzes on its
+  // timer to complete the two-seat question, then next.
+  for (let i = 0; i < ROUND_QUESTIONS; i++) {
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+    t.mock.timers.tick(10000); await settle();
+    assert.equal(srv.room.phase, 'reveal', `question ${i} revealed after both seats buzzed`);
+    await srv.onMessage(JSON.stringify({ type: 'next' }), conn); await settle();
+  }
+  // The round-1 boundary hands the pick to the bot: the host already picked round 1.
+  assert.equal(srv.room.phase, 'picking');
+  assert.equal(srv.room.picker, botId, 'the bot holds the pick');
+  assert.ok(srv.botPickTimer, 'a bot self-pick is scheduled');
+  const planBefore = srv.room.plan.length;
+  const usedBefore = srv.usedModes.size;
+  t.mock.timers.tick(2500); await settle();               // > BOT_PICK_DELAY_MS (2s)
+  assert.equal(srv.room.phase, 'question', 'the bot picked and its round started');
+  assert.equal(srv.room.plan.length, planBefore + 1, 'the plan grew by the bot round');
+  assert.ok(srv.usedModes.size > usedBefore, 'the bot mode was recorded as used');
+  const q = conn.last('question');
+  assert.ok(q.draftPick && q.draftPick.picker === botId, 'the round is attributed to the bot');
+  // Fresh-question reschedule at index > 0: the bot's just-dealt round scheduled its buzz.
+  assert.equal(srv.botTimers.length, 1, 'the bot re-buzzes on the round it just dealt');
+});
+
+test('a bot is restored to present after an eviction (fresh server, same storage)', async () => {
+  const conn = mockConn('a');
+  const party = mockParty([conn]);
+  const srv = new PartyGameServer(party);
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  const botId = conn.last('roster').roster.find((/** @type {any} */ r) => r.bot).playerId;
+  // Evict: a brand-new server instance over the SAME storage reads the snapshot.
+  const srv2 = new PartyGameServer(party);
+  await srv2.onStart();
+  assert.ok(srv2.room, 'the room was restored from storage');
+  assert.ok(srv2.room.present.has(botId), 'the bot is present again with no socket');
+  assert.equal(srv2.room.seats.get(botId).skill, 'hard', 'its skill survived the round trip');
+});
+
+test('two bots each get a buzz timer; completing the question clears the rest', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(srv.botTimers.length, 2, 'both bots are scheduled');
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn); // host buzzes too
+  t.mock.timers.tick(10000); await settle();
+  assert.equal(srv.room.phase, 'reveal', 'all three present seats buzzed → reveal');
+  assert.equal(srv.botTimers.length, 0, 'the completing buzz cancelled the sibling timers');
+});
+
+test('a bot buzz is resolved through isCorrect and scored on the reveal', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  const botId = conn.last('roster').roster.find((/** @type {any} */ r) => r.bot).playerId;
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  const answer = srv.room.question.answer;
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn); // host wrong
+  t.mock.timers.tick(10000); await settle();
+  const botBuzz = srv.room.buzzes.find((b) => b.playerId === botId);
+  assert.ok(botBuzz, 'the bot recorded a buzz');
+  assert.equal(typeof botBuzz.correct, 'boolean', 'correctness was resolved (not left undefined)');
+  assert.equal(botBuzz.correct, botBuzz.choice === answer, 'the correct flag matches the real answer');
+  const reveal = conn.last('reveal');
+  assert.ok(reveal && reveal.points && botId in reveal.points, 'the reveal scored the bot');
+});
+
+test('a bot re-added after a remove keeps a distinct name (no collision)', async () => {
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+  const first = conn.last('roster').roster.filter((/** @type {any} */ r) => r.bot);
+  const roboId = first[0].playerId; // BOT_NAMES[0]
+  await srv.onMessage(JSON.stringify({ type: 'removeBot', botId: roboId }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+  const names = conn.last('roster').roster.filter((/** @type {any} */ r) => r.bot).map((/** @type {any} */ r) => r.nickname);
+  assert.equal(new Set(names).size, names.length, 'names stay distinct across a remove-then-add');
+});

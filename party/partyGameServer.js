@@ -202,9 +202,15 @@ export default class PartyGameServer {
       // seat is restored by a reconnecting `applyHello`. Restore them here so a
       // bot keeps playing after a durable-object eviction — counting toward the
       // seat total and eligible to buzz / pick.
+      let hasBot = false;
       for (const [pid, seat] of this.room.seats) {
-        if (seat.bot === true) this.room.present.add(pid);
+        if (seat.bot === true) { this.room.present.add(pid); hasBot = true; }
       }
+      // The bots' in-flight timers died with the evicted object. Reschedule from
+      // the restored phase so a mid-question buzz or a bot's pending pick resumes
+      // rather than silently sitting out the rest of the round. `null` phaseBefore
+      // reads as "not previously in question", so a mid-question room reschedules.
+      if (hasBot) this.syncBots(null, this.room.questionIndex);
     }
     this.loaded = true;
   }
@@ -465,20 +471,16 @@ export default class PartyGameServer {
           // reveal, the same way the 'most' / 'least' direction already is.
           const modeId = resolveFamilyPick(cardId);
           if (!modeId) return;
-          const mode = MODE_BY_ID[modeId];
           // The picker may veil their own round, but only on a mode where the
           // veil does anything — `canVeilMode` is the same rule the pick card
           // shows the chip by, re-checked here because the client's is advisory.
           // Note this is a per-round choice made in the moment; it is NOT the
           // Custom-setup tricky toggle, which draft still forces off at start.
           const veil = parsed.veil === true && canVeilMode(modeId);
-          const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS, ...(veil ? { veil: true } : {}) };
-          const question = this.generateForQuestion(mode.questionId, mode.poolId);
           // Attribution carries the RESOLVED mode, so the round title card and the
           // "Zosia's pick" pill name the statistic actually being played rather
           // than the family the picker tapped.
-          result = applyPick(this.room, playerId, modeId, segment, question);
-          if (result.broadcasts.length > 0) this.usedModes.add(usedIdForMode(modeId));
+          result = this.startRoundFromMode(playerId, modeId, veil);
           break;
         }
         case 'forcePick': {
@@ -487,18 +489,10 @@ export default class PartyGameServer {
           // hand for the current picker so an idle / absent picker can't stall.
           if (this.room.phase !== 'picking' || this.room.hostId !== playerId) return;
           const picker = this.room.picker;
-          const hand = (this.room.hand ?? []).filter((id) => isValidPick(id, this.usedModes));
-          if (!picker || hand.length === 0) return;
-          const cardId = hand[Math.floor(Math.random() * hand.length)];
-          const modeId = resolveFamilyPick(cardId);
-          if (!modeId) return;
-          const mode = MODE_BY_ID[modeId];
+          const modeId = this.randomModeFromHand();
           // No veil on a forced pick: the veil is a deliberate bet by the picker,
           // and an idle picker never placed it.
-          const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
-          const question = this.generateForQuestion(mode.questionId, mode.poolId);
-          result = applyPick(this.room, picker, modeId, segment, question);
-          if (result.broadcasts.length > 0) this.usedModes.add(usedIdForMode(modeId));
+          if (picker && modeId) result = this.startRoundFromMode(picker, modeId, false);
           break;
         }
         case 'playAgain':
@@ -592,20 +586,63 @@ export default class PartyGameServer {
     }
   }
 
+  // ---- draft round start (shared by every pick path) ----
+
+  /**
+   * Turn a RESOLVED mode id into its round and start it: build the segment,
+   * generate the round's first question, apply the pick, and record the mode as
+   * used. The single place a drafted round begins — shared by the picker's own
+   * `pick`, the host's `forcePick`, and a bot's {@link botPick} — so the segment
+   * shape, question generation, and no-repeat bookkeeping cannot drift between the
+   * three. Returns the reducer's ApplyResult (the unchanged-room result when
+   * `applyPick` refuses).
+   * @param {string} pickerId  the seat the round is attributed to
+   * @param {string} modeId  a resolved mode id (family already resolved)
+   * @param {boolean} [veil]  whether the picker armed the veil (never for forced / bot picks)
+   * @returns {import('../flags/partyRoom.js').ApplyResult}
+   */
+  startRoundFromMode(pickerId, modeId, veil = false) {
+    const mode = MODE_BY_ID[modeId];
+    const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS, ...(veil ? { veil: true } : {}) };
+    const question = this.generateForQuestion(mode.questionId, mode.poolId);
+    const result = applyPick(this.room, pickerId, modeId, segment, question);
+    if (result.broadcasts.length > 0) this.usedModes.add(usedIdForMode(modeId));
+    return result;
+  }
+
+  /**
+   * Pick a random still-valid card from the current pick's dealt hand and resolve
+   * it to a mode id, or null when the hand is empty / unresolvable. Shared by the
+   * host's `forcePick` and a bot's {@link botPick} — the two paths that choose a
+   * card *for* an absent-or-automated picker (the human `pick` names its own).
+   * @returns {string | null}
+   */
+  randomModeFromHand() {
+    if (!this.room) return null;
+    const hand = (this.room.hand ?? []).filter((id) => isValidPick(id, this.usedModes));
+    if (hand.length === 0) return null;
+    const cardId = hand[Math.floor(Math.random() * hand.length)];
+    return resolveFamilyPick(cardId) || null;
+  }
+
   // ---- bots (server-driven seats) ----
 
   /**
-   * Mint a fresh bot seat's id + display name. Cycles the {@link BOT_NAMES} pool
-   * by how many bots the room already holds, appending a number once the pool
-   * wraps, so a room full of bots still reads as distinct names. The random id is
-   * namespaced `bot:` so it can never collide with a human's device id.
+   * Mint a fresh bot seat's id + display name. Picks the first {@link BOT_NAMES}
+   * entry not already taken by a seat in the room (numbering past the pool once it
+   * wraps), so names stay distinct even across a remove-then-add — counting live
+   * bots instead would re-hand a freed name to a seat that still holds it. The
+   * random id is namespaced `bot:` so it can never collide with a human's device id.
    * @returns {{ botId: string, nickname: string }}
    */
   mintBotSeat() {
-    let n = 0;
-    if (this.room) for (const seat of this.room.seats.values()) if (seat.bot === true) n += 1;
-    const base = BOT_NAMES[n % BOT_NAMES.length];
-    const nickname = n < BOT_NAMES.length ? base : `${base} ${Math.floor(n / BOT_NAMES.length) + 1}`;
+    const taken = new Set(this.room ? [...this.room.seats.values()].map((s) => s.nickname) : []);
+    let nickname = 'Bot';
+    for (let n = 0; n < 1000; n += 1) {
+      const base = BOT_NAMES[n % BOT_NAMES.length];
+      const candidate = n < BOT_NAMES.length ? base : `${base} ${Math.floor(n / BOT_NAMES.length) + 1}`;
+      if (!taken.has(candidate)) { nickname = candidate; break; }
+    }
     const botId = `bot:${Math.random().toString(36).slice(2, 10)}`;
     return { botId, nickname };
   }
@@ -673,15 +710,21 @@ export default class PartyGameServer {
       const question = q ? QUESTIONS[q.questionId] : null;
       const correct = q && question ? question.isCorrect(q, choice) : false;
       const phaseBefore = this.room.phase;
+      const indexBefore = this.room.questionIndex;
       const result = applyBuzz(this.room, botId, choice, correct);
       if (result.broadcasts.length === 0) { this.room = result.room; return; }
       this.room = result.room;
       if (this.room.phase !== phaseBefore) this.holders.clear();
       await this.saveRoom();
       this.dispatch(result.broadcasts);
-      // This buzz may have completed the room (all present buzzed → reveal); if so,
-      // cancel the other bots' pending buzzes for this now-finished question.
-      if (this.room.phase !== 'question') this.clearBotTimers();
+      // Reconcile timers through the same path every transition uses. A buzz that
+      // completes the room (all present buzzed → reveal) leaves the question phase,
+      // so `syncBots` cancels the other bots' now-pointless pending buzzes; a buzz
+      // that doesn't complete it stays in `question` and syncBots is a no-op. Going
+      // through it rather than a hand-rolled clear keeps this path from becoming the
+      // one bot mutation that forgets to reschedule if a buzz ever moves to a phase
+      // that needs it.
+      this.syncBots(phaseBefore, indexBefore);
     } catch (err) {
       console.error('[partyGameServer] botBuzz failed:', err);
     }
@@ -702,10 +745,12 @@ export default class PartyGameServer {
   }
 
   /**
-   * A bot holding the draft pick chooses a random valid card from its dealt hand —
-   * the same resolution as the host's `forcePick`, so an idle-picker path and a
-   * bot-picker path build the round identically. No veil: like a forced pick, the
-   * veil is a deliberate bet a bot never places.
+   * A bot holding the draft pick chooses a random valid card from its dealt hand
+   * and starts its round — the exact `randomModeFromHand` + `startRoundFromMode`
+   * the host's `forcePick` runs, so an idle-picker path and a bot-picker path build
+   * the round identically (including the closing Decider, which needs no branch
+   * here: `applyPick` reads `room.decider`). No veil: like a forced pick, the veil
+   * is a deliberate bet a bot never places.
    * @param {string} botId
    */
   async botPick(botId) {
@@ -713,20 +758,13 @@ export default class PartyGameServer {
       if (!this.room || this.room.phase !== 'picking' || this.room.picker !== botId) return;
       const seat = this.room.seats.get(botId);
       if (!seat || seat.bot !== true) return;
-      const hand = (this.room.hand ?? []).filter((id) => isValidPick(id, this.usedModes));
-      if (hand.length === 0) return;
-      const cardId = hand[Math.floor(Math.random() * hand.length)];
-      const modeId = resolveFamilyPick(cardId);
+      const modeId = this.randomModeFromHand();
       if (!modeId) return;
-      const mode = MODE_BY_ID[modeId];
-      const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
-      const question = this.generateForQuestion(mode.questionId, mode.poolId);
       const phaseBefore = this.room.phase;
       const indexBefore = this.room.questionIndex;
-      const result = applyPick(this.room, botId, modeId, segment, question);
+      const result = this.startRoundFromMode(botId, modeId, false);
       if (result.broadcasts.length === 0) { this.room = result.room; return; }
       this.room = result.room;
-      this.usedModes.add(usedIdForMode(modeId));
       if (this.room.phase !== phaseBefore) this.holders.clear();
       await this.saveRoom();
       this.dispatch(result.broadcasts);
