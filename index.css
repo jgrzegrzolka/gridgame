@@ -84,15 +84,11 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.15);
   flex: none;
 }
-/* The negated colour reads quieter: the "not" prefix + the colour word muted. */
-.hero-crit .crit-not .crit-not-pre {
-  font-size: 13px;
-  font-style: italic;
-  color: var(--muted-color);
-}
-.hero-crit .crit-not span:last-child {
-  color: var(--muted-color);
-}
+/* The negation reads like every other criterion — "not" and the colour word both
+ * inherit the line's ink and 17px regular weight, exactly like "cross". The word
+ * "not" carries the exclusion; the swatch (rendered first, before "not blue")
+ * marks which colour. No quieter styling — muted grey read as a different,
+ * thinner font. */
 
 /* The day's flags. Found ones show the real flag (the player already knows
  * them); still-to-find ones are blank stamps; a large answer set collapses its
@@ -102,9 +98,15 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  /* Center, don't stretch: min-height reserves the 50px row, but the default
+   * align-items: stretch would pull each stamp to 50px and break its own 3:2
+   * aspect-ratio — the flag SVG then letterboxes and shows a white strip top and
+   * bottom (worse on phones, where a 54px stamp stretched to 50px strips ~7px).
+   * Centering keeps the true 3:2 box so the flag fills edge to edge. */
+  align-items: center;
   gap: 10px;
   max-width: 460px;
-  margin: 0 auto 34px;
+  margin: 0 auto 38px; /* one clear step down to the CTA (was 34px) */
   min-height: 50px; /* reserve the row so the CTA doesn't jump when stamps paint */
 }
 .hero-stamp {
