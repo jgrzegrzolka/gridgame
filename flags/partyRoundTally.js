@@ -9,12 +9,12 @@
  *
  * **The split arrives from the server; it is no longer inferred.** This module used
  * to recover base/speed from the total by inverse arithmetic (subtract the base,
- * match the remainder against `SPEED_BONUS`), which worked only while every
- * reachable total decomposed uniquely. `SOLE_SURVIVOR_BONUS` equals `SPEED_BONUS[0]`,
- * so `15` became "10 + 5 speed" or "10 + 5 solo" with no way to tell — exactly the
- * handoff the old header here promised. `scoreQuestionDetailed` now itemises the
- * award server-side and the reveal carries it, so this module only ever adds up
- * numbers somebody else already attributed.
+ * match the remainder against a fixed speed curve), which worked only while every
+ * reachable total decomposed uniquely — and it never truly did (the solo bonus
+ * collided with a speed bonus, and the speed ladder is now sized to the race so
+ * its values aren't even fixed). `scoreQuestionDetailed` now itemises the award
+ * server-side and the reveal carries it, so this module only ever adds up numbers
+ * somebody else already attributed.
  *
  * `closeness` is the world-facts question's near-miss award: you named the
  * second- or third-biggest rather than the biggest. A separate bucket from

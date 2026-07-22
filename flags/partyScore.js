@@ -1,102 +1,104 @@
 /**
  * Scoring for a Flag Party question. Pure — no state, no DOM.
  *
- * A question awards a flat {@link CORRECT_POINTS} for any correct answer, plus a
- * decaying speed bonus for the first few correct answers *by arrival order*
- * (the room records buzzes in the order the server received them — see
- * `flags/partyRoom.js` and the "buzz-order is authoritative" note in
- * `PARTY.md`). The speed bonus is suppressed in solo play: with one seat
- * there is no race to reward.
+ * A question pays from four buckets: a flat {@link CORRECT_POINTS} for being
+ * right, a {@link speedBonusForRank speed bonus} that ranks the correct answers
+ * by how quickly they arrived, a {@link SOLE_SURVIVOR_BONUS} for being the only
+ * one right, and — on questions whose options have a true order (world facts) —
+ * {@link CLOSENESS_LADDER closeness} points for a near miss. The speed and solo
+ * bonuses are suppressed in solo play: with one seat there is no race and no
+ * "only one" to be.
+ *
+ * The rebalance (Jan, 2026-07-22): the flat base used to dwarf everything, so an
+ * easy mode where everyone is right (spot-the-flag) came down to a tiny 5/3/1
+ * garnish and being quick barely mattered. The speed ladder is now **sized to
+ * how many got it right**, so it reaches every correct seat and grows with the
+ * race — a big field makes speed the deciding factor, a small one leaves the
+ * base (knowing) in charge. See {@link speedBonusForRank}.
  */
 
-/** Points for any correct answer, regardless of speed. */
-export const CORRECT_POINTS = 10;
+/** Points for a correct answer on a right/wrong question (flag-pick, map-pick,
+ *  spot-the-flag). Ranked questions score through {@link CLOSENESS_LADDER}
+ *  instead — see {@link scoreQuestionDetailed}. */
+export const CORRECT_POINTS = 5;
 
 /**
- * Speed bonus by rank among the correct answers, in arrival order. Index 0 is
- * the first correct answer, 1 the second, and so on; ranks past the end score
- * 0. Tune the curve here — the room and page read it through
- * {@link speedBonusForRank}, never inline.
+ * Speed bonus for the correct answer at 0-based arrival `rank`, among
+ * `correctCount` correct answers. Unlike the old fixed 5/3/1 (which paid only the
+ * first three), this pays **every** correct seat and stretches with the race: the
+ * slowest correct answer scores 0 and each place up is worth one more, with a
+ * **winner bump** so first place always clears second by two.
  *
- * **Requires an actual race** — see {@link scoreQuestionDetailed}. If only one
- * player got the question right they were "first" by default, having beaten
- * nobody, so no speed bonus is paid.
+ *   correctCount 6 -> 6/4/3/2/1/0 by arrival   ·   3 -> 3/1/0   ·   2 -> 2/0
  *
- * @type {number[]}
- */
-export const SPEED_BONUS = [5, 3, 1];
-
-/**
- * @param {number} rank 0-based rank among the correct answers
+ * That is what makes an easy mode a genuine race and a hard mode still mostly
+ * about knowing: with K correct the fastest earns K, so the speed spread grows
+ * exactly when correctness stops being the scarce thing.
+ *
+ * No race, no bonus: `correctCount < 2` pays 0 for everyone (a lone correct
+ * answer was "first" having beaten nobody).
+ *
+ * @param {number} rank 0-based arrival rank among the correct answers
+ * @param {number} correctCount how many got it right (the size of the race)
  * @returns {number}
  */
-export function speedBonusForRank(rank) {
-  return SPEED_BONUS[rank] ?? 0;
+export function speedBonusForRank(rank, correctCount) {
+  if (correctCount < 2) return 0; // no race
+  if (rank < 0 || rank >= correctCount) return 0;
+  if (rank === 0) return correctCount; // winner bump: first clears second by two
+  return correctCount - 1 - rank;
 }
 
 /**
  * Was this award the **first** correct answer — the one seat that actually won
  * the race? Drives the reveal's "⚡ Fastest" badge.
  *
- * Exists because the badge was rendered on `award.speed > 0`, and
- * {@link SPEED_BONUS} pays the first THREE correct answers (5 / 3 / 1). So a
- * question three people got right tagged all three as Fastest, which is how a
- * real game showed two winners of the same race. The seats behind still keep
- * their speed points; they are simply not called first.
+ * Now an explicit flag on the award rather than an inference from the bonus's
+ * value: once the ladder became {@link speedBonusForRank sized to the race}, the
+ * winner's bonus is no longer a fixed constant (it is `correctCount`), so there
+ * is nothing global to compare against. `scoreQuestionDetailed` sets `fastest`
+ * on exactly the rank-0 correct buzz of a real race, and the reveal reads it.
  *
- * Identified by the bonus's VALUE rather than by a rank threaded through the
- * wire: `SPEED_BONUS[0]` is its unique maximum, so matching it picks out rank 0
- * exactly. That soundness depends on the curve strictly decreasing, which a test
- * pins — change {@link SPEED_BONUS} to a curve with a repeated first entry and
- * that test fails rather than the badge quietly doubling up again.
- *
- * @param {{ speed: number } | undefined | null} award
+ * @param {{ fastest?: boolean } | undefined | null} award
  * @returns {boolean}
  */
 export function wasFastest(award) {
-  return !!award && award.speed === SPEED_BONUS[0];
+  return !!(award && award.fastest);
 }
 
 /**
  * Bonus for being the **only** player who got a question right. Knowing the
- * obscure flag alone used to be worth exactly as much as everyone guessing right
- * together. Off in solo play for the same reason the speed bonus is: with one
- * seat there is nobody to be the only one *against*.
+ * obscure flag alone. Off in solo play for the same reason the speed bonus is:
+ * with one seat there is nobody to be the only one *against*.
  *
- * Deliberately equal to `SPEED_BONUS[0]` — which is exactly why the breakdown
- * now travels on the wire instead of being re-derived from the total: `15` no
- * longer decomposes uniquely. See `flags/partyRoundTally.js`.
+ * Deliberately small (1). The old value (5, equal to the old first speed bonus)
+ * made a lucky lone-correct on a hard question worth as much as a clean race win
+ * and was the single biggest way a scoreboard blew open. Being uniquely right is
+ * still recognised, it just no longer swings the board.
  */
-export const SOLE_SURVIVOR_BONUS = 5;
+export const SOLE_SURVIVOR_BONUS = 1;
 
 /**
- * Points by how close a wrong answer was, for questions that rank their options
- * rather than just marking one right — today that is the world-facts
- * (superlative) question, where the four flags have a true order and picking the
- * second-biggest is real knowledge rather than a miss.
+ * Points for a pick on a ranked question (world facts), by the pick's rank in the
+ * question's own direction: index 0 the exact answer, then runner-up, third,
+ * fourth. A ranked question pays partial credit because picking the second-biggest
+ * is real knowledge rather than a miss.
  *
- * Index is the pick's rank in the question's own direction: 0 is the answer, 1
- * the runner-up, and so on. **Index 0 is listed for readability only** — a
- * correct pick is paid through `base`, never through closeness, so that the
- * meaning of `base` ("you were right") survives. The two agree by construction:
- * `CLOSENESS_LADDER[0] === CORRECT_POINTS`, pinned by a test.
- *
- * The cost of this curve, measured over 2,000 simulated 5-question rounds
- * against the previous all-or-nothing scoring: a player who knows the answer
- * scores 2.4x what a random tapper scores, down from 4.0x. In exchange, rounds
- * ending in a dead heat for first fall from ~31% to ~11%, because six possible
- * round totals become thirty-five. Closer boards, far fewer ties. That trade was
- * made deliberately (Jan, 2026-07-19); if the game starts feeling flat, raise
- * this curve rather than adding a separate skill bonus.
+ * **Index 0 is the exact answer** and is paid as `base` (see
+ * {@link scoreQuestionDetailed}), so it reads as "you were right", not
+ * "closeness". It is a touch above {@link CORRECT_POINTS} (6 vs 5) on purpose:
+ * reading a four-way ranking is a harder ask than a right/wrong flag. Crucially
+ * it sits **above** the runner-up (3), so being exactly right always out-scores
+ * being close.
  *
  * @type {number[]}
  */
-export const CLOSENESS_LADDER = [CORRECT_POINTS, 5, 2, 0];
+export const CLOSENESS_LADDER = [6, 3, 2, 0];
 
 /**
- * Closeness points for a pick at `rank` (0 = the answer). Rank 0 and anything
- * out of range score 0: a correct pick is paid as `base`, and a question with no
- * ranking (flag-pick, map-pick) passes no rank at all.
+ * Closeness points for a *wrong* pick at `rank` (0 = the answer). Rank 0 and
+ * anything out of range score 0: a correct pick is paid as `base`, and a question
+ * with no ranking (flag-pick, map-pick) passes no rank at all.
  *
  * @param {number | undefined} rank 0-based rank of the pick in the question's ranking
  * @returns {number}
@@ -109,12 +111,10 @@ export function closenessForRank(rank) {
 /**
  * `rank` is the pick's 0-based position in the question's ranking, and is only
  * present for questions that HAVE a ranking. Absent means "this question is
- * right or wrong, nothing in between" — which is every question but the
- * world-facts one, and is why closeness can be added without touching flag-pick
- * or map-pick scoring at all.
+ * right or wrong, nothing in between" — every question but the world-facts one.
  *
  * @typedef {{ playerId: string, correct: boolean, rank?: number }} ScoredBuzz
- * @typedef {{ base: number, speed: number, solo: number, closeness: number, total: number }} Award
+ * @typedef {{ base: number, speed: number, solo: number, closeness: number, fastest: boolean, total: number }} Award
  */
 
 /**
@@ -139,15 +139,11 @@ export function scoreQuestion(buzzesInOrder, opts = {}) {
  * The same scoring, itemised: what each player earned and *what earned it*.
  *
  * This is the authoritative shape — {@link scoreQuestion} is a projection of it
- * down to totals, kept because the room's seat arithmetic and a good deal of the
- * test suite only ever want the number. The reveal carries the itemised version
- * so the break's chips describe the scoring rules rather than guessing at them
- * from the total (which stopped being decidable once {@link SOLE_SURVIVOR_BONUS}
- * matched `SPEED_BONUS[0]`).
+ * down to totals. The reveal carries the itemised version so the break's chips
+ * describe the scoring rules rather than inferring them from the total.
  *
- * `total` is always `base + speed + solo + closeness`, so a caller can trust
- * either half of the shape without re-deriving the other. `base` and `closeness`
- * are mutually exclusive by construction: you were either right (base) or near
+ * `total` is always `base + speed + solo + closeness`. `base` and `closeness` are
+ * mutually exclusive by construction: you were either right (base) or near
  * (closeness), never both.
  *
  * @param {ScoredBuzz[]} buzzesInOrder
@@ -163,41 +159,32 @@ export function scoreQuestionDetailed(
 ) {
   /** @type {Record<string, Award>} */
   const awards = {};
-  // Sole survivor is decided across the whole question, not per buzz, so it has
-  // to be counted before any award is handed out. Players who never buzzed
-  // aren't in the input at all, so "one correct buzz" already means "one player
-  // in the room got it".
+  // Sole survivor and the size of the race are both decided across the whole
+  // question, so count the correct answers before handing out any award. Players
+  // who never buzzed aren't in the input, so "one correct buzz" already means
+  // "one player in the room got it".
   const correctCount = buzzesInOrder.filter((b) => b.correct).length;
   const soloBonus = applySoloBonus && correctCount === 1 ? SOLE_SURVIVOR_BONUS : 0;
-  // No race, no race bonus. A lone correct answer is "first" having beaten
-  // nobody, so paying it SPEED_BONUS[0] rewarded a race that never happened —
-  // and it stacked with the sole-survivor bonus, making that question worth 20
-  // against everyone else's 0. Measured at 24% of questions in a four-player
-  // game, which made it the single most common way a scoreboard blew open.
-  //
-  // Every other outcome already tops out at a 15-point swing (15/13/11/0,
-  // 15/13/0/0). Dropping this makes the sole-survivor case 15/0/0/0 and the
-  // maximum swing uniform, which is the same answer the race logic gives on its
-  // own. The sole-survivor bonus itself is untouched: knowing something nobody
-  // else did is still worth SOLE_SURVIVOR_BONUS, it just no longer collects a
-  // sprint medal for running alone.
   const raced = correctCount > 1;
   let correctRank = 0;
   for (const buzz of buzzesInOrder) {
     if (!buzz.correct) {
       // A wrong pick can still pay, if the question ranked its options and this
-      // one landed near the top. Deliberately gets no speed bonus: speed ranks
-      // among CORRECT answers, so paying it here would reward buzzing fast on a
-      // question you didn't know.
+      // one landed near the top. Never earns speed: speed ranks among CORRECT
+      // answers, so paying it here would reward buzzing fast on a question you
+      // didn't know.
       const closeness = closenessForRank(buzz.rank);
-      awards[buzz.playerId] = { base: 0, speed: 0, solo: 0, closeness, total: closeness };
+      awards[buzz.playerId] = { base: 0, speed: 0, solo: 0, closeness, fastest: false, total: closeness };
       continue;
     }
-    const base = CORRECT_POINTS;
-    const speed = applySpeedBonus && raced ? speedBonusForRank(correctRank) : 0;
-    const solo = soloBonus;
+    // A ranked question pays the exact answer (its rank is 0) through the top of
+    // the closeness ladder; a right/wrong question pays the flat CORRECT_POINTS.
+    // Both mean "you were right", so both land in `base`.
+    const base = typeof buzz.rank === 'number' ? CLOSENESS_LADDER[0] : CORRECT_POINTS;
+    const speed = applySpeedBonus && raced ? speedBonusForRank(correctRank, correctCount) : 0;
+    const fastest = applySpeedBonus && raced && correctRank === 0;
     awards[buzz.playerId] = {
-      base, speed, solo, closeness: 0, total: base + speed + solo,
+      base, speed, solo: soloBonus, closeness: 0, fastest, total: base + speed + soloBonus,
     };
     correctRank += 1;
   }

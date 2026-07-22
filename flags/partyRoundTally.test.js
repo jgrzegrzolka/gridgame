@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyTally, addQuestionToTally, chipsFor } from './partyRoundTally.js';
-import { scoreQuestionDetailed, CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS } from './partyScore.js';
+import { scoreQuestionDetailed, CORRECT_POINTS, speedBonusForRank, SOLE_SURVIVOR_BONUS } from './partyScore.js';
 
 /**
  * The reveal's `breakdown` field, built exactly the way the room builds it.
@@ -30,8 +30,9 @@ test('accumulates each bucket across a round', () => {
   ];
   let t = emptyTally();
   for (let i = 0; i < 5; i += 1) t = addQuestionToTally(t, breakdownOf(buzzes));
-  assert.deepEqual(t.a, { base: CORRECT_POINTS * 5, speed: SPEED_BONUS[0] * 5, solo: 0, closeness: 0 });
-  assert.deepEqual(t.b, { base: CORRECT_POINTS * 5, speed: SPEED_BONUS[1] * 5, solo: 0, closeness: 0 });
+  // Two correct (a, b), so the speed ladder is sized to a two-way race: 2 / 0.
+  assert.deepEqual(t.a, { base: CORRECT_POINTS * 5, speed: speedBonusForRank(0, 2) * 5, solo: 0, closeness: 0 });
+  assert.deepEqual(t.b, { base: CORRECT_POINTS * 5, speed: speedBonusForRank(1, 2) * 5, solo: 0, closeness: 0 });
   assert.deepEqual(t.c, { base: 0, speed: 0, solo: 0, closeness: 0 });
 });
 
@@ -50,10 +51,9 @@ test('a player who never buzzed simply is not in the tally', () => {
 });
 
 test('the sole survivor bonus keeps its own bucket instead of being read as speed', () => {
-  // The reason the breakdown moved onto the wire: SOLE_SURVIVOR_BONUS equals
-  // SPEED_BONUS[0], so a 15 is either "10 + 5 speed" or "10 + 5 solo" and no
-  // arithmetic on the total alone can tell them apart. Both cases below total
-  // 15 and decompose differently, which is the whole argument in two fixtures.
+  // The reason the breakdown moved onto the wire: base + speed + solo no longer
+  // decomposes uniquely from a total, so the itemised award is authoritative.
+  // Both cases below decompose differently and the chips must tell them apart.
   const alone = addQuestionToTally(emptyTally(), breakdownOf([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: false },
@@ -65,12 +65,8 @@ test('the sole survivor bonus keeps its own bucket instead of being read as spee
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: true },
   ]));
-  assert.deepEqual(raced.a, { base: CORRECT_POINTS, speed: SPEED_BONUS[0], solo: 0, closeness: 0 });
+  assert.deepEqual(raced.a, { base: CORRECT_POINTS, speed: speedBonusForRank(0, 2), solo: 0, closeness: 0 });
   assert.deepEqual(chipsFor(raced.a).map((c) => c.kind), ['base', 'speed']);
-
-  // Same total, different story.
-  const totalOf = (/** @type {{base:number,speed:number,solo:number,closeness:number}} */ x) => x.base + x.speed + x.solo + x.closeness;
-  assert.equal(totalOf(alone.a), totalOf(raced.a));
 });
 
 test('a reveal with no breakdown tallies nothing rather than throwing', () => {

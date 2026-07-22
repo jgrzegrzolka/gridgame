@@ -23,7 +23,7 @@ import {
   DEFAULT_QUESTIONS,
   MAX_SEATS,
 } from './partyRoom.js';
-import { CORRECT_POINTS, SPEED_BONUS, SOLE_SURVIVOR_BONUS, CLOSENESS_LADDER } from './partyScore.js';
+import { CORRECT_POINTS, SOLE_SURVIVOR_BONUS, CLOSENESS_LADDER } from './partyScore.js';
 import { DEFAULT_GAME_LENGTH } from './partyDraft.js';
 
 /** @param {string} answer
@@ -279,10 +279,10 @@ test('applyBuzz: when all present seats have buzzed, the question reveals and sc
   assert.equal(rev.points.alice, aliceAward, 'the only one who knew it');
   assert.deepEqual(
     rev.breakdown.alice,
-    { base: CORRECT_POINTS, speed: 0, solo: SOLE_SURVIVOR_BONUS, closeness: 0 },
+    { base: CORRECT_POINTS, speed: 0, solo: SOLE_SURVIVOR_BONUS, closeness: 0, fastest: false },
     'the reveal itemises what earned it, so the break need not guess',
   );
-  assert.deepEqual(rev.breakdown.bob, { base: 0, speed: 0, solo: 0, closeness: 0 },
+  assert.deepEqual(rev.breakdown.bob, { base: 0, speed: 0, solo: 0, closeness: 0, fastest: false },
     'a flag-pick question ranks nothing, so a wrong pick earns no closeness');
   assert.equal(rev.points.bob, 0);
   assert.equal(r.room.seats.get('alice')?.score, aliceAward);
