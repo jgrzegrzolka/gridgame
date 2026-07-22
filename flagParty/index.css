@@ -607,7 +607,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    500 name, 600 score. The old 700/800 read heavier than anything else on the
    site — the result board is a leaderboard, so it uses the leaderboard's type. */
 .scoreline .rank { color: var(--muted-color); width: 16px; font-variant-numeric: tabular-nums; }
-.scoreline .nm { font-weight: var(--weight-regular); color: var(--primary-color); }
+/* The name yields first when a row is tight: it ellipsizes so the round's chips
+   and the total always keep their place (a long nickname + four chips would
+   otherwise shove the score off a phone-width row). */
+.scoreline .nm { font-weight: var(--weight-regular); color: var(--primary-color); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scoreline .sc { margin-left: auto; font-weight: var(--weight-bold); color: var(--primary-color); font-variant-numeric: tabular-nums; }
 /* Break-row extra: the gap-to-leader on your own row, muted so the score stays
    the loudest thing. Only `.sc` carries margin-left:auto (pushing the score to
@@ -622,34 +625,71 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .scoreline .gain {
   margin-left: auto;
   display: flex;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
   font-size: 12px;
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
-  opacity: 0;
+  /* Chips never shrink — the name (above) gives way instead. */
+  flex-shrink: 0;
 }
-/* The gain is broken into what earned it: a quiet chip for the flat correctness
-   points, a pink one for the speed bonus so "I was first" is the thing that
-   catches the eye. Both sit on --selected-color rather than inventing a tint, so
-   the row keeps to the eight palette vars. */
+/* The gain is broken into what earned it, one pill per scoring bucket: an icon
+   (✓ correct, ⚡ speed, ★ only-one, ≈ close) and the value. The bucket pass that
+   banks it reveals the matching chip (`.in`), so the label and the count-up land
+   together. Pills sit on --page-bg-color inside a --muted-soft hairline (the same
+   pill idiom as the criteria chips); the accent chip borrows the pink border so
+   "I was fast" is the one that catches the eye. Colours stay within the eight. */
 .scoreline .chip {
-  padding: 1px 6px;
-  border-radius: 5px;
-  background: var(--selected-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--page-bg-color);
+  border: 1px solid var(--muted-soft-color);
   white-space: nowrap;
+  /* Hidden until its bucket pass reveals it — see `.chip.in`. */
+  opacity: 0;
+  transform: translateY(4px) scale(0.9);
 }
+.scoreline .chip.in { opacity: 1; transform: none; }
 .scoreline .chip-base { color: var(--muted-color); }
-.scoreline .chip-speed { color: var(--secondary-color); }
-/* Sole survivor: the loudest of the three, so it takes primary — the only ink
-   darker than the row's own text. The mock drew this chip green; green is not
-   one of the eight, and the setup-chip hue exception is confined to setup, so
-   the weight is carried by contrast instead of by a new colour. */
+.scoreline .chip-speed { color: var(--secondary-color); border-color: var(--secondary-color); }
+/* Sole survivor: the loudest, so it takes primary — the only ink darker than the
+   row's own text. The mock drew this chip green; green is not one of the eight,
+   so the weight is carried by contrast instead of by a new colour. */
 .scoreline .chip-solo { color: var(--primary-color); }
-.scoreline .gain.on { opacity: 1; }
+/* Close (world-facts near miss): the quietest bucket, muted like base. */
+.scoreline .chip-closeness { color: var(--muted-color); }
 .scoreline .gain + .sc { margin-left: 9px; }
 @media (prefers-reduced-motion: no-preference) {
-  .scoreline .gain { transition: opacity 0.25s ease; }
+  .scoreline .chip { transition: opacity 0.28s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.5); }
+}
+
+/* The bucket-pass banner: a single pill naming the bucket the board is banking
+   right now, coloured to match that bucket's chips. Fades in per pass and clears
+   once the passes settle. Same pill construction as the chips above. */
+.break-passbar { min-height: 30px; display: flex; align-items: center; justify-content: center; margin: 2px 0 8px; }
+.break-pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  opacity: 0;
+  transform: translateY(4px);
+}
+.break-pass.in { opacity: 1; transform: none; }
+.break-pass.base { color: var(--muted-color); }
+.break-pass.speed { color: var(--secondary-color); border-color: var(--secondary-color); }
+.break-pass.solo { color: var(--primary-color); }
+.break-pass.closeness { color: var(--muted-color); }
+@media (prefers-reduced-motion: no-preference) {
+  .break-pass { transition: opacity 0.25s ease, transform 0.25s ease; }
 }
 
 /* The standings kept under the draft pick. Same `.scoreline` rows as the break —
@@ -665,15 +705,22 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   .scoreline.dimmed { transition: opacity 0.5s ease; }
 }
 
-/* The break screen: MVP banner over the standings. */
+/* The break screen: MVP banner UNDER the standings, revealed once the bucket
+   passes have settled (`.in`). The round's verdict, after you've watched it. */
 .break-mvp {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 11px 12px;
+  margin-top: 4px;
   border-radius: 12px;
   background: var(--selected-color);
   font-size: 14px;
+  opacity: 0;
+}
+.break-mvp.in { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .break-mvp { transition: opacity 0.4s ease; }
 }
 .break-mvp-text { color: var(--primary-color); }
 .break-mvp-name { font-weight: var(--weight-bold); }

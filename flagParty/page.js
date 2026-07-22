@@ -6,12 +6,21 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal } from '../flags/partyClient.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
+
+/** The glyph on each round-gain chip, one per scoring bucket. Icon-only (the
+ *  number sits beside it) so the chip stays free of i18n — a `⚡ +8` reads the
+ *  same in every locale, and the bucket pass banner carries the worded label. */
+const CHIP_ICON = { base: '✓', speed: '⚡', solo: '★', closeness: '≈' };
+/** Fixed order the bucket passes run in — the order the chips are laid out and
+ *  the order the break banks them: what you knew (base), then how fast (speed),
+ *  then the rarer bonuses. Matches {@link chipsFor}'s own ordering. */
+const CHIP_ORDER = /** @type {const} */ (['base', 'speed', 'solo', 'closeness']);
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
 import { clausesFromPrompt, missLabel, filtersFor } from '../flags/partyQuestions/spotFlag.js';
 import { renderSpotCriteria } from '../flags/filterChips.js';
@@ -445,6 +454,7 @@ export function bootFlagParty() {
   const breakMvp = $('break-mvp');
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
+  const breakPass = $('break-pass');
   const roundCardCount = $('roundcard-count');
   const roundCardIc = $('roundcard-ic');
   const roundCardRing = $('roundcard-ring-fill');
@@ -2048,12 +2058,15 @@ export function bootFlagParty() {
     const board = state.scoreboard || [];
     const { rows, mvp } = roundBreak(prevBreakBoard, board);
 
-    // MVP banner — hidden when nobody scored in the round.
+    // MVP banner — hidden when nobody scored in the round. Built now but held
+    // invisible (no `.in`) until the bucket passes settle; playLedger reveals it.
     const mvpRow = mvp ? rows.find((r) => r.playerId === mvp) : null;
     breakMvp.innerHTML = '';
     breakMvp.hidden = !mvpRow;
+    breakMvp.classList.remove('in');
     if (mvpRow) {
-      breakMvp.appendChild(buildAvatar(mvpRow.playerId));
+      // No avatar here — the MVP line is a caption ("Best of the round · Ada
+      // +8"), not a roster row, and the mock draws it text-only.
       const txt = el('span', 'break-mvp-text');
       txt.append(document.createTextNode(`${t('party.roundMvp', 'Best of the round')} · `), el('span', 'break-mvp-name', mvpRow.nickname));
       breakMvp.appendChild(txt);
@@ -2062,45 +2075,65 @@ export function bootFlagParty() {
 
     breakStandingsLabel.textContent = t('party.standings', 'Standings');
 
+    // Fresh break: clear any leftover pass banner from the previous one.
+    breakPass.className = 'break-pass';
+    breakPass.textContent = '';
+
     breakBoard.innerHTML = '';
     /** @type {HTMLElement[]} the row node per `rows` entry, for the slide animation */
     const rowNodes = [];
+    /** @type {boolean[]} does row i's itemised split add up to its round total? */
+    const rowReconciles = [];
+    /** @type {Array<{ base: number, speed: number, solo: number, closeness: number }>} per-row round split */
+    const rowSplits = [];
     rows.forEach((r, i) => {
       const you = r.playerId === state.you;
       const row = el('div', 'scoreline' + (you ? ' you' : ' other'));
       row.appendChild(el('span', 'rank', String(i + 1)));
       row.appendChild(buildAvatar(r.playerId));
       row.appendChild(el('span', 'nm', r.nickname));
-      // The gap to the leader reads on your own row only — it's your race to run.
-      if (you && r.gapToLeader > 0) {
-        row.appendChild(el('span', 'gap', fmt(t('party.behind', '{n} behind'), { n: r.gapToLeader })));
-      }
-      // The round's gain, beside the total, broken into what earned it. Hidden
-      // until the count-up starts and faded out once the rows have settled, so the
-      // board ends up as clean as it was before — the chips answer "what did I just
-      // get, and for what?" during the beat where that's the question, then get out
-      // of the way. `speed` is the bonus for being among the first correct answers,
-      // which was previously invisible the moment the reveal passed.
+      // No "N behind" gap on the break row: once the round's gain is broken into
+      // up to four labelled chips, name + chips + total already fill a phone-width
+      // row, and the gap tipped it into overflow (the chips wrapped, the score got
+      // shoved off). Standing is read from the rank numeral and the slide; the gap
+      // is redundant here.
+      // The round's gain, beside the total, broken into what earned it — one chip
+      // per scoring bucket. Each chip starts hidden and is revealed by the bucket
+      // pass that banks it (`playLedger`), so the label and the count-up land
+      // together. The chips answer "what did I just get, and for what?" — `speed`
+      // especially, the race bonus that used to vanish the moment the reveal passed.
       const gain = el('span', 'gain');
       const chips = chipsFor(roundTally[r.playerId]);
-      // Fall back to the plain total when the tally has nothing to say — a player
-      // who joined mid-round, or a reconnect that missed the questions. The number
-      // is always right; only the attribution is best-effort.
-      if (chips.length && chips.reduce((s, c) => s + c.value, 0) === r.roundGain) {
+      // `reconciles`: the itemised chips add up to the round total, so we trust the
+      // split and can animate it bucket by bucket. When they don't — a player who
+      // joined mid-round, or a reconnect that missed questions — fall back to a
+      // single plain chip and (below) the one-shot count-up. The number is always
+      // right; only the attribution is best-effort.
+      const reconciles = chips.length > 0 && chips.reduce((s, c) => s + c.value, 0) === r.roundGain;
+      if (reconciles) {
         for (const c of chips) {
-          const chip = el('span', `chip chip-${c.kind}`, `+${c.value}`);
-          // "Speed bonus", not "Fastest": this chip is the round TOTAL of speed
-          // points, so 13 can mean first twice and second once. Only the reveal's
-          // per-question badge (`wasFastest`) may claim someone actually came first.
-          if (c.kind === 'speed') chip.setAttribute('aria-label', `${c.value} ${t('party.speedBonus', 'Speed bonus')}`);
+          const chip = el('span', `chip chip-${c.kind}`, `${CHIP_ICON[c.kind]} +${c.value}`);
+          chip.dataset.kind = c.kind;
+          // Each chip names its bucket for a screen reader (the glyph alone is
+          // decorative). "Speed bonus" not "Fastest": this is the round TOTAL of
+          // speed points; only the reveal's per-question badge claims a race win.
+          const labelKey = c.kind === 'base' ? ['party.passCorrect', 'Correct']
+            : c.kind === 'speed' ? ['party.speedBonus', 'Speed bonus']
+              : c.kind === 'solo' ? ['party.soleSurvivor', 'Only one']
+                : ['party.passClose', 'Close'];
+          chip.setAttribute('aria-label', `${c.value} ${t(labelKey[0], labelKey[1])}`);
           gain.appendChild(chip);
         }
       } else if (r.roundGain > 0) {
         // Same rule as `chipsFor`: a scoreless round gets no chip at all, never a
         // "+0". The row's total already says it, and a zero chip reads as a jab at
         // whoever had the bad round.
-        gain.appendChild(el('span', 'chip chip-base', `+${r.roundGain}`));
+        const chip = el('span', 'chip chip-base', `${CHIP_ICON.base} +${r.roundGain}`);
+        chip.dataset.kind = 'base';
+        gain.appendChild(chip);
       }
+      rowReconciles.push(reconciles);
+      rowSplits.push(roundTally[r.playerId] || { base: 0, speed: 0, solo: 0, closeness: 0 });
       row.appendChild(gain);
       // No ▲/▼ delta arrow: the rank movement is shown by the row physically
       // sliding to its new place (animateStandingsMovement, from the same
@@ -2120,103 +2153,143 @@ export function bootFlagParty() {
     }
 
     // Play the ledger. Reached once per break (see `breakBuilt`); the sequence
-    // number it stamps is what its own deferred steps check before painting.
+    // number it stamps is what its own deferred steps check before painting. The
+    // bucket-pass path needs every scoring row's split to reconcile; if any is
+    // best-effort, the whole break counts up in one go instead (see playLedger).
+    const canPass = rows.every((r, i) => r.roundGain === 0 || rowReconciles[i]);
     breakSeq += 1;
     breakAnimToken = String(breakSeq);
-    playLedger(rowNodes, rows, breakAnimToken);
+    playLedger(rowNodes, rows, rowSplits, canPass, breakAnimToken);
   }
 
   /**
-   * Play the break's standings as a **ledger** — four beats told in the order the
-   * round actually happened, rather than handing over a finished ranking:
+   * Play the break's standings as a **ledger** — told in the order the round
+   * actually happened rather than handing over a finished ranking. The board
+   * arrives at last break's totals (seated in last break's order), holds a beat,
+   * then climbs one SCORING BUCKET at a time — a "Correct" pass banks everyone's
+   * base, then "Speed", then "Only one" / "Close" — re-ranking after each. An
+   * overtake driven by speed happens ON the speed pass, in front of you: the
+   * board narrates *why* it moved, and every bucket earns a labelled beat so a
+   * player can read what the points were made of. The MVP line fades in last.
    *
-   *   1. the board arrives showing last break's totals, seated in last break's order
-   *   2. a hold, so you read where everyone stood before the round
-   *   3. every score counts up at once, each row's `+N` gain fading in beside it
-   *   4. the rows slide into their new order, climbers passing over the overtaken
+   * The seating is a FLIP: the DOM holds the rows in FINAL order, and an inline
+   * `translateY` offsets each to its CURRENT slot; releasing the transition slides
+   * it home. One measured stride (row + gap) converts a slot delta to pixels.
    *
-   * Beats 1 and 4 are the FLIP this function has always done (driven by `rankDelta`
-   * from `roundBreak`): a row that moved up starts `rankDelta` slots lower and rises
-   * to place. Rows are uniform height, so one measured stride (row + gap) converts a
-   * rank delta to a pixel offset. What's new is that the board *waits* between the
-   * two, and counts, so an overtake reads as caused by the points rather than
-   * coincident with them.
+   * `canPass` is false when any scoring row's split didn't reconcile (a mid-round
+   * join / reconnect): there's no trustworthy per-bucket breakdown, so we fall back
+   * to counting every score up at once — the old ledger, kept for exactly this.
    *
    * Pure decoration — the final scores and positions are already correct in the DOM
-   * before this runs, so `prefers-reduced-motion` skips straight to them. (Unlike
-   * the tricky veil, none of this carries a gameplay advantage.) The `token` is the
-   * break's identity: every deferred step re-checks it, so a break that ends early
-   * (a fast host clock, a reconnect) can't have its timers paint over the next screen.
+   * before this runs, so `prefers-reduced-motion` skips straight to them. The
+   * `token` is the break's identity: every deferred step re-checks it, so a break
+   * that ends early (a fast host clock, a reconnect) can't paint over the next screen.
    *
-   * @param {HTMLElement[]} nodes  row node per `rows` entry, in new order
+   * @param {HTMLElement[]} nodes  row node per `rows` entry, in FINAL rank order
    * @param {import('../flags/partyBreak.js').BreakRow[]} rows
+   * @param {Array<{ base: number, speed: number, solo: number, closeness: number }>} splits  per-row round split
+   * @param {boolean} canPass  every scoring row's split reconciles → run bucket passes
    * @param {string} token  this break's identity; see above
    */
-  function playLedger(nodes, rows, token) {
-    const gains = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.gain')));
+  function playLedger(nodes, rows, splits, canPass, token) {
     const scores = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.sc')));
-    // A gain of 0 never earns a chip — "+0" is noise on the row of someone who had
-    // a bad round, and they already know.
-    const showGain = rows.map((r) => r.roundGain > 0);
+    const chipsOf = (/** @type {number} */ i, /** @type {string} */ kind) =>
+      /** @type {HTMLElement | null} */ (nodes[i].querySelector(`.chip[data-kind="${kind}"]`));
+    const revealAllChips = (/** @type {number} */ i) => {
+      nodes[i].querySelectorAll('.chip').forEach((c) => c.classList.add('in'));
+    };
+    const revealMvp = () => { if (!breakMvp.hidden) breakMvp.classList.add('in'); };
 
     if (prefersReducedMotion()) {
-      // No motion, but the round's gains are information, not decoration — so they
-      // stay, statically, instead of being animated away.
-      gains.forEach((g, i) => { g.classList.toggle('on', showGain[i]); });
+      // No motion: land on the settled board, chips and MVP shown statically — the
+      // gains are information, not decoration.
+      rows.forEach((r, i) => { scores[i].textContent = String(r.score); revealAllChips(i); });
+      revealMvp();
       return;
     }
 
-    // Beat 1: the rows arrive, bottom-to-top, showing where everyone stood before
-    // the round. Fading only — see `scoreline-fade-in`; the seat offsets below own
-    // `transform`, and an entrance that animated it would erase them.
+    // Beat 1: rows fade in showing where everyone stood before the round. Fading
+    // only — the seat offsets below own `transform`, and an entrance that animated
+    // it would erase them (see `scoreline-fade-in`).
     rows.forEach((r, i) => {
       scores[i].textContent = String(r.prevScore);
       nodes[i].classList.add('enter-fade');
       nodes[i].style.setProperty('--enter-delay', `${(rows.length - 1 - i) * LEDGER_ENTER_STAGGER_MS}ms`);
     });
     const stride = nodes.length > 1 ? nodes[1].offsetTop - nodes[0].offsetTop : 0;
-    const movers = stride
-      ? rows.map((r, i) => (r.rankDelta ? i : -1)).filter((i) => i >= 0)
-      : [];
-    for (const i of movers) {
-      const d = /** @type {number} */ (rows[i].rankDelta);
-      nodes[i].style.transition = 'none';
-      nodes[i].style.transform = `translateY(${d * stride}px)`;
-      nodes[i].style.zIndex = d > 0 ? '2' : '1'; // climbers pass over the overtaken
-    }
+
+    // Running score per FINAL index, and the slot each row currently occupies.
+    const running = rows.map((r) => r.prevScore);
+    const curSlot = new Array(rows.length).fill(-1);
+    // Order the final-indices by current running score (stable on ties by final
+    // index, so the settled order matches `rows`). Returns slot → final-index.
+    const orderNow = () => rows.map((_, i) => i).sort((a, b) => running[b] - running[a] || a - b);
+    // Seat every row at `order`, sliding over `slideMs` (0 = snap). A row rising to
+    // a smaller slot rides above the one it passes.
+    const seat = (/** @type {number[]} */ order, /** @type {number} */ slideMs) => {
+      order.forEach((fi, slot) => {
+        const rose = curSlot[fi] >= 0 && slot < curSlot[fi];
+        nodes[fi].style.transition = slideMs > 0 ? `transform ${slideMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)` : 'none';
+        nodes[fi].style.transform = slot === fi ? '' : `translateY(${(slot - fi) * stride}px)`;
+        nodes[fi].style.zIndex = curSlot[fi] >= 0 && slot !== curSlot[fi] ? (rose ? '2' : '1') : '';
+        const rank = /** @type {HTMLElement} */ (nodes[fi].querySelector('.rank'));
+        if (rank) rank.textContent = String(slot + 1);
+        curSlot[fi] = slot;
+      });
+    };
+    seat(orderNow(), 0); // prev order, since running === prevScore here
     void breakBoard.offsetHeight; // commit the start positions before releasing
 
-    // Beats 3 and 4 are scheduled as ABSOLUTE offsets from now, off the tested
-    // `ledgerSchedule()`. They used to be nested timers with relative delays, and
-    // the inner one measured its delay from the moment the count *started* rather
-    // than the moment it *finished* — so the rows slid while the numbers were still
-    // climbing, blurring the two motions the settle beat exists to separate. Flat
-    // timers off one clock can't drift that way, and the ordering is unit-pinned.
-    const { countAt, slideAt, chipsOffAt } = ledgerSchedule(rows.length);
     const stillOurs = () => breakAnimToken === token;
 
-    // Beat 3: every row counts up at once, its gain chip fading in beside it.
-    window.setTimeout(() => {
-      if (!stillOurs()) return;
-      gains.forEach((g, i) => { if (showGain[i]) g.classList.add('on'); });
-      rows.forEach((r, i) => countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => !stillOurs()));
-    }, countAt);
+    if (!canPass) {
+      // Fallback: no trustworthy split, so count every score up in one go and slide
+      // once — the ledger as it was before the bucket passes.
+      const { countAt, slideAt } = ledgerSchedule(rows.length);
+      window.setTimeout(() => {
+        if (!stillOurs()) return;
+        rows.forEach((r, i) => { revealAllChips(i); countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => !stillOurs()); running[i] = r.score; });
+      }, countAt);
+      window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_SLIDE_MS); revealMvp(); }, slideAt);
+      return;
+    }
 
-    // Beat 4: the counting has finished and been read; now the rows change places.
-    window.setTimeout(() => {
-      if (!stillOurs()) return;
-      for (const i of movers) {
-        nodes[i].style.transition = 'transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)';
-        nodes[i].style.transform = 'translateY(0)';
-      }
-    }, slideAt);
+    // Bucket passes: one beat per bucket anyone earned, in CHIP_ORDER. Each pass
+    // shows its banner, reveals that bucket's chips, counts the rows that earned it,
+    // then (after a settle) re-ranks. Absolute offsets off the tested schedule so
+    // the ordering itself is under test.
+    const active = CHIP_ORDER.filter((k) => splits.some((s) => (s[k] || 0) > 0));
+    const sched = passLedgerSchedule(rows.length, active.length);
+    active.forEach((kind, p) => {
+      const { countAt, slideAt } = sched.steps[p];
+      window.setTimeout(() => {
+        if (!stillOurs()) return;
+        breakPass.className = `break-pass in ${kind}`;
+        const label = kind === 'base' ? t('party.passCorrect', 'Correct')
+          : kind === 'speed' ? t('party.passSpeed', 'Speed')
+            : kind === 'solo' ? t('party.soleSurvivor', 'Only one')
+              : t('party.passClose', 'Close');
+        breakPass.textContent = `${CHIP_ICON[kind]}  ${label}`;
+        rows.forEach((r, i) => {
+          const add = splits[i][kind] || 0;
+          if (add <= 0) return;
+          const chip = chipsOf(i, kind);
+          if (chip) chip.classList.add('in');
+          const from = running[i];
+          running[i] = from + add;
+          countUp(scores[i], from, running[i], LEDGER_PASS_COUNT_MS, 0, () => !stillOurs());
+        });
+      }, countAt);
+      window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_PASS_SLIDE_MS); }, slideAt);
+    });
 
-    // The chips have done their job; drop them so the break settles on a clean
-    // board of totals, which is what the remaining seconds are for reading.
+    // Last: clear the banner and bring in the round's verdict.
     window.setTimeout(() => {
       if (!stillOurs()) return;
-      gains.forEach((g) => g.classList.remove('on'));
-    }, chipsOffAt);
+      breakPass.className = 'break-pass';
+      breakPass.textContent = '';
+      revealMvp();
+    }, sched.settleAt);
   }
 
 

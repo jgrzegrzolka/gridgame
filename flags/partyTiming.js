@@ -181,7 +181,7 @@ export const PICK_TIMEOUT_SECONDS = 45;
  *  and fires `next` when it elapses; other clients just render the break. Keyed
  *  to reading a scoreboard, not to a question, so it's a flat duration rather than
  *  the reveal's clean/miss split. */
-export const ROUND_BREAK_SECONDS = 6;
+export const ROUND_BREAK_SECONDS = 8;
 
 /** The break's standings play as a **ledger**: the board arrives showing where
  *  everyone stood *before* the round, holds a beat, counts every score up to its
@@ -241,6 +241,66 @@ export function ledgerSchedule(rowCount = 0) {
   const slideAt = countAt + LEDGER_COUNT_MS + LEDGER_SETTLE_MS;
   const chipsOffAt = slideAt + LEDGER_SLIDE_MS;
   return { enterMs, countAt, slideAt, chipsOffAt, totalMs: chipsOffAt };
+}
+
+// ---- the break, told bucket by bucket (the "category passes") ----
+// The default break no longer counts every score up at once. Instead the board
+// climbs one SCORING BUCKET at a time — a "Correct" pass banks everyone's base,
+// then a "Speed" pass, then "Only one" / "Close" — re-ranking after each. An
+// overtake driven by speed then happens ON the speed pass, in front of you,
+// which is the whole point: the board narrates *why* it moved, and the four
+// buckets (base / speed / solo / closeness) each get their own labelled beat so
+// a player can read what earned the points. `ledgerSchedule` above is kept for
+// the fallback: a reconnect / mid-round join whose per-bucket split doesn't
+// reconcile still counts up in one go rather than faking a breakdown.
+
+/** Hold after the rows have arrived, before the first bucket pass — a beat to
+ *  read where everyone stood before the round. */
+export const LEDGER_PASS_HOLD_MS = 450;
+/** How long one bucket's count-up runs (every row that earned it ticks at once). */
+export const LEDGER_PASS_COUNT_MS = 520;
+/** The breath between a pass's count FINISHING and the re-rank slide starting,
+ *  so the number change and the row movement read as cause and effect. */
+export const LEDGER_PASS_SETTLE_MS = 120;
+/** The per-pass re-rank slide. Matches the inline transition duration in
+ *  `playLedger`'s pass path — change both together. */
+export const LEDGER_PASS_SLIDE_MS = 600;
+/** The gap after one pass has fully settled before the next pass's banner. */
+export const LEDGER_PASS_GAP_MS = 180;
+
+/**
+ * When each bucket pass fires, as milliseconds from the moment the break appears.
+ * Each pass is a count (`countAt`) then, after the count finishes and a settle
+ * beat, a re-rank slide (`slideAt`). Passes never overlap: one fully settles
+ * before the next begins. `settleAt` is when the last slide completes — the beat
+ * the pass banner clears and the round's MVP line fades in.
+ *
+ * Expressed as absolute offsets (like {@link ledgerSchedule}) so the ORDERING is
+ * the thing under test, not just the sum. `passCount` is how many buckets any
+ * player actually earned this round (1–4); a round nobody scored passes 0 and the
+ * sequence is just the hold.
+ *
+ * @param {number} rowCount   standings rows on screen (sets the entrance cascade)
+ * @param {number} passCount  buckets earned this round, in [0, 4]
+ * @returns {{ enterMs: number, steps: Array<{ countAt: number, slideAt: number }>, settleAt: number, totalMs: number }}
+ */
+export function passLedgerSchedule(rowCount = 0, passCount = 0) {
+  const rows = Math.max(0, rowCount);
+  const passes = Math.max(0, passCount);
+  const enterMs = rows > 0 ? (rows - 1) * LEDGER_ENTER_STAGGER_MS + LEDGER_ENTER_MS : 0;
+  /** @type {Array<{ countAt: number, slideAt: number }>} */
+  const steps = [];
+  let t = enterMs + LEDGER_PASS_HOLD_MS;
+  for (let p = 0; p < passes; p += 1) {
+    const countAt = t;
+    const slideAt = countAt + LEDGER_PASS_COUNT_MS + LEDGER_PASS_SETTLE_MS;
+    steps.push({ countAt, slideAt });
+    t = slideAt + LEDGER_PASS_SLIDE_MS + LEDGER_PASS_GAP_MS;
+  }
+  // The MVP reveal lands when the last slide finishes — the trailing gap is only
+  // spacing before a *next* pass that doesn't exist, so it isn't part of the run.
+  const settleAt = passes > 0 ? t - LEDGER_PASS_GAP_MS : enterMs + LEDGER_PASS_HOLD_MS;
+  return { enterMs, steps, settleAt, totalMs: settleAt };
 }
 
 // ---- the finish: revealing the final board from the bottom up ----
