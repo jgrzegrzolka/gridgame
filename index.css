@@ -165,7 +165,10 @@ body {
 .game-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  /* No flex gap: the icon carries its own margin and the name/desc spacing is
+   * owned by the middot separator (see .game-row-desc::before), so that gap
+   * stays symmetric around the dot. */
+  gap: 0;
   padding: 14px 16px;
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
@@ -179,13 +182,23 @@ body {
 .game-row .game-icon {
   width: 22px;
   height: 22px;
+  margin-right: 14px;
 }
 .game-row-name {
   font-size: 15px;
   font-weight: var(--weight-bold);
 }
+/* Name and one-liner read as one line — "60s Quiz · Beat the clock" — joined by
+ * a muted middot rather than aligned into a fixed column (which left short names
+ * with a big gap). The dot is a `::before` on the desc, so on phones — where the
+ * desc is hidden — the separator disappears with it. */
 .game-row-desc {
   font-size: 13px;
+  color: var(--muted-color);
+}
+.game-row-desc::before {
+  content: "·";
+  margin: 0 8px;
   color: var(--muted-color);
 }
 .game-row-arrow {
