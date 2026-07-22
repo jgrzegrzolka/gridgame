@@ -424,6 +424,29 @@ export function isBlankReveal(roster, reveal) {
 }
 
 /**
+ * Order the reveal's per-player rows highest-first BY THIS QUESTION'S points, so
+ * the reveal reads as "who nailed this one" — the biggest `+N` on top. The server
+ * sends the scoreboard descending by cumulative total, which instead parks the
+ * overall leader on top even on a question they scored nothing on, and leaves the
+ * visible `+N` column jumbled.
+ *
+ * Ties break by cumulative score, then playerId, so the order is stable and
+ * deterministic (a re-render can't reshuffle equal rows). Non-mutating.
+ *
+ * @param {Array<{ playerId: string, nickname: string, score: number }> | null} scoreboard
+ * @param {Record<string, number> | null | undefined} points  this question's points, by playerId
+ * @returns {Array<{ playerId: string, nickname: string, score: number }>}
+ */
+export function revealOrder(scoreboard, points) {
+  const pts = points || {};
+  return [...(scoreboard || [])].sort((a, b) => (
+    (pts[b.playerId] || 0) - (pts[a.playerId] || 0)
+    || b.score - a.score
+    || a.playerId.localeCompare(b.playerId)
+  ));
+}
+
+/**
  * Pick the finish-screen celebration tier for the LOCAL player on the Flag
  * Party final screen. The scoreboard is descending by score (index 0 is the
  * top scorer), matching how `renderFinal` reads it.
