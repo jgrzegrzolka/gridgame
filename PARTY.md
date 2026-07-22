@@ -210,6 +210,8 @@ last place, and that pick is now the whole comeback mechanic.
 
 Still open:
 
+- **Bots** — an automated seat at a chosen difficulty (Iteration 17 below), primarily to give solo a
+  real opponent + speed bonus, but addable to any game.
 - **TV / Display + Buzzer surface**, the Jackbox layer (see Surfaces above).
 - Loose ends under **Open decisions** (QR in the lobby, max-seat cap).
 
@@ -1920,6 +1922,78 @@ Room state `opener` parallels `length` exactly — same null-means-nobody-set-it
 `settings` broadcast, carried on `welcome`, the snapshot, and the Play-again lobby message so a room
 that liked its setup does not re-choose it every game. The host's choice is remembered in
 `gridgame.party.opener` and claimed into each room they host, like the length.
+
+## Iteration 17 — Bots: an automated seat at any skill — PLANNED (2026-07-22)
+
+Goal: let a host **add a bot** to the lobby, at a chosen difficulty, so a game never needs a warm body
+in the other seat. Jan's framing (2026-07-22): "mostly for solo, but possible to add for other games as
+well — an option to add a bot with different skill / difficulty."
+
+**Why it earns its place.** Solo today is a 1-seat game with the first-place speed bonus *off*: no
+opponent, no race, so the whole "buzz before they do" mechanic — the soul of the show — is dark. A
+single bot turns solo into a real 2-seat race with the bonus on, from the same codebase. And because
+**solo is just a 1-seat lobby**, the *same* button drops a bot into a friends' game too (3 friends + a
+bot). One control, both cases.
+
+**The shape: a server-driven seat.** A bot is a **seat the server plays instead of a WebSocket.** This
+is the one genuinely new structural idea — every seat today is born from `applyHello` on a real
+connection and lives or dies with it. A bot seat is created by a host action, carries `bot: true`,
+counts in `present`, and has no `conn`. Everything downstream already works on it: scoring
+(`partyScore.js`), the draft picker rotation (`pickerFor` / the Decider), the standings ledger — none
+of them care whether a seat is human. Decisions:
+
+- **The server already holds the answer, so there is no game-playing AI.** `generateForQuestion` knows
+  `q.answer` and every question module exposes `isCorrect`. A bot "playing" is: roll accuracy → choose
+  the right answer or a plausible wrong one, roll a delay → fire `applyBuzz(room, botId, choice,
+  correct)` on a timer. The same call a real buzz makes. Buzz-order authority (serial DO processing) is
+  identical for a scheduled bot buzz.
+- **Difficulty is two dials, presets over them.** A bot's whole behaviour is *accuracy* (how often it
+  picks the correct answer) and *speed* (how long before it buzzes — this is what decides whether it
+  steals the first-correct bonus). Levels are presets; starting numbers, all tunable:
+  | Level | Accuracy | Buzz delay | Feels like |
+  |---|---|---|---|
+  | Easy | ~50% | 6–9 s | you'll usually win |
+  | Medium | ~75% | 3–6 s | a real race |
+  | Hard | ~90% | 1–3 s | punishes hesitation |
+  Accuracy and delay are rolled **per question**, so a bot is never perfectly predictable, and a Hard
+  bot still occasionally whiffs.
+- **The brain is pure and tested.** `flags/partyBot.js`: `decideBuzz(question, skill, rng) -> {
+  willAnswer, choice, delayMs }`. The exact "extract the testable logic into a `flags/*.js` sibling"
+  shape the repo asks for — no DOM, no timers, injectable rng, so the accuracy distribution and the
+  wrong-answer pick are unit-tested. The **server** owns the actual `setTimeout` (or a PartyKit alarm)
+  that fires the buzz; the brain only says *what* and *when*, never *does* it.
+- **Skill is uniform across question types (MVP).** One skill value drives flags, outlines, and the
+  superlative/metric rounds alike. A more human-textured bot — strong at flags, near-random at "Honey
+  production" — is a real future refinement (per-category skill), noted and deferred so v1 stays one
+  dial.
+- **The draft already covers a bot picker.** If a bot is in last place it becomes the round picker.
+  `forcePick` already picks a random valid card from the hand for an idle picker, so the machinery
+  exists; the clean version is the bot picking *itself* through the same path (a random valid card,
+  possibly weighted later). No new draft rule.
+- **Bots never disconnect — which the timing model likes.** Today the *host's tab* drives reveal/next
+  (documented Iteration 3 limitation). Bots don't strictly need that fixed, but scheduling their buzzes
+  server-side leans the same way, and a bot seat can't stall the room the way a dropped human can.
+
+**Build steps (draft — refine at plan time):**
+
+- [ ] `flags/partyRoom.js` — virtual seat: `applyAddBot` / `applyRemoveBot` (host-only, lobby phase),
+      seat carries `bot: true` + `skill`, counted in `present`, excluded from connection dispatch.
+      Serialize/deserialize so a bot survives an eviction. Guard: max seats, host-only. (+ tests)
+- [ ] `flags/partyBot.js` — `decideBuzz(question, skill, rng)`; skill presets `EASY` / `MEDIUM` /
+      `HARD` as `{ accuracy, delayMin, delayMax }`. Wrong-answer pick = a random *other* option (later:
+      a plausible distractor). Pure, seeded-rng tested.
+- [ ] `party/partyGameServer.js` — on each `question`, schedule each bot's buzz via `setTimeout` /
+      alarm using `decideBuzz`; on reveal/next, cancel outstanding bot timers. Bot self-pick on the
+      draft boundary when a bot is the picker.
+- [ ] Lobby UI (`flagParty/page.js` + `index.css`) — an **"Add bot"** control with a difficulty
+      choice, a generated bot nickname + a bot marker on the roster/avatars. Remove-bot affordance.
+      en + pl i18n (`party.*`), no em dashes.
+- [ ] `npm run validate` green + end-to-end in-browser (solo + bot: a race with a real first-correct
+      bonus; a friends game with a bot; a bot as last-place picker).
+
+**Deferred:** per-category skill (human-textured bots); plausible-distractor wrong picks (vs a random
+other option); multiple bots as an explicit designed mode (the seat model allows it, but tune the UX);
+bot personalities / names theming.
 
 ## Out of scope (don't sweep in)
 

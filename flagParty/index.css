@@ -123,6 +123,31 @@
 .chip.away { opacity: 0.5; }
 .chip-name { color: var(--primary-color); }
 .chip-host { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: var(--weight-bold); }
+/* A bot seat: a robot glyph before the name plus its difficulty word. A bot is a
+   player, not a verdict, so it stays on the greys — nothing borrows the palette. */
+.chip.bot .chip-name::before { content: '\1F916'; margin-right: 5px; font-size: 12px; }
+.chip-bot {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  color: var(--muted-color);
+  background: var(--selected-color);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+/* The host's remove-bot ×, pushed to the trailing edge of the chip. */
+.chip-remove {
+  appearance: none;
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--muted-color);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.chip-remove:hover { color: var(--primary-color); }
+.chip-remove:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; border-radius: 4px; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
 /* Question: prompt + flags */
@@ -776,6 +801,46 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   gap: 6px;
 }
 .draft-length[hidden] { display: none; }
+/* Bots field: same column shape as the length / first-round fields, so it reads as
+   a third row of the same card. A difficulty select + an Add button on one line. */
+.bot-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bot-row[hidden] { display: none; }
+.bot-add { display: flex; gap: 8px; }
+.bot-skill {
+  appearance: none;
+  flex: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--hover-color);
+  color: var(--primary-color);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bot-skill:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+.bot-add-btn {
+  appearance: none;
+  box-sizing: border-box;
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: var(--surface-color);
+  color: var(--primary-color);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bot-add-btn:hover:not(:disabled) { background: var(--hover-color); }
+.bot-add-btn:disabled { opacity: 0.5; cursor: default; }
+.bot-add-btn:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
 /* Right-aligned on the length field's header line, opposite its label. Deliberately
    the SAME size / weight / colour as the veil switch's label on the first-round
    header row (`.veil-toggle` → `.scope-toggle` text: 12px, primary), so the two

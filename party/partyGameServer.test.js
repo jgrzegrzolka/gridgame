@@ -746,3 +746,74 @@ test('hold: holders are cleared when the phase moves on', async () => {
   assert.notEqual(srv.room.phase, 'reveal', 'the room moved on');
   assert.deepEqual([...srv.holders], [], 'so the hold did not survive with it');
 });
+
+// ---- bots (Iteration 17) ----
+
+test('addBot: the host adds a present bot; it takes a seat with its skill', async () => {
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  const roster = conn.last('roster').roster;
+  const bot = roster.find((/** @type {any} */ r) => r.bot);
+  assert.ok(bot, 'a bot seat appears in the roster');
+  assert.equal(bot.skill, 'hard');
+  assert.equal(bot.present, true);
+  assert.equal(srv.room.seats.size, 2, 'solo host + bot = a two-seat game');
+});
+
+test('addBot: an unknown skill is coerced to the default', async () => {
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'brutal' }), conn);
+  const bot = conn.last('roster').roster.find((/** @type {any} */ r) => r.bot);
+  assert.equal(bot.skill, 'medium');
+});
+
+test('removeBot: the host removes its bot, back to a lone seat', async () => {
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+  const botId = conn.last('roster').roster.find((/** @type {any} */ r) => r.bot).playerId;
+  await srv.onMessage(JSON.stringify({ type: 'removeBot', botId }), conn);
+  assert.equal(srv.room.seats.size, 1);
+  assert.ok(!srv.room.seats.has(botId));
+});
+
+test('a bot buzzes on its own once a question is dealt', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(srv.room.phase, 'question');
+  assert.equal(srv.botTimers.length, 1, 'a buzz is scheduled for the bot');
+  // Advance past the hard bot's max delay (3s), then let botBuzz's async work settle.
+  t.mock.timers.tick(3500);
+  await new Promise((r) => setImmediate(r));
+  const botBuzz = srv.room.buzzes.find((b) => b.playerId.startsWith('bot:'));
+  assert.ok(botBuzz, 'the bot recorded a buzz');
+  assert.notEqual(srv.room.phase, 'lobby');
+});
+
+test('leaving the question phase cancels a bot buzz that had not fired', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(srv.botTimers.length, 1);
+  // The host force-reveals before the easy bot's 6-9s delay elapses.
+  await srv.onMessage(JSON.stringify({ type: 'reveal' }), conn);
+  assert.equal(srv.room.phase, 'reveal');
+  assert.equal(srv.botTimers.length, 0, 'pending bot buzz was cancelled on leaving the question');
+});

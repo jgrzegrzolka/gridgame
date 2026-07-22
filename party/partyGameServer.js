@@ -22,9 +22,12 @@ import {
   applyRepick,
   applySetLength,
   applyPick,
+  applyAddBot,
+  applyRemoveBot,
   serializeRoom,
   deserializeRoom,
 } from '../flags/partyRoom.js';
+import { decideBuzz, validateBotSkill } from '../flags/partyBot.js';
 import * as flagPick from '../flags/partyQuestions/flagPick.js';
 import * as mapPick from '../flags/partyQuestions/mapPick.js';
 import * as superlative from '../flags/partyQuestions/superlative.js';
@@ -34,6 +37,17 @@ import * as spotFlag from '../flags/partyQuestions/spotFlag.js';
 /** @typedef {import('../flags/partyRoom.js').Broadcast} Broadcast */
 
 const STORAGE_KEY = 'room';
+
+/** Display names bots cycle through as they're added (see {@link PartyGameServer#mintBotSeat}). */
+const BOT_NAMES = ['Robo', 'Pixel', 'Circuit', 'Bolt', 'Nano', 'Chip', 'Cosmo', 'Turing', 'Ada', 'Data'];
+
+/**
+ * How long a bot "thinks" before it picks its draft round. A short beat so a
+ * bot-as-picker reads as deliberate rather than instant, but far under the host's
+ * {@link PICK_TIMEOUT_SECONDS} anti-stall timer so the bot always beats it. The
+ * host's `forcePick` is still the backstop if this timer is ever lost (eviction).
+ */
+const BOT_PICK_DELAY_MS = 2000;
 
 /** Flag pools by the plan's poolId — sovereign for the first segment, non-sovereign for the second. */
 const ALL_COUNTRIES = loadCountries(rawCountries);
@@ -103,6 +117,16 @@ export default class PartyGameServer {
      *  freeze the room with nothing left to send the release.
      *  @type {Set<string>} */
     this.holders = new Set();
+    /** Pending bot buzz timers for the current question, cleared when it ends.
+     *  Bots are server-driven seats (`flags/partyBot.js`): each question, every
+     *  present bot gets a scheduled buzz. Held transiently (like `holders`) — a
+     *  timer can't survive a DO eviction, and a stale bot buzz is a harmless no-op
+     *  anyway (applyBuzz guards phase + duplicate).
+     *  @type {ReturnType<typeof setTimeout>[]} */
+    this.botTimers = [];
+    /** Pending bot self-pick timer, when a bot holds the draft pick.
+     *  @type {ReturnType<typeof setTimeout> | null} */
+    this.botPickTimer = null;
   }
 
   /**
@@ -173,6 +197,13 @@ export default class PartyGameServer {
           // GDP twice.
           if (id) this.usedModes.add(usedIdForMode(id));
         }
+      }
+      // Bots have no socket, so nothing re-adds them to `present` the way a human
+      // seat is restored by a reconnecting `applyHello`. Restore them here so a
+      // bot keeps playing after a durable-object eviction — counting toward the
+      // seat total and eligible to buzz / pick.
+      for (const [pid, seat] of this.room.seats) {
+        if (seat.bot === true) this.room.present.add(pid);
       }
     }
     this.loaded = true;
@@ -285,6 +316,7 @@ export default class PartyGameServer {
 
       /** @type {import('../flags/partyRoom.js').ApplyResult | null} */
       const phaseBefore = this.room ? this.room.phase : null;
+      const indexBefore = this.room ? this.room.questionIndex : 0;
       let result = null;
       switch (parsed.type) {
         case 'start': {
@@ -353,6 +385,23 @@ export default class PartyGameServer {
           // Validated in the reducer (which also owns the host and phase
           // guards), so the raw value goes straight through.
           result = applySetLength(this.room, playerId, parsed.length);
+          break;
+        }
+        case 'addBot': {
+          // The host drops a bot into the lobby. The server mints the seat id and
+          // display name (the room stays free of id/name generation) and validates
+          // the difficulty; the reducer owns the host + lobby + cap guards. A bot
+          // is a full seat from here on — it buzzes (scheduled in `syncBots`),
+          // scores, and can be the draft picker.
+          const skill = validateBotSkill(parsed.skill);
+          const { botId, nickname } = this.mintBotSeat();
+          result = applyAddBot(this.room, playerId, botId, nickname, skill);
+          break;
+        }
+        case 'removeBot': {
+          // Host removes a bot seat. The reducer refuses to remove a human this
+          // way, so a spoofed `removeBot` naming a real player is a no-op.
+          result = applyRemoveBot(this.room, playerId, String(parsed.botId ?? ''));
           break;
         }
         case 'buzz': {
@@ -487,6 +536,11 @@ export default class PartyGameServer {
       if (result.room.phase !== phaseBefore) this.holders.clear();
       await this.saveRoom();
       this.dispatch(result.broadcasts);
+      // Bots react to whatever just happened: a fresh question schedules their
+      // buzzes, a pick landing on a bot schedules its self-pick, leaving the
+      // question cancels pending buzzes. Kept out of the reducer path (it owns
+      // timers, not state) and after dispatch so players see the board first.
+      this.syncBots(phaseBefore, indexBefore);
     } catch (err) {
       console.error('[partyGameServer] onMessage failed:', err);
     }
@@ -502,6 +556,8 @@ export default class PartyGameServer {
       if (this.connByPlayer.get(playerId) === conn) {
         this.connByPlayer.delete(playerId);
       }
+      const phaseBefore = this.room.phase;
+      const indexBefore = this.room.questionIndex;
       const result = applyDisconnect(this.room, playerId);
       this.room = result.room;
       /** @type {Array<{ to: string | 'all', message: object }>} */
@@ -527,8 +583,156 @@ export default class PartyGameServer {
       }
       await this.saveRoom();
       this.dispatch(broadcasts);
+      // A disconnect can complete a question (the last un-buzzed human left, so
+      // the reveal fires) or hand a pick to a bot (re-election above). Let the
+      // bots react to either, same as after a message.
+      this.syncBots(phaseBefore, indexBefore);
     } catch (err) {
       console.error('[partyGameServer] onClose failed:', err);
+    }
+  }
+
+  // ---- bots (server-driven seats) ----
+
+  /**
+   * Mint a fresh bot seat's id + display name. Cycles the {@link BOT_NAMES} pool
+   * by how many bots the room already holds, appending a number once the pool
+   * wraps, so a room full of bots still reads as distinct names. The random id is
+   * namespaced `bot:` so it can never collide with a human's device id.
+   * @returns {{ botId: string, nickname: string }}
+   */
+  mintBotSeat() {
+    let n = 0;
+    if (this.room) for (const seat of this.room.seats.values()) if (seat.bot === true) n += 1;
+    const base = BOT_NAMES[n % BOT_NAMES.length];
+    const nickname = n < BOT_NAMES.length ? base : `${base} ${Math.floor(n / BOT_NAMES.length) + 1}`;
+    const botId = `bot:${Math.random().toString(36).slice(2, 10)}`;
+    return { botId, nickname };
+  }
+
+  /**
+   * Reconcile bot timers with the room's phase after any transition. The single
+   * place bot timing is driven, called after every dispatch (message + disconnect
+   * + bot-originated), so there's one rule for when bots act:
+   *  - a **fresh** question (phase entered `question`, or the index advanced)
+   *    schedules a buzz for every present bot;
+   *  - any other non-question phase cancels pending buzzes;
+   *  - a `picking` phase whose picker is a bot schedules its self-pick.
+   *
+   * @param {string | null} phaseBefore  the phase before the transition
+   * @param {number} indexBefore  the question index before the transition
+   */
+  syncBots(phaseBefore, indexBefore) {
+    if (!this.room) return;
+    const { phase, questionIndex, question } = this.room;
+    if (phase === 'question' && question) {
+      const freshQuestion = phaseBefore !== 'question' || indexBefore !== questionIndex;
+      if (freshQuestion) this.scheduleBotBuzzes();
+    } else {
+      this.clearBotTimers();
+    }
+    if (phase === 'picking') this.scheduleBotPick();
+    else this.clearBotPickTimer();
+  }
+
+  /** Schedule a buzz for every present bot on the current question. */
+  scheduleBotBuzzes() {
+    this.clearBotTimers();
+    if (!this.room || this.room.phase !== 'question' || !this.room.question) return;
+    const q = this.room.question;
+    for (const [pid, seat] of this.room.seats) {
+      if (seat.bot !== true || !this.room.present.has(pid)) continue;
+      // A bot that already buzzed this question (a reschedule racing a reconnect)
+      // is skipped; applyBuzz would no-op it anyway.
+      if (this.room.buzzes.some((b) => b.playerId === pid)) continue;
+      const { choice, delayMs } = decideBuzz(q, seat.skill ?? '', Math.random);
+      this.botTimers.push(setTimeout(() => { this.botBuzz(pid, choice); }, delayMs));
+    }
+  }
+
+  clearBotTimers() {
+    for (const t of this.botTimers) clearTimeout(t);
+    this.botTimers = [];
+  }
+
+  /**
+   * A bot's scheduled buzz fires. Runs the exact human buzz path — resolve
+   * correctness via the question's `isCorrect`, apply, persist, dispatch — so a
+   * bot answer is indistinguishable from a player's downstream (order, scoring,
+   * reveal). Guarded on phase + seat so a timer surviving into the wrong phase is
+   * a harmless no-op.
+   * @param {string} botId
+   * @param {string} choice
+   */
+  async botBuzz(botId, choice) {
+    try {
+      if (!this.room || this.room.phase !== 'question') return;
+      const seat = this.room.seats.get(botId);
+      if (!seat || seat.bot !== true) return;
+      const q = this.room.question;
+      const question = q ? QUESTIONS[q.questionId] : null;
+      const correct = q && question ? question.isCorrect(q, choice) : false;
+      const phaseBefore = this.room.phase;
+      const result = applyBuzz(this.room, botId, choice, correct);
+      if (result.broadcasts.length === 0) { this.room = result.room; return; }
+      this.room = result.room;
+      if (this.room.phase !== phaseBefore) this.holders.clear();
+      await this.saveRoom();
+      this.dispatch(result.broadcasts);
+      // This buzz may have completed the room (all present buzzed → reveal); if so,
+      // cancel the other bots' pending buzzes for this now-finished question.
+      if (this.room.phase !== 'question') this.clearBotTimers();
+    } catch (err) {
+      console.error('[partyGameServer] botBuzz failed:', err);
+    }
+  }
+
+  /** If the current pick belongs to a bot, schedule its self-pick. */
+  scheduleBotPick() {
+    this.clearBotPickTimer();
+    if (!this.room || this.room.phase !== 'picking') return;
+    const picker = this.room.picker;
+    const seat = picker ? this.room.seats.get(picker) : null;
+    if (!seat || seat.bot !== true) return;
+    this.botPickTimer = setTimeout(() => { this.botPick(/** @type {string} */ (picker)); }, BOT_PICK_DELAY_MS);
+  }
+
+  clearBotPickTimer() {
+    if (this.botPickTimer) { clearTimeout(this.botPickTimer); this.botPickTimer = null; }
+  }
+
+  /**
+   * A bot holding the draft pick chooses a random valid card from its dealt hand —
+   * the same resolution as the host's `forcePick`, so an idle-picker path and a
+   * bot-picker path build the round identically. No veil: like a forced pick, the
+   * veil is a deliberate bet a bot never places.
+   * @param {string} botId
+   */
+  async botPick(botId) {
+    try {
+      if (!this.room || this.room.phase !== 'picking' || this.room.picker !== botId) return;
+      const seat = this.room.seats.get(botId);
+      if (!seat || seat.bot !== true) return;
+      const hand = (this.room.hand ?? []).filter((id) => isValidPick(id, this.usedModes));
+      if (hand.length === 0) return;
+      const cardId = hand[Math.floor(Math.random() * hand.length)];
+      const modeId = resolveFamilyPick(cardId);
+      if (!modeId) return;
+      const mode = MODE_BY_ID[modeId];
+      const segment = { poolId: mode.poolId, questionId: mode.questionId, questions: ROUND_QUESTIONS };
+      const question = this.generateForQuestion(mode.questionId, mode.poolId);
+      const phaseBefore = this.room.phase;
+      const indexBefore = this.room.questionIndex;
+      const result = applyPick(this.room, botId, modeId, segment, question);
+      if (result.broadcasts.length === 0) { this.room = result.room; return; }
+      this.room = result.room;
+      this.usedModes.add(usedIdForMode(modeId));
+      if (this.room.phase !== phaseBefore) this.holders.clear();
+      await this.saveRoom();
+      this.dispatch(result.broadcasts);
+      this.syncBots(phaseBefore, indexBefore);
+    } catch (err) {
+      console.error('[partyGameServer] botPick failed:', err);
     }
   }
 

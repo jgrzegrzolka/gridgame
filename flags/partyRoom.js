@@ -19,7 +19,14 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from '
  * and `final` → `lobby` on Play again.
  *
  * @typedef {'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
- * @typedef {{ nickname: string, score: number }} Seat
+ * @typedef {{ nickname: string, score: number, bot?: boolean, skill?: string }} Seat
+ * A seat with `bot: true` is a server-driven bot (see `flags/partyBot.js`): it has
+ * no socket, so it never joins `present` from a connection and never leaves on a
+ * disconnect — the server keeps it present for its whole life (added at
+ * {@link applyAddBot}, restored to `present` on load). `skill` is a bot difficulty
+ * id the server validated before it reached here. Everything downstream treats a
+ * bot seat like any other: it buzzes (the server schedules it), it scores, and it
+ * can be the draft picker. Humans carry neither field.
  * `ranking` / `values` are present only on questions that rank their options
  * (world facts). `ranking` is best-first in the question's own direction, so
  * `ranking[0]` is the answer whether it asked for the most or the least. Both
@@ -729,6 +736,62 @@ export function applySetLength(room, playerId, length) {
   };
 }
 
+/**
+ * The host adds a bot seat from the lobby. A bot is a full seat with `bot: true`
+ * and a difficulty `skill`, present from the moment it's added (it has no socket,
+ * so nothing else would ever put it in `present`). It counts against
+ * {@link MAX_SEATS} like a human, and — being a second seat — flips solo play into
+ * a race (the speed bonus keys on seat count, see {@link toReveal}).
+ *
+ * Lobby-only and host-only, checked here so a second caller can't forget them.
+ * The `botId` and `nickname` are minted by the server (the room stays free of
+ * id/name generation), and `skill` is validated by the server before it arrives
+ * (the room stores it verbatim, staying decoupled from `partyBot.js`). An id that
+ * already holds a seat is refused rather than overwriting a live player.
+ *
+ * @param {Room} room
+ * @param {string} playerId  must be the host
+ * @param {string} botId  the server-minted seat id for the bot
+ * @param {string} nickname  the server-minted display name
+ * @param {string} skill  a validated bot difficulty id
+ * @returns {ApplyResult}
+ */
+export function applyAddBot(room, playerId, botId, nickname, skill) {
+  if (room.phase !== 'lobby') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  if (!botId || room.seats.has(botId)) return { room, broadcasts: [] };
+  if (room.seats.size >= MAX_SEATS) return { room, broadcasts: [] };
+  const seats = new Map(room.seats);
+  seats.set(botId, { nickname: cleanName(nickname), score: 0, bot: true, skill });
+  const present = new Set(room.present);
+  present.add(botId);
+  const nextRoom = { ...room, seats, present };
+  return { room: nextRoom, broadcasts: [{ to: 'all', message: rosterMessage(nextRoom) }] };
+}
+
+/**
+ * The host removes a bot seat from the lobby. Only a bot can be removed this way —
+ * a human seat is sticky (it leaves by disconnecting), so a `removeBot` naming a
+ * real player is refused. Lobby-only and host-only, same as {@link applyAddBot}.
+ *
+ * @param {Room} room
+ * @param {string} playerId  must be the host
+ * @param {string} botId  the bot seat to remove
+ * @returns {ApplyResult}
+ */
+export function applyRemoveBot(room, playerId, botId) {
+  if (room.phase !== 'lobby') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  const seat = room.seats.get(botId);
+  if (!seat || seat.bot !== true) return { room, broadcasts: [] };
+  const seats = new Map(room.seats);
+  seats.delete(botId);
+  const present = new Set(room.present);
+  present.delete(botId);
+  const nextRoom = { ...room, seats, present };
+  return { room: nextRoom, broadcasts: [{ to: 'all', message: rosterMessage(nextRoom) }] };
+}
+
 // ---- internal helpers ----
 
 /**
@@ -881,7 +944,16 @@ function cleanName(nickname) {
 function rosterList(room) {
   const out = [];
   for (const [playerId, seat] of room.seats) {
-    out.push({ playerId, nickname: seat.nickname, score: seat.score, present: room.present.has(playerId) });
+    // `bot` / `skill` ride along only for bot seats, so a human roster entry is
+    // byte-identical to before this feature (nothing to migrate, no test churn).
+    // The client badges a bot from this and disables its own myChoice for it.
+    out.push({
+      playerId,
+      nickname: seat.nickname,
+      score: seat.score,
+      present: room.present.has(playerId),
+      ...(seat.bot === true ? { bot: true, skill: seat.skill } : {}),
+    });
   }
   return out;
 }
