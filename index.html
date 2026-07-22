@@ -27,7 +27,6 @@
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=__BUILD__" />
     <link rel="stylesheet" href="common.css?v=__BUILD__" />
-    <link rel="stylesheet" href="flags/flagFacts.css?v=__BUILD__" />
     <link rel="stylesheet" href="index.css?v=__BUILD__" />
   </head>
   <body>
@@ -76,138 +75,66 @@
     </nav>
     <main>
       <h1 class="sr-only">Yet Another Quiz: country flag games</h1>
-      <section class="domain" aria-label="Flags" data-i18n-attr="aria-label:domain.flags">
-        <!-- Flag of the day — a compact, quiet card above the game grid.
-             Populated by bootHome() (needs countries.json for the name +
-             the story pool); stays hidden until it resolves, so no-JS /
-             fetch-fail degrades to nothing rather than an empty box.
-             Clicking opens the same story popup as /flagsdata/. -->
-        <button type="button" class="fotd-card" id="flag-of-day" hidden>
-          <span class="fotd-kicker" data-i18n="home.fotd.label">Flag of the day:</span>
-          <img class="fotd-flag" alt="" />
-          <span class="fotd-name"></span>
-        </button>
-        <div class="game-tiles">
-          <a class="game-tile" href="daily/">
-            <span class="tile-preview">
-              <span class="daily-preview">
-                <span class="daily-header-row">
-                  <span class="daily-category" data-i18n="home.daily.category">Europe · cross</span>
-                  <span class="daily-progress" data-i18n="home.daily.progress">5 / 10 found</span>
-                </span>
-                <span class="daily-found">
-                  <img src="flags/svg/ch.svg" alt="" />
-                  <img src="flags/svg/dk.svg" alt="" />
-                  <img src="flags/svg/fi.svg" alt="" />
-                  <img src="flags/svg/gb.svg" alt="" />
-                  <img src="flags/svg/gr.svg" alt="" />
-                </span>
-              </span>
+      <section class="home" aria-label="Flags" data-i18n-attr="aria-label:domain.flags">
+        <!-- Hero: fully static, fabricated on purpose. A fixed headline + a
+             decorative criteria line (Europe / cross / not blue — an EXAMPLE of
+             the kind of rule, not today's actual one) + three fake flags. It
+             touches no puzzle data, so the landing page makes no catalog fetch
+             and stays instant; the "Today's puzzle" button links to the real
+             daily. The criteria chips reuse the site's own marks — the red
+             cross motif icon (filterChips.js MOTIF_ICONS) and a colour swatch —
+             so the home speaks the same visual language as the games. The whole
+             line is aria-hidden: it's illustrative, not a rule to announce. -->
+        <section class="hero" id="hero">
+          <h2 class="hero-title" data-i18n="home.hero.headline">Can you find them all?</h2>
+          <p class="hero-crit" aria-hidden="true">
+            <span class="crit-tok"><span data-i18n="home.hero.critPlace">Europe</span></span>
+            <span class="crit-sep">·</span>
+            <span class="crit-tok">
+              <svg class="crit-gly" viewBox="0 0 24 24" fill="#cf2b2b" aria-hidden="true"><rect x="1.5" y="10" width="21" height="4" rx="0.5"/><rect x="7" y="2.5" width="4" height="19" rx="0.5"/></svg>
+              <span data-i18n="home.hero.critShape">cross</span>
             </span>
-            <span class="tile-label">
-              <span class="game-icon icon-daily" aria-hidden="true"></span>
-              <span class="game-name" data-i18n="tile.daily">Daily puzzle</span>
+            <span class="crit-sep">·</span>
+            <span class="crit-tok crit-not">
+              <span class="crit-not-pre" data-i18n="home.hero.critNot">not</span>
+              <span class="crit-swatch" style="background:#2f6fd0"></span>
+              <span data-i18n="home.hero.critColor">blue</span>
             </span>
+          </p>
+          <!-- Painted by bootHome(): three fixed fake flags (flags/fakeFlags.js)
+               plus one empty "to find" box — pure decoration. -->
+          <div class="hero-stamps" id="hero-stamps" aria-hidden="true"></div>
+          <a class="lobby-btn primary" id="hero-cta" href="daily/">
+            <span class="game-icon icon-daily" aria-hidden="true"></span>
+            <span class="hero-cta-label" data-i18n="home.hero.cta">Today's puzzle</span>
           </a>
-          <a class="game-tile" href="flagQuiz/?n=60s">
-            <span class="tile-preview">
-              <span class="quiz-preview">
-                <span class="quiz-prompt" data-i18n="home.quiz.prompt">Poland</span>
-                <span class="quiz-flags">
-                  <img class="quiz-flag" src="flags/svg/ca.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/pl.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/kr.svg" alt="" />
-                  <img class="quiz-flag" src="flags/svg/eg.svg" alt="" />
-                </span>
-              </span>
-            </span>
-            <span class="tile-label">
-              <span class="game-icon icon-quiz" aria-hidden="true"></span>
-              <span class="game-name" data-i18n="tile.quiz">60s Quiz</span>
-            </span>
+        </section>
+
+        <!-- The other games: one quiet, consistent list instead of four
+             preview cards — each a slim row (icon · name · one-liner · arrow). -->
+        <p class="start-sep" data-i18n="home.more">More ways to play</p>
+        <nav class="game-list" aria-label="More ways to play" data-i18n-attr="aria-label:home.more">
+          <a class="game-row" href="flagQuiz/?n=60s">
+            <span class="game-icon icon-quiz" aria-hidden="true"></span>
+            <span class="game-row-name" data-i18n="tile.quiz">60s Quiz</span>
+            <span class="game-row-desc" data-i18n="home.desc.quiz">Beat the clock</span>
+            <span class="game-row-arrow" aria-hidden="true"></span>
           </a>
-          <a class="game-tile" href="flagParty/">
-            <span class="tile-preview">
-              <!-- Party preview: a live scoreboard — the standings everyone
-                   races to climb. Mirrors the game's own break / final board
-                   (rank · avatar · name · gain · score, leader highlighted),
-                   which is what makes this tile read as the multiplayer one
-                   rather than a twin of the 60s-Quiz tile beside it. Static,
-                   like every other tile preview: the three identicons are the
-                   real avatar art (flags/avatar.js palette), baked in as an
-                   illustrative example the same way the quiz tile hardcodes
-                   "Poland". Example player names (Ava / Ben) stay untranslated;
-                   only "You", the room chip and the round chip are i18n'd. -->
-              <span class="party-preview">
-                <span class="party-head">
-                  <span class="party-room" data-i18n="home.party.room">Room · 7KQ2</span>
-                  <span class="party-round" data-i18n="home.party.round">Round 3</span>
-                </span>
-                <span class="pp-row pp-lead">
-                  <span class="pp-rank">1</span>
-                  <span class="avatar"><svg viewBox='0 0 5 5' fill='#0e7490' shape-rendering='crispEdges' aria-hidden='true'><rect x='0' y='0' width='1' height='1'/><rect x='4' y='0' width='1' height='1'/><rect x='0' y='1' width='1' height='1'/><rect x='4' y='1' width='1' height='1'/><rect x='2' y='1' width='1' height='1'/><rect x='1' y='3' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='2' y='3' width='1' height='1'/><rect x='1' y='4' width='1' height='1'/><rect x='3' y='4' width='1' height='1'/></svg></span>
-                  <span class="pp-name">Ava</span>
-                  <span class="pp-gain">+2</span>
-                  <span class="pp-score">31</span>
-                </span>
-                <span class="pp-row">
-                  <span class="pp-rank">2</span>
-                  <span class="avatar"><svg viewBox='0 0 5 5' fill='#660033' shape-rendering='crispEdges' aria-hidden='true'><rect x='0' y='1' width='1' height='1'/><rect x='4' y='1' width='1' height='1'/><rect x='1' y='1' width='1' height='1'/><rect x='3' y='1' width='1' height='1'/><rect x='1' y='3' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='0' y='4' width='1' height='1'/><rect x='4' y='4' width='1' height='1'/><rect x='1' y='4' width='1' height='1'/><rect x='3' y='4' width='1' height='1'/><rect x='2' y='4' width='1' height='1'/></svg></span>
-                  <span class="pp-name" data-i18n="home.party.you">You</span>
-                  <span class="pp-gain">+1</span>
-                  <span class="pp-score">28</span>
-                </span>
-                <span class="pp-row">
-                  <span class="pp-rank">3</span>
-                  <span class="avatar"><svg viewBox='0 0 5 5' fill='#1d4ed8' shape-rendering='crispEdges' aria-hidden='true'><rect x='1' y='0' width='1' height='1'/><rect x='3' y='0' width='1' height='1'/><rect x='0' y='1' width='1' height='1'/><rect x='4' y='1' width='1' height='1'/><rect x='0' y='2' width='1' height='1'/><rect x='4' y='2' width='1' height='1'/><rect x='0' y='3' width='1' height='1'/><rect x='4' y='3' width='1' height='1'/><rect x='1' y='3' width='1' height='1'/><rect x='3' y='3' width='1' height='1'/><rect x='2' y='3' width='1' height='1'/><rect x='1' y='4' width='1' height='1'/><rect x='3' y='4' width='1' height='1'/></svg></span>
-                  <span class="pp-name">Ben</span>
-                  <span class="pp-gain"></span>
-                  <span class="pp-score">22</span>
-                </span>
-              </span>
-            </span>
-            <span class="tile-label">
-              <span class="game-icon icon-party" aria-hidden="true"></span>
-              <span class="game-name" data-i18n="tile.party">Flag Party</span>
-            </span>
+          <a class="game-row" href="flagParty/">
+            <span class="game-icon icon-party" aria-hidden="true"></span>
+            <span class="game-row-name" data-i18n="tile.party">Flag Party</span>
+            <span class="game-row-desc" data-i18n="home.desc.party">Play together on your phones</span>
+            <span class="game-row-arrow" aria-hidden="true"></span>
           </a>
-          <a class="game-tile" href="ticTacToe/">
-            <span class="tile-preview">
-              <span class="ttt-preview">
-                <span class="ttt-grid">
-                  <span class="ttt-cell p1 win"><img src="flags/svg/fr.svg" alt="" /></span>
-                  <span class="ttt-cell p2"><img src="flags/svg/jp.svg" alt="" /></span>
-                  <span class="ttt-cell"></span>
-                  <span class="ttt-cell"></span>
-                  <span class="ttt-cell p1 win"><img src="flags/svg/se.svg" alt="" /></span>
-                  <span class="ttt-cell p2"><img src="flags/svg/cn.svg" alt="" /></span>
-                  <span class="ttt-cell"></span>
-                  <span class="ttt-cell"></span>
-                  <span class="ttt-cell p1 win"><img src="flags/svg/it.svg" alt="" /></span>
-                </span>
-                <span class="ttt-result" data-i18n="home.ttt.result">Pink wins!</span>
-              </span>
-            </span>
-            <span class="tile-label">
-              <span class="game-icon icon-ttt" aria-hidden="true"></span>
-              <span class="game-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
-            </span>
+          <a class="game-row" href="ticTacToe/">
+            <span class="game-icon icon-ttt" aria-hidden="true"></span>
+            <span class="game-row-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
+            <span class="game-row-desc" data-i18n="home.desc.ttt">Three flags in a row</span>
+            <span class="game-row-arrow" aria-hidden="true"></span>
           </a>
-        </div>
+        </nav>
       </section>
     </main>
-    <dialog id="zoom" tabindex="-1">
-      <button type="button" class="zoom-close" aria-label="Close" data-i18n-attr="aria-label:zoom.close">&times;</button>
-      <div class="zoom-scroll quiet-scroll">
-        <img alt="" />
-        <p></p>
-        <div class="country-facts" hidden></div>
-        <!-- Image-credit footer, kept as a sibling of the facts panel (same as
-             /flagsdata/) so both popups render the credit the same way.
-             Populated by paintFacts; hidden when there's no story. -->
-        <div class="country-credit" hidden></div>
-      </div>
-    </dialog>
     <script type="module">
       import { bootHome } from './page.js';
       bootHome();

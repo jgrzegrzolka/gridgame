@@ -118,11 +118,11 @@
   border-radius: 11px;
   padding: 8px 11px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
 }
 .chip.away { opacity: 0.5; }
 .chip-name { color: var(--primary-color); }
-.chip-host { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: 600; }
+.chip-host { margin-left: auto; font-size: 11px; color: var(--muted-color); font-weight: var(--weight-bold); }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
 /* Question: prompt + flags */
@@ -131,7 +131,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--muted-color);
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
@@ -191,7 +191,7 @@
   text-align: right;
   white-space: nowrap;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
@@ -210,13 +210,13 @@
    only (the country name, or the superlative label), since the tiles already
    say whether you're matching a flag / outline / stat. Kept hidden via JS so
    the element is easy to bring back; the rule stays for that case. */
-.prompt-lead { font-size: 14px; font-weight: 500; color: var(--muted-color); }
+.prompt-lead { font-size: 14px; font-weight: var(--weight-regular); color: var(--muted-color); }
 /* Same weight/size as flagQuiz's `.country-name` prompt (28px / 500) so the
    country name reads identically across the two flag-picking games — it used
    to be 800 + tight tracking, which read a size larger than flagQuiz's. Every
    question fills this line now (the superlative label included), so `min-height`
    is just a defensive reserve keeping the grid at the same Y in every mode. */
-.prompt-target { font-size: 28px; font-weight: 500; color: var(--primary-color); min-height: 1lh; }
+.prompt-target { font-size: 28px; font-weight: var(--weight-regular); color: var(--primary-color); min-height: 1lh; }
 /* Superlative questions: the metric icon leads the criterion label on one row,
    tinted with the metric's setting hue (--mc, set per question via [data-metric]
    with the setup-chip hues below). The label drops from the 28px country-name
@@ -288,7 +288,7 @@
 .rank-row.you-right { box-shadow: inset 0 0 0 2px var(--correct-color); }
 .rank-row.you-wrong { box-shadow: inset 0 0 0 2px var(--wrong-color); }
 .rank-pos {
-  font-size: 12px; font-weight: 700; color: var(--muted-color);
+  font-size: 12px; font-weight: var(--weight-bold); color: var(--muted-color);
   text-align: center; font-variant-numeric: tabular-nums;
 }
 .rank-flag {
@@ -298,7 +298,7 @@
 .rank-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .rank-body { display: block; min-width: 0; }
 .rank-name {
-  display: block; min-width: 0; font-size: 13px; font-weight: 600;
+  display: block; min-width: 0; font-size: 13px; font-weight: var(--weight-bold);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* The value is the answer to the question, so it gets its own column instead of
@@ -344,7 +344,7 @@
    scoring key. Muted when nobody picked it, so the ladder still reads as a
    ladder without shouting about rows that paid nobody. */
 .rank-pts {
-  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  font-size: 12px; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums;
   color: var(--muted-color); text-align: right;
 }
 .rank-pts.live { color: var(--primary-color); }
@@ -373,7 +373,7 @@
    button sitting under every non-chart reveal. Pinned by hiddenGuards.test.js. */
 .hold-read[hidden] { display: none; }
 .hold-btn {
-  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: var(--weight-bold); cursor: pointer;
   background: var(--surface-color); color: var(--primary-color);
   border: 1px solid var(--muted-soft-color); border-radius: 999px;
   padding: 9px 18px; display: inline-flex; align-items: center; gap: 9px;
@@ -525,8 +525,8 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   font-size: 13px;
   pointer-events: none;
 }
-.opt-pop .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.opt-pop .val { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+.opt-pop .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--weight-regular); }
+.opt-pop .val { flex: none; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
 
 .question-foot { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 
@@ -540,14 +540,14 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   border-radius: 10px;
   padding: 8px 11px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
 }
 .toast-name { color: var(--primary-color); }
-.toast .fast { font-size: 11px; color: var(--muted-color); font-weight: 700; }
+.toast .fast { font-size: 11px; color: var(--muted-color); font-weight: var(--weight-bold); }
 /* Same badge slot as ⚡ Fastest; pink because being the only one right is the
    rarer thing of the two and should be the one that catches the eye. */
-.toast .solo { font-size: 11px; color: var(--secondary-color); font-weight: 700; }
-.toast .pts { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary-color); }
+.toast .solo { font-size: 11px; color: var(--secondary-color); font-weight: var(--weight-bold); }
+.toast .pts { margin-left: auto; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; color: var(--primary-color); }
 .toast .pts.zero { color: var(--muted-color); }
 
 /* "Nobody knew that one" — the reveal's named beat when the question beat the
@@ -557,7 +557,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   text-align: center;
   margin: 0 0 2px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--muted-color);
 }
 
@@ -607,8 +607,8 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    500 name, 600 score. The old 700/800 read heavier than anything else on the
    site — the result board is a leaderboard, so it uses the leaderboard's type. */
 .scoreline .rank { color: var(--muted-color); width: 16px; font-variant-numeric: tabular-nums; }
-.scoreline .nm { font-weight: 500; color: var(--primary-color); }
-.scoreline .sc { margin-left: auto; font-weight: 600; color: var(--primary-color); font-variant-numeric: tabular-nums; }
+.scoreline .nm { font-weight: var(--weight-regular); color: var(--primary-color); }
+.scoreline .sc { margin-left: auto; font-weight: var(--weight-bold); color: var(--primary-color); font-variant-numeric: tabular-nums; }
 /* Break-row extra: the gap-to-leader on your own row, muted so the score stays
    the loudest thing. Only `.sc` carries margin-left:auto (pushing the score to
    the right edge), so the gap sits just after the name. (Rank movement is shown
@@ -625,7 +625,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   gap: 4px;
   align-items: center;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
   opacity: 0;
 }
@@ -676,8 +676,8 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   font-size: 14px;
 }
 .break-mvp-text { color: var(--primary-color); }
-.break-mvp-name { font-weight: 650; }
-.break-mvp-gain { margin-left: auto; font-weight: 600; color: var(--secondary-color); font-variant-numeric: tabular-nums; }
+.break-mvp-name { font-weight: var(--weight-bold); }
+.break-mvp-gain { margin-left: auto; font-weight: var(--weight-bold); color: var(--secondary-color); font-variant-numeric: tabular-nums; }
 .break-board { display: flex; flex-direction: column; gap: 8px; }
 
 /* ---- draft: game length ---- */
@@ -738,7 +738,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    it names the control without competing with the room code or the start button. */
 .dl-group-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--muted-color);
@@ -784,7 +784,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .dl-pick:disabled { cursor: default; }
 .dl-pick[aria-checked='true'] { background: var(--surface-color); color: var(--primary-color); }
 .dl-pick:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
-.dl-lab { font-size: 11px; font-weight: 600; }
+.dl-lab { font-size: 11px; font-weight: var(--weight-bold); }
 /* One, two or three strokes — the count IS the length, so the control says
    "longer" before the label is read. Pink throughout; the two you have not
    chosen step back rather than changing colour, so the trio still reads as one
@@ -877,15 +877,15 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .pick-card-ic { flex: none; width: 30px; height: 30px; display: grid; place-items: center; color: var(--mc, var(--primary-color)); }
 .pick-card-ic svg { width: 24px; height: 24px; display: block; }
 .pick-card-ic img { width: 28px; height: 22px; object-fit: contain; }
-.pick-card-label { font-size: 15px; font-weight: 600; }
+.pick-card-label { font-size: 15px; font-weight: var(--weight-bold); }
 /* The second line on a metric-family card ("GDP, total or per person"): states
    the range the family can resolve to. Quieter than the name — it's context for
    the choice, not part of it — using the same --muted-color the pick board's
    secondary text and every other site caption use. */
-.pick-card-sub { display: block; font-size: 12px; font-weight: 500; color: var(--muted-color); margin-top: 1px; }
+.pick-card-sub { display: block; font-size: 12px; font-weight: var(--weight-regular); color: var(--muted-color); margin-top: 1px; }
 .pick-watch { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
 .pick-watch .avatar { width: 44px; height: 44px; border-radius: 8px; }
-.pick-watch-name { margin: 0; font-size: 17px; font-weight: 600; color: var(--primary-color); text-align: center; }
+.pick-watch-name { margin: 0; font-size: 17px; font-weight: var(--weight-bold); color: var(--primary-color); text-align: center; }
 /* ---- round title card: the beat that announces round 2..N before its first
    question (a big-card counterpart to the question pill's "X's pick" attribution). The
    metric hue on the icon is the same confined-to-setup colour exception the draft
@@ -908,7 +908,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    one round whose name says more than its position); every other round gets a
    dot per round, which reads at a glance and lets the card open on its artwork
    instead of a sentence. `.is-pips` switches between the two. */
-.roundcard-count { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
+.roundcard-count { font-size: 12px; font-weight: var(--weight-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
 .roundcard-count.is-pips { display: flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .roundcard-pip {
   width: 6px;
@@ -950,8 +950,8 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
    both decks now crop to the same 56px coin. */
 .roundcard-ic .roundcard-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .roundcard-contour { width: 64px; height: 64px; object-fit: contain; }
-.roundcard-name { font-size: 22px; font-weight: 700; color: var(--primary-color); line-height: 1.2; }
-.roundcard-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--primary-color); }
+.roundcard-name { font-size: 22px; font-weight: var(--weight-bold); color: var(--primary-color); line-height: 1.2; }
+.roundcard-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 14px; font-weight: var(--weight-bold); color: var(--primary-color); }
 .roundcard-pick .avatar { width: 26px; height: 26px; border-radius: 6px; }
 /* The card has no entrance animation of its own: its section rises in through
    the shared `.pt-entering` swap like every other screen. It used to carry a

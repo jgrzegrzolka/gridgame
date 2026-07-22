@@ -66,8 +66,12 @@ const VEIL_ORDER = [0, 4, 2, 5, 1, 3];
  *  `hintFor` resolves. On the two-directional metrics the suffix wasn't even
  *  information, since "most & least" was true of every one of them.
  *
- *  The picture trio keeps its colon ("Flags: countries", "Map: outlines") — that
- *  names the POOL a round draws from, which nothing else on the pick screen says.
+ *  The picture modes carry a `full` form ("Flags: countries", "Map: outlines") as
+ *  their canonical catalog name, but no surface renders it any more: the lobby
+ *  first-round row, the draft pick card AND the round card all show the SHORT
+ *  name (Flags / Weird / Spot / Maps), so a round is named the same way
+ *  everywhere. The full picture labels stay only to satisfy the test's "every
+ *  mode has a full label" invariant; metrics have no short, so they keep `full`.
  *
  *  Pinned by `flagParty/modeLabels.test.js`, over these fallbacks AND over both
  *  shipped locales: the player reads the i18n string, so pinning only the
@@ -2004,8 +2008,12 @@ export function bootFlagParty() {
     if (modeId) {
       roundCardIc.innerHTML = roundCardIconHtml(modeId);
       roundCardIc.style.setProperty('--mc', modeHue(modeId) || 'currentColor');
-      const label = modeFullLabel(modeId);
-      roundCardName.textContent = t(label.key || '', label.fallback || '');
+      // Short name for the picture decks (Flags / Weird / Spot / Maps), the full
+      // name for metric rounds (which have no short). `modeLabel` picks the right
+      // one — so the round card names a round the SAME way as the lobby's
+      // first-round row and the draft pick card, instead of the old colon form
+      // ("Flags: countries").
+      roundCardName.textContent = modeLabel(modeId);
     } else {
       // Only reached when the pool is genuinely unknowable — a flag round whose pick
       // attribution is missing (a mid-round reconnect). Announce generically.

@@ -57,7 +57,7 @@ body {
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--primary-color);
   white-space: nowrap;
   overflow: hidden;
@@ -67,7 +67,7 @@ body {
  * reads as transient, matching the loading treatment used elsewhere. */
 .pc-name-loading {
   color: var(--muted-color);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   font-style: italic;
 }
 .pc-mark {
@@ -79,7 +79,7 @@ body {
   height: 18px;
   border-radius: 3px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--surface-color);
 }
 .pc-mark.x { background: var(--x-color); }
@@ -146,14 +146,14 @@ body {
 }
 .mc-vs {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted-color);
 }
 .mc-score {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--primary-color);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -196,7 +196,7 @@ body:has(.player-card.waiting) .grid {
   border: 1px solid var(--muted-soft-color);
 }
 .grid th {
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   font-size: 14px;
   color: var(--primary-color);
   /* Clip rather than spill if a label is somehow taller than its box. The
@@ -344,7 +344,7 @@ body.game-over .actions-row {
 }
 .picker-cats {
   flex: 1;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   font-size: 14px;
   color: var(--primary-color);
 }
@@ -493,7 +493,7 @@ body.picker-open {
   margin-bottom: 14px;
 }
 .match-cats {
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   font-size: 16px;
   color: var(--primary-color);
 }

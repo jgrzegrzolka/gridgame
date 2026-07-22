@@ -45,7 +45,7 @@ body {
 .stats-label {
   flex: 1;
   font-size: 17px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   color: var(--primary-color);
 }
 .stats-chips {
@@ -90,7 +90,7 @@ body {
   display: block;
 }
 .stats-chip-score {
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   font-size: 16px;
 }
 .stats-chip-time {
@@ -101,7 +101,7 @@ body {
 .stats-chip-cta {
   margin-left: auto;
   color: var(--link-color);
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   font-size: 14px;
 }
 .stats-chip-unplayed {
@@ -177,7 +177,7 @@ body {
 }
 .mode-toggle .mode-current {
   color: var(--primary-color);
-  font-weight: 500;
+  font-weight: var(--weight-regular);
 }
 /* ── Deck indicator (play row) ─────────────────────────────────────
  * One icon saying which deck you're in. It is tappable but carries NO
@@ -331,7 +331,7 @@ body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted-color);
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   margin: 0 0 7px;
 }
 
@@ -341,7 +341,7 @@ body {
 }
 .country-name {
   font-size: 28px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   color: var(--primary-color);
   /* Matches `#flag-map-section`'s 24 px top margin so the prompt-to-
    * choices gap reads as the same beat as the choices-to-map gap. */
@@ -487,7 +487,7 @@ body {
 }
 .leaderboard-title {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--muted-color);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -533,7 +533,7 @@ body {
 .leaderboard-name {
   color: var(--primary-color);
   font-size: 15px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -541,7 +541,7 @@ body {
 .leaderboard-score {
   color: var(--primary-color);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
 }
 .leaderboard-time {
   /* Finish time for a row that cleared the whole pool inside the 60s
@@ -550,7 +550,7 @@ body {
   margin-left: 6px;
   color: var(--muted-color);
   font-size: 13px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 .leaderboard-row.is-self {
   /* Pink-bordered, translucent-pink fill so the player spots themselves
@@ -564,7 +564,7 @@ body {
 }
 .leaderboard-row.is-self .leaderboard-name {
   color: var(--secondary-color);
-  font-weight: 600;
+  font-weight: var(--weight-bold);
 }
 .leaderboard-sep {
   color: var(--muted-color);

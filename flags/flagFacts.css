@@ -150,7 +150,7 @@ dialog#zoom .flag-facts-intro {
   border-radius: 999px;
   background: var(--surface-color);
   font-size: 11.5px;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   line-height: 1.2;
   color: var(--primary-color);
   font-variant-numeric: tabular-nums;
@@ -342,7 +342,7 @@ dialog#zoom .flag-facts-eq-img {
 .flag-facts-extra-title {
   margin: 0 0 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--primary-color);
 }
 dialog#zoom .flag-facts-list {

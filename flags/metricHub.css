@@ -48,7 +48,7 @@
   gap: 6px;
   padding: 3px 10px 3px 7px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--muted-color);
 }
 .mhub-ic {
@@ -97,7 +97,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--mc, var(--primary-color));
   margin-right: 2px;
   white-space: nowrap;

@@ -1,492 +1,216 @@
+/* Home page — "The Daily, front and centre".
+ *
+ * One front door (today's puzzle, its flags shown large) over one quiet,
+ * consistent list of the other games — not four competing preview cards. The
+ * flags are the only bold element; everything else stays disciplined. All
+ * colour comes from the eight site tokens (common.css) plus the flags
+ * themselves. Painted by bootHome() (page.js) from the live daily catalog. */
+
 body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* The home has nothing between the chrome strip (70px) and the hero, so it
+   * doesn't need the full --page-top (104px) reservation the busier pages use —
+   * that left a wide dead band above the eyebrow. Start content just below the
+   * strip. */
+  padding-top: 84px;
 }
 
-.domain {
+/* Centered reading column. Narrower than the old 720px tile grid: the hero is
+ * a single focused column, so a tighter measure keeps the title, stamps and
+ * list visually anchored together. */
+.home {
   width: 100%;
-  /* Matches the chrome cluster's inner span — logo (top-left) and
-   * burger (top-right) are anchored at 20px + --chrome-x-offset, so
-   * 720px keeps the tile cluster aligned with them at any viewport
-   * width without overhanging. */
-  max-width: 720px;
-  margin-bottom: 24px;
+  max-width: 560px;
+  margin: 0 auto 40px;
 }
-/* 2×2 on desktop (minmax 320 keeps two cards per row at 720 max),
- * single column on phone. */
-.game-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
+
+/* ---------------------------------------------------------------- the hero */
+.hero {
+  text-align: center;
+  padding: 20px 8px 8px;
 }
-/* Visual recipe (bg / border / hover / pink-border press feedback)
- * lives on the unified rule in common.css alongside the buttons.
- * Layout here: label strip (icon + game name) sits ON TOP — it's
- * what answers "what is this tile?" at a glance, especially on
- * mobile where the visual preview otherwise dominates. The
- * preview area fills the remaining space below. Padding is 0 on
- * the tile so the preview can reach the card edges. The visual
- * order is label-first via `column-reverse`, NOT by reordering
- * the DOM — keyboard / screen-reader order stays "label, then
- * preview" which matches reading flow on assistive tech too.
- *
- * Previously the label sat at the bottom of the tile; that read
- * as "scan flags first, then look up what game this is", which
- * the player had to do mentally for every tile every visit. The
- * new heading-on-top hierarchy answers the question in one glance. */
-.game-tile {
+/* Fixed copy (not the puzzle's description), so it never varies in length. Uses
+ * the site's regular weight — same as the other big prompt headings now
+ * (flagQuiz's `.country-name`, Flag Party's `.prompt-target`), since the whole
+ * app runs on just `--weight-regular` / `--weight-bold`. Scales down fluidly on
+ * phones. */
+.hero-title {
+  font-size: clamp(21px, 4vw, 27px);
+  font-weight: var(--weight-regular);
+  line-height: 1.2;
+  margin: 0 auto 28px;
+  max-width: 20ch;
+  color: var(--primary-color);
+}
+/* Decorative criteria line — an EXAMPLE rule, not today's. Speaks the site's
+ * own criteria language: a continent word, a motif glyph, a colour swatch,
+ * with `·` separators. The illustrative glyph/swatch colours are the documented
+ * exception to the eight-token palette (same standing as the real flag SVGs and
+ * the filterChips criteria marks — a mark that depicts a flag detail can't be
+ * built from brand tokens). */
+.hero-crit {
+  /* Block-level flex (not inline-flex) so the margin below actually lays out —
+   * as inline-flex the vertical margin barely rendered, which made the gap to
+   * the flags read too tight and the gap above too loose. */
   display: flex;
-  flex-direction: column-reverse;
-  padding: 0;
-  overflow: hidden;
-  min-height: 240px;
-}
-/* The site-wide casual hover: --hover-color, the same quiet light wash
-   every clickable surface uses (chrome buttons, pills, tic-tac-toe cells).
-   Everything else in the shared button recipe (border, padding, pink press
-   afterglow) still comes from common.css. */
-.game-tile:hover {
-  background: var(--hover-color);
-}
-/* The display:flex above outweighs the UA `[hidden]` rule, so any ship-dark
-   tile (rendered `hidden`, revealed later by bootHome()) would show to everyone
-   without this. Keep hidden tiles hidden. */
-.game-tile[hidden] { display: none; }
-.tile-preview {
-  flex: 1;
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  /* Hairline sits between label (top) and preview (below) — with
-   * `column-reverse` the preview's TOP edge is what touches the
-   * label, so the rule moves from `border-bottom` to `border-top`. */
-  border-top: 1px solid var(--muted-soft-color);
+  gap: 8px 6px;
+  margin: 0 auto 14px;
+  font-size: 17px;
+  color: var(--primary-color);
 }
-.tile-label {
-  display: flex;
+.hero-crit .crit-sep {
+  color: var(--muted-color);
+  font-size: 14px;
+}
+.hero-crit .crit-tok {
+  display: inline-flex;
   align-items: center;
+  gap: 7px;
+}
+.hero-crit .crit-gly {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+.hero-crit .crit-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex: none;
+}
+/* The negated colour reads quieter: the "not" prefix + the colour word muted. */
+.hero-crit .crit-not .crit-not-pre {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted-color);
+}
+.hero-crit .crit-not span:last-child {
+  color: var(--muted-color);
+}
+
+/* The day's flags. Found ones show the real flag (the player already knows
+ * them); still-to-find ones are blank stamps; a large answer set collapses its
+ * tail into a "+N" marker (see heroStamps). The row IS the puzzle's progress.
+ * This is the page's signature: flags at a size no quiz site gives them. */
+.hero-stamps {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  padding: 12px 16px;
+  max-width: 460px;
+  margin: 0 auto 34px;
+  min-height: 50px; /* reserve the row so the CTA doesn't jump when stamps paint */
 }
-.game-name {
-  /* Reads as a section heading: 18px gives it the visual authority
-   * of "this is what the tile IS"; the preview below is the teaser
-   * of how the game plays. Weight stays at 600 (semi-bold) — bumping
-   * to 700 made the four tiles feel a touch shouty next to the
-   * delicate flag previews. */
-  font-size: 18px;
-  font-weight: 600;
-  text-align: center;
+.hero-stamp {
+  width: 72px;
+  aspect-ratio: 3 / 2;
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
 }
+.hero-stamp img,
+.hero-stamp svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Empty "to find" box trailing the fake flags — a quiet dashed placeholder,
+ * never a real flag (no spoiler, no progress). */
+.hero-stamp.todo {
+  background: var(--selected-color);
+  box-shadow: none;
+  border: 1px dashed var(--muted-color);
+}
+
+/* The hero CTA reuses the site's one accent pill — `.lobby-btn.primary`
+ * (common.css), the soft-rose button. Only the icon + label layout and a
+ * slightly larger hero footprint are added here; the rose fill / border / hover
+ * all come from the shared recipe so the button reads identically to the online
+ * start screens. */
+#hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: var(--weight-bold);
+  padding: 13px 24px;
+}
+#hero-cta .game-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* --------------------------------------------------------- the game list */
+/* "More ways to play" reuses the shared `.start-sep` divider from common.css —
+ * the same "─ or join a game ─" separator the Flag Party / Tic-Tac-Toe start
+ * screens use (sentence case, muted, hairline either side). Only the home's
+ * roomier vertical spacing is set here; the look comes from the shared class. */
+.home .start-sep {
+  margin: 30px 0 12px;
+}
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+/* One slim row per game: icon · name · one-liner · arrow. Shares the site's
+ * surface-card + hairline + quiet-hover recipe. */
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--primary-color);
+}
+.game-row:hover {
+  background: var(--hover-color);
+}
+.game-row .game-icon {
+  width: 22px;
+  height: 22px;
+}
+.game-row-name {
+  font-size: 15px;
+  font-weight: var(--weight-bold);
+}
+.game-row-desc {
+  font-size: 13px;
+  color: var(--muted-color);
+}
+.game-row-arrow {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  background-color: var(--muted-color);
+  -webkit-mask: center / contain no-repeat;
+          mask: center / contain no-repeat;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z'/%3E%3C/svg%3E");
+}
+
+/* ------------------------------------------------------------ game icons */
+/* Shared glyph mechanic: a mask filled with currentColor, so an icon inherits
+ * its context's colour (rose inside the accent CTA, primary in a list row). */
 .game-icon {
   display: block;
+  flex: none;
   width: 26px;
   height: 26px;
   background-color: currentColor;
   -webkit-mask: center / contain no-repeat;
           mask: center / contain no-repeat;
 }
-
-/* Daily preview: category title + "X / Y found" progress chip +
- * a row of "found" flag thumbs. Mirrors the find-all loop — a
- * topic, a counter, flags accumulating as you match. */
-.daily-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-.daily-header-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.daily-category {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--primary-color);
-}
-.daily-progress {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted-color);
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 999px;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-.daily-found {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-  flex-wrap: wrap;
-  max-width: 240px;
-}
-.daily-found img {
-  width: 40px;
-  aspect-ratio: 3 / 2;
-  object-fit: cover;
-  border-radius: 2px;
-  border: 1px solid var(--muted-soft-color);
-  background: var(--surface-color);
-}
-
-/* Quiz preview: a country prompt at the top + 4 flag thumbs below.
- * Mirrors the 60s quiz mechanic (country to identify, candidates
- * to choose from). */
-.quiz-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 240px;
-}
-.quiz-prompt {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--primary-color);
-}
-.quiz-flags {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  width: 100%;
-}
-.quiz-flag {
-  display: block;
-  width: 100%;
-  aspect-ratio: 3 / 2;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid var(--muted-soft-color);
-  background: var(--surface-color);
-  transition: transform 150ms ease-out;
-}
-.quiz-flag:hover {
-  transform: scale(1.08);
-}
-
-/* Party preview: a live scoreboard — a room/round chip over three ranked
- * rows (rank · avatar · name · gain · score), the leader highlighted. It
- * re-creates the game's own break / final board look (flagParty's
- * `.scoreline`) as a bespoke, self-contained preview — the same convention
- * every other tile here follows (`.quiz-preview`, `.ttt-preview` echo their
- * games without importing the real components, since the game stylesheets
- * aren't loaded on the home page). The identicon box is the ONE shared piece:
- * it reuses common.css `.avatar`, resized here. Colours are all site tokens;
- * pink (`--secondary-color`) marks the leader row and the speed gain, matching
- * how the game itself paints the winning row and its speed chip. */
-.party-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  max-width: 250px;
-}
-.party-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 2px;
-}
-.party-room {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-color);
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 999px;
-  padding: 2px 9px;
-}
-.party-round {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--secondary-color);
-}
-.pp-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 9px;
-  border-radius: 9px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  font-size: 13px;
-}
-/* The leader row wears the same treatment the game gives the winning row:
- * the heavier selected-grey fill + a pink border. */
-.pp-row.pp-lead {
-  background: var(--selected-color);
-  border-color: var(--secondary-color);
-}
-.pp-row .avatar {
-  /* Shrink the shared 24px `.avatar` (common.css) to match the row height —
-   * the game resizes it per context the same way (rank-rail 22, picks 20). */
-  width: 22px;
-  height: 22px;
-}
-.pp-rank {
-  width: 14px;
-  color: var(--muted-color);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.pp-name {
-  font-weight: 600;
-  color: var(--primary-color);
-}
-/* Pushed to the right edge; the pink echoes the game's speed bonus. Empty on
- * rows that scored no speed points, so its slot still reserves the gap. */
-.pp-gain {
-  margin-left: auto;
-  min-width: 2ch;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--secondary-color);
-  font-variant-numeric: tabular-nums;
-}
-.pp-score {
-  margin-left: 9px;
-  min-width: 2ch;
-  text-align: right;
-  font-weight: 700;
-  color: var(--primary-color);
-  font-variant-numeric: tabular-nums;
-}
-
-/* TTT preview: 3×3 grid with two players (pink = secondary, dark =
- * primary) and a winning diagonal highlighted for p1. */
-.ttt-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  max-width: 180px;
-}
-.ttt-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  width: 100%;
-}
-.ttt-cell {
-  aspect-ratio: 1;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.ttt-cell img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.ttt-cell.p1 {
-  border: 3px solid var(--secondary-color);
-}
-.ttt-cell.p2 {
-  border: 3px solid var(--primary-color);
-}
-.ttt-cell.win {
-  /* Pink ring around the winning cells. Width is a custom prop so
-   * the phone media query can shrink it (cell borders also drop to
-   * 2 px there) and the hover-pulse keyframes can interpolate from
-   * whichever value applies without a 2 → 3 jump at hover-in. */
-  --win-glow: 3px;
-  box-shadow: 0 0 0 var(--win-glow) var(--secondary-color) inset;
-}
-/* Pulse the three winning cells when the tile is hovered — emphasises
- * "these three won" without the wrong-answer connotation a shake would
- * carry. Inset shadow thickens by 1 px mid-pulse so the pink ring
- * reads a touch louder at the apex too. */
-@keyframes ttt-win-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 var(--win-glow) var(--secondary-color) inset;
-  }
-  50% {
-    transform: scale(1.06);
-    box-shadow: 0 0 0 calc(var(--win-glow) + 1px) var(--secondary-color) inset;
-  }
-}
-.game-tile:hover .ttt-cell.win {
-  animation: ttt-win-pulse 600ms ease-in-out infinite;
-}
-/* Respect prefers-reduced-motion — same etiquette every other animated
- * surface on the site follows. */
-@media (prefers-reduced-motion: reduce) {
-  .game-tile:hover .ttt-cell.win {
-    animation: none;
-  }
-}
-.ttt-result {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--secondary-color);
-}
-
-/* Phone: compress vertically so all four tiles fit without scrolling
- * on the common 800-900 px viewport (iPhone 12+ / Android avg). At
- * the previous desktop min-height of 240 px four tiles + gaps came
- * out at ~1000 px, leaving the fourth game off-screen for a fresh
- * visitor. min-height 160 + smaller preview internals lands a stack
- * around 690 px — fits an 800 px viewport with room above the
- * chrome reservation; iPhone SE (667) still needs a small scroll
- * for the last tile to fully show. */
-@media (max-width: 600px) {
-  /* Reclaim ~14 px between the chrome strip and the first tile —
-   * the default body padding-top (--page-top, 104) leaves a 34 px
-   * gap below the 70 px strip; on phone that's pure dead space
-   * since the home page has nothing else above the tiles. */
-  body {
-    padding-top: 90px;
-  }
-  /* Last-mile fit pass: trim a few px so a Pixel-9-class viewport
-   * (~720 visible after Chrome's bars) lands the fourth tile bottom
-   * inside the fold instead of just below it. */
-  .game-tiles {
-    gap: 14px;
-  }
-  .game-tile {
-    min-height: 138px;
-  }
-  .tile-preview {
-    padding: 14px;
-  }
-  .tile-label {
-    padding: 10px 12px;
-  }
-  /* Keep the heading at 18px / 700 on mobile too — shrinking it back
-   * to 14px there would undo the whole "answer 'what is this tile?'
-   * at a glance" goal precisely where the screen real-estate is
-   * tightest and the previews loom largest. */
-  .daily-preview {
-    gap: 8px;
-  }
-  .daily-category {
-    font-size: 12px;
-  }
-  .daily-progress {
-    font-size: 10px;
-    padding: 1px 7px;
-  }
-  .daily-found {
-    gap: 3px;
-  }
-  .daily-found img {
-    width: 32px;
-  }
-  /* Quiz: prompt + a single row of 4 flags (was 2×2) so the tile
-   * doesn't need to be tall enough for two flag rows. */
-  .quiz-preview {
-    gap: 8px;
-    max-width: 220px;
-  }
-  .quiz-prompt {
-    font-size: 14px;
-  }
-  .quiz-flags {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
-  }
-  /* Party: keep all three ranked rows (the leaderboard is the point), but
-   * drop the room/round chip and tighten every gap so the board fits the
-   * 138px mobile tile without pushing it taller than its siblings. The
-   * avatars + scores still carry "several players competing" on their own. */
-  .party-head {
-    display: none;
-  }
-  .party-preview {
-    gap: 4px;
-    max-width: 230px;
-  }
-  .pp-row {
-    gap: 7px;
-    padding: 3px 8px;
-    font-size: 12px;
-  }
-  .pp-row .avatar {
-    width: 18px;
-    height: 18px;
-  }
-  .ttt-preview {
-    gap: 4px;
-    max-width: 110px;
-  }
-  .ttt-cell.p1,
-  .ttt-cell.p2 {
-    border-width: 2px;
-  }
-  .ttt-cell.win {
-    --win-glow: 2px;
-  }
-  .ttt-result {
-    font-size: 10px;
-  }
-}
-/* Flag of the day — a compact, low-profile card above the game grid. The
- * bordered-button look (surface fill, hairline border, hover, pink-press
- * afterglow) comes from the shared recipe in common.css (listed alongside
- * `.game-tile`); only layout + the smaller padding live here. Deliberately
- * quiet: a single row with a small flag chip so it never competes with the
- * game tiles below it. Clicking opens the shared flag-story popup. */
-.fotd-card {
-  display: flex;
-  align-items: center;
-  /* Reads as one line: "Flag of the day:" [flag] Name. flex-wrap lets the
-   * name drop below on very narrow phones rather than truncate. */
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  width: 100%;
-  margin-bottom: 16px;
-  padding: 9px 14px;
-  text-align: left;
-}
-/* The display:flex above outweighs the UA `[hidden]` rule, so the card needs
- * its own guard to honour the `hidden` attribute (same as `.game-tile`) —
- * otherwise an empty card shows before JS resolves or on fetch-fail. Also what
- * keeps the card off the page while the feature is toggled off in page.js. */
-.fotd-card[hidden] { display: none; }
-.fotd-kicker {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--muted-color);
-  white-space: nowrap;
-}
-.fotd-flag {
-  width: 46px;
-  aspect-ratio: 3 / 2;
-  object-fit: cover;
-  border-radius: 3px;
-  border: 1px solid var(--muted-soft-color);
-  flex: none;
-}
-.fotd-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--primary-color);
-  min-width: 0;
-}
-
 .icon-daily {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
@@ -495,13 +219,36 @@ body {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
 }
+.icon-party {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
+}
 .icon-ttt {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");
           mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 8h18v2H3zM3 14h18v2H3zM8 3h2v18H8zM14 3h2v18h-2z'/%3E%3C/svg%3E");
 }
-/* Flag Party: a "people" glyph — the multiplayer signal that sets this tile
- * apart from the 60s-Quiz clock (`.icon-quiz`) it used to share. */
-.icon-party {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
-          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E");
+
+/* ---------------------------------------------------------------- mobile */
+@media (max-width: 600px) {
+  /* Reclaim the dead gap under the fixed chrome strip (home has nothing else
+   * above the hero). */
+  body {
+    padding-top: 78px;
+  }
+  .hero {
+    padding: 10px 6px 6px;
+  }
+  .hero-stamps {
+    gap: 7px;
+    max-width: 340px;
+  }
+  .hero-stamp {
+    width: 54px;
+    border-radius: 5px;
+  }
+  /* Drop each game's one-liner on phones: the name + icon carry it, and the
+   * row stays a comfortable thumb target without wrapping. */
+  .game-row-desc {
+    display: none;
+  }
 }
