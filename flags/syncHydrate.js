@@ -29,6 +29,7 @@
  */
 
 import { fetchSyncLink } from './syncLinkClient.js';
+import { restoreOrCreateDeviceId } from './identity.js';
 
 /**
  * @typedef {{
@@ -376,4 +377,42 @@ export async function hydrateFromServer({ deviceId, store, fetchImpl = globalThi
   try { json = await res.json(); } catch { return { ok: false }; }
   const counts = applyHydratePayload({ store, payload: json });
   return { ok: true, ...counts };
+}
+
+/**
+ * Boot-time identity resolution for every page that reads the
+ * eviction-vulnerable localStorage caches (`daily.scores`, `flagquiz.best.*`).
+ * Feature W. This is the single entry point the daily, archive, and flagQuiz
+ * boots call — the restore↔hydrate contract lives here, not copy-pasted into
+ * each boot.
+ *
+ * It resolves the deviceId durably (restoring the original id from the
+ * `gg_did` cookie via /whoami when localStorage was evicted) and — *only* when
+ * the id had to be restored — rebuilds the local caches from Cosmos before the
+ * page reads them. The gate is `restored`, NEVER "the cache looks empty":
+ * `applyHydratePayload` overwrites, so hydrating a device that simply hasn't
+ * synced its local-only plays yet would clobber them.
+ *
+ * A restore-path hydrate also stamps `LAST_HYDRATE_KEY` so the ambient
+ * `trySyncDevices` staleness gate won't immediately re-fetch the same payload
+ * this hour (it just did).
+ *
+ * Never throws — a failed /whoami degrades to a freshly minted id, exactly as
+ * the non-durable path always did.
+ *
+ * @param {{
+ *   store: HydrateStore,
+ *   randomUUID: () => string,
+ *   fetchImpl?: typeof fetch,
+ *   now?: number,
+ * }} args
+ * @returns {Promise<string>} the resolved deviceId
+ */
+export async function resolveIdentityAndHydrate({ store, randomUUID, fetchImpl = globalThis.fetch, now = Date.now() }) {
+  const { deviceId, restored } = await restoreOrCreateDeviceId(store, randomUUID, fetchImpl);
+  if (restored) {
+    await hydrateFromServer({ deviceId, store, fetchImpl });
+    try { store.setItem(LAST_HYDRATE_KEY, String(now)); } catch { /* best-effort */ }
+  }
+  return deviceId;
 }

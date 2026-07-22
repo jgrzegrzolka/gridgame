@@ -354,7 +354,7 @@
     "menuLink": "Prywatność",
     "title": "Prywatność, Yet Another Quiz",
     "heading": "Prywatność",
-    "intro": "Przechowujemy losowe ID urządzenia, które Twoja przeglądarka generuje przy pierwszej potrzebie, oraz dane gier powiązane z tym ID, zgłoszenia codziennych zagadek, rekordy quizu, wyniki kółka i krzyżyka, opcjonalny pseudonim. Czas przechowywania od 48 godzin (wiersze rankingu) do 1 roku (zgłoszenia codzienne); profil i rekordy zostają do momentu, aż poprosisz o usunięcie. Korzystamy też z Cloudflare Web Analytics, anonimowych statystyk ruchu bez ciasteczek (odsłony, kraj, przeglądarka), żeby wiedzieć, ile osób odwiedza stronę. Bez reklam, kont, ciasteczek.",
+    "intro": "Przechowujemy losowe ID urządzenia, które Twoja przeglądarka generuje przy pierwszej potrzebie, oraz dane gier powiązane z tym ID, zgłoszenia codziennych zagadek, rekordy quizu, wyniki kółka i krzyżyka, opcjonalny pseudonim. Czas przechowywania od 48 godzin (wiersze rankingu) do 1 roku (zgłoszenia codzienne); profil i rekordy zostają do momentu, aż poprosisz o usunięcie. Korzystamy też z Cloudflare Web Analytics, anonimowych statystyk ruchu bez ciasteczek (odsłony, kraj, przeglądarka), żeby wiedzieć, ile osób odwiedza stronę. Bez reklam i kont. Ustawiamy jedno funkcjonalne ciasteczko, które przechowuje to samo losowe ID urządzenia, aby Twój zapisany postęp można było odtworzyć, jeśli przeglądarka wyczyści swoją pamięć lokalną; nie służy ono do śledzenia.",
     "removal": {
       "title": "Chcesz, żeby Twoje dane zniknęły? Masz trzy opcje.",
       "bomb": "Zrzuć bombę na centrum danych Azure Cosmos DB w Amsterdamie.",

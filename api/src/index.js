@@ -32,6 +32,7 @@ require('./functions/profileEnsure');
 require('./functions/profileSyncBlob');
 require('./functions/profileDeletion');
 require('./functions/getProfile');
+require('./functions/whoami');
 require('./functions/tttResult');
 require('./functions/getTttResult');
 require('./functions/clearLocalRows');

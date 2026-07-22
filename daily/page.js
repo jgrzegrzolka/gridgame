@@ -25,7 +25,7 @@ import {
   paintLives,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
-import { trySyncDevices } from '../flags/syncHydrate.js';
+import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.js';
 import { submitResult } from './statsSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
@@ -631,11 +631,20 @@ async function handleFinish(n, targets, all, info, isToday) {
  * `playFlow.startGame`. Keeping this file player-only means a bug in
  * either author tool can't crash live daily.
  */
-export function bootDaily() {
+export async function bootDaily() {
   wireZoom();
   mountDevReset();
+
+  // Feature W: resolve identity durably before anything reads local caches —
+  // restoring the original deviceId + rebuilding `daily.scores` from Cosmos if
+  // localStorage was evicted. Fast path (local id present) = no network.
+  const bootDeviceId = await resolveIdentityAndHydrate({
+    store: window.localStorage, randomUUID: () => window.crypto.randomUUID(),
+  });
+
+  // Migrations run after any hydrate so credited-answer fixups apply to
+  // hydrated rows too, not just ones this browser already had.
   migrateScores(window.localStorage);
-  const bootDeviceId = getOrCreateDeviceId(window.localStorage, () => window.crypto.randomUUID());
   // Background sync for linked devices only. Unlinked users pay
   // zero (a single localStorage read returns null and the helper
   // exits). Linked users refresh local cache from the server at

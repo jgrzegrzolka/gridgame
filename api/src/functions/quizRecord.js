@@ -10,6 +10,7 @@ const {
 } = require('../lib/dailyLeaderboardDoc');
 const { lowerWinsFromConfigKey } = require('../lib/quizRecordKey');
 const { isLocalRequestUrl } = require('../lib/requestHost');
+const { deviceCookieHeader } = require('../lib/deviceCookie');
 
 const DB_NAME = 'yetanotherquiz';
 const CONTAINER_NAME = 'quizRecords';
@@ -122,7 +123,9 @@ app.http('quizRecord', {
       context.warn('daily leaderboard write threw (non-fatal)', err);
     }
 
-    return { status: 204 };
+    // Feature W: stamp the durable deviceId cookie — a finished quiz round is
+    // restorable data (the personal best), so anchor the identity here too.
+    return { status: 204, headers: { 'Set-Cookie': deviceCookieHeader(body.deviceId) } };
   },
 });
 
