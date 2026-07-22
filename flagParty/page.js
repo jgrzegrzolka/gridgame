@@ -2236,10 +2236,11 @@ export function bootFlagParty() {
       toast.appendChild(buildAvatar(entry.playerId));
       toast.appendChild(el('span', 'toast-name', entry.nickname));
       // Badges read off the itemised award. "Fastest" goes through
-      // `wasFastest` rather than `speed > 0`: the speed bonus pays the first
-      // THREE correct answers, so `> 0` tagged up to three players as Fastest
-      // at once. A sole survivor still shows "Only one" without "Fastest" --
-      // with nobody to race, `speed` is 0.
+      // `wasFastest` rather than `speed > 0`: the speed bonus now pays every
+      // correct seat, so `> 0` would tag the whole field as Fastest. The award
+      // carries an explicit `fastest` flag set on exactly the race winner. A sole
+      // survivor shows "Only one" without "Fastest" -- with nobody to race,
+      // `fastest` is false.
       const award = breakdown[entry.playerId];
       if (wasFastest(award)) toast.appendChild(el('span', 'fast', `⚡ ${t('party.fastest', 'Fastest')}`));
       if (award && award.solo > 0) toast.appendChild(el('span', 'solo', `★ ${t('party.soleSurvivor', 'Only one')}`));

@@ -793,12 +793,15 @@ function toReveal(room) {
   });
   /** @type {Record<string, number>} */
   const points = {};
-  /** @type {Record<string, { base: number, speed: number, solo: number, closeness: number }>} */
+  /** @type {Record<string, { base: number, speed: number, solo: number, closeness: number, fastest: boolean }>} */
   const breakdown = {};
   for (const [pid, award] of Object.entries(awards)) {
     points[pid] = award.total;
+    // `fastest` rides along so the reveal can badge the one seat that won the
+    // race: the speed ladder is sized to the field now, so its winning value
+    // isn't a constant the client could compare against (see `wasFastest`).
     breakdown[pid] = {
-      base: award.base, speed: award.speed, solo: award.solo, closeness: award.closeness,
+      base: award.base, speed: award.speed, solo: award.solo, closeness: award.closeness, fastest: award.fastest,
     };
   }
   const seats = new Map();

@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CORRECT_POINTS,
-  SPEED_BONUS,
   speedBonusForRank,
   scoreQuestion,
   scoreQuestionDetailed,
@@ -12,25 +11,38 @@ import {
   wasFastest,
 } from './partyScore.js';
 
-test('speedBonusForRank: follows the curve, then 0 past the end', () => {
-  assert.equal(speedBonusForRank(0), SPEED_BONUS[0]);
-  assert.equal(speedBonusForRank(1), SPEED_BONUS[1]);
-  assert.equal(speedBonusForRank(2), SPEED_BONUS[2]);
-  assert.equal(speedBonusForRank(3), 0);
-  assert.equal(speedBonusForRank(99), 0);
+test('speedBonusForRank: sized to the race — every correct seat scores, winner bumped', () => {
+  // Six correct -> 6/4/3/2/1/0 by arrival. The fastest gets a winner bump (6, not
+  // 5), so first place always clears second by two.
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((r) => speedBonusForRank(r, 6)), [6, 4, 3, 2, 1, 0]);
+  // Three correct -> 3/1/0. Two correct -> 2/0.
+  assert.deepEqual([0, 1, 2].map((r) => speedBonusForRank(r, 3)), [3, 1, 0]);
+  assert.deepEqual([0, 1].map((r) => speedBonusForRank(r, 2)), [2, 0]);
 });
 
-test('scoreQuestion: correct answers get base + decaying speed bonus in arrival order', () => {
+test('speedBonusForRank: no race means no bonus, and out-of-range pays 0', () => {
+  assert.equal(speedBonusForRank(0, 1), 0, 'a lone correct answer beat nobody');
+  assert.equal(speedBonusForRank(0, 0), 0);
+  assert.equal(speedBonusForRank(6, 6), 0, 'rank past the field');
+  assert.equal(speedBonusForRank(-1, 6), 0);
+});
+
+test('scoreQuestion: correct answers get base + a speed bonus that reaches everyone', () => {
   const points = scoreQuestion([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: true },
     { playerId: 'c', correct: true },
     { playerId: 'd', correct: true },
+    { playerId: 'e', correct: true },
+    { playerId: 'f', correct: true },
   ]);
-  assert.equal(points.a, CORRECT_POINTS + 5);
-  assert.equal(points.b, CORRECT_POINTS + 3);
-  assert.equal(points.c, CORRECT_POINTS + 1);
-  assert.equal(points.d, CORRECT_POINTS + 0);
+  // Six correct: base 5 + speed 6/4/3/2/1/0.
+  assert.equal(points.a, CORRECT_POINTS + 6);
+  assert.equal(points.b, CORRECT_POINTS + 4);
+  assert.equal(points.c, CORRECT_POINTS + 3);
+  assert.equal(points.d, CORRECT_POINTS + 2);
+  assert.equal(points.e, CORRECT_POINTS + 1);
+  assert.equal(points.f, CORRECT_POINTS + 0);
 });
 
 test('scoreQuestion: wrong answers score 0 and do not consume a speed rank', () => {
@@ -40,10 +52,10 @@ test('scoreQuestion: wrong answers score 0 and do not consume a speed rank', () 
     { playerId: 'c', correct: true },
   ]);
   assert.equal(points.a, 0);
-  // b is the FIRST correct answer despite buzzing second — a's wrong buzz
-  // must not steal the rank-0 bonus.
-  assert.equal(points.b, CORRECT_POINTS + 5);
-  assert.equal(points.c, CORRECT_POINTS + 3);
+  // Two correct, so the ladder is sized to 2 (2/0). b is first correct despite
+  // buzzing second — a's wrong buzz must not steal the winner bump.
+  assert.equal(points.b, CORRECT_POINTS + 2);
+  assert.equal(points.c, CORRECT_POINTS + 0);
 });
 
 test('scoreQuestion: solo (applySpeedBonus false) awards base only', () => {
@@ -57,16 +69,14 @@ test('scoreQuestion: empty question scores nobody', () => {
   assert.deepEqual(scoreQuestion([]), {});
 });
 
-// ---- Iteration 12 phase 5: the itemised award + sole survivor ----
-
-test('scoreQuestionDetailed: total is always base + speed + solo', () => {
+test('scoreQuestionDetailed: total is always base + speed + solo + closeness', () => {
   const awards = scoreQuestionDetailed([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: true },
-    { playerId: 'c', correct: false },
+    { playerId: 'c', correct: false, rank: 1 },
   ]);
   for (const award of Object.values(awards)) {
-    assert.equal(award.total, award.base + award.speed + award.solo);
+    assert.equal(award.total, award.base + award.speed + award.solo + award.closeness);
   }
 });
 
@@ -86,15 +96,17 @@ test('scoreQuestionDetailed: scoreQuestion is exactly its totals', () => {
   }
 });
 
-test('sole survivor: the only correct player gets the bonus', () => {
+test('sole survivor: the only correct player gets the small bonus, no speed', () => {
   const awards = scoreQuestionDetailed([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: false },
     { playerId: 'c', correct: false },
   ]);
   assert.equal(awards.a.solo, SOLE_SURVIVOR_BONUS);
+  assert.equal(awards.a.solo, 1, 'sole survivor is worth exactly 1 now');
   // No speed: being "first" among one correct answer means beating nobody.
   assert.equal(awards.a.speed, 0);
+  assert.equal(awards.a.fastest, false, 'nobody is fastest without a race');
   assert.equal(awards.a.total, CORRECT_POINTS + SOLE_SURVIVOR_BONUS);
   assert.equal(awards.b.solo, 0);
 });
@@ -109,8 +121,6 @@ test('sole survivor: two correct answers means nobody was the only one', () => {
 });
 
 test('sole survivor: counts across the whole question, not per buzz order', () => {
-  // The lone correct answer arriving last must still be recognised — the bonus is
-  // decided by how many got it right, which isn't known until every buzz is in.
   const awards = scoreQuestionDetailed([
     { playerId: 'a', correct: false },
     { playerId: 'b', correct: false },
@@ -120,7 +130,6 @@ test('sole survivor: counts across the whole question, not per buzz order', () =
 });
 
 test('sole survivor: off in solo play, like the speed bonus', () => {
-  // One seat: there is nobody to be the only one against.
   const awards = scoreQuestionDetailed([{ playerId: 'a', correct: true }], { applySpeedBonus: false });
   assert.equal(awards.a.solo, 0);
   assert.equal(awards.a.speed, 0);
@@ -128,22 +137,36 @@ test('sole survivor: off in solo play, like the speed bonus', () => {
 });
 
 test('a wrong answer earns nothing in every bucket when the question has no ranking', () => {
-  // No `rank` on the buzz — flag-pick and map-pick are right-or-wrong, so
-  // closeness must stay 0 and this path must behave exactly as it always has.
   const awards = scoreQuestionDetailed([{ playerId: 'a', correct: false }, { playerId: 'b', correct: true }]);
-  assert.deepEqual(awards.a, { base: 0, speed: 0, solo: 0, closeness: 0, total: 0 });
+  assert.deepEqual(awards.a, { base: 0, speed: 0, solo: 0, closeness: 0, fastest: false, total: 0 });
 });
 
-test('closeness: the ladder agrees with CORRECT_POINTS at rank 0', () => {
-  // The ladder is written 10/5/2/0 because that is what a player reads off the
-  // reveal chart. Index 0 is paid as `base`, so if these two ever drift the
-  // chart would print a number the scorer does not award.
-  assert.equal(CLOSENESS_LADDER[0], CORRECT_POINTS);
+// ---- ranked (world-facts) questions ----
+
+test('ranked: the exact answer pays the top of the closeness ladder, as base', () => {
+  // A ranked question scores through the ladder, so a right pick is worth
+  // CLOSENESS_LADDER[0] (6) rather than the flat CORRECT_POINTS (5) — reading a
+  // four-way ranking earns a touch more than a right/wrong flag. It still lands
+  // in `base` ("you were right"), never `closeness`.
+  const awards = scoreQuestionDetailed([
+    { playerId: 'right', correct: true, rank: 0 },
+    { playerId: 'near', correct: false, rank: 1 },
+  ]);
+  assert.equal(awards.right.base, CLOSENESS_LADDER[0]);
+  assert.equal(awards.right.base, 6);
+  assert.equal(awards.right.closeness, 0);
 });
 
-test('closeness: rank 0 and out-of-range ranks pay nothing', () => {
+test('closeness: the ladder is 6/3/2/0 and a right pick out-scores the closest wrong one', () => {
+  // The whole reason the ladder tops out below nothing awkward: base (6) sits
+  // above runner-up (3), so being right always beats being close.
+  assert.deepEqual(CLOSENESS_LADDER, [6, 3, 2, 0]);
+  assert.ok(CLOSENESS_LADDER[0] > CLOSENESS_LADDER[1], 'right beats close');
+});
+
+test('closeness: rank 0 and out-of-range ranks pay nothing through closeness', () => {
   // Rank 0 is the answer and is paid through `base`; paying it here too would
-  // double-count. Non-integers and overshoot are defensive, not expected.
+  // double-count. Non-integers and overshoot are defensive.
   assert.equal(closenessForRank(0), 0);
   assert.equal(closenessForRank(undefined), 0);
   assert.equal(closenessForRank(4), 0);
@@ -151,28 +174,21 @@ test('closeness: rank 0 and out-of-range ranks pay nothing', () => {
   assert.equal(closenessForRank(1.5), 0);
 });
 
-test('closeness: a near miss pays, and lands in its own bucket', () => {
+test('closeness: a near miss pays by how near, and lands in its own bucket', () => {
   const awards = scoreQuestionDetailed([
     { playerId: 'right', correct: true, rank: 0 },
     { playerId: 'near', correct: false, rank: 1 },
     { playerId: 'far', correct: false, rank: 2 },
     { playerId: 'last', correct: false, rank: 3 },
   ]);
-  assert.deepEqual(awards.near, { base: 0, speed: 0, solo: 0, closeness: 5, total: 5 });
-  assert.deepEqual(awards.far, { base: 0, speed: 0, solo: 0, closeness: 2, total: 2 });
-  assert.deepEqual(awards.last, { base: 0, speed: 0, solo: 0, closeness: 0, total: 0 });
-  // The correct pick is paid as base, never as closeness — that separation is
-  // what lets the break's chips say "right" vs "close" rather than one number.
-  assert.equal(awards.right.base, CORRECT_POINTS);
-  assert.equal(awards.right.closeness, 0);
+  assert.deepEqual(awards.near, { base: 0, speed: 0, solo: 0, closeness: 3, fastest: false, total: 3 });
+  assert.deepEqual(awards.far, { base: 0, speed: 0, solo: 0, closeness: 2, fastest: false, total: 2 });
+  assert.deepEqual(awards.last, { base: 0, speed: 0, solo: 0, closeness: 0, fastest: false, total: 0 });
 });
 
 test('closeness: a near miss earns no speed bonus, however fast it arrived', () => {
-  // Speed ranks among CORRECT answers. Paying it on a near miss would reward
-  // buzzing fast on a question you did not know, which is the opposite of what
-  // the speed bonus is for.
-  // Two correct, so a race genuinely happened and the control below is
-  // meaningful — with a single correct answer nobody gets speed at all now.
+  // Speed ranks among the EXACT-correct only. Paying it on a near miss would
+  // reward buzzing fast on a question you did not know.
   const awards = scoreQuestionDetailed([
     { playerId: 'fastWrong', correct: false, rank: 1 },
     { playerId: 'right1', correct: true, rank: 0 },
@@ -180,12 +196,11 @@ test('closeness: a near miss earns no speed bonus, however fast it arrived', () 
   ]);
   assert.equal(awards.fastWrong.speed, 0);
   assert.equal(awards.fastWrong.total, CLOSENESS_LADDER[1]);
-  assert.equal(awards.right1.speed, SPEED_BONUS[0], 'the actual race still pays');
+  // Two exact-correct is a real race (K=2), so the winner bump pays.
+  assert.equal(awards.right1.speed, speedBonusForRank(0, 2), 'the actual race still pays');
 });
 
 test('closeness: a near miss does not block the sole-survivor bonus', () => {
-  // Sole survivor means "the only one who got it RIGHT". Someone scoring
-  // closeness points is still wrong, so the lone correct player keeps the bonus.
   const awards = scoreQuestionDetailed([
     { playerId: 'a', correct: false, rank: 1 },
     { playerId: 'b', correct: true, rank: 0 },
@@ -195,9 +210,6 @@ test('closeness: a near miss does not block the sole-survivor bonus', () => {
 });
 
 test('closeness: scoreQuestion projects the same totals as the detailed scorer', () => {
-  // scoreQuestion is a projection, not a second implementation. Closeness has to
-  // reach the room's seat arithmetic through it or near misses would show on the
-  // reveal and never touch anyone's score.
   const buzzes = [
     { playerId: 'a', correct: false, rank: 1 },
     { playerId: 'b', correct: true, rank: 0 },
@@ -209,52 +221,28 @@ test('closeness: scoreQuestion projects the same totals as the detailed scorer',
   assert.equal(flat.a, CLOSENESS_LADDER[1]);
 });
 
-test('no race, no race bonus: a lone correct answer earns no speed', () => {
-  // Being 'first' among one correct answer means having beaten nobody. This
-  // used to pay SPEED_BONUS[0] on top of the sole-survivor bonus, making that
-  // question worth 20 against everyone else's 0 -- and it fires on ~24% of
-  // four-player questions, so it was the most common way a board blew open.
-  const alone = scoreQuestionDetailed([
+test('the winner of a bigger race wins a bigger prize, and a lone correct is modest', () => {
+  // The design the rebalance buys: with K correct the winner earns CORRECT_POINTS
+  // + K, so an easy question everyone gets (big K) becomes a real race, while a
+  // lone correct answer tops out at CORRECT_POINTS + 1 (down from the old 15).
+  // Everyone in the race still banks at least the base, so a big K is not a
+  // blow-open — it lifts the whole field, not just the winner.
+  for (let correct = 2; correct <= 6; correct++) {
+    const buzzes = [];
+    for (let i = 0; i < 6; i++) buzzes.push({ playerId: 'p' + i, correct: i < correct });
+    const awards = scoreQuestionDetailed(buzzes);
+    const top = Math.max(...Object.values(awards).map((a) => a.total));
+    assert.equal(top, CORRECT_POINTS + correct, `${correct} correct -> winner scores ${CORRECT_POINTS + correct}`);
+  }
+  const lone = scoreQuestionDetailed([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: false },
     { playerId: 'c', correct: false },
-    { playerId: 'd', correct: false },
   ]);
-  assert.equal(alone.a.speed, 0);
-  assert.equal(alone.a.total, CORRECT_POINTS + SOLE_SURVIVOR_BONUS);
-
-  // Two correct is a real race, and the winner of it is paid.
-  const raced = scoreQuestionDetailed([
-    { playerId: 'a', correct: true },
-    { playerId: 'b', correct: true },
-    { playerId: 'c', correct: false },
-    { playerId: 'd', correct: false },
-  ]);
-  assert.equal(raced.a.speed, SPEED_BONUS[0]);
-  assert.equal(raced.b.speed, SPEED_BONUS[1]);
-  assert.equal(raced.a.solo, 0, 'two correct is not a sole survivor');
+  assert.equal(Math.max(...Object.values(lone).map((a) => a.total)), CORRECT_POINTS + SOLE_SURVIVOR_BONUS);
 });
 
-test('the biggest possible swing on a question is the same however many knew it', () => {
-  // The real complaint this fixed: the sole-survivor case was the ONLY outcome
-  // that could exceed a 15-point swing, and the excess was exactly the
-  // unearned speed bonus. Walk every outcome and pin that the top payout never
-  // exceeds a correct answer plus one bonus.
-  const cap = CORRECT_POINTS + Math.max(SPEED_BONUS[0], SOLE_SURVIVOR_BONUS);
-  for (let correct = 1; correct <= 4; correct++) {
-    const buzzes = [];
-    for (let i = 0; i < 4; i++) buzzes.push({ playerId: 'p' + i, correct: i < correct });
-    const awards = scoreQuestionDetailed(buzzes);
-    const top = Math.max(...Object.values(awards).map((a) => a.total));
-    assert.ok(top <= cap,
-      `${correct} correct pays a top score of ${top}, above the ${cap} cap`);
-  }
-});
-
-test('only ONE player is ever tagged Fastest', () => {
-  // Reported from a real game: two players showed the Fastest badge at once.
-  // SPEED_BONUS pays the first THREE correct answers (5/3/1), and the badge was
-  // rendered on `award.speed > 0`, so everyone who placed got called first.
+test('only ONE player is ever tagged Fastest, via the explicit flag', () => {
   const awards = scoreQuestionDetailed([
     { playerId: 'first', correct: true },
     { playerId: 'second', correct: true },
@@ -269,23 +257,25 @@ test('only ONE player is ever tagged Fastest', () => {
 });
 
 test('wasFastest is false when there was no race at all', () => {
-  // A lone correct answer earns no speed (no race), so nobody is Fastest.
   const alone = scoreQuestionDetailed([
     { playerId: 'a', correct: true },
     { playerId: 'b', correct: false },
   ]);
   assert.equal(wasFastest(alone.a), false);
   assert.equal(wasFastest(alone.b), false);
-  // Solo play switches the bonus off entirely.
   const solo = scoreQuestionDetailed([{ playerId: 'a', correct: true }], { applySpeedBonus: false });
   assert.equal(wasFastest(solo.a), false);
 });
 
-test('SPEED_BONUS strictly decreases, which is what makes wasFastest sound', () => {
-  // wasFastest identifies the winner by the VALUE of the bonus, so a curve with
-  // a repeated or non-maximal first entry would tag two players again.
-  for (let i = 1; i < SPEED_BONUS.length; i++) {
-    assert.ok(SPEED_BONUS[i] < SPEED_BONUS[i - 1],
-      `SPEED_BONUS must strictly decrease; [${i}]=${SPEED_BONUS[i]} vs [${i - 1}]=${SPEED_BONUS[i - 1]}`);
+test('the speed ladder strictly decreases by arrival, which is what makes wasFastest sound', () => {
+  // wasFastest is now an explicit flag, but the ladder must still hand the fastest
+  // a strictly-greater bonus than anyone else, or two seats could sensibly claim
+  // the badge. Walk a few race sizes and pin the monotonic drop + winner bump.
+  for (const k of [2, 3, 4, 6]) {
+    for (let r = 1; r < k; r++) {
+      assert.ok(speedBonusForRank(r - 1, k) > speedBonusForRank(r, k),
+        `ladder must strictly decrease at K=${k}: rank ${r - 1} vs ${r}`);
+    }
+    assert.ok(speedBonusForRank(0, k) - speedBonusForRank(1, k) >= 2, `winner bump at K=${k}`);
   }
 });

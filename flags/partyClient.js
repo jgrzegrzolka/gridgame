@@ -37,7 +37,7 @@
  * @property {number} seatCount
  * @property {string | null} myChoice
  * @property {{ answer: string, picks: Record<string, string>, points: Record<string, number>,
- *   breakdown?: Record<string, { base: number, speed: number, solo: number, closeness: number }>,
+ *   breakdown?: Record<string, { base: number, speed: number, solo: number, closeness: number, fastest?: boolean }>,
  *   ranking?: string[] | null, values?: Record<string, number> | null } | null} reveal
  * @property {string[]} holders  seats currently pressing "hold to read" on the
  *   chart reveal, freezing everyone's countdown. A set rather than a boolean so
