@@ -9,7 +9,7 @@ import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak } from '../flags/partyBreak.js';
-import { emptyTally, addQuestionToTally, chipsFor } from '../flags/partyRoundTally.js';
+import { emptyTally, addQuestionToTally } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
 
@@ -17,9 +17,8 @@ import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
  *  number sits beside it) so the chip stays free of i18n — a `⚡ +8` reads the
  *  same in every locale, and the bucket pass banner carries the worded label. */
 const CHIP_ICON = { base: '✓', speed: '⚡', solo: '★', closeness: '≈' };
-/** Fixed order the bucket passes run in — the order the chips are laid out and
- *  the order the break banks them: what you knew (base), then how fast (speed),
- *  then the rarer bonuses. Matches {@link chipsFor}'s own ordering. */
+/** Fixed order the bucket passes run in — the order the break banks them: what you
+ *  knew (base), then how fast (speed), then the rarer bonuses (only-one, close). */
 const CHIP_ORDER = /** @type {const} */ (['base', 'speed', 'solo', 'closeness']);
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
 import { clausesFromPrompt, missLabel, filtersFor } from '../flags/partyQuestions/spotFlag.js';
@@ -2092,53 +2091,19 @@ export function bootFlagParty() {
       row.appendChild(el('span', 'rank', String(i + 1)));
       row.appendChild(buildAvatar(r.playerId));
       row.appendChild(el('span', 'nm', r.nickname));
-      // No "N behind" gap on the break row: once the round's gain is broken into
-      // up to four labelled chips, name + chips + total already fill a phone-width
-      // row, and the gap tipped it into overflow (the chips wrapped, the score got
-      // shoved off). Standing is read from the rank numeral and the slide; the gap
-      // is redundant here.
-      // The round's gain, beside the total, broken into what earned it — one chip
-      // per scoring bucket. Each chip starts hidden and is revealed by the bucket
-      // pass that banks it (`playLedger`), so the label and the count-up land
-      // together. The chips answer "what did I just get, and for what?" — `speed`
-      // especially, the race bonus that used to vanish the moment the reveal passed.
-      const gain = el('span', 'gain');
-      const chips = chipsFor(roundTally[r.playerId]);
-      // `reconciles`: the itemised chips add up to the round total, so we trust the
-      // split and can animate it bucket by bucket. When they don't — a player who
-      // joined mid-round, or a reconnect that missed questions — fall back to a
-      // single plain chip and (below) the one-shot count-up. The number is always
-      // right; only the attribution is best-effort.
-      const reconciles = chips.length > 0 && chips.reduce((s, c) => s + c.value, 0) === r.roundGain;
-      if (reconciles) {
-        for (const c of chips) {
-          const chip = el('span', `chip chip-${c.kind}`, `${CHIP_ICON[c.kind]} +${c.value}`);
-          chip.dataset.kind = c.kind;
-          // Each chip names its bucket for a screen reader (the glyph alone is
-          // decorative). "Speed bonus" not "Fastest": this is the round TOTAL of
-          // speed points; only the reveal's per-question badge claims a race win.
-          const labelKey = c.kind === 'base' ? ['party.passCorrect', 'Correct']
-            : c.kind === 'speed' ? ['party.speedBonus', 'Speed bonus']
-              : c.kind === 'solo' ? ['party.soleSurvivor', 'Only one']
-                : ['party.passClose', 'Close'];
-          chip.setAttribute('aria-label', `${c.value} ${t(labelKey[0], labelKey[1])}`);
-          gain.appendChild(chip);
-        }
-      } else if (r.roundGain > 0) {
-        // Same rule as `chipsFor`: a scoreless round gets no chip at all, never a
-        // "+0". The row's total already says it, and a zero chip reads as a jab at
-        // whoever had the bad round.
-        const chip = el('span', 'chip chip-base', `${CHIP_ICON.base} +${r.roundGain}`);
-        chip.dataset.kind = 'base';
-        gain.appendChild(chip);
-      }
-      rowReconciles.push(reconciles);
-      rowSplits.push(roundTally[r.playerId] || { base: 0, speed: 0, solo: 0, closeness: 0 });
-      row.appendChild(gain);
-      // No ▲/▼ delta arrow: the rank movement is shown by the row physically
-      // sliding to its new place (animateStandingsMovement, from the same
-      // `rankDelta`), so a second numeric indicator would be redundant.
+      // Tight single-line row: rank · avatar · name · total, nothing reserved for a
+      // gain chip. The round's gain isn't a persistent chip; each bucket flies into
+      // the total during the ledger (see `playLedger`), so the settled board rests
+      // on totals and even a long nickname keeps the whole line. Rank movement is
+      // the row sliding to its new place, so there's no ▲/▼ arrow either.
       row.appendChild(el('span', 'sc', String(r.score)));
+      // The per-bucket split drives the fly-in. It "reconciles" when its buckets add
+      // up to the round total; only then can we attribute the gain bucket by bucket.
+      // A mid-round join / reconnect that missed questions won't reconcile — that
+      // row counts up in one go instead (see `playLedger`'s fallback).
+      const split = roundTally[r.playerId] || { base: 0, speed: 0, solo: 0, closeness: 0 };
+      rowReconciles.push(r.roundGain > 0 && split.base + split.speed + split.solo + split.closeness === r.roundGain);
+      rowSplits.push(split);
       breakBoard.appendChild(row);
       rowNodes.push(row);
     });
@@ -2193,17 +2158,16 @@ export function bootFlagParty() {
    */
   function playLedger(nodes, rows, splits, canPass, token) {
     const scores = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.sc')));
-    const chipsOf = (/** @type {number} */ i, /** @type {string} */ kind) =>
-      /** @type {HTMLElement | null} */ (nodes[i].querySelector(`.chip[data-kind="${kind}"]`));
-    const revealAllChips = (/** @type {number} */ i) => {
-      nodes[i].querySelectorAll('.chip').forEach((c) => c.classList.add('in'));
-    };
     const revealMvp = () => { if (!breakMvp.hidden) breakMvp.classList.add('in'); };
+    const passLabel = (/** @type {string} */ kind) => (kind === 'base' ? t('party.passCorrect', 'Correct')
+      : kind === 'speed' ? t('party.passSpeed', 'Speed')
+        : kind === 'solo' ? t('party.soleSurvivor', 'Only one')
+          : t('party.passClose', 'Close'));
 
     if (prefersReducedMotion()) {
-      // No motion: land on the settled board, chips and MVP shown statically — the
-      // gains are information, not decoration.
-      rows.forEach((r, i) => { scores[i].textContent = String(r.score); revealAllChips(i); });
+      // No motion: land straight on the settled totals. The gain fly-in is pure
+      // decoration (the totals are already correct in the DOM), so nothing to play.
+      rows.forEach((r, i) => { scores[i].textContent = String(r.score); });
       revealMvp();
       return;
     }
@@ -2244,18 +2208,39 @@ export function bootFlagParty() {
 
     if (!canPass) {
       // Fallback: no trustworthy split, so count every score up in one go and slide
-      // once — the ledger as it was before the bucket passes.
+      // once — no per-bucket fly-in, just the totals.
       const { countAt, slideAt } = ledgerSchedule(rows.length);
       window.setTimeout(() => {
         if (!stillOurs()) return;
-        rows.forEach((r, i) => { revealAllChips(i); countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => !stillOurs()); running[i] = r.score; });
+        rows.forEach((r, i) => { countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => !stillOurs()); running[i] = r.score; });
       }, countAt);
       window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_SLIDE_MS); revealMvp(); }, slideAt);
       return;
     }
 
-    // Bucket passes: one beat per bucket anyone earned, in CHIP_ORDER. Each pass
-    // shows its banner, reveals that bucket's chips, counts the rows that earned it,
+    // A gain flies in: a chip pops just left of the total, holds, then merges into
+    // the score as it counts. Overlay only (absolute, reserves no row width), so a
+    // long nickname keeps the whole line. Transient by design — the settled board
+    // rests on totals; the pass banner + the fly are the beat it's read.
+    const FLY_HOLD_MS = 360;
+    const flyGain = (/** @type {number} */ i, /** @type {string} */ kind, /** @type {number} */ value) => {
+      const chip = el('span', `fchip ${kind} enter`, `${CHIP_ICON[kind]} +${value}`);
+      chip.setAttribute('aria-label', `${value} ${passLabel(kind)}`);
+      nodes[i].appendChild(chip);
+      const from = running[i];
+      running[i] = from + value;
+      window.setTimeout(() => {
+        if (!stillOurs()) { chip.remove(); return; }
+        chip.classList.remove('enter');
+        chip.classList.add('fly'); // CSS carries the merge transform + fade
+        countUp(scores[i], from, running[i], LEDGER_PASS_COUNT_MS - FLY_HOLD_MS, 0, () => !stillOurs());
+        scores[i].classList.remove('bump'); void scores[i].offsetWidth; scores[i].classList.add('bump');
+        window.setTimeout(() => chip.remove(), LEDGER_PASS_COUNT_MS - FLY_HOLD_MS + 140);
+      }, FLY_HOLD_MS);
+    };
+
+    // One beat per bucket anyone earned, in CHIP_ORDER. Each pass names the bucket
+    // (the pill inline with "Standings"), flies each earner's chip into their total,
     // then (after a settle) re-ranks. Absolute offsets off the tested schedule so
     // the ordering itself is under test.
     const active = CHIP_ORDER.filter((k) => splits.some((s) => (s[k] || 0) > 0));
@@ -2265,20 +2250,8 @@ export function bootFlagParty() {
       window.setTimeout(() => {
         if (!stillOurs()) return;
         breakPass.className = `break-pass in ${kind}`;
-        const label = kind === 'base' ? t('party.passCorrect', 'Correct')
-          : kind === 'speed' ? t('party.passSpeed', 'Speed')
-            : kind === 'solo' ? t('party.soleSurvivor', 'Only one')
-              : t('party.passClose', 'Close');
-        breakPass.textContent = `${CHIP_ICON[kind]}  ${label}`;
-        rows.forEach((r, i) => {
-          const add = splits[i][kind] || 0;
-          if (add <= 0) return;
-          const chip = chipsOf(i, kind);
-          if (chip) chip.classList.add('in');
-          const from = running[i];
-          running[i] = from + add;
-          countUp(scores[i], from, running[i], LEDGER_PASS_COUNT_MS, 0, () => !stillOurs());
-        });
+        breakPass.textContent = `${CHIP_ICON[kind]}  ${passLabel(kind)}`;
+        rows.forEach((r, i) => { const add = splits[i][kind] || 0; if (add > 0) flyGain(i, kind, add); });
       }, countAt);
       window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_PASS_SLIDE_MS); }, slideAt);
     });

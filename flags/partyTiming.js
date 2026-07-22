@@ -257,16 +257,18 @@ export function ledgerSchedule(rowCount = 0) {
 /** Hold after the rows have arrived, before the first bucket pass — a beat to
  *  read where everyone stood before the round. */
 export const LEDGER_PASS_HOLD_MS = 450;
-/** How long one bucket's count-up runs (every row that earned it ticks at once). */
-export const LEDGER_PASS_COUNT_MS = 520;
+/** How long one bucket's beat runs: a gain chip pops just left of the total, holds,
+ *  then merges into the score as it counts. Longer than a bare count-up because the
+ *  chip has to appear and be read before it flies in (see `playLedger`'s `flyGain`). */
+export const LEDGER_PASS_COUNT_MS = 760;
 /** The breath between a pass's count FINISHING and the re-rank slide starting,
  *  so the number change and the row movement read as cause and effect. */
-export const LEDGER_PASS_SETTLE_MS = 120;
+export const LEDGER_PASS_SETTLE_MS = 100;
 /** The per-pass re-rank slide. Matches the inline transition duration in
  *  `playLedger`'s pass path — change both together. */
-export const LEDGER_PASS_SLIDE_MS = 600;
+export const LEDGER_PASS_SLIDE_MS = 460;
 /** The gap after one pass has fully settled before the next pass's banner. */
-export const LEDGER_PASS_GAP_MS = 180;
+export const LEDGER_PASS_GAP_MS = 120;
 
 /**
  * When each bucket pass fires, as milliseconds from the moment the break appears.
