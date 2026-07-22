@@ -32,14 +32,6 @@ function modeForLink(all, key, current) {
   return defaultModeFor(size, key);
 }
 
-/** Small uppercase group caption. @param {string} key @param {string} fallback */
-function capEl(key, fallback) {
-  const p = document.createElement('p');
-  p.className = 'menu-cap';
-  p.textContent = t(key, fallback);
-  return p;
-}
-
 /**
  * Build the burger-menu contents for the flagQuiz feature.
  *
@@ -77,10 +69,10 @@ export function buildQuizMenu(menuEl, all, opts) {
   const { relativeBase, currentVariantKey, currentMode = null, statsCurrent } = opts;
   const activeDeck = currentVariantKey ? deckOf(currentVariantKey) : null;
 
-  // ---- 1. deck pills ----
+  // ---- 1. deck pills ---- (no caption: the pills are self-evidently the deck
+  // switcher, and each carries its own icon + name)
   const deckLi = document.createElement('li');
   deckLi.className = 'menu-decks';
-  deckLi.appendChild(capEl('menu.deck', 'Deck'));
   const pills = document.createElement('div');
   pills.className = 'deck-pills';
   for (const deck of DECKS) {
@@ -110,16 +102,20 @@ export function buildQuizMenu(menuEl, all, opts) {
   // there is genuinely nothing to pick. Derived from the deck's own shape,
   // so Phases 3/4 (world-only) inherit it without a rule to remember.
   if (activeDeck && deckHasScopes(activeDeck)) {
-    const capLi = document.createElement('li');
-    capLi.className = 'menu-divider';
-    capLi.appendChild(capEl('menu.partOfWorld', 'Part of the world'));
-    menuEl.appendChild(capLi);
+    // No caption: the continent links speak for themselves. The first rendered
+    // scope carries the menu-divider (which the caption's <li> used to own), so
+    // the scope list still reads as its own group under the deck pills.
+    let firstScope = true;
     for (const key of variantsForDeck(activeDeck)) {
       const variant = VARIANTS[key];
       if (!variant) continue;
       const mode = modeForLink(all, key, currentMode);
       if (mode === null) continue;
       const li = document.createElement('li');
+      if (firstScope) {
+        li.className = 'menu-divider';
+        firstScope = false;
+      }
       const a = document.createElement('a');
       a.href = `${relativeBase}?v=${key}&n=${mode}`;
       a.textContent = t(`variant.${key}`, variant.label);

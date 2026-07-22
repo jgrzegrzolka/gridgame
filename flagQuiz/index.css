@@ -324,17 +324,6 @@ body {
   display: block;
 }
 
-/* Group caption inside the burger — quieter than a menu link, and not
-   clickable. */
-.menu-cap {
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-color);
-  font-weight: var(--weight-bold);
-  margin: 0 0 7px;
-}
-
 .mode-toggle .mode-sep {
   color: #ddd;
   padding: 0 4px;
