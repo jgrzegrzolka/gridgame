@@ -192,7 +192,7 @@
 }
 .achievement-name {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   color: var(--primary-color);
   margin: 0;
   line-height: 1.2;

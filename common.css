@@ -72,6 +72,13 @@
   --correct-color: #2a9d4a;
   --wrong-color: #c0392b;
   --link-color: var(--primary-color);
+  /* The site runs on exactly TWO font weights — a regular and a bold — so type
+   * emphasis reads consistently everywhere and there's no drift into 500 / 600 /
+   * 650. Every `font-weight` in the app resolves through one of these two tokens;
+   * change the value here to retune the whole site's weight. (The former
+   * medium/semibold values collapsed here: 500 → regular, 600 / 650 → bold.) */
+  --weight-regular: 400;
+  --weight-bold: 700;
   --page-top: 104px;
   /* Height of the fixed chrome strip (body::before) — the visible top
    * bar. Kept smaller than --page-top so a thin band of page background
@@ -255,7 +262,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   font-size: 14px;
   color: var(--primary-color);
   text-decoration: none;
@@ -446,7 +453,7 @@ body::after {
   color: var(--link-color);
   text-decoration: none;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
 }
 .menu a:hover {
   text-decoration: underline;
@@ -485,7 +492,7 @@ body::after {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 .menu li.menu-nickname .menu-nickname-avatar {
   display: inline-flex;
@@ -503,7 +510,7 @@ body::after {
 }
 .menu li.menu-nickname .menu-nickname-value {
   color: var(--secondary-color);
-  font-weight: 500;
+  font-weight: var(--weight-regular);
 }
 /* Hover-underline (from `.menu a:hover`) would otherwise paint in the
  * anchor's `color: var(--link-color)` (primary/dark) because the inner
@@ -738,7 +745,7 @@ body::after {
  * on the profile form so the "primary action in a · row" feels the same
  * wherever a page opts in. */
 .row-cta {
-  font-weight: 500;
+  font-weight: var(--weight-regular);
 }
 
 /* Iconic "share this thing" button — a 20×20 share glyph that morphs to a
@@ -836,7 +843,7 @@ body::after {
 .pill {
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   background: var(--surface-color);
   color: var(--muted-color);
   border: 1px solid var(--muted-soft-color);
@@ -952,7 +959,7 @@ body::after {
  * `renderCriteriaInline`: the findFlag + daily play-screen headers and the Flag
  * Party spot-the-flag prompt. Same mechanism = same code, in one place. */
 .crit { white-space: nowrap; }
-.crit-sep { color: var(--muted-color); margin: 0 0.4em; font-weight: 400; }
+.crit-sep { color: var(--muted-color); margin: 0 0.4em; font-weight: var(--weight-regular); }
 /* The colour swatch needs a small gap before its word when inline; the boxed
  * `.pill` / `.filter-chip` get this from their flex gap instead. */
 .crit .pill-swatch { margin-right: 0.3em; }
@@ -971,7 +978,7 @@ body::after {
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   line-height: 1.4;
   padding: 3px 6px 3px 10px;
   border-radius: 999px;
@@ -994,7 +1001,7 @@ body::after {
   background: var(--surface-color);
   color: var(--mc);
   border-color: var(--mc);
-  font-weight: 600;
+  font-weight: var(--weight-bold);
 }
 .filter-chip-x {
   font: inherit;
@@ -1086,7 +1093,7 @@ body::after {
   cursor: pointer;
   user-select: none;
   padding: 0 2px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   border-radius: 3px;
   opacity: 0.7;
 }
@@ -1201,7 +1208,7 @@ body::after {
 }
 .final-score {
   font-size: 28px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   margin: 0 0 12px;
 }
 .time {
@@ -1268,7 +1275,7 @@ body::after {
 .best .new-badge {
   display: inline-block;
   color: var(--correct-color);
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   margin-left: 6px;
   animation: new-record-bounce 2s ease-out;
   transform-origin: center bottom;
@@ -1672,8 +1679,6 @@ dialog#zoom p.zoom-note {
 .help-btn,
 .picker-close,
 .zoom-close,
-.fotd-card,
-.game-tile,
 .map-fullscreen-btn,
 .map-hide-btn,
 .map-fs-exit,
@@ -1702,7 +1707,6 @@ dialog#zoom p.zoom-note {
 .help-btn:hover,
 .picker-close:hover,
 .zoom-close:hover,
-.fotd-card:hover,
 .map-fullscreen-btn:hover,
 .map-hide-btn:hover,
 .map-fs-exit:hover,
@@ -1718,8 +1722,6 @@ dialog#zoom p.zoom-note {
 .help-btn:active,
 .picker-close:active,
 .zoom-close:active,
-.fotd-card:active,
-.game-tile:active,
 .map-fullscreen-btn:active,
 .map-hide-btn:active,
 .map-fs-exit:active,
@@ -1945,7 +1947,7 @@ dialog#zoom p.zoom-note {
   color: var(--surface-color);
   padding: 3px 4px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: var(--weight-regular);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -2044,7 +2046,7 @@ dialog#zoom p.zoom-note {
 }
 .ach-celebrate-hat {
   font-size: 8px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--secondary-color);
@@ -2066,7 +2068,7 @@ dialog#zoom p.zoom-note {
 }
 .ach-celebrate-name {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--primary-color);
   margin: 0;
   line-height: 1.2;
@@ -2126,13 +2128,13 @@ dialog#zoom p.zoom-note {
 }
 .achievement-info-name {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   color: var(--primary-color);
   margin: 0;
 }
 .achievement-info-status {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted-color);

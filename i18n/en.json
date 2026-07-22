@@ -376,23 +376,19 @@
     "party": "Flag Party"
   },
   "home": {
-    "daily": {
-      "category": "Europe · cross",
-      "progress": "5 / 10 found"
+    "hero": {
+      "headline": "Can you find them all?",
+      "critPlace": "Europe",
+      "critShape": "cross",
+      "critNot": "not",
+      "critColor": "blue",
+      "cta": "Today's puzzle"
     },
-    "quiz": {
-      "prompt": "Poland"
-    },
-    "party": {
-      "room": "Room · 7KQ2",
-      "round": "Round 3",
-      "you": "You"
-    },
-    "ttt": {
-      "result": "Pink wins!"
-    },
-    "fotd": {
-      "label": "Flag of the day:"
+    "more": "More ways to play",
+    "desc": {
+      "quiz": "Beat the clock",
+      "party": "Play together on your phones",
+      "ttt": "Three flags in a row"
     }
   },
   "game": {

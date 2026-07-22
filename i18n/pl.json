@@ -376,23 +376,19 @@
     "party": "Flagowa impreza"
   },
   "home": {
-    "daily": {
-      "category": "Europa · krzyż",
-      "progress": "Znaleziono 5 / 10"
+    "hero": {
+      "headline": "Czy znajdziesz je wszystkie?",
+      "critPlace": "Europa",
+      "critShape": "krzyż",
+      "critNot": "bez",
+      "critColor": "niebieskiego",
+      "cta": "Dzisiejsza zagadka"
     },
-    "quiz": {
-      "prompt": "Polska"
-    },
-    "party": {
-      "room": "Pokój · 7KQ2",
-      "round": "Runda 3",
-      "you": "Ty"
-    },
-    "ttt": {
-      "result": "Wygrywa różowy!"
-    },
-    "fotd": {
-      "label": "Flaga dnia:"
+    "more": "Więcej sposobów gry",
+    "desc": {
+      "quiz": "Wyścig z czasem",
+      "party": "Grajcie razem na telefonach",
+      "ttt": "Trzy flagi w rzędzie"
     }
   },
   "game": {

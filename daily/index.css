@@ -126,7 +126,7 @@
 .daily-stats-headline {
   font-size: 16px;
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   margin: 0;
   text-align: left;
   /* Inline flow (not flex) so the share button stays glued to its
@@ -197,7 +197,7 @@
   background: rgba(0, 0, 0, 0.7);
   color: var(--surface-color);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   text-align: center;
   padding: 2px 4px;
   letter-spacing: 0.04em;
@@ -224,14 +224,14 @@
   left: 0;
   background: var(--primary-color);
   color: var(--surface-color);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   border-bottom-right-radius: 4px;
 }
 .find-tile-pop {
   right: 0;
   background: rgba(0, 0, 0, 0.6);
   color: var(--surface-color);
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   border-bottom-left-radius: 4px;
 }
 
