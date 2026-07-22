@@ -172,6 +172,25 @@
               </button>
             </span>
           </div>
+          <!-- Bots (host-only). Solo play is a one-seat game with no race and no
+               speed bonus; a bot is that second seat, and the same control fills
+               out a friends' game. Host chooses a difficulty and taps Add; each
+               bot then shows in the player list with a remove affordance. Hidden
+               for guests (adding a seat is the host's call) via `#bot-row`. -->
+          <div class="bot-row" id="bot-row" hidden>
+            <div class="dl-fieldhead">
+              <span class="dl-group-label" data-i18n="party.botsLabel">Bots</span>
+            </div>
+            <div class="bot-add">
+              <select class="bot-skill" id="bot-skill"
+                      data-i18n-attr="aria-label:party.botSkill" aria-label="Bot difficulty">
+                <option value="easy" data-i18n="party.botEasy">Easy</option>
+                <option value="medium" selected data-i18n="party.botMedium">Medium</option>
+                <option value="hard" data-i18n="party.botHard">Hard</option>
+              </select>
+              <button type="button" class="bot-add-btn" id="add-bot" data-i18n="party.addBot">Add bot</button>
+            </div>
+          </div>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <div class="actions-row">

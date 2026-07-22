@@ -9,7 +9,9 @@
  * tapped, which is local until reveal (the server never echoes picks early).
  *
  * @typedef {'connecting' | 'lobby' | 'question' | 'reveal' | 'picking' | 'final'} Phase
- * @typedef {{ playerId: string, nickname: string, score: number, present: boolean }} RosterEntry
+ * @typedef {{ playerId: string, nickname: string, score: number, present: boolean, bot?: boolean, skill?: string }} RosterEntry
+ *   `bot` / `skill` are present only on bot seats (server-driven, see
+ *   `flags/partyBot.js`); the page badges the chip and offers the host a remove.
  * @typedef {{ prompt: string, options: string[], questionId?: string, clearFrac?: number }} PublicQuestion
  * @typedef {{ key: string, fallback: string, params?: Record<string, string> }} StatusOverride
  *

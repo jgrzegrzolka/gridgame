@@ -18,6 +18,8 @@ import {
   applySetLength,
   applySetFirstPick,
   applyPick,
+  applyAddBot,
+  applyRemoveBot,
   serializeRoom,
   deserializeRoom,
   DEFAULT_QUESTIONS,
@@ -1054,4 +1056,86 @@ test('welcome carries the first round, so a joiner paints it immediately', () =>
   const r = applyHello(room, 'bob', 'Bob');
   const welcome = r.broadcasts.find((b) => b.to === 'bob');
   assert.equal(/** @type {any} */ (welcome?.message).firstPick, 'flags-weird');
+});
+
+// ---- bots (Iteration 17) ----
+
+test('applyAddBot: host adds a present bot seat, roster carries bot + skill', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  const r = applyAddBot(room, 'alice', 'bot:1', 'Robo', 'hard');
+  const seat = r.room.seats.get('bot:1');
+  assert.equal(seat?.bot, true);
+  assert.equal(seat?.skill, 'hard');
+  assert.equal(seat?.score, 0);
+  assert.ok(r.room.present.has('bot:1'), 'bot is present immediately');
+  const roster = /** @type {any} */ (msg(r, 'roster')).roster;
+  const entry = roster.find((/** @type {any} */ e) => e.playerId === 'bot:1');
+  assert.equal(entry.bot, true);
+  assert.equal(entry.skill, 'hard');
+  assert.equal(entry.present, true);
+});
+
+test('applyAddBot: a bot makes seat count > 1 (turns solo into a race)', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  assert.equal(room.seats.size, 1);
+  room = applyAddBot(room, 'alice', 'bot:1', 'Robo', 'medium').room;
+  assert.equal(room.seats.size, 2);
+});
+
+test('applyAddBot: human roster entries stay free of bot/skill fields', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  room = applyAddBot(room, 'alice', 'bot:1', 'Robo', 'easy').room;
+  // Read the roster off a fresh hello broadcast to another seat.
+  const hello = applyHello(room, 'bob', 'Bob');
+  const list = /** @type {any} */ (hello.broadcasts.find((b) => b.to !== 'bob')?.message).roster;
+  const human = list.find((/** @type {any} */ e) => e.playerId === 'alice');
+  assert.ok(!('bot' in human) && !('skill' in human), 'human entry has no bot fields');
+});
+
+test('applyAddBot: only the host, only from the lobby', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  assert.equal(applyAddBot(room, 'bob', 'bot:1', 'Robo', 'medium').broadcasts.length, 0, 'guest cannot add');
+  const started = applyStart(room, 'alice', q('jp'), null, undefined, undefined, undefined, undefined).room;
+  assert.equal(applyAddBot(started, 'alice', 'bot:1', 'Robo', 'medium').broadcasts.length, 0, 'not mid-game');
+});
+
+test('applyAddBot: refuses an id that already holds a seat, and respects MAX_SEATS', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  assert.equal(applyAddBot(room, 'alice', 'alice', 'Dup', 'medium').broadcasts.length, 0, 'no overwrite');
+  // Fill to the cap (alice already holds 1 seat), then a bot is refused.
+  for (let i = room.seats.size; i < MAX_SEATS; i++) room = applyAddBot(room, 'alice', `bot:${i}`, `B${i}`, 'easy').room;
+  assert.equal(room.seats.size, MAX_SEATS);
+  assert.equal(applyAddBot(room, 'alice', 'bot:over', 'Over', 'easy').broadcasts.length, 0, 'full room');
+});
+
+test('applyRemoveBot: host removes a bot; a human seat is never removable this way', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyAddBot(room, 'alice', 'bot:1', 'Robo', 'medium').room;
+  assert.equal(applyRemoveBot(room, 'alice', 'bob').broadcasts.length, 0, 'cannot remove a human');
+  assert.ok(room.seats.has('bob'));
+  const r = applyRemoveBot(room, 'alice', 'bot:1');
+  assert.ok(!r.room.seats.has('bot:1'));
+  assert.ok(!r.room.present.has('bot:1'));
+  assert.equal(msg(r, 'roster').type, 'roster');
+});
+
+test('applyRemoveBot: only the host may remove a bot', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyAddBot(room, 'alice', 'bot:1', 'Robo', 'medium').room;
+  assert.equal(applyRemoveBot(room, 'bob', 'bot:1').broadcasts.length, 0);
+  assert.ok(room.seats.has('bot:1'));
+});
+
+test('bots survive serialization and play-again keeps them, zeroing the score', () => {
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  room = applyAddBot(room, 'alice', 'bot:1', 'Robo', 'hard').room;
+  const restored = deserializeRoom(serializeRoom(room));
+  const seat = restored.seats.get('bot:1');
+  assert.equal(seat?.bot, true);
+  assert.equal(seat?.skill, 'hard');
+  // Deserialize drops present (no live sockets survive) — the server restores bots.
+  assert.equal(restored.present.size, 0);
 });

@@ -5,6 +5,7 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal, revealOrder } from '../flags/partyClient.js';
+import { MAX_SEATS } from '../flags/partyRoom.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -460,6 +461,9 @@ export function bootFlagParty() {
   const roundCardName = $('roundcard-name');
   const roundCardPick = $('roundcard-pick');
   const lobbySetupEl = $('lobby-setup');
+  const botRow = $('bot-row');
+  const botSkillSel = /** @type {HTMLSelectElement} */ ($('bot-skill'));
+  const addBotBtn = /** @type {HTMLButtonElement} */ ($('add-bot'));
   const draftLengthEl = $('draft-length');
   const draftLengthGroup = $('draft-length-group');
   const draftLengthHint = $('draft-length-hint');
@@ -612,6 +616,26 @@ export function bootFlagParty() {
     if (!(ws && ws.readyState === WebSocket.OPEN)) return false;
     ws.send(JSON.stringify(msg));
     return true;
+  }
+
+  // ---- bots (host-only) ----
+  // A bot is a server-driven seat added from the lobby (see `flags/partyBot.js`).
+  // The client only sends `addBot` / `removeBot`; everything about how a bot plays
+  // lives server-side. The chosen difficulty is remembered per device so a host
+  // who likes Hard bots gets them next time.
+  const BOT_SKILL_KEY = 'gridgame.party.botSkill';
+  /** @param {string | undefined} skill */
+  function botSkillLabel(skill) {
+    const key = { easy: 'party.botEasy', medium: 'party.botMedium', hard: 'party.botHard' }[String(skill)]
+      || 'party.botMedium';
+    return t(key, String(skill || 'Medium'));
+  }
+  function loadBotSkill() {
+    try { return localStorage.getItem(BOT_SKILL_KEY) || 'medium'; } catch { return 'medium'; }
+  }
+  /** @param {string} skill */
+  function saveBotSkill(skill) {
+    try { localStorage.setItem(BOT_SKILL_KEY, skill); } catch { /* private mode */ }
   }
 
   // ---- game length (host-only) ----
@@ -1498,12 +1522,31 @@ export function bootFlagParty() {
     const inLobby = state.phase === 'lobby';
     const hostSetup = state.isHost && inLobby;
     for (const r of state.roster) {
-      const chip = el('div', 'chip' + (r.present ? '' : ' away'));
+      const isBot = /** @type {any} */ (r).bot === true;
+      const chip = el('div', 'chip' + (r.present ? '' : ' away') + (isBot ? ' bot' : ''));
       chip.appendChild(buildAvatar(r.playerId));
       chip.appendChild(el('span', 'chip-name', r.nickname));
+      if (isBot) {
+        // The difficulty word doubles as the "this is a bot" mark; the chip's
+        // `.bot` class adds the robot glyph. No score/skill leak worth hiding —
+        // everyone can see who the bots are and how hard they play.
+        chip.appendChild(el('span', 'chip-bot', botSkillLabel(/** @type {any} */ (r).skill)));
+      }
       if (r.playerId === roomHostId) chip.appendChild(el('span', 'chip-host', t('party.host', 'host')));
+      // The host can pull a bot back out while still in the lobby.
+      if (isBot && hostSetup) {
+        const rm = /** @type {HTMLButtonElement} */ (el('button', 'chip-remove'));
+        rm.type = 'button';
+        rm.textContent = '×';
+        rm.setAttribute('aria-label', t('party.removeBot', 'Remove bot'));
+        rm.addEventListener('click', () => send({ type: 'removeBot', botId: r.playerId }));
+        chip.appendChild(rm);
+      }
       playersEl.appendChild(chip);
     }
+    // Bots are the host's call and only in the lobby; a full room disables Add.
+    botRow.hidden = !hostSetup;
+    addBotBtn.disabled = state.roster.length >= MAX_SEATS;
     startBtn.hidden = !hostSetup;
     // The host can start as soon as they're seated — a room of one is allowed
     // (play alone), and more players can join before the tap. The guard only
@@ -2529,6 +2572,16 @@ export function bootFlagParty() {
     if (next) setFirstPick(next, true);
   });
   draftFirstPickVeil.addEventListener('change', () => setFirstPickVeil(draftFirstPickVeil.checked));
+  // Bots: the host taps Add at the chosen difficulty; the server mints the seat
+  // and broadcasts the roster, which repaints the player list (with a remove ×).
+  botSkillSel.value = loadBotSkill();
+  botSkillSel.addEventListener('change', () => saveBotSkill(botSkillSel.value));
+  addBotBtn.addEventListener('click', () => {
+    if (!state.isHost) return;
+    const skill = botSkillSel.value || 'medium';
+    saveBotSkill(skill);
+    send({ type: 'addBot', skill });
+  });
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
     // plan (the server builds the first round from the host's chosen firstPick and
