@@ -682,7 +682,9 @@ export default class PartyGameServer {
       // A bot that already buzzed this question (a reschedule racing a reconnect)
       // is skipped; applyBuzz would no-op it anyway.
       if (this.room.buzzes.some((b) => b.playerId === pid)) continue;
-      const { choice, delayMs } = decideBuzz(q, seat.skill ?? '', Math.random);
+      // `tricky` rides along so a veiled round delays the bot too — without it the
+      // veil is a handicap on the humans alone and the speed bonus is unwinnable.
+      const { choice, delayMs } = decideBuzz(q, seat.skill ?? '', Math.random, { tricky: this.room.tricky === true });
       this.botTimers.push(setTimeout(() => { this.botBuzz(pid, choice); }, delayMs));
     }
   }

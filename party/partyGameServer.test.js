@@ -935,3 +935,29 @@ test('a bot re-added after a remove keeps a distinct name (no collision)', async
   const names = conn.last('roster').roster.filter((/** @type {any} */ r) => r.bot).map((/** @type {any} */ r) => r.nickname);
   assert.equal(new Set(names).size, names.length, 'names stay distinct across a remove-then-add');
 });
+
+test('a veiled round delays the bot too — the veil is not a handicap on humans alone', async (t) => {
+  // The wiring this pins is one argument: the server passing `room.tricky` into
+  // `decideBuzz`. Without it a Hard bot buzzed at 1-3 s against tiles that are not
+  // fully clear until 16 s, so no human could win the speed bonus on a veiled
+  // round at any difficulty. The delay maths itself is `flags/partyBot.test.js`.
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'setFirstPick', firstPick: 'flags-all', veil: true }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'hard' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(srv.room.tricky, true, 'the round really is veiled');
+
+  // 4 s in — comfortably past an unveiled Hard bot's 1-3 s window, and the tiles
+  // are barely a quarter clear. The bot must still be waiting.
+  t.mock.timers.tick(4000); await settle();
+  assert.equal(srv.room.buzzes.length, 0, 'the bot has not buzzed while the tiles are still covered');
+  assert.equal(srv.room.phase, 'question', 'so the question is still open');
+
+  // By the ceiling it has answered, whatever it rolled.
+  t.mock.timers.tick(14000); await settle();
+  assert.equal(srv.room.buzzes.length, 1, 'the bot buzzed before the clock ran out');
+});
