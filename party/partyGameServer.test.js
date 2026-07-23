@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import PartyGameServer from './partyGameServer.js';
-import { roundCountFor, HAND_SIZE } from '../flags/partyDraft.js';
+import { roundCountFor, HAND_SIZE, usedIdForMode } from '../flags/partyDraft.js';
 import { ROUND_QUESTIONS } from '../flags/partyPlan.js';
 
 /**
@@ -845,13 +845,26 @@ test('a bot can be the draft picker and starts its own round', async (t) => {
   assert.equal(srv.room.picker, botId, 'the bot holds the pick');
   assert.ok(srv.botPickTimer, 'a bot self-pick is scheduled');
   const planBefore = srv.room.plan.length;
-  const usedBefore = srv.usedModes.size;
+  const usedBefore = new Set(srv.usedModes);
   t.mock.timers.tick(2500); await settle();               // > BOT_PICK_DELAY_MS (2s)
   assert.equal(srv.room.phase, 'question', 'the bot picked and its round started');
   assert.equal(srv.room.plan.length, planBefore + 1, 'the plan grew by the bot round');
-  assert.ok(srv.usedModes.size > usedBefore, 'the bot mode was recorded as used');
   const q = conn.last('question');
   assert.ok(q.draftPick && q.draftPick.picker === botId, 'the round is attributed to the bot');
+  // What the bot actually played, recorded through the SAME bookkeeping a human
+  // pick uses. Asserting "the set grew" instead was flaky at ~8%: the bot picks a
+  // random card from its hand, and `flags-all` is REPEATABLE, so it sits in every
+  // hand including the one dealt after round 1 played it. When the bot re-picks
+  // it the round is legal, the plan grows, and `usedModes` correctly does not —
+  // the family is already in there. Pin the membership, and pin the growth only
+  // for the case where growth is actually the right answer.
+  const played = usedIdForMode(q.draftPick.modeId);
+  assert.ok(srv.usedModes.has(played), `the bot mode ${played} was recorded as used`);
+  assert.equal(
+    srv.usedModes.size,
+    usedBefore.size + (usedBefore.has(played) ? 0 : 1),
+    'the played-mode memory grew by exactly the bot round, or not at all on a repeatable re-pick',
+  );
   // Fresh-question reschedule at index > 0: the bot's just-dealt round scheduled its buzz.
   assert.equal(srv.botTimers.length, 1, 'the bot re-buzzes on the round it just dealt');
 });
