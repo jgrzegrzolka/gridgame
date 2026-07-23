@@ -221,8 +221,8 @@ export function validateBotSkill(skill) {
  *
  * @param {{ options: string[], answer: string, questionId?: string, clearFrac?: number }} question
  *   the full question, including the server-held `answer` (never sent to
- *   clients). `questionId` selects the delay window — see {@link QUESTION_PACE} —
- *   and `clearFrac` times the veil.
+ *   clients). `questionId` selects both the delay window and the accuracy — see
+ *   {@link QUESTION_PROFILE} — and `clearFrac` times the veil.
  * @param {string} skill  a BOT_SKILLS id; coerced if unknown
  * @param {() => number} [rng]  returns [0, 1); defaults to Math.random
  * @param {{ tricky?: boolean }} [opts]  room state the decision needs: `tricky` is
