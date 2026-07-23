@@ -101,7 +101,12 @@
 /* Lobby — the room code line (`.room-line`) and invite icon (`.share-link`)
    are the shared components in common.css, same as Tic-Tac-Toe's in-game
    header. Only the player list below is Flag-Party-specific. */
+/* The seat list: the players JS paints (`.player-list`) plus the host's empty
+   seat under them. One flex column over both, so the gap between the last player
+   and the empty seat is the same 8px as between two players — the seat is part
+   of the list, not a control parked below it. */
 .players { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.player-list { display: flex; flex-direction: column; gap: 8px; }
 .plabel {
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -134,6 +139,80 @@
   border-radius: 6px;
   padding: 1px 6px;
 }
+/* The empty seat: the `.chip` recipe with the fill taken away and the border
+   dashed, so it reads as a place that COULD be filled rather than a seat that is.
+   Both `[hidden]` guards are load-bearing: `.chip` and `.bot-seat` each set a
+   flex display, which outweighs the UA `[hidden]` rule (the same trap as
+   `.pick-hand[hidden]`), and this element is toggled from page.js. */
+.bot-seat {
+  display: flex;
+  border-style: dashed;
+  background: none;
+  color: var(--muted-color);
+  font-weight: var(--weight-regular);
+  /* The children carry the padding instead of the chip, so the whole row is a
+     hit target rather than a label with a small button in it. Clipping to the
+     chip's own radius keeps the button's hover wash inside the rounded corners. */
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.chip[hidden], .bot-seat[hidden] { display: none; }
+.bot-seat-add {
+  appearance: none;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted-color);
+  text-align: left;
+  cursor: pointer;
+}
+/* The + sits in the avatar's slot, so the empty seat lines up with the players
+   above it instead of starting at its own left edge. */
+.bot-seat-add::before {
+  content: '+';
+  width: 22px;
+  margin-right: 9px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1;
+}
+.bot-seat-add:hover { background: var(--hover-color); }
+.bot-seat-add:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+/* Difficulty rides on the seat itself, where a real bot wears its skill badge.
+   Borderless — the chip is the box — with a caret so the word still reads as a
+   control rather than a label. */
+.bot-seat-skill { position: relative; display: inline-flex; align-items: center; padding-right: 11px; }
+.bot-seat-skill::after {
+  content: '';
+  position: absolute;
+  right: 11px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted-color);
+  border-bottom: 1.5px solid var(--muted-color);
+  transform: translateY(-2px) rotate(45deg);
+  pointer-events: none;
+}
+.bot-seat-skill .bot-skill {
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  padding: 8px 18px 8px 4px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+  color: var(--muted-color);
+  cursor: pointer;
+}
+.bot-seat-skill .bot-skill:hover { background: var(--hover-color); }
+.bot-seat-skill .bot-skill:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
 /* The host's remove-bot ×, pushed to the trailing edge of the chip. */
 .chip-remove {
   appearance: none;
@@ -801,46 +880,6 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   gap: 6px;
 }
 .draft-length[hidden] { display: none; }
-/* Bots field: same column shape as the length / first-round fields, so it reads as
-   a third row of the same card. A difficulty select + an Add button on one line. */
-.bot-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.bot-row[hidden] { display: none; }
-.bot-add { display: flex; gap: 8px; }
-.bot-skill {
-  appearance: none;
-  flex: 1;
-  box-sizing: border-box;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: var(--hover-color);
-  color: var(--primary-color);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.bot-skill:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
-.bot-add-btn {
-  appearance: none;
-  box-sizing: border-box;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 10px;
-  padding: 8px 14px;
-  background: var(--surface-color);
-  color: var(--primary-color);
-  font: inherit;
-  font-size: 13px;
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.bot-add-btn:hover:not(:disabled) { background: var(--hover-color); }
-.bot-add-btn:disabled { opacity: 0.5; cursor: default; }
-.bot-add-btn:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
 /* Right-aligned on the length field's header line, opposite its label. Deliberately
    the SAME size / weight / colour as the veil switch's label on the first-round
    header row (`.veil-toggle` → `.scope-toggle` text: 12px, primary), so the two

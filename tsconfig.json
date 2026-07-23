@@ -17,6 +17,8 @@
     "party/ticTacToeServer.test.js",
     "flagParty/sectionSwap.js",
     "flagParty/sectionSwap.test.js",
+    "flagParty/botSeat.js",
+    "flagParty/botSeat.test.js",
     "ticTacToe/onlineClient.js",
     "ticTacToe/onlineClient.test.js",
     "common.js",
