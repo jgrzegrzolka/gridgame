@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideBuzz, validateBotSkill, BOT_SKILLS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
+import { decideBuzz, validateBotSkill, delayWindowFor, BOT_SKILLS, QUESTION_PACE, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
 
 /** A deterministic rng that yields the given values in order, then repeats the last.
  *  @param {number[]} values */
@@ -65,11 +65,78 @@ test('decideBuzz: delay is drawn inside the skill window', () => {
   }
 });
 
-test('decideBuzz: every skill delay window fits inside the 20s question clock', () => {
-  for (const skill of BOT_SKILL_ORDER) {
+test('decideBuzz: every delay window fits inside the 20s question clock', () => {
+  // Every window a bot can draw from, base and per-question alike — a window that
+  // ran past the clock would leave the bot silent and the question timing out.
+  /** @type {[string, { delayMinMs: number, delayMaxMs: number }][]} */
+  const windows = [
+    ...BOT_SKILL_ORDER.map((s) => /** @type {[string, any]} */ ([`base/${s}`, BOT_SKILLS[s]])),
+    ...Object.entries(QUESTION_PACE).flatMap(([qid, bySkill]) =>
+      Object.entries(bySkill).map(([s, w]) => /** @type {[string, any]} */ ([`${qid}/${s}`, w]))),
+  ];
+  for (const [name, w] of windows) {
     // A generous margin so the bot always buzzes before the host timer reveals.
-    assert.ok(BOT_SKILLS[skill].delayMaxMs <= 18000, `${skill} max delay under 18s`);
-    assert.ok(BOT_SKILLS[skill].delayMinMs >= 0, `${skill} min delay non-negative`);
+    assert.ok(w.delayMaxMs <= 18000, `${name} max delay under 18s`);
+    assert.ok(w.delayMinMs >= 0, `${name} min delay non-negative`);
+    assert.ok(w.delayMinMs < w.delayMaxMs, `${name} window is a real range`);
+  }
+});
+
+test('spot-the-flag buzzes later than a flag pick, at every skill', () => {
+  // The whole point of the override: reading three criteria against four tiles is
+  // slower than one recognition, so the bot must not arrive at flag-pick speed.
+  //
+  // Later at BOTH ends is the requirement — deliberately not "spot's earliest
+  // clears flag-pick's latest". That stronger form was tried and rejected: it
+  // forces the windows apart, and the gap it opens at Hard hands a strong player
+  // the bonus nearly every time, which is not what Hard is for. The two windows
+  // overlapping is intended (see QUESTION_PACE).
+  for (const skill of BOT_SKILL_ORDER) {
+    const base = BOT_SKILLS[skill];
+    const spot = QUESTION_PACE.spotFlag[skill];
+    assert.ok(spot.delayMinMs > base.delayMinMs,
+      `${skill}: spot starts later (${spot.delayMinMs} > ${base.delayMinMs})`);
+    assert.ok(spot.delayMaxMs > base.delayMaxMs,
+      `${skill}: spot ends later (${spot.delayMaxMs} > ${base.delayMaxMs})`);
+  }
+});
+
+test('spot-the-flag windows are wider than the base, and stay in skill order', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    const base = BOT_SKILLS[skill];
+    const spot = QUESTION_PACE.spotFlag[skill];
+    assert.ok(spot.delayMaxMs - spot.delayMinMs > base.delayMaxMs - base.delayMinMs,
+      `${skill}: spot's window is wider than the base's`);
+  }
+  const mins = BOT_SKILL_ORDER.map((s) => QUESTION_PACE.spotFlag[s].delayMinMs);
+  assert.deepEqual(mins, [...mins].sort((a, b) => b - a), 'easy is slowest, hard is quickest');
+});
+
+test('delayWindowFor: the question picks the window, unknown ids fall back to the skill', () => {
+  assert.deepEqual(delayWindowFor('spotFlag', 'hard'), QUESTION_PACE.spotFlag.hard);
+  assert.deepEqual(delayWindowFor('flagPick', 'hard'), BOT_SKILLS.hard);
+  assert.deepEqual(delayWindowFor('mapPick', 'hard'), BOT_SKILLS.hard);
+  assert.deepEqual(delayWindowFor(undefined, 'hard'), BOT_SKILLS.hard);
+  // An inherited property name must not read as a question override.
+  assert.deepEqual(delayWindowFor('toString', 'hard'), BOT_SKILLS.hard);
+});
+
+test('decideBuzz: a spot-the-flag question draws from the spot window, not the base', () => {
+  const spotQ = { ...Q, questionId: 'spotFlag' };
+  for (const skill of BOT_SKILL_ORDER) {
+    const win = QUESTION_PACE.spotFlag[skill];
+    assert.equal(decideBuzz(spotQ, skill, seq([0, 0])).delayMs, win.delayMinMs);
+    assert.equal(decideBuzz(spotQ, skill, seq([0, 1])).delayMs, win.delayMaxMs);
+  }
+  // The accuracy roll is untouched: only WHEN it buzzes moved, not whether it is right.
+  assert.equal(decideBuzz(spotQ, 'hard', seq([0.99, 0, 0.5])).choice !== spotQ.answer, true);
+});
+
+test('decideBuzz: a flag-pick question is unchanged by the spot override', () => {
+  const flagQ = { ...Q, questionId: 'flagPick' };
+  for (const skill of BOT_SKILL_ORDER) {
+    assert.equal(decideBuzz(flagQ, skill, seq([0, 0])).delayMs, BOT_SKILLS[skill].delayMinMs);
+    assert.equal(decideBuzz(flagQ, skill, seq([0, 1])).delayMs, BOT_SKILLS[skill].delayMaxMs);
   }
 });
 
