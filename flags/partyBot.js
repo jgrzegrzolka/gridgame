@@ -62,16 +62,21 @@ export const BOT_SKILLS = {
  * @type {Record<string, Record<string, { delayMinMs: number, delayMaxMs: number }>>}
  */
 export const QUESTION_PACE = {
-  // Every window starts after its own skill's flag-pick window ENDS (pinned by
-  // test), so "the bot is slower here" holds at every difficulty rather than only
-  // on average. The ceiling is the other constraint: a question ends when every
-  // seat has buzzed, so a slow bot is time the human spends waiting — which is
-  // why easy tops out at 14 s rather than being scaled as far as the 20 s clock
-  // would technically allow.
+  // Numbers are Jan's call (2026-07-23). Each window is later at BOTH ends than
+  // its own skill's flag-pick window and wider than it (pinned by test), but the
+  // two OVERLAP on purpose: a Hard bot can occasionally arrive at 2.5 s, quicker
+  // than its own flag-pick worst case. That is the intended read — usually slower
+  // here, occasionally as quick as it would have been on an easier question — and
+  // it keeps Hard a real race for a strong player (a 4 s answer wins two in three)
+  // rather than a bot that only turns up once you have already won.
+  //
+  // The ceiling is the other constraint: a question ends when every seat has
+  // buzzed, so a slow bot is time the human spends waiting. Easy tops out at 13 s
+  // rather than being scaled as far as the 20 s clock would technically allow.
   spotFlag: {
-    easy: { delayMinMs: 9500, delayMaxMs: 14000 },
-    medium: { delayMinMs: 6500, delayMaxMs: 12000 },
-    hard: { delayMinMs: 3500, delayMaxMs: 9500 },
+    easy: { delayMinMs: 6500, delayMaxMs: 13000 },
+    medium: { delayMinMs: 4000, delayMaxMs: 9000 },
+    hard: { delayMinMs: 2500, delayMaxMs: 7000 },
   },
 };
 

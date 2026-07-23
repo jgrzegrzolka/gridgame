@@ -85,11 +85,19 @@ test('decideBuzz: every delay window fits inside the 20s question clock', () => 
 test('spot-the-flag buzzes later than a flag pick, at every skill', () => {
   // The whole point of the override: reading three criteria against four tiles is
   // slower than one recognition, so the bot must not arrive at flag-pick speed.
+  //
+  // Later at BOTH ends is the requirement — deliberately not "spot's earliest
+  // clears flag-pick's latest". That stronger form was tried and rejected: it
+  // forces the windows apart, and the gap it opens at Hard hands a strong player
+  // the bonus nearly every time, which is not what Hard is for. The two windows
+  // overlapping is intended (see QUESTION_PACE).
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill];
     const spot = QUESTION_PACE.spotFlag[skill];
-    assert.ok(spot.delayMinMs > base.delayMaxMs,
-      `${skill}: spot's earliest (${spot.delayMinMs}) clears flag-pick's latest (${base.delayMaxMs})`);
+    assert.ok(spot.delayMinMs > base.delayMinMs,
+      `${skill}: spot starts later (${spot.delayMinMs} > ${base.delayMinMs})`);
+    assert.ok(spot.delayMaxMs > base.delayMaxMs,
+      `${skill}: spot ends later (${spot.delayMaxMs} > ${base.delayMaxMs})`);
   }
 });
 
