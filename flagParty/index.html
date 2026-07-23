@@ -88,7 +88,26 @@
       <!-- Lobby -->
       <section class="pt-lobby" id="pt-lobby" hidden>
         <p class="room-line"><span class="room-text"><strong id="room-code">-----</strong></span><button type="button" class="share-link" id="share-btn" aria-label="Invite link" data-i18n-attr="aria-label:party.share"><span class="share-icon" aria-hidden="true"></span></button></p>
-        <div class="players" id="players"></div>
+        <div class="players">
+          <div class="player-list" id="players"></div>
+          <!-- The empty seat, at the foot of the seat list. A bot is a seat, not a
+               game setting: it used to sit in the host's setup card below, where
+               pressing Add changed a list in a different panel and a third field
+               competed with the two settings everybody reads. Host + lobby only,
+               and it disappears at MAX_SEATS instead of greying out — see
+               `botSeat.js` for why each of those three is the rule. -->
+          <div class="chip bot-seat" id="bot-seat" hidden>
+            <button type="button" class="bot-seat-add" id="add-bot" data-i18n="party.addBot">Add a bot</button>
+            <span class="bot-seat-skill">
+              <select class="bot-skill" id="bot-skill"
+                      data-i18n-attr="aria-label:party.botSkill" aria-label="Bot difficulty">
+                <option value="easy" data-i18n="party.botEasy">Easy</option>
+                <option value="medium" selected data-i18n="party.botMedium">Medium</option>
+                <option value="hard" data-i18n="party.botHard">Hard</option>
+              </select>
+            </span>
+          </div>
+        </div>
         <!-- Host game setup, grouped in one bordered card so the two choices read
              as a single panel rather than two look-alike segmented strips with a
              line of text wedged between them. No card heading: the two field labels
@@ -171,25 +190,6 @@
                 <span class="dl-lab" data-i18n="party.lengthLong">Long</span>
               </button>
             </span>
-          </div>
-          <!-- Bots (host-only). Solo play is a one-seat game with no race and no
-               speed bonus; a bot is that second seat, and the same control fills
-               out a friends' game. Host chooses a difficulty and taps Add; each
-               bot then shows in the player list with a remove affordance. Hidden
-               for guests (adding a seat is the host's call) via `#bot-row`. -->
-          <div class="bot-row" id="bot-row" hidden>
-            <div class="dl-fieldhead">
-              <span class="dl-group-label" data-i18n="party.botsLabel">Bots</span>
-            </div>
-            <div class="bot-add">
-              <select class="bot-skill" id="bot-skill"
-                      data-i18n-attr="aria-label:party.botSkill" aria-label="Bot difficulty">
-                <option value="easy" data-i18n="party.botEasy">Easy</option>
-                <option value="medium" selected data-i18n="party.botMedium">Medium</option>
-                <option value="hard" data-i18n="party.botHard">Hard</option>
-              </select>
-              <button type="button" class="bot-add-btn" id="add-bot" data-i18n="party.addBot">Add bot</button>
-            </div>
           </div>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
