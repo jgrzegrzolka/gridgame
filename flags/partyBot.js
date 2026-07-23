@@ -42,48 +42,67 @@ export const BOT_SKILLS = {
 };
 
 /**
- * Per-question overrides of the delay window, because {@link BOT_SKILLS} above is
+ * Per-question overrides of a skill preset, because {@link BOT_SKILLS} above is
  * calibrated for ONE task: read a country name, find its flag among four. A bot
- * has no such task — it is handed the answer — so its delay is not a simulation
- * of anything, it is a handicap chosen to sit where a human's time lands. When
- * the question asks something slower of a person, the same delay stops being a
- * race and becomes a formality.
+ * has no such task — it is handed the answer — so its dials are not a simulation
+ * of anything, they are a handicap chosen to sit where a human's play lands. A
+ * question that asks something different of a person needs different numbers.
  *
- * **spot-the-flag** is that case. The player is given three criteria and four
- * tiles, and has to check every tile against all three before they can even start
- * choosing — where a flag-pick question is one recognition. On the base windows a
- * Hard bot buzzes at 1-3 s while a person is still reading clause two, and there
- * is no speed the human could have played at to win. These windows are both
- * later and deliberately WIDER: the task has more variance for a person (a lucky
- * first tile versus checking all four), so the bot's arrival should have more
- * variance too, or it becomes a metronome you either always beat or never do.
+ * **spot-the-flag** is that case, and it pulls the two dials in OPPOSITE
+ * directions:
  *
- * Everything absent from this table keeps its {@link BOT_SKILLS} window. Accuracy
- * is never overridden here — only when the bot arrives, never whether it is right.
+ *  - *slower*, because the player is given three criteria and four tiles and has
+ *    to check every tile against all three before they can start choosing, where
+ *    a flag-pick question is one recognition. The windows are also deliberately
+ *    WIDER: the task has more variance for a person (a lucky first tile versus
+ *    checking all four), so the bot's arrival should have more variance too, or
+ *    it becomes a metronome you either always beat or never do.
+ *  - *more accurate*, because it is the gentlest question in the show. Nothing is
+ *    being recalled — the answer is on screen and the criteria are printed next
+ *    to it. What makes it hard is the time it takes, not the knowing, and time is
+ *    the one thing a bot has. An Easy bot getting half of these wrong read as
+ *    broken rather than easy.
  *
- * @type {Record<string, Record<string, { delayMinMs: number, delayMaxMs: number }>>}
+ * Either field may be omitted; whatever is absent falls back to {@link BOT_SKILLS}.
+ *
+ * @type {Record<string, Record<string, { accuracy?: number, delayMinMs?: number, delayMaxMs?: number }>>}
  */
-export const QUESTION_PACE = {
-  // Numbers are Jan's call (2026-07-23). Each window is later at BOTH ends than
-  // its own skill's flag-pick window and wider than it (pinned by test), but the
-  // two OVERLAP on purpose: a Hard bot can occasionally arrive at 2.5 s, quicker
-  // than its own flag-pick worst case. That is the intended read — usually slower
-  // here, occasionally as quick as it would have been on an easier question — and
-  // it keeps Hard a real race for a strong player (a 4 s answer wins two in three)
-  // rather than a bot that only turns up once you have already won.
+export const QUESTION_PROFILE = {
+  // Numbers are Jan's call (2026-07-23). The windows OVERLAP the base on purpose:
+  // a Hard bot can occasionally arrive at 2 s, quicker than its own flag-pick
+  // worst case. That is the intended read — usually slower here, occasionally as
+  // quick as it would have been on an easier question — and it keeps Hard a real
+  // race for a strong player rather than a bot that only turns up once you have
+  // already won.
   //
   // The ceiling is the other constraint: a question ends when every seat has
-  // buzzed, so a slow bot is time the human spends waiting. Easy tops out at 13 s
+  // buzzed, so a slow bot is time the human spends waiting. Easy tops out at 12 s
   // rather than being scaled as far as the 20 s clock would technically allow.
   spotFlag: {
-    easy: { delayMinMs: 6500, delayMaxMs: 13000 },
-    medium: { delayMinMs: 4000, delayMaxMs: 9000 },
-    hard: { delayMinMs: 2500, delayMaxMs: 7000 },
+    easy: { accuracy: 0.8, delayMinMs: 6000, delayMaxMs: 12000 },
+    medium: { accuracy: 0.9, delayMinMs: 4000, delayMaxMs: 8000 },
+    // Not 1.0: a Hard bot that never missed would be a different kind of opponent
+    // (see the module doc — every skill whiffs sometimes, that is what keeps it
+    // from feeling scripted).
+    hard: { accuracy: 0.97, delayMinMs: 2000, delayMaxMs: 6500 },
   },
 };
 
 /** The skill a bot gets when none (or an unknown one) is asked for. */
 export const DEFAULT_BOT_SKILL = 'medium';
+
+/**
+ * This question's override entry for a skill, or null when it has none.
+ * @param {unknown} questionId
+ * @param {string} skill  an already-validated BOT_SKILLS id
+ */
+function profileFor(questionId, skill) {
+  const byQuestion = typeof questionId === 'string'
+    && Object.prototype.hasOwnProperty.call(QUESTION_PROFILE, questionId)
+    ? QUESTION_PROFILE[questionId]
+    : null;
+  return (byQuestion && byQuestion[skill]) || null;
+}
 
 /**
  * The delay window to draw from: the question's own override if it has one, else
@@ -94,10 +113,25 @@ export const DEFAULT_BOT_SKILL = 'medium';
  * @returns {{ delayMinMs: number, delayMaxMs: number }}
  */
 export function delayWindowFor(questionId, skill) {
-  const byQuestion = typeof questionId === 'string'
-    ? Object.prototype.hasOwnProperty.call(QUESTION_PACE, questionId) && QUESTION_PACE[questionId]
-    : null;
-  return (byQuestion && byQuestion[skill]) || BOT_SKILLS[skill];
+  const p = profileFor(questionId, skill);
+  const base = BOT_SKILLS[skill];
+  return {
+    delayMinMs: p && typeof p.delayMinMs === 'number' ? p.delayMinMs : base.delayMinMs,
+    delayMaxMs: p && typeof p.delayMaxMs === 'number' ? p.delayMaxMs : base.delayMaxMs,
+  };
+}
+
+/**
+ * The chance this bot taps the right answer on this question: the question's own
+ * override if it has one, else the skill's.
+ *
+ * @param {unknown} questionId
+ * @param {string} skill  an already-validated BOT_SKILLS id
+ * @returns {number}
+ */
+export function accuracyFor(questionId, skill) {
+  const p = profileFor(questionId, skill);
+  return p && typeof p.accuracy === 'number' ? p.accuracy : BOT_SKILLS[skill].accuracy;
 }
 
 /**
@@ -117,10 +151,15 @@ export function delayWindowFor(questionId, skill) {
  * more obscured a tile it can read — which is the same thing that makes it good.
  *
  * These fractions are a judgement call, not a measurement; they are the dial to
- * turn if veiled rounds feel wrong.
+ * turn if veiled rounds feel wrong. Softened once already (Jan, 2026-07-23): at
+ * 0.45/0.55/0.65 a veiled Hard bot did not arrive until 8.2 s, which over-corrected
+ * — the veil should cost the bot roughly what it costs a person, not hand the
+ * round to whoever is fastest among the humans. At 0.38 a Hard bot buzzes from
+ * 7.1 s, so a sharp player reading the flag at ~40% clarity still gets there
+ * first, and a normal one does not.
  * @type {Record<string, number>}
  */
-export const VEIL_SIGHT = { easy: 0.65, medium: 0.55, hard: 0.45 };
+export const VEIL_SIGHT = { easy: 0.55, medium: 0.46, hard: 0.38 };
 
 /**
  * The latest a veiled buzz may land. The veil pushes every window later, and on
@@ -191,11 +230,11 @@ export function validateBotSkill(skill) {
  * @returns {{ choice: string, delayMs: number }}
  */
 export function decideBuzz(question, skill, rng = Math.random, opts = {}) {
-  const cfg = BOT_SKILLS[validateBotSkill(skill)];
+  const validSkill = validateBotSkill(skill);
   const options = Array.isArray(question.options) ? question.options : [];
   const answer = question.answer;
 
-  const wantsCorrect = rng() < cfg.accuracy;
+  const wantsCorrect = rng() < accuracyFor(question.questionId, validSkill);
   let choice = answer;
   if (!wantsCorrect) {
     const others = options.filter((o) => o !== answer);
@@ -211,7 +250,6 @@ export function decideBuzz(question, skill, rng = Math.random, opts = {}) {
 
   // Drawn LAST, after the accuracy roll and any wrong-pick index, so the rng
   // order the doc promises still holds with the window now question-dependent.
-  const validSkill = validateBotSkill(skill);
   const window = delayWindowFor(question.questionId, validSkill);
   const span = window.delayMaxMs - window.delayMinMs;
   const drawn = window.delayMinMs + rng() * span;

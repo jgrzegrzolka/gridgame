@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideBuzz, validateBotSkill, delayWindowFor, veilSightMs, BOT_SKILLS, QUESTION_PACE, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
+import { decideBuzz, validateBotSkill, delayWindowFor, accuracyFor, veilSightMs, BOT_SKILLS, QUESTION_PROFILE, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
 
 /** A deterministic rng that yields the given values in order, then repeats the last.
  *  @param {number[]} values */
@@ -71,7 +71,7 @@ test('decideBuzz: every delay window fits inside the 20s question clock', () => 
   /** @type {[string, { delayMinMs: number, delayMaxMs: number }][]} */
   const windows = [
     ...BOT_SKILL_ORDER.map((s) => /** @type {[string, any]} */ ([`base/${s}`, BOT_SKILLS[s]])),
-    ...Object.entries(QUESTION_PACE).flatMap(([qid, bySkill]) =>
+    ...Object.entries(QUESTION_PROFILE).flatMap(([qid, bySkill]) =>
       Object.entries(bySkill).map(([s, w]) => /** @type {[string, any]} */ ([`${qid}/${s}`, w]))),
   ];
   for (const [name, w] of windows) {
@@ -90,46 +90,88 @@ test('spot-the-flag buzzes later than a flag pick, at every skill', () => {
   // clears flag-pick's latest". That stronger form was tried and rejected: it
   // forces the windows apart, and the gap it opens at Hard hands a strong player
   // the bonus nearly every time, which is not what Hard is for. The two windows
-  // overlapping is intended (see QUESTION_PACE).
+  // overlapping is intended (see QUESTION_PROFILE).
+  // The floor may TIE the base's (easy does, at 6 s) — a spot window that starts
+  // no earlier and ends much later is still later overall, and forcing the floor
+  // up just to satisfy a strict `>` would be the tail wagging the dog. The ceiling
+  // is what has to move.
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill];
-    const spot = QUESTION_PACE.spotFlag[skill];
-    assert.ok(spot.delayMinMs > base.delayMinMs,
-      `${skill}: spot starts later (${spot.delayMinMs} > ${base.delayMinMs})`);
+    const spot = delayWindowFor('spotFlag', skill);
+    assert.ok(spot.delayMinMs >= base.delayMinMs,
+      `${skill}: spot starts no earlier (${spot.delayMinMs} >= ${base.delayMinMs})`);
     assert.ok(spot.delayMaxMs > base.delayMaxMs,
       `${skill}: spot ends later (${spot.delayMaxMs} > ${base.delayMaxMs})`);
   }
 });
 
+test('spot-the-flag is the question a bot gets RIGHT more often, at every skill', () => {
+  // The other half of the override, and it pulls the opposite way to the delay:
+  // spot-the-flag is the gentlest question in the show (the answer is on screen,
+  // the criteria are printed beside it) — it is slow, not hard. An Easy bot
+  // getting half of these wrong read as broken rather than easy.
+  for (const skill of BOT_SKILL_ORDER) {
+    const base = BOT_SKILLS[skill].accuracy;
+    const spot = accuracyFor('spotFlag', skill);
+    assert.ok(spot > base, `${skill}: ${spot} > ${base}`);
+    assert.ok(spot <= 1, `${skill}: still a probability`);
+    // Never a certainty — every skill has to whiff sometimes or it reads scripted.
+    assert.ok(spot < 1, `${skill}: still misses occasionally`);
+  }
+  const accs = BOT_SKILL_ORDER.map((s) => accuracyFor('spotFlag', s));
+  assert.deepEqual(accs, [...accs].sort((a, b) => a - b), 'still ascending by skill');
+});
+
+test('accuracyFor: the question picks the accuracy, everything else keeps the skill preset', () => {
+  assert.equal(accuracyFor('flagPick', 'easy'), BOT_SKILLS.easy.accuracy);
+  assert.equal(accuracyFor('mapPick', 'easy'), BOT_SKILLS.easy.accuracy);
+  assert.equal(accuracyFor(undefined, 'easy'), BOT_SKILLS.easy.accuracy);
+  assert.equal(accuracyFor('toString', 'easy'), BOT_SKILLS.easy.accuracy);
+  assert.equal(accuracyFor('spotFlag', 'easy'), QUESTION_PROFILE.spotFlag.easy.accuracy);
+});
+
+test('decideBuzz: the spot accuracy override actually reaches the roll', () => {
+  const spotQ = { ...Q, questionId: 'spotFlag' };
+  // 0.6 is above Easy's base accuracy (0.5) but below its spot accuracy (0.8):
+  // wrong on a flag pick, right on a spot-the-flag. One roll, two verdicts.
+  assert.notEqual(decideBuzz({ ...Q, questionId: 'flagPick' }, 'easy', seq([0.6, 0, 0])).choice, Q.answer);
+  assert.equal(decideBuzz(spotQ, 'easy', seq([0.6, 0, 0])).choice, Q.answer);
+});
+
 test('spot-the-flag windows are wider than the base, and stay in skill order', () => {
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill];
-    const spot = QUESTION_PACE.spotFlag[skill];
+    const spot = delayWindowFor('spotFlag', skill);
     assert.ok(spot.delayMaxMs - spot.delayMinMs > base.delayMaxMs - base.delayMinMs,
       `${skill}: spot's window is wider than the base's`);
   }
-  const mins = BOT_SKILL_ORDER.map((s) => QUESTION_PACE.spotFlag[s].delayMinMs);
+  const mins = BOT_SKILL_ORDER.map((s) => delayWindowFor('spotFlag', s).delayMinMs);
   assert.deepEqual(mins, [...mins].sort((a, b) => b - a), 'easy is slowest, hard is quickest');
 });
 
 test('delayWindowFor: the question picks the window, unknown ids fall back to the skill', () => {
-  assert.deepEqual(delayWindowFor('spotFlag', 'hard'), QUESTION_PACE.spotFlag.hard);
-  assert.deepEqual(delayWindowFor('flagPick', 'hard'), BOT_SKILLS.hard);
-  assert.deepEqual(delayWindowFor('mapPick', 'hard'), BOT_SKILLS.hard);
-  assert.deepEqual(delayWindowFor(undefined, 'hard'), BOT_SKILLS.hard);
+  assert.deepEqual(delayWindowFor('spotFlag', 'hard'), {
+    delayMinMs: QUESTION_PROFILE.spotFlag.hard.delayMinMs,
+    delayMaxMs: QUESTION_PROFILE.spotFlag.hard.delayMaxMs,
+  });
+  // The base window, minus the accuracy the preset also carries.
+  const baseHard = { delayMinMs: BOT_SKILLS.hard.delayMinMs, delayMaxMs: BOT_SKILLS.hard.delayMaxMs };
+  assert.deepEqual(delayWindowFor('flagPick', 'hard'), baseHard);
+  assert.deepEqual(delayWindowFor('mapPick', 'hard'), baseHard);
+  assert.deepEqual(delayWindowFor(undefined, 'hard'), baseHard);
   // An inherited property name must not read as a question override.
-  assert.deepEqual(delayWindowFor('toString', 'hard'), BOT_SKILLS.hard);
+  assert.deepEqual(delayWindowFor('toString', 'hard'), baseHard);
 });
 
 test('decideBuzz: a spot-the-flag question draws from the spot window, not the base', () => {
   const spotQ = { ...Q, questionId: 'spotFlag' };
   for (const skill of BOT_SKILL_ORDER) {
-    const win = QUESTION_PACE.spotFlag[skill];
+    const win = QUESTION_PROFILE.spotFlag[skill];
     assert.equal(decideBuzz(spotQ, skill, seq([0, 0])).delayMs, win.delayMinMs);
     assert.equal(decideBuzz(spotQ, skill, seq([0, 1])).delayMs, win.delayMaxMs);
   }
-  // The accuracy roll is untouched: only WHEN it buzzes moved, not whether it is right.
-  assert.equal(decideBuzz(spotQ, 'hard', seq([0.99, 0, 0.5])).choice !== spotQ.answer, true);
+  // A roll above even the raised spot accuracy still lands on a wrong option.
+  assert.notEqual(decideBuzz(spotQ, 'hard', seq([0.99, 0, 0.5])).choice, spotQ.answer);
 });
 
 test('decideBuzz: a flag-pick question is unchanged by the spot override', () => {
@@ -216,8 +258,13 @@ test('decideBuzz: a veiled buzz never runs past the ceiling, at any skill or rol
 test('decideBuzz: a veiled bot waits for sight, so a human who can see it has a real chance', () => {
   // The whole point. A hard bot used to buzz at 1-3s against tiles that are not
   // fully clear until 16s; it now arrives after it could plausibly have seen them.
+  // Tiles are ~40% clear at 6.4 s, which is where a sharp player can first read a
+  // familiar flag; the bot must not be there before them. It must also not sit out
+  // half the round waiting — the veil should cost it roughly what it costs a
+  // person, not hand the bonus to whoever is fastest among the humans.
   const earliest = decideBuzz(VEILED_FLAG, 'hard', seq([0, 0]), { tricky: true }).delayMs;
-  assert.ok(earliest >= 8000, `a veiled hard bot's earliest buzz (${earliest}) leaves the room a chance`);
+  assert.ok(earliest >= 6400, `a veiled hard bot's earliest buzz (${earliest}) leaves the room a chance`);
+  assert.ok(earliest <= 9000, `a veiled hard bot (${earliest}) still turns up while the round is live`);
 });
 
 test('decideBuzz: the veil moves when the bot answers, never whether it is right', () => {
