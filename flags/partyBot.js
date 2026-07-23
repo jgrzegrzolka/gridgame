@@ -39,8 +39,59 @@ export const BOT_SKILLS = {
   hard: { accuracy: 0.9, delayMinMs: 1000, delayMaxMs: 3000 },
 };
 
+/**
+ * Per-question overrides of the delay window, because {@link BOT_SKILLS} above is
+ * calibrated for ONE task: read a country name, find its flag among four. A bot
+ * has no such task — it is handed the answer — so its delay is not a simulation
+ * of anything, it is a handicap chosen to sit where a human's time lands. When
+ * the question asks something slower of a person, the same delay stops being a
+ * race and becomes a formality.
+ *
+ * **spot-the-flag** is that case. The player is given three criteria and four
+ * tiles, and has to check every tile against all three before they can even start
+ * choosing — where a flag-pick question is one recognition. On the base windows a
+ * Hard bot buzzes at 1-3 s while a person is still reading clause two, and there
+ * is no speed the human could have played at to win. These windows are both
+ * later and deliberately WIDER: the task has more variance for a person (a lucky
+ * first tile versus checking all four), so the bot's arrival should have more
+ * variance too, or it becomes a metronome you either always beat or never do.
+ *
+ * Everything absent from this table keeps its {@link BOT_SKILLS} window. Accuracy
+ * is never overridden here — only when the bot arrives, never whether it is right.
+ *
+ * @type {Record<string, Record<string, { delayMinMs: number, delayMaxMs: number }>>}
+ */
+export const QUESTION_PACE = {
+  // Every window starts after its own skill's flag-pick window ENDS (pinned by
+  // test), so "the bot is slower here" holds at every difficulty rather than only
+  // on average. The ceiling is the other constraint: a question ends when every
+  // seat has buzzed, so a slow bot is time the human spends waiting — which is
+  // why easy tops out at 14 s rather than being scaled as far as the 20 s clock
+  // would technically allow.
+  spotFlag: {
+    easy: { delayMinMs: 9500, delayMaxMs: 14000 },
+    medium: { delayMinMs: 6500, delayMaxMs: 12000 },
+    hard: { delayMinMs: 3500, delayMaxMs: 9500 },
+  },
+};
+
 /** The skill a bot gets when none (or an unknown one) is asked for. */
 export const DEFAULT_BOT_SKILL = 'medium';
+
+/**
+ * The delay window to draw from: the question's own override if it has one, else
+ * the skill's base window.
+ *
+ * @param {unknown} questionId  the question's id (absent on older payloads)
+ * @param {string} skill  an already-validated BOT_SKILLS id
+ * @returns {{ delayMinMs: number, delayMaxMs: number }}
+ */
+export function delayWindowFor(questionId, skill) {
+  const byQuestion = typeof questionId === 'string'
+    ? Object.prototype.hasOwnProperty.call(QUESTION_PACE, questionId) && QUESTION_PACE[questionId]
+    : null;
+  return (byQuestion && byQuestion[skill]) || BOT_SKILLS[skill];
+}
 
 /** Skill ids in difficulty order — the order the lobby lists them. */
 export const BOT_SKILL_ORDER = /** @type {const} */ (['easy', 'medium', 'hard']);
@@ -70,8 +121,9 @@ export function validateBotSkill(skill) {
  * when wrong), then delay — so a seeded rng makes the whole decision reproducible
  * in tests.
  *
- * @param {{ options: string[], answer: string }} question  the full question,
- *   including the server-held `answer` (never sent to clients)
+ * @param {{ options: string[], answer: string, questionId?: string }} question  the
+ *   full question, including the server-held `answer` (never sent to clients).
+ *   `questionId` selects the delay window — see {@link QUESTION_PACE}.
  * @param {string} skill  a BOT_SKILLS id; coerced if unknown
  * @param {() => number} [rng]  returns [0, 1); defaults to Math.random
  * @returns {{ choice: string, delayMs: number }}
@@ -95,7 +147,10 @@ export function decideBuzz(question, skill, rng = Math.random) {
     // answer rather than buzzing nothing.
   }
 
-  const span = cfg.delayMaxMs - cfg.delayMinMs;
-  const delayMs = Math.round(cfg.delayMinMs + rng() * span);
+  // Drawn LAST, after the accuracy roll and any wrong-pick index, so the rng
+  // order the doc promises still holds with the window now question-dependent.
+  const window = delayWindowFor(question.questionId, validateBotSkill(skill));
+  const span = window.delayMaxMs - window.delayMinMs;
+  const delayMs = Math.round(window.delayMinMs + rng() * span);
   return { choice, delayMs };
 }
