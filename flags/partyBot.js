@@ -21,6 +21,8 @@
  * reveal.
  */
 
+import { QUESTION_SECONDS, DEFAULT_REVEAL, revealCategoryFor, veilActive } from './partyTiming.js';
+
 /**
  * @typedef {{ accuracy: number, delayMinMs: number, delayMaxMs: number }} BotSkill
  */
@@ -98,6 +100,58 @@ export function delayWindowFor(questionId, skill) {
   return (byQuestion && byQuestion[skill]) || BOT_SKILLS[skill];
 }
 
+/**
+ * How clear a veiled tile has to be before a bot will answer, as a fraction of
+ * the way to full clarity.
+ *
+ * On a veiled round ("Covered start") the tiles begin hidden and clear over the
+ * clock, reaching full clarity at `clearFrac` of the question window — 16 s of
+ * 20 for a flag round, 8 s for outlines. A bot is handed the answer, so nothing
+ * about the veil slows it down: before this, a Hard bot buzzed at 1-3 s while
+ * every human was still looking at a grey square, and **no player could win the
+ * speed bonus on a veiled round at any difficulty**. The veil was a handicap
+ * applied to exactly one side.
+ *
+ * So a bot now waits until a person of its calibre could plausibly have seen the
+ * flag, then takes its ordinary reaction time on top. The better the bot, the
+ * more obscured a tile it can read — which is the same thing that makes it good.
+ *
+ * These fractions are a judgement call, not a measurement; they are the dial to
+ * turn if veiled rounds feel wrong.
+ * @type {Record<string, number>}
+ */
+export const VEIL_SIGHT = { easy: 0.65, medium: 0.55, hard: 0.45 };
+
+/**
+ * The latest a veiled buzz may land. The veil pushes every window later, and on
+ * a flag round at Easy the sum runs past the 20 s clock — a bot that never buzzed
+ * would leave the question to time out. Capping here means an Easy bot on a
+ * veiled flag round often answers at the wire, which is the honest outcome: it
+ * genuinely cannot read the tile much before then.
+ */
+export const VEIL_CEILING_MS = 18000;
+
+/**
+ * How long into a veiled question this bot can first see the tiles, in ms.
+ * Zero for any question that is not veiled — including every statistics question,
+ * where {@link veilActive} refuses the veil outright.
+ *
+ * @param {{ questionId?: string, clearFrac?: number }} question
+ * @param {string} skill  an already-validated BOT_SKILLS id
+ * @param {boolean} tricky  the room's veil setting for this round
+ * @param {number} [questionMs]  the question window; defaults to the real clock
+ * @returns {number}
+ */
+export function veilSightMs(question, skill, tricky, questionMs = QUESTION_SECONDS * 1000) {
+  if (!veilActive(tricky, question.questionId)) return 0;
+  // `clearFrac` is stamped on the question server-side; fall back to the category
+  // default so an older payload can't make the bot behave as if unveiled.
+  const clearFrac = typeof question.clearFrac === 'number'
+    ? question.clearFrac
+    : DEFAULT_REVEAL[revealCategoryFor(String(question.questionId))];
+  return Math.round(questionMs * clearFrac * (VEIL_SIGHT[skill] ?? 0));
+}
+
 /** Skill ids in difficulty order — the order the lobby lists them. */
 export const BOT_SKILL_ORDER = /** @type {const} */ (['easy', 'medium', 'hard']);
 
@@ -126,14 +180,17 @@ export function validateBotSkill(skill) {
  * when wrong), then delay — so a seeded rng makes the whole decision reproducible
  * in tests.
  *
- * @param {{ options: string[], answer: string, questionId?: string }} question  the
- *   full question, including the server-held `answer` (never sent to clients).
- *   `questionId` selects the delay window — see {@link QUESTION_PACE}.
+ * @param {{ options: string[], answer: string, questionId?: string, clearFrac?: number }} question
+ *   the full question, including the server-held `answer` (never sent to
+ *   clients). `questionId` selects the delay window — see {@link QUESTION_PACE} —
+ *   and `clearFrac` times the veil.
  * @param {string} skill  a BOT_SKILLS id; coerced if unknown
  * @param {() => number} [rng]  returns [0, 1); defaults to Math.random
+ * @param {{ tricky?: boolean }} [opts]  room state the decision needs: `tricky` is
+ *   the veil setting for this round (see {@link VEIL_SIGHT}). Absent = unveiled.
  * @returns {{ choice: string, delayMs: number }}
  */
-export function decideBuzz(question, skill, rng = Math.random) {
+export function decideBuzz(question, skill, rng = Math.random, opts = {}) {
   const cfg = BOT_SKILLS[validateBotSkill(skill)];
   const options = Array.isArray(question.options) ? question.options : [];
   const answer = question.answer;
@@ -154,8 +211,14 @@ export function decideBuzz(question, skill, rng = Math.random) {
 
   // Drawn LAST, after the accuracy roll and any wrong-pick index, so the rng
   // order the doc promises still holds with the window now question-dependent.
-  const window = delayWindowFor(question.questionId, validateBotSkill(skill));
+  const validSkill = validateBotSkill(skill);
+  const window = delayWindowFor(question.questionId, validSkill);
   const span = window.delayMaxMs - window.delayMinMs;
-  const delayMs = Math.round(window.delayMinMs + rng() * span);
+  const drawn = window.delayMinMs + rng() * span;
+  // The veil pushes the whole window back by the time it takes this bot to see
+  // the tiles — its reaction is unchanged, it just starts later, exactly as a
+  // human's does. Capped so a veiled Easy bot still buzzes before the clock.
+  const sight = veilSightMs(question, validSkill, opts.tricky === true);
+  const delayMs = Math.round(Math.min(sight + drawn, sight > 0 ? VEIL_CEILING_MS : Infinity));
   return { choice, delayMs };
 }

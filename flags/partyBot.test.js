@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideBuzz, validateBotSkill, delayWindowFor, BOT_SKILLS, QUESTION_PACE, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
+import { decideBuzz, validateBotSkill, delayWindowFor, veilSightMs, BOT_SKILLS, QUESTION_PACE, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
 
 /** A deterministic rng that yields the given values in order, then repeats the last.
  *  @param {number[]} values */
@@ -150,6 +150,82 @@ test('decideBuzz: an unknown skill is coerced to the default and still decides',
   const { choice, delayMs } = decideBuzz(Q, 'nope', seq([0, 0]));
   assert.equal(choice, 'fr');
   assert.equal(delayMs, BOT_SKILLS[DEFAULT_BOT_SKILL].delayMinMs);
+});
+
+// ---- the veil ----
+// A veiled round hides the tiles and clears them over the clock. A bot is handed
+// the answer, so without this it buzzed at its usual speed while every human was
+// still looking at a grey square — the veil handicapped exactly one side.
+
+/** A veiled flag question: full clarity at 80% of the 20s window, i.e. 16s. */
+const VEILED_FLAG = { ...Q, questionId: 'flagPick', clearFrac: 0.8 };
+
+test('VEIL_SIGHT covers every skill, in order, as a real fraction of the clear time', () => {
+  assert.deepEqual(Object.keys(VEIL_SIGHT).sort(), [...BOT_SKILL_ORDER].sort());
+  for (const [skill, frac] of Object.entries(VEIL_SIGHT)) {
+    assert.ok(frac > 0 && frac <= 1, `${skill} sight is a fraction of the way to clear`);
+  }
+  const fracs = BOT_SKILL_ORDER.map((s) => VEIL_SIGHT[s]);
+  assert.deepEqual(fracs, [...fracs].sort((a, b) => b - a), 'easy needs the clearest tile, hard the least');
+});
+
+test('veilSightMs: zero unless the round is actually veiled', () => {
+  assert.equal(veilSightMs(VEILED_FLAG, 'hard', false), 0, 'tricky off');
+  assert.ok(veilSightMs(VEILED_FLAG, 'hard', true) > 0, 'tricky on');
+  // A statistics question refuses the veil outright (veilActive), so its bots are
+  // never delayed even in a tricky room.
+  assert.equal(veilSightMs({ ...Q, questionId: 'superlative', clearFrac: 0.2 }, 'hard', true), 0);
+});
+
+test('veilSightMs: a better bot reads a more obscured tile, and sight scales with the clear time', () => {
+  const [easy, medium, hard] = ['easy', 'medium', 'hard'].map((s) => veilSightMs(VEILED_FLAG, s, true));
+  assert.ok(hard < medium && medium < easy, 'hard sees first, easy last');
+  // Outlines clear in half the time a flag does (0.4 vs 0.8), so sight halves too.
+  const map = veilSightMs({ ...Q, questionId: 'mapPick', clearFrac: 0.4 }, 'hard', true);
+  assert.equal(map, Math.round(hard / 2));
+});
+
+test('veilSightMs: a missing clearFrac falls back to the category default, never to zero', () => {
+  const noFrac = { ...Q, questionId: 'flagPick' };
+  assert.equal(veilSightMs(noFrac, 'hard', true), veilSightMs(VEILED_FLAG, 'hard', true));
+});
+
+test('decideBuzz: a veiled round pushes every skill later than the same question unveiled', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    for (const roll of [0, 0.5, 1]) {
+      const clear = decideBuzz(VEILED_FLAG, skill, seq([0, roll])).delayMs;
+      const veiled = decideBuzz(VEILED_FLAG, skill, seq([0, roll]), { tricky: true }).delayMs;
+      assert.ok(veiled > clear, `${skill} at roll ${roll}: veiled ${veiled} > clear ${clear}`);
+    }
+  }
+});
+
+test('decideBuzz: a veiled buzz never runs past the ceiling, at any skill or roll', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    for (const roll of [0, 0.25, 0.5, 0.75, 1]) {
+      const veiled = decideBuzz(VEILED_FLAG, skill, seq([0, roll]), { tricky: true }).delayMs;
+      assert.ok(veiled <= VEIL_CEILING_MS, `${skill} at roll ${roll}: ${veiled} <= ${VEIL_CEILING_MS}`);
+    }
+    // The veiled spot-the-flag round is the worst case — the latest window on the
+    // slowest-clearing category — and it has to stay inside the clock too.
+    const spot = decideBuzz({ ...Q, questionId: 'spotFlag', clearFrac: 0.8 }, skill, seq([0, 1]), { tricky: true });
+    assert.ok(spot.delayMs <= VEIL_CEILING_MS, `veiled spot ${skill}: ${spot.delayMs}`);
+  }
+});
+
+test('decideBuzz: a veiled bot waits for sight, so a human who can see it has a real chance', () => {
+  // The whole point. A hard bot used to buzz at 1-3s against tiles that are not
+  // fully clear until 16s; it now arrives after it could plausibly have seen them.
+  const earliest = decideBuzz(VEILED_FLAG, 'hard', seq([0, 0]), { tricky: true }).delayMs;
+  assert.ok(earliest >= 8000, `a veiled hard bot's earliest buzz (${earliest}) leaves the room a chance`);
+});
+
+test('decideBuzz: the veil moves when the bot answers, never whether it is right', () => {
+  // Same accuracy rolls, veiled and not: the same choice comes out both times.
+  const clear = decideBuzz(VEILED_FLAG, 'easy', seq([0.99, 0.5, 0.5]));
+  const veiled = decideBuzz(VEILED_FLAG, 'easy', seq([0.99, 0.5, 0.5]), { tricky: true });
+  assert.equal(veiled.choice, clear.choice);
+  assert.notEqual(veiled.choice, VEILED_FLAG.answer);
 });
 
 test('decideBuzz: deterministic under a fixed seed', () => {
