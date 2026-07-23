@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { roundBreak } from './partyBreak.js';
+import { roundBreak, breakOpeningOrder } from './partyBreak.js';
 
 /** @param {Array<[string, number]>} pairs */
 const board = (...pairs) => pairs.map(([playerId, score]) => ({ playerId, nickname: playerId.toUpperCase(), score }));
@@ -99,4 +99,33 @@ test('prevScore is the real prior total even where the gain clamp bites', () => 
   assert.equal(rows[0].prevScore, 50);
   assert.equal(rows[0].roundGain, 0);
   assert.notEqual(rows[0].score - rows[0].roundGain, rows[0].prevScore);
+});
+
+// --- breakOpeningOrder: the slot order the ledger opens in, before any points ---
+
+test('first break opens ALPHABETICALLY by nickname, not in final score order', () => {
+  // Score order is charlie, alice, bob; the opening seat must be alice, bob, charlie
+  // so the slide starts from a neutral order and actually moves as points land,
+  // rather than opening already-sorted (which read as a pointless shuffle).
+  const { rows } = roundBreak(null, board(['charlie', 30], ['alice', 20], ['bob', 10]));
+  assert.deepEqual(breakOpeningOrder(rows, false), [1, 2, 0]);
+});
+
+test('later breaks open in the PREVIOUS break order (prevScore descending)', () => {
+  const prev = board(['a', 30], ['b', 20], ['c', 10]); // a, b, c
+  const curr = board(['c', 40], ['a', 35], ['b', 22]); // final order c, a, b
+  const { rows } = roundBreak(prev, curr);
+  // Opens in last break's order a, b, c -> indices 1, 2, 0 into the final-order rows.
+  assert.deepEqual(breakOpeningOrder(rows, true), [1, 2, 0]);
+});
+
+test('opening order is name-case- and diacritic-insensitive, numeric-aware, stable on ties', () => {
+  /** @param {Array<[string, number]>} pairs nickname/prevScore, final order as given */
+  const rows = [
+    { playerId: 'p1', nickname: 'Player2', score: 0, prevScore: 0, roundGain: 0, rankDelta: null, gapToLeader: 0 },
+    { playerId: 'p2', nickname: 'player10', score: 0, prevScore: 0, roundGain: 0, rankDelta: null, gapToLeader: 0 },
+    { playerId: 'p3', nickname: 'Ámy', score: 0, prevScore: 0, roundGain: 0, rankDelta: null, gapToLeader: 0 },
+  ];
+  // Ámy < Player2 < player10 (base sensitivity folds the accent + case, numeric keeps 2 < 10).
+  assert.deepEqual(breakOpeningOrder(rows, false), [2, 0, 1]);
 });

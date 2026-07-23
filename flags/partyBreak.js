@@ -66,6 +66,8 @@ export function roundBreak(prevBoard, currBoard) {
     };
   });
 
+  // (opening order is decided by `breakOpeningOrder` below, off these rows.)
+
   // MVP = the biggest gainer in the round. Ties break toward the higher total
   // (curr is sorted by score, so the earlier row wins), and a round where nobody
   // scored has no MVP.
@@ -76,4 +78,35 @@ export function roundBreak(prevBoard, currBoard) {
     if (row.roundGain > best) { best = row.roundGain; mvp = row.playerId; }
   }
   return { rows, mvp };
+}
+
+/** Case- and diacritic-insensitive, numeric-aware nickname compare for the
+ *  alphabetical opening seat ("Player2" before "Player10"). Built once. */
+const NAME_COLLATOR = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+
+/**
+ * The slot order the between-rounds ledger OPENS in, before any points are
+ * counted — an array of indices into `rows` (which is final score order),
+ * slot-first.
+ *
+ * The ledger's story is "here is where you stood, now watch the points land", so
+ * every break after the first opens in the PREVIOUS break's order (rows by their
+ * `prevScore`, descending). The very first break of a game has no previous
+ * standing to open from: opening it by `prevScore` seats everyone at 0, which
+ * collapses onto final score order, so the slide would start already-sorted and
+ * read as a pointless shuffle. There we open ALPHABETICALLY by nickname instead —
+ * a neutral order the points then rearrange into the ranking.
+ *
+ * Ties break by final index, so the mapping is stable and deterministic.
+ *
+ * @param {BreakRow[]} rows  break rows in final score order
+ * @param {boolean} hasPrev  was there a previous break to open from?
+ * @returns {number[]} slot -> index into `rows`
+ */
+export function breakOpeningOrder(rows, hasPrev) {
+  const idx = rows.map((_, i) => i);
+  if (hasPrev) {
+    return idx.sort((a, b) => rows[b].prevScore - rows[a].prevScore || a - b);
+  }
+  return idx.sort((a, b) => NAME_COLLATOR.compare(rows[a].nickname || '', rows[b].nickname || '') || a - b);
 }

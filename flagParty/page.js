@@ -9,7 +9,7 @@ import { showBotSeat } from './botSeat.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
-import { roundBreak } from '../flags/partyBreak.js';
+import { roundBreak, breakOpeningOrder } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
 import { CLOSENESS_LADDER, wasFastest } from '../flags/partyScore.js';
@@ -1274,7 +1274,7 @@ export function bootFlagParty() {
    *  heights — a measurement that reads zero while the section is still display:none,
    *  which flattened every rank-change slide. So the params are held here and played
    *  from `onShown('break')`, the same beat the finish board starts from. */
-  let breakLedgerPending = /** @type {{ nodes: HTMLElement[], rows: import('../flags/partyBreak.js').BreakRow[], splits: Array<{ base: number, speed: number, solo: number, closeness: number }>, canPass: boolean, token: string } | null} */ (null);
+  let breakLedgerPending = /** @type {{ nodes: HTMLElement[], rows: import('../flags/partyBreak.js').BreakRow[], splits: Array<{ base: number, speed: number, solo: number, closeness: number }>, canPass: boolean, hasPrev: boolean, token: string } | null} */ (null);
   /** This round's running score breakdown, per player, for the break's chips.
    *  Reset when a round starts; added to once per question (the tokens below guard
    *  render()'s re-runs, which would otherwise count a question twice). */
@@ -2113,6 +2113,9 @@ export function bootFlagParty() {
     breakBuilt = true;
 
     const board = state.scoreboard || [];
+    // No previous break means the first round of the game: the ledger opens
+    // alphabetically rather than in final order (see `breakOpeningOrder`).
+    const hasPrev = Array.isArray(prevBreakBoard) && prevBreakBoard.length > 0;
     const { rows, mvp } = roundBreak(prevBreakBoard, board);
 
     // MVP banner — hidden when nobody scored in the round. Built now but held
@@ -2186,7 +2189,7 @@ export function bootFlagParty() {
     // it is still display:none gives a zero stride and no rank-change slide. Runs
     // now only if the break is already shown (a reconnect re-entering it); otherwise
     // `onShown('break')` plays it. See `breakLedgerPending`.
-    breakLedgerPending = { nodes: rowNodes, rows, splits: rowSplits, canPass, token: breakAnimToken };
+    breakLedgerPending = { nodes: rowNodes, rows, splits: rowSplits, canPass, hasPrev, token: breakAnimToken };
     if (swapper.shown === 'break') startBreakLedger();
   }
 
@@ -2197,14 +2200,16 @@ export function bootFlagParty() {
     const p = breakLedgerPending;
     if (!p) return;
     breakLedgerPending = null;
-    playLedger(p.nodes, p.rows, p.splits, p.canPass, p.token);
+    playLedger(p.nodes, p.rows, p.splits, p.canPass, p.hasPrev, p.token);
   }
 
   /**
    * Play the break's standings as a **ledger** — told in the order the round
    * actually happened rather than handing over a finished ranking. The board
-   * arrives at last break's totals (seated in last break's order), holds a beat,
-   * then climbs one SCORING BUCKET at a time — a "Correct" pass banks everyone's
+   * arrives at last break's totals (seated in last break's order — or, on the
+   * first break of the game, alphabetically, since there is no prior standing to
+   * open from), holds a beat, then climbs one SCORING BUCKET at a time — a
+   * "Correct" pass banks everyone's
    * base, then "Speed", then "Only one" / "Close" — re-ranking after each. An
    * overtake driven by speed happens ON the speed pass, in front of you: the
    * board narrates *why* it moved, and every bucket earns a labelled beat so a
@@ -2227,9 +2232,10 @@ export function bootFlagParty() {
    * @param {import('../flags/partyBreak.js').BreakRow[]} rows
    * @param {Array<{ base: number, speed: number, solo: number, closeness: number }>} splits  per-row round split
    * @param {boolean} canPass  every scoring row's split reconciles → run bucket passes
+   * @param {boolean} hasPrev  is there a previous break to open in the order of? (false = first round → open alphabetically)
    * @param {string} token  this break's identity; see above
    */
-  function playLedger(nodes, rows, splits, canPass, token) {
+  function playLedger(nodes, rows, splits, canPass, hasPrev, token) {
     const scores = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.sc')));
     const revealMvp = () => { if (!breakMvp.hidden) breakMvp.classList.add('in'); };
     const passLabel = (/** @type {string} */ kind) => (kind === 'base' ? t('party.passCorrect', 'Correct')
@@ -2274,7 +2280,10 @@ export function bootFlagParty() {
         curSlot[fi] = slot;
       });
     };
-    seat(orderNow(), 0); // prev order, since running === prevScore here
+    // Open in last break's order (prevScore descending, which `orderNow` gives
+    // since running === prevScore here); the first break has no prior standing, so
+    // it opens alphabetically instead — see `breakOpeningOrder`.
+    seat(breakOpeningOrder(rows, hasPrev), 0);
     void breakBoard.offsetHeight; // commit the start positions before releasing
 
     const stillOurs = () => breakAnimToken === token;
