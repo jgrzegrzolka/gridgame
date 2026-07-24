@@ -116,6 +116,38 @@ test('chrome: the root index.html does NOT carry a Home link', () => {
   assert.equal(homeLinks.length, 0, `root index.html unexpectedly has ${homeLinks.length} Home link(s)`);
 });
 
+// The coffee CTA closes every burger, and `menu-divider` is what separates it
+// from the page's own nav links. A menu with no nav links above it must NOT
+// carry the class, or the rule floats at the top of the panel dividing the item
+// from nothing. Both halves are enforced because both have happened: the
+// ticTacToe menus grew a stray rule when the 9x9 links were removed (fixed in
+// CSS by the `.menu-nickname + .menu-divider` reset), and flagParty kept one
+// after its Home item left the burger. This is the static half of that rule —
+// the CSS reset only covers menus where JS mounts a nickname row above.
+test('chrome: the coffee item carries menu-divider only when something sits above it', () => {
+  /** @type {string[]} */
+  const offenders = [];
+  for (const file of findHtmlFiles(HERE)) {
+    const rel = relative(HERE, file).split(sep).join('/');
+    const html = readFileSync(file, 'utf-8');
+    for (const block of html.match(/<ul class="menu"[^>]*>[\s\S]*?<\/ul>/g) ?? []) {
+      const at = block.indexOf('menu-coffee');
+      if (at === -1) continue;
+      const liStart = block.lastIndexOf('<li', at);
+      const above = (block.slice(0, liStart).match(/<li\b/g) ?? []).length;
+      const hasDivider = /\bmenu-divider\b/.test(block.slice(liStart, at));
+      if (above > 0 && !hasDivider) {
+        offenders.push(`${rel}: coffee follows ${above} menu item(s) but carries no menu-divider`);
+      }
+      if (above === 0 && !hasDivider) continue;
+      if (above === 0) {
+        offenders.push(`${rel}: coffee is the only menu item but still carries menu-divider — a rule above nothing`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
+});
+
 // Every HTML page that ships the `#lang-toggle` element must also ship
 // the inline non-module <script> that paints `data-current` from
 // localStorage + navigator.language. Without it, the lang flag is blank
