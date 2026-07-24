@@ -158,61 +158,87 @@
   overflow: hidden;
 }
 .chip[hidden], .bot-seat[hidden] { display: none; }
-.bot-seat-add {
-  appearance: none;
-  flex: 1;
+/* "+ Add bot" names the row; it is not a control. The + sits in the avatar's
+   slot so the empty seat lines up with the players above it instead of starting
+   at its own left edge. */
+.bot-seat-verb {
   display: flex;
   align-items: center;
-  border: 0;
-  background: none;
-  padding: 8px 11px;
-  font: inherit;
-  font-size: 14px;
-  color: var(--muted-color);
-  text-align: left;
-  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 8px 0 8px 11px;
 }
-/* The + sits in the avatar's slot, so the empty seat lines up with the players
-   above it instead of starting at its own left edge. */
-.bot-seat-add::before {
-  content: '+';
+.bot-seat-plus {
   width: 22px;
   margin-right: 9px;
   text-align: center;
   font-size: 16px;
   line-height: 1;
 }
-.bot-seat-add:hover { background: var(--hover-color); }
-.bot-seat-add:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
-/* Difficulty rides on the seat itself, where a real bot wears its skill badge.
-   Borderless — the chip is the box — with a caret so the word still reads as a
-   control rather than a label. */
-.bot-seat-skill { position: relative; display: inline-flex; align-items: center; padding-right: 11px; }
-.bot-seat-skill::after {
-  content: '';
-  position: absolute;
-  right: 11px;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid var(--muted-color);
-  border-bottom: 1.5px solid var(--muted-color);
-  transform: translateY(-2px) rotate(45deg);
-  pointer-events: none;
+/* Names the scale the dots are drawn on. Lower-case and small: it introduces the
+   buttons rather than competing with the verb. */
+.bot-seat-scale {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0 6px 0 8px;
+  font-size: 12px;
+  white-space: nowrap;
 }
-.bot-seat-skill .bot-skill {
+/* The three levels. Each button carries the whole scale and fills its own place
+   in it, so a level reads without comparing it to its neighbours. */
+/* `align-self: stretch` is load-bearing: the seat is also a `.chip`, and `.chip`
+   sets `align-items: center`, which would size these buttons to the 6px dots
+   inside them. The row would still LOOK right — the dots sit where you expect —
+   while the tap target silently became 6px tall. */
+.bot-levels { display: flex; flex: 0 0 auto; align-self: stretch; }
+.bot-lv {
   appearance: none;
   border: 0;
-  border-radius: 8px;
+  border-left: 1px solid var(--muted-soft-color);
   background: none;
-  padding: 8px 18px 8px 4px;
   font: inherit;
-  font-size: 12px;
-  font-weight: var(--weight-bold);
-  color: var(--muted-color);
+  /* The ink is 24px of dots. The target must not be — `min-width` is what keeps
+     a wordless button thumb-sized on the phones this screen is built for, and
+     the padding is set so it lands exactly on 44 rather than overshooting:
+     three buttons are the widest fixed thing in the row, so every px here is a
+     px the "difficulty:" label doesn't get. */
+  padding: 0 10px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
-.bot-seat-skill .bot-skill:hover { background: var(--hover-color); }
-.bot-seat-skill .bot-skill:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+.bot-lv:hover { background: var(--hover-color); }
+.bot-lv:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+.bot-dots { display: flex; gap: 3px; }
+/* border-box explicitly: this file has no global reset, so a bordered 6px dot
+   would otherwise measure 8px and the filled/hollow pair would differ in size
+   as well as fill. */
+.bot-dot {
+  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--muted-color);
+}
+.bot-dot.on { background: var(--muted-color); }
+.bot-lv:hover .bot-dot { border-color: var(--primary-color); }
+.bot-lv:hover .bot-dot.on { background: var(--primary-color); }
+/* On the narrowest phones the row cannot hold all three parts. Measured in
+   Polish at 360px ("+ Dodaj bota" + "poziom:" + three 44px buttons) it wants
+   ~324px and gets 295 — and because the seat clips (`overflow: hidden`, which
+   keeps the buttons' hover wash inside the chip's radius) the overflow is
+   SILENT: the Hard button just isn't there. So the label goes, not a button.
+   It is the one part the row can lose — the verb still says what the seat does,
+   the dots still show the scale, and the level names are on every button's
+   aria-label and title regardless. Threshold is 380px because the label fits
+   from there up in both languages, which covers most phones in use (390, 393,
+   412) and drops it only on the 360-class ones. */
+@media (max-width: 379px) {
+  .bot-seat-scale { display: none; }
+}
 /* The host's remove-bot ×, pushed to the trailing edge of the chip. */
 .chip-remove {
   appearance: none;
