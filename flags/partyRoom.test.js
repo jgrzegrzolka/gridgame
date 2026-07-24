@@ -580,6 +580,41 @@ test('applyPick: the picker chooses -> round appended, advances to its first que
   assert.equal(m.answer, undefined, 'the answer never rides the question broadcast');
 });
 
+test('roundPicker names whose round is live, for the whole round', () => {
+  // Read by the server to give a bot the picker's edge on the round it drafted
+  // (`flags/partyBot.js`). Distinct from `picker`, which is cleared the instant
+  // the choice is made — this one has to survive all five questions.
+  let room = draftRevealAtBoundary(4);
+  assert.equal(room.roundPicker, 'alice', "round 1 is the host's pick");
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
+  assert.equal(room.roundPicker, 'alice', 'still alice while bob is choosing');
+  const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
+  room = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de'])).room;
+  assert.equal(room.picker, null, 'the choice is made…');
+  assert.equal(room.roundPicker, 'bob', '…and the round is bob’s until the next pick');
+});
+
+test('roundPicker: the Decider is its picker’s round, even though it spends no slot', () => {
+  // Deliberately NOT derived from pickedBy's tail, and this is why: the Decider
+  // never appends, so the tail would name the previous picker for exactly the
+  // round where being wrong costs the most (double points).
+  let room = draftRevealAtBoundary(4);
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true).room;
+  const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
+  const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
+  assert.deepEqual(r.room.pickedBy, ['alice'], 'no rotation slot spent');
+  assert.equal(r.room.roundPicker, 'bob', 'but the round is still bob’s');
+});
+
+test('roundPicker: null in a game nobody drafted, and after a reset', () => {
+  let room = createRoom(15);
+  for (const id of ['alice', 'bob']) room = applyHello(room, id, id).room;
+  const started = applyStart(room, 'alice', q('pa'), null, 15).room;
+  assert.equal(started.roundPicker, null, 'a setlist game has no picker to credit');
+  // And a legacy snapshot reads as nobody's round rather than crediting a seat.
+  assert.equal(deserializeRoom({ phase: 'lobby' }).roundPicker, null);
+});
+
 test('applyPick: only the designated picker can pick, and only in the picking phase', () => {
   let room = draftRevealAtBoundary(4);
   room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
@@ -817,6 +852,7 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
   assert.equal(restored.draft, true);
   assert.equal(restored.targetRounds, 3);
   assert.equal(restored.picker, 'bob');
+  assert.equal(restored.roundPicker, 'alice', 'the live round keeps its owner across an eviction');
   assert.deepEqual(restored.hand, ['map-outlines', 'superlative-coffee']);
   assert.equal(restored.decider, false);
   const midDecider = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(

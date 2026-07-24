@@ -19,6 +19,13 @@
  * one. The delay ranges all sit comfortably inside the question window
  * (`QUESTION_SECONDS`, 20 s) so a bot always answers before the clock forces the
  * reveal.
+ *
+ * A skill preset is only the starting point. Three things move it, in this order:
+ * the **mode** ({@link MODE_PROFILE} — weird flags and map outlines are harder
+ * than sovereign flags, spot-the-flag is easier and slower), the **question**
+ * (a statistic's accuracy comes from how far its answer stands out —
+ * {@link spreadGapOf}), and the **seat** (a bot that drafted this round plays it
+ * a little better — {@link PICKER_BONUS}).
  */
 
 import { QUESTION_SECONDS, DEFAULT_REVEAL, revealCategoryFor, veilActive } from './partyTiming.js';
@@ -42,32 +49,52 @@ export const BOT_SKILLS = {
 };
 
 /**
- * Per-question overrides of a skill preset, because {@link BOT_SKILLS} above is
- * calibrated for ONE task: read a country name, find its flag among four. A bot
- * has no such task — it is handed the answer — so its dials are not a simulation
- * of anything, they are a handicap chosen to sit where a human's play lands. A
- * question that asks something different of a person needs different numbers.
+ * Per-**mode** overrides of a skill preset, because {@link BOT_SKILLS} above is
+ * calibrated for ONE task: read a country name, find a sovereign flag among four.
+ * A bot has no such task — it is handed the answer — so its dials are not a
+ * simulation of anything, they are a handicap chosen to sit where a human's play
+ * lands. A round that asks something different of a person needs different numbers.
  *
- * **spot-the-flag** is that case, and it pulls the two dials in OPPOSITE
- * directions:
+ * **Keyed on the mode id, not the question id**, and that distinction is
+ * load-bearing: `flags-all` and `flags-weird` are the same `flagPick` question
+ * module over different pools (`flags/partyPlan.js`), and they are nowhere near
+ * equally hard for a person — everybody knows the French flag, almost nobody knows
+ * Wallis and Futuna's. A question-keyed table cannot tell them apart, which is why
+ * the server stamps `modeId` on every question it deals.
  *
- *  - *slower*, because the player is given three criteria and four tiles and has
- *    to check every tile against all three before they can start choosing, where
- *    a flag-pick question is one recognition. The windows are also deliberately
- *    WIDER: the task has more variance for a person (a lucky first tile versus
- *    checking all four), so the bot's arrival should have more variance too, or
- *    it becomes a metronome you either always beat or never do.
- *  - *more accurate*, because it is the gentlest question in the show. Nothing is
- *    being recalled — the answer is on screen and the criteria are printed next
- *    to it. What makes it hard is the time it takes, not the knowing, and time is
- *    the one thing a bot has. An Easy bot getting half of these wrong read as
- *    broken rather than easy.
+ * The accuracy ladder across the picture modes, easiest first (Jan, 2026-07-24):
+ *   spot-the-flag → flags → weird flags → map outlines.
  *
- * Either field may be omitted; whatever is absent falls back to {@link BOT_SKILLS}.
+ *  - **spot-the-flag** is the gentlest question in the show, and it pulls the two
+ *    dials in OPPOSITE directions. *Slower*, because the player is given three
+ *    criteria and four tiles and has to check every tile against all three before
+ *    they can start choosing, where a flag-pick question is one recognition; the
+ *    windows are also deliberately WIDER, since the task has more variance for a
+ *    person (a lucky first tile versus checking all four) and a bot that arrives
+ *    like a metronome is one you either always beat or never do. *More accurate*,
+ *    because nothing is being recalled — the answer is on screen and the criteria
+ *    are printed next to it. What makes it hard is the time it takes, not the
+ *    knowing, and time is the one thing a bot has. An Easy bot getting half of
+ *    these wrong read as broken rather than easy.
+ *  - **flags-weird** (territories, dependencies, the non-sovereign pool) drops
+ *    below the base: these are the flags a person is least likely to have ever
+ *    seen, so a bot that hits them at sovereign-flag rates is playing a different
+ *    game from everyone else at the table.
+ *  - **map-outlines** is the hardest of the four. An outline carries none of the
+ *    colour and emblem cues a flag does, and it is the one picture mode where good
+ *    players routinely guess.
+ *
+ * Only `accuracy` moves for the two new entries — the delay windows stay the
+ * base's, because how *hard* a round is and how *long* it takes to answer are
+ * separate dials and only the first is what makes weird flags weird.
+ *
+ * Any field may be omitted; whatever is absent falls back to {@link BOT_SKILLS}.
+ * Statistics rounds are deliberately absent — their difficulty is per-question,
+ * not per-mode; see {@link STAT_ACCURACY}.
  *
  * @type {Record<string, Record<string, { accuracy?: number, delayMinMs?: number, delayMaxMs?: number }>>}
  */
-export const QUESTION_PROFILE = {
+export const MODE_PROFILE = {
   // Numbers are Jan's call (2026-07-23). The windows OVERLAP the base on purpose:
   // a Hard bot can occasionally arrive at 2 s, quicker than its own flag-pick
   // worst case. That is the intended read — usually slower here, occasionally as
@@ -78,7 +105,7 @@ export const QUESTION_PROFILE = {
   // The ceiling is the other constraint: a question ends when every seat has
   // buzzed, so a slow bot is time the human spends waiting. Easy tops out at 12 s
   // rather than being scaled as far as the 20 s clock would technically allow.
-  spotFlag: {
+  'spot-flag': {
     easy: { accuracy: 0.8, delayMinMs: 6000, delayMaxMs: 12000 },
     medium: { accuracy: 0.9, delayMinMs: 4000, delayMaxMs: 8000 },
     // Not 1.0: a Hard bot that never missed would be a different kind of opponent
@@ -86,34 +113,166 @@ export const QUESTION_PROFILE = {
     // from feeling scripted).
     hard: { accuracy: 0.97, delayMinMs: 2000, delayMaxMs: 6500 },
   },
+  'flags-weird': {
+    easy: { accuracy: 0.35 },
+    medium: { accuracy: 0.6 },
+    hard: { accuracy: 0.8 },
+  },
+  'map-outlines': {
+    easy: { accuracy: 0.3 },
+    medium: { accuracy: 0.52 },
+    hard: { accuracy: 0.75 },
+  },
 };
+
+/**
+ * Mode ids for questions dealt without one — a room snapshot written before the
+ * server stamped `modeId`, which outlives a deploy in the durable object.
+ *
+ * Only the modes whose question id identifies them unambiguously are here.
+ * `flagPick` is deliberately absent: it is exactly the ambiguity this whole key
+ * change exists to resolve, and guessing `flags-all` for an old weird-flags round
+ * would hand that round the wrong numbers. Unmapped means the base preset, which
+ * is what those rounds already played at before this change.
+ * @type {Record<string, string>}
+ */
+const MODE_BY_QUESTION_ID = {
+  spotFlag: 'spot-flag',
+  mapPick: 'map-outlines',
+};
+
+/**
+ * The {@link MODE_PROFILE} key for a question: the mode the server stamped, else
+ * whatever its question id unambiguously implies, else null (base preset).
+ * @param {{ modeId?: string, questionId?: string }} question
+ * @returns {string | null}
+ */
+export function modeKeyFor(question) {
+  if (typeof question.modeId === 'string') return question.modeId;
+  const qid = question.questionId;
+  return (typeof qid === 'string' && Object.prototype.hasOwnProperty.call(MODE_BY_QUESTION_ID, qid))
+    ? MODE_BY_QUESTION_ID[qid]
+    : null;
+}
+
+/**
+ * A statistics round's accuracy range, low gap → high gap (see
+ * {@link spreadGapOf}). Ranges rather than points because a world-facts question
+ * is the one round whose difficulty is a property of the *question*, not the mode:
+ * "which of these produces the most coffee — Brazil, Iceland, Mongolia, Norway"
+ * and "…Brazil, Vietnam, Colombia, Indonesia" are the same mode and nothing like
+ * the same question.
+ *
+ * The floors sit below the base preset and the ceilings well above it, so a
+ * statistics round is genuinely easier than a flag pick when the answer is out on
+ * its own and genuinely harder when the top two are neck and neck — which is the
+ * same thing that decides it for a person.
+ * @type {Record<string, { min: number, max: number }>}
+ */
+export const STAT_ACCURACY = {
+  easy: { min: 0.4, max: 0.75 },
+  medium: { min: 0.6, max: 0.92 },
+  hard: { min: 0.78, max: 0.99 },
+};
+
+/**
+ * How clearly this question's answer stands out from the field, in `[0, 1]`.
+ *
+ * Deliberately a **fraction of the board's own spread** — how far the answer beats
+ * the runner-up, over how far it beats the far end — rather than the value ratio
+ * the generator's `GAP_RATIO` gate uses. Two reasons, both fatal to a ratio:
+ * several shipped metrics are index scores where a ratio means nothing (a
+ * corruption index of 60 is not "1.25× more corrupt" than 48), and average
+ * temperature goes **negative**, where a ratio is not merely meaningless but
+ * sign-flipped. Subtraction survives both.
+ *
+ * It also matches what the player actually does: they are not comparing the answer
+ * to an absolute scale, they are comparing four tiles to each other. 1 is a
+ * runaway, 0 is a coin-flip between the top two.
+ *
+ * Null for any question that is not a ranked statistic (no `ranking` / `values`),
+ * or one whose four options are all equal — the caller falls back to the mode
+ * table.
+ *
+ * @param {{ ranking?: string[], values?: Record<string, number> }} question
+ * @returns {number | null}
+ */
+export function spreadGapOf(question) {
+  const ranking = question.ranking;
+  const values = question.values;
+  if (!Array.isArray(ranking) || ranking.length < 2 || !values) return null;
+  const best = values[ranking[0]];
+  const runnerUp = values[ranking[1]];
+  const farthest = values[ranking[ranking.length - 1]];
+  if (typeof best !== 'number' || typeof runnerUp !== 'number' || typeof farthest !== 'number') return null;
+  const spread = Math.abs(best - farthest);
+  if (!(spread > 0)) return null;
+  return Math.min(1, Math.abs(best - runnerUp) / spread);
+}
+
+/**
+ * The accuracy a statistics question of this clarity deserves at this skill —
+ * a straight lerp across {@link STAT_ACCURACY}. Linear, not curved: the curve
+ * would be a second dial to explain, and the gap is already a normalised
+ * fraction rather than a raw magnitude.
+ * @param {number} gap  a {@link spreadGapOf} fraction
+ * @param {string} skill  an already-validated BOT_SKILLS id
+ * @returns {number}
+ */
+export function statAccuracyFor(gap, skill) {
+  const range = STAT_ACCURACY[skill];
+  const t = Math.max(0, Math.min(1, gap));
+  return range.min + (range.max - range.min) * t;
+}
+
+/**
+ * What a bot gains on the round it chose itself.
+ *
+ * A drafted round is a bet: a person picks the category they know, and the round
+ * they picked is the round they are best at. A bot that picked at random and then
+ * played the round exactly as it plays every other one is the only seat at the
+ * table for which the pick meant nothing — so it gets the edge a picker has,
+ * rather than a smarter pick (which would also make it pick the same few modes
+ * every game, and drain the variety the draft exists for).
+ *
+ * Small on purpose: at Medium it turns a 3-in-4 round into roughly a 5-in-6 one,
+ * noticeable over five questions without making a bot's own round unwinnable.
+ */
+export const PICKER_BONUS = 0.08;
+
+/**
+ * The hard cap on any accuracy after bonuses. A bot that cannot miss reads as
+ * scripted rather than skilled (the same reason Hard spot-the-flag stops at 0.97),
+ * so the picker bonus can approach certainty but never reach it.
+ */
+export const ACCURACY_CEILING = 0.99;
 
 /** The skill a bot gets when none (or an unknown one) is asked for. */
 export const DEFAULT_BOT_SKILL = 'medium';
 
 /**
- * This question's override entry for a skill, or null when it has none.
- * @param {unknown} questionId
+ * This mode's override entry for a skill, or null when it has none.
+ * @param {unknown} modeId
  * @param {string} skill  an already-validated BOT_SKILLS id
  */
-function profileFor(questionId, skill) {
-  const byQuestion = typeof questionId === 'string'
-    && Object.prototype.hasOwnProperty.call(QUESTION_PROFILE, questionId)
-    ? QUESTION_PROFILE[questionId]
+function profileFor(modeId, skill) {
+  const byMode = typeof modeId === 'string'
+    && Object.prototype.hasOwnProperty.call(MODE_PROFILE, modeId)
+    ? MODE_PROFILE[modeId]
     : null;
-  return (byQuestion && byQuestion[skill]) || null;
+  return (byMode && byMode[skill]) || null;
 }
 
 /**
- * The delay window to draw from: the question's own override if it has one, else
+ * The delay window to draw from: the mode's own override if it has one, else
  * the skill's base window.
  *
- * @param {unknown} questionId  the question's id (absent on older payloads)
+ * @param {unknown} modeId  the round's mode id (absent on older payloads)
  * @param {string} skill  an already-validated BOT_SKILLS id
  * @returns {{ delayMinMs: number, delayMaxMs: number }}
  */
-export function delayWindowFor(questionId, skill) {
-  const p = profileFor(questionId, skill);
+export function delayWindowFor(modeId, skill) {
+  const p = profileFor(modeId, skill);
   const base = BOT_SKILLS[skill];
   return {
     delayMinMs: p && typeof p.delayMinMs === 'number' ? p.delayMinMs : base.delayMinMs,
@@ -122,16 +281,40 @@ export function delayWindowFor(questionId, skill) {
 }
 
 /**
- * The chance this bot taps the right answer on this question: the question's own
- * override if it has one, else the skill's.
+ * The chance this bot taps the right answer on a round of this mode: the mode's
+ * own override if it has one, else the skill's. The static half of the dial —
+ * {@link buzzAccuracy} is what a buzz actually rolls against.
  *
- * @param {unknown} questionId
+ * @param {unknown} modeId
  * @param {string} skill  an already-validated BOT_SKILLS id
  * @returns {number}
  */
-export function accuracyFor(questionId, skill) {
-  const p = profileFor(questionId, skill);
+export function accuracyFor(modeId, skill) {
+  const p = profileFor(modeId, skill);
   return p && typeof p.accuracy === 'number' ? p.accuracy : BOT_SKILLS[skill].accuracy;
+}
+
+/**
+ * The accuracy one buzz rolls against: the mode's number, or the question's own
+ * where it has one (a statistic scales with how clear its answer is), plus the
+ * picker's bonus when this bot chose the round, capped at
+ * {@link ACCURACY_CEILING}.
+ *
+ * The three layers are ordered deliberately. The gap REPLACES the mode number
+ * rather than nudging it — a statistics round has no meaningful fixed difficulty
+ * to nudge — while the picker bonus ADDS to whatever came out, because it is a
+ * property of the seat, not of the question.
+ *
+ * @param {{ modeId?: string, questionId?: string, ranking?: string[], values?: Record<string, number> }} question
+ * @param {string} skill  an already-validated BOT_SKILLS id
+ * @param {{ picked?: boolean }} [opts]  `picked` = this bot drafted this round
+ * @returns {number}
+ */
+export function buzzAccuracy(question, skill, opts = {}) {
+  const gap = spreadGapOf(question);
+  const base = gap === null ? accuracyFor(modeKeyFor(question), skill) : statAccuracyFor(gap, skill);
+  const withBonus = opts.picked === true ? base + PICKER_BONUS : base;
+  return Math.min(ACCURACY_CEILING, withBonus);
 }
 
 /**
@@ -219,14 +402,18 @@ export function validateBotSkill(skill) {
  * when wrong), then delay — so a seeded rng makes the whole decision reproducible
  * in tests.
  *
- * @param {{ options: string[], answer: string, questionId?: string, clearFrac?: number }} question
+ * @param {{ options: string[], answer: string, modeId?: string, questionId?: string,
+ *   clearFrac?: number, ranking?: string[], values?: Record<string, number> }} question
  *   the full question, including the server-held `answer` (never sent to
- *   clients). `questionId` selects both the delay window and the accuracy — see
- *   {@link QUESTION_PROFILE} — and `clearFrac` times the veil.
+ *   clients). `modeId` selects both the delay window and the accuracy — see
+ *   {@link MODE_PROFILE} — `ranking` / `values` scale a statistic's accuracy to
+ *   how clear its answer is, `questionId` times the veil alongside `clearFrac`.
  * @param {string} skill  a BOT_SKILLS id; coerced if unknown
  * @param {() => number} [rng]  returns [0, 1); defaults to Math.random
- * @param {{ tricky?: boolean }} [opts]  room state the decision needs: `tricky` is
- *   the veil setting for this round (see {@link VEIL_SIGHT}). Absent = unveiled.
+ * @param {{ tricky?: boolean, picked?: boolean }} [opts]  room state the decision
+ *   needs: `tricky` is the veil setting for this round (see {@link VEIL_SIGHT}),
+ *   `picked` says this bot drafted this round (see {@link PICKER_BONUS}). Absent
+ *   = unveiled, not the picker.
  * @returns {{ choice: string, delayMs: number }}
  */
 export function decideBuzz(question, skill, rng = Math.random, opts = {}) {
@@ -234,7 +421,7 @@ export function decideBuzz(question, skill, rng = Math.random, opts = {}) {
   const options = Array.isArray(question.options) ? question.options : [];
   const answer = question.answer;
 
-  const wantsCorrect = rng() < accuracyFor(question.questionId, validSkill);
+  const wantsCorrect = rng() < buzzAccuracy(question, validSkill, opts);
   let choice = answer;
   if (!wantsCorrect) {
     const others = options.filter((o) => o !== answer);
@@ -249,8 +436,8 @@ export function decideBuzz(question, skill, rng = Math.random, opts = {}) {
   }
 
   // Drawn LAST, after the accuracy roll and any wrong-pick index, so the rng
-  // order the doc promises still holds with the window now question-dependent.
-  const window = delayWindowFor(question.questionId, validSkill);
+  // order the doc promises still holds with the window now mode-dependent.
+  const window = delayWindowFor(modeKeyFor(question), validSkill);
   const span = window.delayMaxMs - window.delayMinMs;
   const drawn = window.delayMinMs + rng() * span;
   // The veil pushes the whole window back by the time it takes this bot to see

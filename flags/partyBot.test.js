@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideBuzz, validateBotSkill, delayWindowFor, accuracyFor, veilSightMs, BOT_SKILLS, QUESTION_PROFILE, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
+import { decideBuzz, validateBotSkill, delayWindowFor, accuracyFor, buzzAccuracy, modeKeyFor, spreadGapOf, statAccuracyFor, veilSightMs, BOT_SKILLS, MODE_PROFILE, STAT_ACCURACY, PICKER_BONUS, ACCURACY_CEILING, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
 
 /** A deterministic rng that yields the given values in order, then repeats the last.
  *  @param {number[]} values */
@@ -71,8 +71,10 @@ test('decideBuzz: every delay window fits inside the 20s question clock', () => 
   /** @type {[string, { delayMinMs: number, delayMaxMs: number }][]} */
   const windows = [
     ...BOT_SKILL_ORDER.map((s) => /** @type {[string, any]} */ ([`base/${s}`, BOT_SKILLS[s]])),
-    ...Object.entries(QUESTION_PROFILE).flatMap(([qid, bySkill]) =>
-      Object.entries(bySkill).map(([s, w]) => /** @type {[string, any]} */ ([`${qid}/${s}`, w]))),
+    // Every mode override, resolved through delayWindowFor so an entry that
+    // overrides only `accuracy` is checked against the base window it inherits.
+    ...Object.keys(MODE_PROFILE).flatMap((mode) =>
+      BOT_SKILL_ORDER.map((s) => /** @type {[string, any]} */ ([`${mode}/${s}`, delayWindowFor(mode, s)]))),
   ];
   for (const [name, w] of windows) {
     // A generous margin so the bot always buzzes before the host timer reveals.
@@ -90,14 +92,14 @@ test('spot-the-flag buzzes later than a flag pick, at every skill', () => {
   // clears flag-pick's latest". That stronger form was tried and rejected: it
   // forces the windows apart, and the gap it opens at Hard hands a strong player
   // the bonus nearly every time, which is not what Hard is for. The two windows
-  // overlapping is intended (see QUESTION_PROFILE).
+  // overlapping is intended (see MODE_PROFILE).
   // The floor may TIE the base's (easy does, at 6 s) — a spot window that starts
   // no earlier and ends much later is still later overall, and forcing the floor
   // up just to satisfy a strict `>` would be the tail wagging the dog. The ceiling
   // is what has to move.
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill];
-    const spot = delayWindowFor('spotFlag', skill);
+    const spot = delayWindowFor('spot-flag', skill);
     assert.ok(spot.delayMinMs >= base.delayMinMs,
       `${skill}: spot starts no earlier (${spot.delayMinMs} >= ${base.delayMinMs})`);
     assert.ok(spot.delayMaxMs > base.delayMaxMs,
@@ -112,22 +114,25 @@ test('spot-the-flag is the question a bot gets RIGHT more often, at every skill'
   // getting half of these wrong read as broken rather than easy.
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill].accuracy;
-    const spot = accuracyFor('spotFlag', skill);
+    const spot = accuracyFor('spot-flag', skill);
     assert.ok(spot > base, `${skill}: ${spot} > ${base}`);
     assert.ok(spot <= 1, `${skill}: still a probability`);
     // Never a certainty — every skill has to whiff sometimes or it reads scripted.
     assert.ok(spot < 1, `${skill}: still misses occasionally`);
   }
-  const accs = BOT_SKILL_ORDER.map((s) => accuracyFor('spotFlag', s));
+  const accs = BOT_SKILL_ORDER.map((s) => accuracyFor('spot-flag', s));
   assert.deepEqual(accs, [...accs].sort((a, b) => a - b), 'still ascending by skill');
 });
 
-test('accuracyFor: the question picks the accuracy, everything else keeps the skill preset', () => {
-  assert.equal(accuracyFor('flagPick', 'easy'), BOT_SKILLS.easy.accuracy);
-  assert.equal(accuracyFor('mapPick', 'easy'), BOT_SKILLS.easy.accuracy);
+test('accuracyFor: the mode picks the accuracy, everything else keeps the skill preset', () => {
+  // The unlisted modes: sovereign flags IS the base preset (it's what the numbers
+  // were calibrated on), and every statistics mode is absent by design — its
+  // accuracy comes from the question, not the table.
+  assert.equal(accuracyFor('flags-all', 'easy'), BOT_SKILLS.easy.accuracy);
+  assert.equal(accuracyFor('superlative-gdp', 'easy'), BOT_SKILLS.easy.accuracy);
   assert.equal(accuracyFor(undefined, 'easy'), BOT_SKILLS.easy.accuracy);
   assert.equal(accuracyFor('toString', 'easy'), BOT_SKILLS.easy.accuracy);
-  assert.equal(accuracyFor('spotFlag', 'easy'), QUESTION_PROFILE.spotFlag.easy.accuracy);
+  assert.equal(accuracyFor('spot-flag', 'easy'), MODE_PROFILE['spot-flag'].easy.accuracy);
 });
 
 test('decideBuzz: the spot accuracy override actually reaches the roll', () => {
@@ -141,18 +146,18 @@ test('decideBuzz: the spot accuracy override actually reaches the roll', () => {
 test('spot-the-flag windows are wider than the base, and stay in skill order', () => {
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill];
-    const spot = delayWindowFor('spotFlag', skill);
+    const spot = delayWindowFor('spot-flag', skill);
     assert.ok(spot.delayMaxMs - spot.delayMinMs > base.delayMaxMs - base.delayMinMs,
       `${skill}: spot's window is wider than the base's`);
   }
-  const mins = BOT_SKILL_ORDER.map((s) => delayWindowFor('spotFlag', s).delayMinMs);
+  const mins = BOT_SKILL_ORDER.map((s) => delayWindowFor('spot-flag', s).delayMinMs);
   assert.deepEqual(mins, [...mins].sort((a, b) => b - a), 'easy is slowest, hard is quickest');
 });
 
 test('delayWindowFor: the question picks the window, unknown ids fall back to the skill', () => {
-  assert.deepEqual(delayWindowFor('spotFlag', 'hard'), {
-    delayMinMs: QUESTION_PROFILE.spotFlag.hard.delayMinMs,
-    delayMaxMs: QUESTION_PROFILE.spotFlag.hard.delayMaxMs,
+  assert.deepEqual(delayWindowFor('spot-flag', 'hard'), {
+    delayMinMs: MODE_PROFILE['spot-flag'].hard.delayMinMs,
+    delayMaxMs: MODE_PROFILE['spot-flag'].hard.delayMaxMs,
   });
   // The base window, minus the accuracy the preset also carries.
   const baseHard = { delayMinMs: BOT_SKILLS.hard.delayMinMs, delayMaxMs: BOT_SKILLS.hard.delayMaxMs };
@@ -166,7 +171,7 @@ test('delayWindowFor: the question picks the window, unknown ids fall back to th
 test('decideBuzz: a spot-the-flag question draws from the spot window, not the base', () => {
   const spotQ = { ...Q, questionId: 'spotFlag' };
   for (const skill of BOT_SKILL_ORDER) {
-    const win = QUESTION_PROFILE.spotFlag[skill];
+    const win = MODE_PROFILE['spot-flag'][skill];
     assert.equal(decideBuzz(spotQ, skill, seq([0, 0])).delayMs, win.delayMinMs);
     assert.equal(decideBuzz(spotQ, skill, seq([0, 1])).delayMs, win.delayMaxMs);
   }
@@ -279,4 +284,202 @@ test('decideBuzz: deterministic under a fixed seed', () => {
   const a = decideBuzz(Q, 'hard', seq([0.3, 0.7]));
   const b = decideBuzz(Q, 'hard', seq([0.3, 0.7]));
   assert.deepEqual(a, b);
+});
+
+// ---- the mode ladder ----
+// Which round it is decides how often a bot is right. The two flag modes are the
+// same question module over different pools, so this is the half of the dial a
+// question-keyed table could not express at all.
+
+test('the picture modes run easiest to hardest: spot, flags, weird flags, outlines', () => {
+  // The ladder itself, at every skill. Everybody knows the French flag; almost
+  // nobody knows Wallis and Futuna's; an outline has no colours or emblem to go on
+  // at all. A bot that hit all three at the same rate would be playing a different
+  // game from the table.
+  for (const skill of BOT_SKILL_ORDER) {
+    const ladder = ['spot-flag', 'flags-all', 'flags-weird', 'map-outlines']
+      .map((mode) => accuracyFor(mode, skill));
+    assert.deepEqual(ladder, [...ladder].sort((a, b) => b - a),
+      `${skill}: ${ladder.join(' > ')} descends`);
+    // Strictly, not merely non-increasing — a tie would mean one of the four
+    // stopped saying anything.
+    for (let i = 1; i < ladder.length; i += 1) {
+      assert.ok(ladder[i] < ladder[i - 1], `${skill}: rung ${i} is genuinely harder`);
+    }
+  }
+});
+
+test('every mode accuracy is a real probability, ascending by skill', () => {
+  for (const [mode, bySkill] of Object.entries(MODE_PROFILE)) {
+    const accs = BOT_SKILL_ORDER.map((s) => accuracyFor(mode, s));
+    assert.deepEqual(accs, [...accs].sort((a, b) => a - b), `${mode}: harder bots are more accurate`);
+    for (const [i, a] of accs.entries()) {
+      assert.ok(a > 0 && a < 1, `${mode}/${BOT_SKILL_ORDER[i]}: ${a} misses sometimes and lands sometimes`);
+    }
+    assert.ok(Object.keys(bySkill).length === BOT_SKILL_ORDER.length, `${mode}: covers every skill`);
+  }
+});
+
+test('modeKeyFor: the stamped mode wins, an unambiguous question id is the fallback', () => {
+  assert.equal(modeKeyFor({ modeId: 'flags-weird', questionId: 'flagPick' }), 'flags-weird');
+  // A room snapshot written before the server stamped modeId.
+  assert.equal(modeKeyFor({ questionId: 'spotFlag' }), 'spot-flag');
+  assert.equal(modeKeyFor({ questionId: 'mapPick' }), 'map-outlines');
+  // flagPick is exactly the ambiguity the stamp exists to resolve — guessing
+  // flags-all would hand an old weird-flags round the wrong (easier) numbers, so
+  // an unstamped one plays at the base preset, which is what it played before.
+  assert.equal(modeKeyFor({ questionId: 'flagPick' }), null);
+  assert.equal(modeKeyFor({}), null);
+  assert.equal(modeKeyFor({ questionId: 'toString' }), null);
+});
+
+test('decideBuzz: weird flags are harder than flags on the same roll', () => {
+  // One roll, two verdicts — the same proof the spot override gets, in the other
+  // direction. 0.45 is under Easy's base 0.5 and over its weird-flag 0.35.
+  assert.equal(decideBuzz({ ...Q, modeId: 'flags-all' }, 'easy', seq([0.45, 0, 0])).choice, Q.answer);
+  assert.notEqual(decideBuzz({ ...Q, modeId: 'flags-weird' }, 'easy', seq([0.45, 0, 0])).choice, Q.answer);
+  // And outlines are harder still: 0.32 clears weird flags but not the map.
+  assert.equal(decideBuzz({ ...Q, modeId: 'flags-weird' }, 'easy', seq([0.32, 0, 0])).choice, Q.answer);
+  assert.notEqual(decideBuzz({ ...Q, modeId: 'map-outlines' }, 'easy', seq([0.32, 0, 0])).choice, Q.answer);
+});
+
+test('decideBuzz: the mode moves accuracy alone — weird flags buzz at base speed', () => {
+  // Only spot-the-flag overrides the window. How hard a round is and how long it
+  // takes to answer are separate dials; weird flags turn only the first.
+  for (const skill of BOT_SKILL_ORDER) {
+    for (const mode of ['flags-weird', 'map-outlines']) {
+      assert.equal(decideBuzz({ ...Q, modeId: mode }, skill, seq([0, 0])).delayMs, BOT_SKILLS[skill].delayMinMs);
+      assert.equal(decideBuzz({ ...Q, modeId: mode }, skill, seq([0, 1])).delayMs, BOT_SKILLS[skill].delayMaxMs);
+    }
+  }
+});
+
+// ---- statistics: the question, not the mode ----
+// "Which of these produces the most coffee — Brazil, Iceland, Mongolia, Norway"
+// and "…Brazil, Vietnam, Colombia, Indonesia" are the same mode and nothing like
+// the same question, so a statistics round's difficulty is read off the question.
+
+/** A runaway: the answer is far clear of the field. */
+const RUNAWAY = {
+  options: ['cn', 'ng', 'pl', 'fj'], answer: 'cn',
+  ranking: ['cn', 'ng', 'pl', 'fj'], values: { cn: 1400, ng: 220, pl: 38, fj: 1 },
+  modeId: 'superlative-pop', questionId: 'superlative',
+};
+/** A coin flip: the top two are neck and neck. */
+const NECK_AND_NECK = {
+  options: ['cn', 'in', 'pl', 'fj'], answer: 'cn',
+  ranking: ['cn', 'in', 'pl', 'fj'], values: { cn: 1410, in: 1400, pl: 38, fj: 1 },
+  modeId: 'superlative-pop', questionId: 'superlative',
+};
+
+test('spreadGapOf: a runaway answer scores near 1, a coin flip near 0', () => {
+  const runaway = spreadGapOf(RUNAWAY);
+  const close = spreadGapOf(NECK_AND_NECK);
+  assert.ok(runaway !== null && close !== null);
+  assert.ok(runaway > 0.8, `runaway ${runaway}`);
+  assert.ok(close < 0.05, `coin flip ${close}`);
+});
+
+test('spreadGapOf: survives negative values, where a ratio would not', () => {
+  // Average temperature goes below zero, and several shipped metrics are index
+  // scores where a ratio means nothing at all. Subtraction handles both; this is
+  // the reason the gap is a spread fraction and not the generator's GAP_RATIO.
+  const coldest = {
+    options: ['ru', 'ca', 'pl', 'qa'], answer: 'ru',
+    ranking: ['ru', 'ca', 'pl', 'qa'], values: { ru: -5, ca: -3, pl: 9, qa: 27 },
+    modeId: 'superlative-temperature',
+  };
+  const gap = spreadGapOf(coldest);
+  assert.ok(gap !== null && gap > 0 && gap < 1, `a real fraction, got ${gap}`);
+  assert.equal(gap, 2 / 32);
+});
+
+test('spreadGapOf: null for anything that is not a ranked statistic', () => {
+  // Cast because a flag-pick question shares no field with the ranked shape — which
+  // is the point of the case: decideBuzz hands this function every question it sees.
+  assert.equal(spreadGapOf(/** @type {any} */ (Q)), null, 'a flag pick has no ranking');
+  assert.equal(spreadGapOf({ ranking: ['a', 'b'] }), null, 'no values');
+  assert.equal(spreadGapOf({ ranking: ['a'], values: { a: 1 } }), null, 'no runner-up');
+  assert.equal(spreadGapOf({ ranking: ['a', 'b'], values: { a: 5, b: 5 } }), null, 'no spread to divide by');
+  assert.equal(spreadGapOf({ ranking: ['a', 'b'], values: { a: 5 } }), null, 'a missing value');
+});
+
+test('statAccuracyFor: rises with the gap, spans the range, ascends by skill', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    const range = STAT_ACCURACY[skill];
+    assert.equal(statAccuracyFor(0, skill), range.min);
+    assert.equal(statAccuracyFor(1, skill), range.max);
+    assert.ok(statAccuracyFor(0.5, skill) > range.min && statAccuracyFor(0.5, skill) < range.max);
+    // Out-of-range inputs clamp rather than extrapolating past a probability.
+    assert.equal(statAccuracyFor(-1, skill), range.min);
+    assert.equal(statAccuracyFor(2, skill), range.max);
+    assert.ok(range.min > 0 && range.max < 1, `${skill}: still a probability at both ends`);
+  }
+  for (const gap of [0, 0.5, 1]) {
+    const accs = BOT_SKILL_ORDER.map((s) => statAccuracyFor(gap, s));
+    assert.deepEqual(accs, [...accs].sort((a, b) => a - b), `gap ${gap}: harder bots are more accurate`);
+  }
+});
+
+test('a statistic straddles the flag pick: a clear one is easier, a close one harder', () => {
+  // The point of the range. A world-facts round is not uniformly easier or harder
+  // than recognising a flag — it depends entirely on how far apart the numbers are,
+  // which is the same thing that decides it for a person.
+  for (const skill of BOT_SKILL_ORDER) {
+    const base = BOT_SKILLS[skill].accuracy;
+    assert.ok(buzzAccuracy(RUNAWAY, skill) > base, `${skill}: a runaway beats a flag pick`);
+    assert.ok(buzzAccuracy(NECK_AND_NECK, skill) < base, `${skill}: a coin flip is worse`);
+  }
+});
+
+test('buzzAccuracy: a statistics question ignores the mode table entirely', () => {
+  // Even given a mode that HAS an override, the question wins — a statistics round
+  // has no fixed difficulty for the table to state.
+  const mislabelled = { ...RUNAWAY, modeId: 'map-outlines' };
+  assert.equal(buzzAccuracy(mislabelled, 'easy'), buzzAccuracy(RUNAWAY, 'easy'));
+  assert.notEqual(buzzAccuracy(mislabelled, 'easy'), accuracyFor('map-outlines', 'easy'));
+});
+
+// ---- the picker's edge ----
+// A person drafts the category they know. A bot that picked and then played the
+// round exactly as it plays every other one is the only seat for which the pick
+// meant nothing.
+
+test('buzzAccuracy: the round a bot picked gets exactly the bonus', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    for (const q of [{ ...Q, modeId: 'flags-weird' }, { ...Q, modeId: 'flags-all' }, RUNAWAY]) {
+      const plain = buzzAccuracy(q, skill);
+      const picked = buzzAccuracy(q, skill, { picked: true });
+      assert.equal(picked, Math.min(ACCURACY_CEILING, plain + PICKER_BONUS));
+      assert.ok(picked > plain, `${skill}/${q.modeId}: the pick is worth something`);
+    }
+  }
+});
+
+test('buzzAccuracy: the bonus never buys certainty', () => {
+  // Hard spot-the-flag (0.97) plus the bonus would exceed 1. A bot that cannot
+  // miss reads as scripted rather than skilled, so the ceiling holds it short.
+  const best = buzzAccuracy({ ...Q, modeId: 'spot-flag' }, 'hard', { picked: true });
+  assert.equal(best, ACCURACY_CEILING);
+  assert.ok(best < 1);
+  // The widest statistic at Hard is the other candidate for overflow.
+  assert.ok(buzzAccuracy(RUNAWAY, 'hard', { picked: true }) < 1);
+});
+
+test('decideBuzz: the picker bonus reaches the roll, and moves nothing else', () => {
+  // 0.55 is above Easy's base 0.5 and below its picked 0.58: wrong on someone
+  // else's round, right on its own. One roll, two verdicts.
+  const q = { ...Q, modeId: 'flags-all' };
+  assert.notEqual(decideBuzz(q, 'easy', seq([0.55, 0, 0])).choice, Q.answer);
+  assert.equal(decideBuzz(q, 'easy', seq([0.55, 0, 0]), { picked: true }).choice, Q.answer);
+  // Accuracy only — a bot does not also get faster on its own round.
+  for (const skill of BOT_SKILL_ORDER) {
+    for (const roll of [0, 0.5, 1]) {
+      assert.equal(
+        decideBuzz(q, skill, seq([0, roll]), { picked: true }).delayMs,
+        decideBuzz(q, skill, seq([0, roll])).delayMs,
+        `${skill} at roll ${roll}: same window`,
+      );
+    }
+  }
 });
