@@ -101,9 +101,34 @@
               <span data-i18n="home.hero.critColor">blue</span>
             </span>
           </p>
-          <!-- Painted by bootHome(): three fixed fake flags (flags/fakeFlags.js)
-               plus one empty "to find" box — pure decoration. -->
-          <div class="hero-stamps" id="hero-stamps" aria-hidden="true"></div>
+          <!-- Three fabricated flags plus one empty "to find" box — pure
+               decoration, and deliberately STATIC MARKUP rather than painted by
+               bootHome(). Being fake is the point: they fill the hero with flag
+               imagery without spoiling today's answers, and the Jolly Roger
+               winks that these aren't the ones to find.
+
+               Inline, in the HTML, because this row is the first thing the eye
+               lands on. Built in JS it waited on the module graph AND the 91KB
+               translation fetch (mountHeroFlags used to sit inside
+               bootI18n().then), so the headline and CTA painted instantly while
+               the flags popped in visibly late. Nothing here needs i18n or the
+               catalog; as markup it paints with everything else. Pinned by
+               home.test.js — including that page.js must not touch it.
+
+               Redrawn native 3:2 so they fill the same stamp boxes as the real
+               found-flags. The artwork reuses the site's existing invented-flag
+               set: the two-tone Nordic cross is FLAG_GLYPH from filterChips.js,
+               the Jolly Roger is the "weird deck" symbol from deckIcons.js. The
+               two fixed illustrative hues per flag are the documented exception
+               to the eight-colour palette rule, the same standing as the real
+               flag SVGs — a mark that depicts a flag can't be built from brand
+               tokens. -->
+          <div class="hero-stamps" aria-hidden="true">
+            <span class="hero-stamp fake"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24"><rect width="36" height="24" fill="#2a9d8f"/><rect x="10" y="0" width="4.5" height="24" fill="#f4efe6"/><rect x="0" y="9.75" width="36" height="4.5" fill="#f4efe6"/></svg></span>
+            <span class="hero-stamp fake"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24"><rect width="36" height="24" fill="#c65f9a"/><path d="M0 0L36 24M36 0L0 24" stroke="#f4efe6" stroke-width="5"/></svg></span>
+            <span class="hero-stamp fake"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24"><rect width="36" height="24" fill="#241f22"/><g stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="13" x2="24" y2="19"/><line x1="24" y1="13" x2="12" y2="19"/></g><g fill="#fff"><circle cx="11.4" cy="12.6" r="1.5"/><circle cx="24.6" cy="12.6" r="1.5"/><circle cx="11.4" cy="19.4" r="1.5"/><circle cx="24.6" cy="19.4" r="1.5"/></g><ellipse cx="18" cy="10.5" rx="5" ry="5.3" fill="#fff"/><rect x="14.6" y="13.6" width="6.8" height="3.4" rx="1" fill="#fff"/><circle cx="16" cy="10" r="1.4" fill="#241f22"/><circle cx="20" cy="10" r="1.4" fill="#241f22"/><rect x="17.3" y="11.6" width="1.4" height="2" fill="#241f22"/></svg></span>
+            <span class="hero-stamp todo"></span>
+          </div>
           <a class="lobby-btn primary" id="hero-cta" href="daily/">
             <span class="game-icon icon-daily" aria-hidden="true"></span>
             <span class="hero-cta-label" data-i18n="home.hero.cta">Today's puzzle</span>

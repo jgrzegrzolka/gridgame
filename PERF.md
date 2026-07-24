@@ -15,6 +15,16 @@ The constraints that shape every fix below:
 
 ## Journal (newest first)
 
+### 2026-07-24 — Home hero flags painted late → moved the row into the HTML
+
+**Symptom.** On the landing page the three fabricated hero flags appeared visibly after everything around them. Jan: "this flags are showing a little too slow as for main page." His screenshot caught the row mid-fill — headline, criteria line, CTA and the whole game list already painted, flag boxes still empty.
+
+**Diagnosis.** The row was built by `mountHeroFlags()` **inside `bootI18n().then(...)`** — the last statement of `bootHome()`. So 2.7 KB of constant, decorative, self-contained SVG waited on the 91 KB `i18n/en.json` fetch *and* its parse, plus the whole deferred module graph (`page.js` → `i18n.js` + `common.js`, ~46 KB) before a single flag could paint. Nothing in the row reads a translation: the container is `aria-hidden`, the artwork is fixed, and the hero is documented as static and fabricated. Everything *beside* it — headline, criteria chips, CTA label — is plain markup with the English baked in via `data-i18n`, which is exactly why those painted instantly and only the flags lagged. This is the same shape as the 2026-06-13 lang-toggle entry below: a purely visual, dependency-free element parked behind the deferred module graph.
+
+**Fix.** The three `<svg>`s and the trailing empty "to find" box are now literal markup in `index.html`, so they paint with the document — zero network waits, zero JS. `mountHeroFlags()`, `HERO_EMPTY_BOXES` and the `FAKE_FLAGS` import are gone from `page.js`, and `flags/fakeFlags.js` (plus its test) is deleted, since the HTML is now the only consumer and a module read solely by its own test is dead weight. `home.test.js` carries the old assertions forward (three fakes + one todo, 3:2 viewBox, no external refs, the invented artwork) and adds the load-bearing one: **`page.js` must not mention `hero-stamps` or `FAKE_FLAGS`**, so the row can't drift back into JS without a red test.
+
+**Trade-off.** The artwork now lives as raw markup rather than a documented, importable constant, and `fakeFlags.js`'s rationale comment moved into the HTML alongside it. The real cost is future flexibility: `fakeFlags.js` noted "a later step may draw these at random from a larger pool", and a random pick genuinely does need JS. That step would trade first paint for variety on the one screen where first paint matters most — if it's ever wanted, delete the `page.js`-must-not-touch-it assertion **deliberately** rather than working around it. Note `.hero-stamps { min-height: 50px }` stayed: it's taller than the 48 px stamps, so it sets the row height rather than merely reserving it, and dropping it moves the CTA up 2 px. Its original job (absorbing the jump while the stamps painted) is gone, but the layout still depends on it.
+
 ### 2026-07-08 — Pan revealed a blank strip → dropped the GPU-transform gesture layer
 
 **Symptom.** Panning the map (quiz result, flagsdata) to reveal a region that was off-screen showed the newly-exposed strip as blank / un-rendered for the duration of the drag; it only filled in on release. Jan: "the part that was not previously visible is rendering and feels weird." Not a throughput problem — a *reveal* artifact.
