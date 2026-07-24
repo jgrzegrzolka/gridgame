@@ -462,8 +462,8 @@ export function bootFlagParty() {
   const roundCardPick = $('roundcard-pick');
   const lobbySetupEl = $('lobby-setup');
   const botSeat = $('bot-seat');
-  const botSkillSel = /** @type {HTMLSelectElement} */ ($('bot-skill'));
-  const addBotBtn = /** @type {HTMLButtonElement} */ ($('add-bot'));
+  const botLevelBtns = /** @type {HTMLButtonElement[]} */ (
+    [...botSeat.querySelectorAll('.bot-lv')]);
   const draftLengthEl = $('draft-length');
   const draftLengthGroup = $('draft-length-group');
   const draftLengthHint = $('draft-length-hint');
@@ -623,21 +623,18 @@ export function bootFlagParty() {
   // lobby's player list (see `flags/partyBot.js`, and `botSeat.js` for when that
   // seat shows).
   // The client only sends `addBot` / `removeBot`; everything about how a bot plays
-  // lives server-side. The chosen difficulty is remembered per device so a host
-  // who likes Hard bots gets them next time.
-  const BOT_SKILL_KEY = 'gridgame.party.botSkill';
+  // lives server-side.
+  //
+  // Nothing is remembered between adds. The seat used to store the last-picked
+  // difficulty (`gridgame.party.botSkill`) so the Add button had something to
+  // apply — but each level is its own button now, so a preference has nothing
+  // left to pre-fill. Restoring it could only mark a button that isn't a
+  // selection, which reads as state the tap doesn't actually depend on.
   /** @param {string | undefined} skill */
   function botSkillLabel(skill) {
     const key = { easy: 'party.botEasy', medium: 'party.botMedium', hard: 'party.botHard' }[String(skill)]
       || 'party.botMedium';
     return t(key, String(skill || 'Medium'));
-  }
-  function loadBotSkill() {
-    try { return localStorage.getItem(BOT_SKILL_KEY) || 'medium'; } catch { return 'medium'; }
-  }
-  /** @param {string} skill */
-  function saveBotSkill(skill) {
-    try { localStorage.setItem(BOT_SKILL_KEY, skill); } catch { /* private mode */ }
   }
 
   // ---- game length (host-only) ----
@@ -2584,17 +2581,18 @@ export function bootFlagParty() {
     if (next) setFirstPick(next, true);
   });
   draftFirstPickVeil.addEventListener('change', () => setFirstPickVeil(draftFirstPickVeil.checked));
-  // Bots: the host taps the empty seat at the chosen difficulty; the server mints
-  // the seat and broadcasts the roster, which repaints the list — the new bot
-  // lands directly above the empty seat that was just pressed, with a remove ×.
-  botSkillSel.value = loadBotSkill();
-  botSkillSel.addEventListener('change', () => saveBotSkill(botSkillSel.value));
-  addBotBtn.addEventListener('click', () => {
-    if (!state.isHost) return;
-    const skill = botSkillSel.value || 'medium';
-    saveBotSkill(skill);
-    send({ type: 'addBot', skill });
-  });
+  // Bots: the host taps a difficulty and that IS the add — one gesture, no
+  // separate confirm. The server mints the seat and broadcasts the roster, which
+  // repaints the list, so the new bot lands directly above the seat that was just
+  // pressed, wearing the level that was tapped and a remove ×. That chip is also
+  // where the level's NAME first appears, which is how a host learns what the
+  // dots meant.
+  for (const btn of botLevelBtns) {
+    btn.addEventListener('click', () => {
+      if (!state.isHost) return;
+      send({ type: 'addBot', skill: btn.dataset.skill });
+    });
+  }
   startBtn.addEventListener('click', () => {
     // Draft is the only way a game starts: zero setup, so the start carries no
     // plan (the server builds the first round from the host's chosen firstPick and

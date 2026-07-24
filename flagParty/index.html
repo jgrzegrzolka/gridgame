@@ -96,15 +96,37 @@
                competed with the two settings everybody reads. Host + lobby only,
                and it disappears at MAX_SEATS instead of greying out — see
                `botSeat.js` for why each of those three is the rule. -->
+          <!-- One tap, not three. "Add bot" is a LABEL here, not a button: the
+               three difficulty buttons do the adding, so choosing a level and
+               seating the bot are the same gesture. It replaced an Add button
+               beside a native <select>, which on a phone threw a full-height OS
+               wheel over the lobby and still needed a second press afterwards.
+
+               The levels are drawn, not written: each button shows the whole
+               3-step scale and fills its own place in it, so "two of three"
+               reads without comparing buttons. Carrying no level words is what
+               lets the row fit every language — the words live in aria-label /
+               title, and a seated bot wears its own on its chip. Order follows
+               BOT_SKILL_ORDER (easiest first); botSeat.test.js pins it. -->
           <div class="chip bot-seat" id="bot-seat" hidden>
-            <button type="button" class="bot-seat-add" id="add-bot" data-i18n="party.addBot">Add a bot</button>
-            <span class="bot-seat-skill">
-              <select class="bot-skill" id="bot-skill"
-                      data-i18n-attr="aria-label:party.botSkill" aria-label="Bot difficulty">
-                <option value="easy" data-i18n="party.botEasy">Easy</option>
-                <option value="medium" selected data-i18n="party.botMedium">Medium</option>
-                <option value="hard" data-i18n="party.botHard">Hard</option>
-              </select>
+            <span class="bot-seat-verb">
+              <span class="bot-seat-plus" aria-hidden="true">+</span>
+              <span data-i18n="party.addBot">Add bot</span>
+            </span>
+            <span class="bot-seat-scale" data-i18n="party.botDifficulty">difficulty:</span>
+            <span class="bot-levels">
+              <button type="button" class="bot-lv" data-skill="easy" aria-label="Easy" title="Easy"
+                      data-i18n-attr="aria-label:party.botEasy,title:party.botEasy">
+                <span class="bot-dots" aria-hidden="true"><span class="bot-dot on"></span><span class="bot-dot"></span><span class="bot-dot"></span></span>
+              </button>
+              <button type="button" class="bot-lv" data-skill="medium" aria-label="Medium" title="Medium"
+                      data-i18n-attr="aria-label:party.botMedium,title:party.botMedium">
+                <span class="bot-dots" aria-hidden="true"><span class="bot-dot on"></span><span class="bot-dot on"></span><span class="bot-dot"></span></span>
+              </button>
+              <button type="button" class="bot-lv" data-skill="hard" aria-label="Hard" title="Hard"
+                      data-i18n-attr="aria-label:party.botHard,title:party.botHard">
+                <span class="bot-dots" aria-hidden="true"><span class="bot-dot on"></span><span class="bot-dot on"></span><span class="bot-dot on"></span></span>
+              </button>
             </span>
           </div>
         </div>
