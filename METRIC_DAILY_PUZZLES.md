@@ -6,6 +6,8 @@ Surfaces 1-5 of a world metric are bounded engineering: once they land, the metr
 
 **Deferred 2026-07-11 at Jan's request.** Agents: do **not** author these unprompted, wait for Jan. See memory `project_metric_daily_puzzles_deferred`.
 
+**Cadence, set 2026-07-23:** the daily schedule alternates one flag puzzle and one statistic puzzle, day by day. That is what drives this list now — the catalog needs roughly as many statistics as flag puzzles, and population alone could not supply them. Jan picks the next metric off this list; the work per metric is the 12-14 standard superlatives (world most/least, per-continent most/least), which is enough to cover about a month of statistic slots.
+
 ## How to pick this up (per metric, when Jan says he's ready)
 
 For a metric whose code surfaces (1-5) already shipped:
@@ -17,8 +19,8 @@ For a metric whose code surfaces (1-5) already shipped:
 
 Population is the shipped precedent (Feature DG: 14 superlative puzzles + per-flag captions). The rest have all code surfaces done, daily deferred:
 
-- [ ] **Area** (Feature DH): superlative puzzles + rank captions
-- [ ] **Population density** (Feature DI): superlative puzzles + rank captions
+- [x] **Area** (Feature DH): 14 standard superlatives shipped 2026-07-23 (world most/least top10, per-continent most/least), blended into the schedule from 2026-07-26. Captions baked as per-answer `notes` ("Area: 16,376,870 km²"), so no `populationRank.js` work was needed. 195 compound area/density x colour/motif candidates sit in `ideas.json` for past-#100 use.
+- [x] **Population density** (Feature DI): 14 standard superlatives shipped 2026-07-23, same shape as area. PL captions use the unit form `osób/km²` rather than a sentence, because the noun would otherwise have to agree with the numeral (564 osoby, 531 osoba, 1 727 osób).
 - [ ] **GDP** (Feature DJ): superlative puzzles + rank captions
 - [ ] **GDP per capita** (Feature DJ): superlative puzzles + rank captions. **Watch:** "largest per capita" surfaces Vatican #1 ($375K estimate artifact), then Monaco / Liechtenstein: accurate to the data, but worth a human eye when picking answer sets.
 - [ ] **Coffee production** (Feature DK): superlative puzzles + rank captions. **Sparse + one-directional:** author **"most" only** ("the 10 biggest coffee producers", per-continent biggest), never "least" — coffee is a sparse metric, so `resolveSuperlative` ranks the ~78 growers, and "smallest grower" is an obscure question (this matches the code surfaces: atLeast-only filters, biggest-only party round). Both overrides matter when picking answer sets: CAR (2.8K t) and Guinea (10K t) are deliberately low, not top-10.
