@@ -22,6 +22,7 @@ const CHIP_ICON = { base: '✓', speed: '⚡', solo: '★', closeness: '≈' };
  *  knew (base), then how fast (speed), then the rarer bonuses (only-one, close). */
 const CHIP_ORDER = /** @type {const} */ (['base', 'speed', 'solo', 'closeness']);
 import { barFractions, railWidthPx, chartUnitLine } from '../flags/partyChart.js';
+import { capPickers } from '../flags/pickAvatars.js';
 import { clausesFromPrompt, missLabel, filtersFor } from '../flags/partyQuestions/spotFlag.js';
 import { renderSpotCriteria } from '../flags/filterChips.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
@@ -1810,9 +1811,15 @@ export function bootFlagParty() {
       row.appendChild(el('span', 'rank-val',
         typeof v === 'number' && metricData ? formatValue(v, metricData.format) : ''));
       const rail = el('span', 'rank-rail');
+      /** @type {string[]} */
+      const rowPickers = [];
       for (const [pid, choice] of Object.entries(reveal.picks)) {
-        if (choice === code) rail.appendChild(buildAvatar(pid));
+        if (choice === code) rowPickers.push(pid);
       }
+      // Capped, or one popular country would size the rail for the whole chart
+      // and squeeze the country name on every row — see `railWidthPx`, which
+      // measures through the same split.
+      appendPickers(rail, rowPickers);
       row.appendChild(rail);
       // Everyone on a row scores the same, because closeness is rank-based. So the
       // row states its price once rather than a number per avatar, and the chart
@@ -1833,6 +1840,31 @@ export function bootFlagParty() {
     return chart;
   }
 
+
+  /**
+   * Fill a pick row — a tile's `.picks` or a chart row's `.rank-rail` — with at
+   * most `PICK_AVATAR_CAP` faces, then a `+N` marker for everyone else.
+   *
+   * One helper for both surfaces: the cap is a single rule
+   * (`flags/pickAvatars.js`) and the two rows differ only in the CSS that sizes
+   * them. Two copies is how one of them would quietly stop being capped.
+   *
+   * @param {HTMLElement} host  an empty `.picks` / `.rank-rail`
+   * @param {string[]} pickerIds  playerIds in buzz order, so the faces kept are
+   *   the players who got there first
+   */
+  function appendPickers(host, pickerIds) {
+    const { shown, overflow } = capPickers(pickerIds);
+    for (const pid of shown) host.appendChild(buildAvatar(pid));
+    if (!overflow) return;
+    const more = el('span', 'more', '+' + String(overflow));
+    // The marker is a count, not decoration, so it reads as words to a screen
+    // reader rather than as a bare "+11".
+    const label = fmt(t('party.morePickers', '{n} more'), { n: String(overflow) });
+    more.title = label;
+    more.setAttribute('aria-label', label);
+    host.appendChild(more);
+  }
 
   function flagOpt(code, opts) {
     const node = document.createElement(opts.selectable ? 'button' : 'div');
@@ -1877,7 +1909,7 @@ export function bootFlagParty() {
     // the green pulse alone (matching flagQuiz).
     if (opts.pickers.length) {
       const p = el('div', 'picks');
-      for (const pid of opts.pickers) p.appendChild(buildAvatar(pid));
+      appendPickers(p, opts.pickers);
       node.appendChild(p);
     }
     // Superlative reveal only: a bottom strip naming the country and its

@@ -469,6 +469,12 @@
   box-shadow: 0 0 0 2px var(--surface-color);
 }
 .rank-rail .avatar + .avatar { margin-left: -6px; }
+/* A FIXED width, unlike the tile's marker, and `RAIL_MORE_PX` in
+   flags/partyChart.js mirrors it: the rail's track is stamped from the busiest
+   row before any number is on screen, so a marker that sized itself to its digits
+   would put every country name in the chart on a different x for `+9` than for
+   `+11`. 30px fits the widest a room can produce (MAX_SEATS 20, so `+15`). */
+.rank-rail .more { height: 22px; width: 30px; font-size: 11px; margin-left: -6px; }
 /* Rank-based scoring means everyone on a row scores the same, so the row states
    its price once instead of a number per avatar -- the chart doubles as the
    scoring key. Muted when nobody picked it, so the ladder still reads as a
@@ -628,6 +634,24 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 
 .picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
+/* Past five pickers the row stops naming faces and counts them (`+11`). The cap
+   itself is JS (`flags/pickAvatars.js`) — this is only what the marker looks
+   like: an avatar's silhouette (same 4px radius, same surface ring, so the run
+   still reads as one row of tokens) in the site's selected grey, because it is
+   emphatically NOT a player and must never be mistaken for one. */
+.picks .more, .rank-rail .more {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--selected-color);
+  color: var(--primary-color);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--surface-color);
+}
+.picks .more { height: 20px; min-width: 20px; padding: 0 4px; font-size: 10px; }
 /* When your wrong tile carries the country-name strip (bottom), lift its pick
    avatars clear of it so both stay readable — party-only, flagQuiz has no
    avatars on a tile. */

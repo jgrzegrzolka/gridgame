@@ -680,6 +680,7 @@
     "isChoosing": "{name} wybiera…",
     "aPlayer": "Gracz",
     "roundPick": "wybór: {name}",
+    "morePickers": "jeszcze {n}",
     "roundCardCount": "Runda {n} z {total}",
     "decider": "Runda decydująca",
     "yourPickDecider": "Twój wybór, i to on rozstrzyga grę",
