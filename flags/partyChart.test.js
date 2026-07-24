@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { barFractions, railWidthPx, chartUnitLine, RAIL_AVATAR_PX, RAIL_AVATAR_OVERLAP_PX } from './partyChart.js';
+import { barFractions, railWidthPx, chartUnitLine, RAIL_AVATAR_PX, RAIL_AVATAR_OVERLAP_PX, RAIL_MORE_PX } from './partyChart.js';
+import { PICK_AVATAR_CAP } from './pickAvatars.js';
 
 test('all-positive metrics read as a share of the biggest', () => {
   // The common case, and the one a player intuitively expects: the winner fills
@@ -110,6 +111,41 @@ test('the rail constants match the stylesheet they mirror', () => {
   assert.ok(overlap, 'expected a .rank-rail .avatar + .avatar negative margin');
   assert.equal(Number(avatar[1]), RAIL_AVATAR_PX);
   assert.equal(Number(overlap[1]), RAIL_AVATAR_OVERLAP_PX);
+  // The overflow marker's width is a third hardcoded CSS number, and the one most
+  // likely to be nudged for looks — a marker wider than the rail thinks it is
+  // pushes the points column off every row at once.
+  const more = css.match(/\.rank-rail \.more\s*\{[^}]*width:\s*(\d+)px/);
+  assert.ok(more, 'expected a .rank-rail .more width in flagParty/index.css');
+  assert.equal(Number(more[1]), RAIL_MORE_PX);
+});
+
+test('railWidthPx: the cap bounds the rail, however full the room', () => {
+  // The bug this closes: twelve people all picking Brazil sized the rail at 198px,
+  // and every row is pinned to the busiest one, so the country name lost its
+  // column on all four rows — including the three nobody picked.
+  const ranking = ['br', 'vn', 'co', 'id'];
+  /** @param {number} n */
+  const allOn = (n) => Object.fromEntries(Array.from({ length: n }, (_, i) => ['p' + i, 'br']));
+  const widest = railWidthPx(ranking, allOn(PICK_AVATAR_CAP + 1));
+  for (const n of [8, 12, 20, 200]) {
+    assert.equal(railWidthPx(ranking, allOn(n)), widest, `${n} pickers cost no more than ${PICK_AVATAR_CAP + 1}`);
+  }
+  // And the bound is a number a phone row can actually spare: the row's other
+  // five tracks and their gaps take 176px of ~350px.
+  assert.ok(widest <= 120, `the widest rail is ${widest}px`);
+});
+
+test('railWidthPx: the marker costs a slot, and only past the cap', () => {
+  const ranking = ['br', 'vn'];
+  /** @param {number} n */
+  const allOn = (n) => Object.fromEntries(Array.from({ length: n }, (_, i) => ['p' + i, 'br']));
+  const step = RAIL_AVATAR_PX - RAIL_AVATAR_OVERLAP_PX;
+  // Right up to the cap it is avatars all the way, exactly as before.
+  assert.equal(railWidthPx(ranking, allOn(PICK_AVATAR_CAP)),
+    RAIL_AVATAR_PX + (PICK_AVATAR_CAP - 1) * step);
+  // One more, and the sixth face becomes a marker that overlaps like an avatar.
+  assert.equal(railWidthPx(ranking, allOn(PICK_AVATAR_CAP + 1)),
+    RAIL_AVATAR_PX + (PICK_AVATAR_CAP - 1) * step + RAIL_MORE_PX - RAIL_AVATAR_OVERLAP_PX);
 });
 
 // ---- chartUnitLine ----

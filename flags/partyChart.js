@@ -7,6 +7,8 @@
  * length still looks like a bar).
  */
 
+import { pickSlots } from './pickAvatars.js';
+
 /**
  * Bar length for each ranked option, as a fraction in [0, 1].
  *
@@ -57,11 +59,18 @@ export function barFractions(ranking, values) {
  * Measuring the busiest row once and pinning every row to it fixes the alignment
  * while still fitting whatever the room size.
  *
- * The two constants mirror `.rank-rail .avatar` in `flagParty/index.css`: each
- * avatar is {@link RAIL_AVATAR_PX} wide and every one after the first overlaps
- * the last by {@link RAIL_AVATAR_OVERLAP_PX}. They are exported so the stylesheet
- * and this arithmetic are pinned together by a test rather than silently drifting
- * the next time someone resizes an avatar.
+ * The constants mirror `.rank-rail` in `flagParty/index.css`: each avatar is
+ * {@link RAIL_AVATAR_PX} wide, every one after the first overlaps the last by
+ * {@link RAIL_AVATAR_OVERLAP_PX}, and the overflow marker is a fixed
+ * {@link RAIL_MORE_PX}. They are exported so the stylesheet and this arithmetic
+ * are pinned together by a test rather than silently drifting the next time
+ * someone resizes an avatar.
+ *
+ * **The cap is what keeps this column honest.** Before it, a room where twelve
+ * people all picked Brazil sized the rail at 198px, and since every row is pinned
+ * to the busiest one, the country name on all four rows lost its space — including
+ * the three rows nobody picked. Capped, the widest a rail can ever be is five
+ * faces and a marker, so the names hold still from round to round.
  *
  * @param {string[]} ranking  option codes, one per row
  * @param {Record<string, string>} picks  playerId -> the code they picked
@@ -75,7 +84,12 @@ export function railWidthPx(ranking, picks) {
     const n = chosen.filter((choice) => choice === code).length;
     if (n > busiest) busiest = n;
   }
-  return RAIL_AVATAR_PX + (busiest - 1) * (RAIL_AVATAR_PX - RAIL_AVATAR_OVERLAP_PX);
+  // Measured through the same split the row is drawn with (`flags/pickAvatars.js`),
+  // so the rail can never be sized for a row that renders differently.
+  const { faces, marker } = pickSlots(busiest);
+  const step = RAIL_AVATAR_PX - RAIL_AVATAR_OVERLAP_PX;
+  const width = RAIL_AVATAR_PX + Math.max(0, faces - 1) * step;
+  return marker ? width + RAIL_MORE_PX - RAIL_AVATAR_OVERLAP_PX : width;
 }
 
 /** Width of one avatar in the reveal chart's rail. Mirrors `.rank-rail .avatar`. */
@@ -83,6 +97,15 @@ export const RAIL_AVATAR_PX = 22;
 /** How far each avatar after the first slides over the last. Mirrors
  *  `.rank-rail .avatar + .avatar { margin-left: -6px }`. */
 export const RAIL_AVATAR_OVERLAP_PX = 6;
+/**
+ * Width of the `+N` overflow marker. Mirrors `.rank-rail .more`, and it is a
+ * FIXED width rather than one that grows with the digits: this arithmetic runs
+ * before the number is on screen, and a marker that measured itself would put the
+ * rail — and so every country name in the chart — on a different x for `+9` than
+ * for `+11`. Wide enough for the largest overflow a room can produce (`MAX_SEATS`
+ * is 20, so `+15`).
+ */
+export const RAIL_MORE_PX = 30;
 
 /**
  * The chart's scale line: what the numbers count, and as of when.

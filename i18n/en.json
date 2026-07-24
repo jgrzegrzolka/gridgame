@@ -680,6 +680,7 @@
     "isChoosing": "{name} is choosing…",
     "aPlayer": "A player",
     "roundPick": "{name}'s pick",
+    "morePickers": "{n} more",
     "roundCardCount": "Round {n} of {total}",
     "decider": "The Decider",
     "yourPickDecider": "Your pick, and it decides the game",
