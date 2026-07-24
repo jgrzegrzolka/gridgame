@@ -107,7 +107,12 @@ body {
   gap: 10px;
   max-width: 460px;
   margin: 0 auto 38px; /* one clear step down to the CTA (was 34px) */
-  min-height: 50px; /* reserve the row so the CTA doesn't jump when stamps paint */
+  /* Taller than the 48px stamps, so this sets the row height rather than just
+   * reserving it — don't drop it expecting a no-op, the CTA moves up 2px.
+   * It originally existed to stop that CTA jumping while the stamps were
+   * painted by JS after boot; the stamps are static markup now (see
+   * index.html), so there's no jump left to absorb. */
+  min-height: 50px;
 }
 .hero-stamp {
   width: 72px;
