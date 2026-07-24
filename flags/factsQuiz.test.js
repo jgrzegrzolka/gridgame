@@ -40,6 +40,44 @@ function loaded(keys) {
   });
 }
 
+test('with no limit the deck never runs dry — nothing to exhaust', () => {
+  const quiz = createFactsQuiz({ metrics: loaded(['population']), pool: POOL, rng: seeded(1) });
+  for (let i = 0; i < 400; i++) {
+    assert.ok(quiz.next(), 'unbounded facts must keep generating');
+  }
+});
+
+test('a `limit` ends the round after exactly that many questions', () => {
+  // The count-mode contract. `flagQuiz/page.js` ends a round when `next()`
+  // returns null and has no other stopping condition, so without this an
+  // untimed 20-question round would run forever — which is why the deck had no
+  // untimed mode at all before the limit existed.
+  const quiz = createFactsQuiz({ metrics: loaded(['population']), pool: POOL, rng: seeded(3), limit: 20 });
+  for (let i = 0; i < 20; i++) {
+    assert.ok(quiz.next(), `question ${i + 1} of 20 must be served`);
+  }
+  assert.equal(quiz.next(), null, 'the 21st question ends the round');
+  assert.equal(quiz.next(), null, 'and it stays ended');
+});
+
+test('`peek` stops warming flags once the last question has been served', () => {
+  // peek() drives the image prefetch. Warming a 21st question we will never
+  // render would be a wasted request on the exact frame the result screen
+  // wants the network.
+  const quiz = createFactsQuiz({ metrics: loaded(['population']), pool: POOL, rng: seeded(4), limit: 3 });
+  assert.ok(quiz.peek(), 'the first question is warm before it is served');
+  quiz.next();
+  quiz.next();
+  assert.ok(quiz.peek(), 'question 3 is still coming');
+  quiz.next();
+  assert.equal(quiz.peek(), null, 'nothing left to warm');
+});
+
+test('`total` reports the round length when bounded, so the progress bar has a real denominator', () => {
+  const bounded = createFactsQuiz({ metrics: loaded(['population']), pool: POOL, rng: seeded(5), limit: 20 });
+  assert.equal(bounded.total, 20);
+});
+
 test('a question offers four distinct countries with the answer among them', () => {
   const quiz = createFactsQuiz({ metrics: loaded(['population']), pool: POOL, rng: seeded(1) });
   for (let i = 0; i < 30; i++) {

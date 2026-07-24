@@ -62,9 +62,11 @@
         bestKey,
         scoreColor,
         isTimedMode,
+        isEndlessVariant,
         accuracyRatio,
         shouldShowBestTime,
         formatBestScoreLabel,
+        targetFor,
       } from '../../flags/quiz.js';
       import { bootI18n, wireLangToggle, t } from '../../i18n.js';
       import { wireBurgerDismiss, mountNicknameMenuItem } from '../../common.js';
@@ -106,6 +108,19 @@
             '<line x1="11.5" y1="8"  x2="17" y2="8"/>' +
             '<line x1="11.5" y1="12" x2="17" y2="12"/>' +
             '<line x1="11.5" y1="16" x2="17" y2="16"/>' +
+          '</svg>',
+        // Fixed-count mode. Same squared outline as `all` so the two count
+        // modes read as siblings, with the bullet rows replaced by the literal
+        // round length — the count IS the distinguishing fact, and a glyph for
+        // "twenty of something" would be a worse version of writing 20.
+        '20q':
+          '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" ' +
+          'stroke="currentColor" stroke-width="1.5" ' +
+          'stroke-linejoin="round" aria-hidden="true">' +
+            '<rect x="3" y="3" width="18" height="18" rx="1"/>' +
+            '<text x="12" y="12" fill="currentColor" stroke="none" ' +
+            'font-size="11" font-weight="600" text-anchor="middle" ' +
+            'dominant-baseline="central">20</text>' +
           '</svg>',
       };
 
@@ -158,7 +173,7 @@
        * When the slot is untouched it shows mode · Play, faded, with
        * a CTA hint — keeps the row from looking incomplete.
        */
-      function modeChip(key, mode, target) {
+      function modeChip(key, mode, target, endless) {
         // Stats lives at /flagQuiz/stats/, quiz at /flagQuiz/, so we
         // need to step one level up when linking back to the quiz.
         const a = document.createElement('a');
@@ -184,12 +199,22 @@
         if (best) {
           const score = document.createElement('span');
           score.className = 'stats-chip-score';
-          score.textContent = formatBestScoreLabel(mode, best, target);
+          score.textContent = formatBestScoreLabel(mode, best, target, key);
           // Tint by ratio in both directions: timed mode = correct/total
           // (higher is greener), untimed = mistakes/total (lower is greener).
-          score.style.color = isTimedMode(mode)
-            ? scoreColor(best.score / target)
-            : scoreColor(accuracyRatio(best.score, target));
+          //
+          // An endless deck in timed mode has neither ratio available. There's
+          // no denominator (that's the whole point), and the accuracy the
+          // result screen tints by — correct vs total picks — isn't recoverable
+          // here, because a stored best is only `{ score, time }`. Tinting
+          // against the country pool anyway is what made every Statistics chip
+          // red: 6/195 is a 3% ratio for a score that may well be excellent.
+          // No honest ratio means no tint; the chip inherits its text colour.
+          if (!(endless && isTimedMode(mode))) {
+            score.style.color = isTimedMode(mode)
+              ? scoreColor(best.score / target)
+              : scoreColor(accuracyRatio(best.score, target));
+          }
           a.appendChild(score);
           if (shouldShowBestTime(mode, best)) {
             const time = document.createElement('span');
@@ -234,7 +259,15 @@
 
           const chips = document.createElement('span');
           chips.className = 'stats-chips';
-          for (const mode of modes) chips.appendChild(modeChip(key, mode, variantPool.length));
+          const endless = isEndlessVariant(key);
+          for (const mode of modes) {
+            // Per-mode target, not the pool size. Those coincided while every
+            // mode played the whole pool ('all' targets it, '60s' can't exceed
+            // it), so passing the pool was right by accident. A fixed-count
+            // mode breaks the coincidence: a 20-question round would otherwise
+            // render "18/195" and tint against a denominator it never had.
+            chips.appendChild(modeChip(key, mode, targetFor(mode, variantPool), endless));
+          }
           li.appendChild(chips);
 
           statsEl.appendChild(li);

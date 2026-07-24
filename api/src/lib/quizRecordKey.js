@@ -32,14 +32,33 @@ const CONFIG_KEY_RE = /^[a-z0-9-]{1,20}:[a-z0-9-]{1,10}(:(sov|all))?$/;
 const CONFIG_KEY_MAX = 40;
 
 /**
+ * The mode tokens this module knows, split by the physics that bound them.
+ *
+ * This is the one place the server DOES enumerate — variants stay deliberately
+ * unenumerated (that's what lets a new deck ship without an API deploy), but a
+ * mode carries a scoring direction and a score ceiling that only the server can
+ * be trusted to decide. A client-side mode missing from these sets has its
+ * submissions rejected as `unknown_mode`, so shipping one is a two-repo change
+ * by design: loud beats silently ranking a leaderboard backwards.
+ *
+ *   timed — score is CORRECT answers, bounded by the clock. Higher wins.
+ *   count — score is MISTAKES over a fixed number of questions, bounded by the
+ *           pool. Lower wins. `all` runs until the pool is exhausted; `20q`
+ *           stops at 20, which is how the Statistics deck (whose pool is never
+ *           exhausted) gets an untimed mode at all.
+ */
+const TIMED_MODES = new Set(['60s']);
+const COUNT_MODES = new Set(['all', '20q']);
+
+/**
  * Derive `lowerWins` (the comparator direction) from a configKey's mode
  * segment. This is the server-trusted derivation: the leaderboard read
  * endpoint can't accept `lowerWins` from a query param without letting a
  * caller flip a competitor's ranking, so we re-derive from the configKey
  * the client already used to write.
  *
- *   '60s' (timed)      → false  // more correct wins
- *   'all' (endurance)  → true   // fewer mistakes wins
+ *   '60s' (timed)          → false  // more correct wins
+ *   'all' / '20q' (count)  → true   // fewer mistakes wins
  *
  * Returns `null` for any other mode token — defensive against a new mode
  * shipping client-side without this map being updated. The endpoint
@@ -56,8 +75,8 @@ function lowerWinsFromConfigKey(configKey) {
   const parts = String(configKey).split(':');
   if (parts.length !== 2 && parts.length !== 3) return null;
   const mode = parts[1];
-  if (mode === '60s') return false;
-  if (mode === 'all') return true;
+  if (TIMED_MODES.has(mode)) return false;
+  if (COUNT_MODES.has(mode)) return true;
   return null;
 }
 
@@ -95,8 +114,9 @@ const MAX_COUNT_MODE_SCORE = 250;
  *     through. Scales with the clock, so a round that ended early bounds
  *     lower, and a future timed mode with a different budget needs no change
  *     here.
- *   - `all` (count): runs for as long as it takes, so time says nothing.
- *     Bounded by the pool instead.
+ *   - `all` / `20q` (count): run for as long as they take, so time says
+ *     nothing — a player mulling over 20 questions for ten minutes is playing
+ *     normally. Bounded by the pool instead.
  *
  * @param {string} configKey
  * @param {number} durationMs
@@ -107,8 +127,8 @@ function maxScoreForConfigKey(configKey, durationMs) {
   if (parts.length !== 2 && parts.length !== 3) return null;
   if (typeof durationMs !== 'number' || !Number.isFinite(durationMs) || durationMs < 0) return null;
   const mode = parts[1];
-  if (mode === '60s') return Math.ceil((durationMs / 1000) * MAX_ANSWERS_PER_SECOND);
-  if (mode === 'all') return MAX_COUNT_MODE_SCORE;
+  if (TIMED_MODES.has(mode)) return Math.ceil((durationMs / 1000) * MAX_ANSWERS_PER_SECOND);
+  if (COUNT_MODES.has(mode)) return MAX_COUNT_MODE_SCORE;
   return null;
 }
 

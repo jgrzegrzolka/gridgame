@@ -323,8 +323,12 @@ test('createQuiz.addToCabinet — main queue served before cabinet', () => {
   assert.notEqual(next.answer, first.answer, 'cabinet waits for the main queue to drain');
 });
 
-test('MODES contains "60s" and "all" in that display order', () => {
-  assert.deepEqual(Object.keys(MODES), ['60s', 'all']);
+test('MODES key order is display order — chips and the mode toggle both render in it', () => {
+  // `20q` sits beside `all`, its fellow count mode. No deck offers both (it
+  // exists precisely because `all` can't work on Statistics), so their relative
+  // order never shows up on screen; grouping them keeps the timed/untimed split
+  // readable here.
+  assert.deepEqual(Object.keys(MODES), ['60s', 'all', '20q']);
 });
 
 test('MODES["60s"] is a 60-second budget with a 3-second-per-wrong penalty', () => {
@@ -391,6 +395,30 @@ test('formatBestScoreLabel: untimed clamps negative correct counts to 0 — prot
 
 test('formatBestScoreLabel: unknown mode falls back to "correct/target" — same shape as count mode, safer than throwing for stale localStorage entries', () => {
   assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '43/50');
+});
+
+test('formatBestScoreLabel: an endless deck in timed mode drops the denominator — 195 is a country count, not a question count', () => {
+  // The bug this pins: Statistics generates questions from metric x quartet, so
+  // its pool is the set of countries that can APPEAR, never a set you play
+  // through. Rendering "6/195" invited the reading "6 of 195 questions", which
+  // is a total that does not exist and can never be reached.
+  assert.equal(formatBestScoreLabel('60s', { score: 6 }, 195, 'facts'), '6');
+  assert.equal(formatBestScoreLabel('60s', { score: 0 }, 195, 'facts'), '0');
+});
+
+test('formatBestScoreLabel: a finite deck keeps its denominator in timed mode', () => {
+  // Same call, different deck: here the pool IS the question set, so "22 of the
+  // 195 flags" is an honest reading and the ceiling is worth showing.
+  assert.equal(formatBestScoreLabel('60s', { score: 22 }, 195, 'countries'), '22/195');
+  // Omitting the variant keeps the old two-argument behaviour.
+  assert.equal(formatBestScoreLabel('60s', { score: 22 }, 195), '22/195');
+});
+
+test('formatBestScoreLabel: an endless deck KEEPS the denominator in count mode — 20 really is the round length', () => {
+  // The suppression is about the pool, not the deck. A 20-question round has a
+  // genuine, reachable total, so "18/20" reads correctly even on Statistics.
+  assert.equal(formatBestScoreLabel('20q', { score: 2 }, 20, 'facts'), '18/20');
+  assert.equal(formatBestScoreLabel('20q', { score: 0 }, 20, 'facts'), '20/20');
 });
 
 // ---- mistakesAfterGiveUp ----
@@ -464,28 +492,45 @@ test('availableModes offers both 60s and all for any pool size — the timed mod
   assert.deepEqual(availableModes(0), ['60s', 'all']);
 });
 
-test('availableModes: a variant restricts to its declared modes — Facts is 60s-only', () => {
-  // The argument Phases 2 and 3 deferred. Facts has nothing to exhaust, so `all`
-  // would never end; the variant declares `modes: ['60s']` and this is where it
-  // takes effect.
-  assert.deepEqual(availableModes(195, 'facts'), ['60s']);
-  assert.deepEqual(availableModes(0, 'facts'), ['60s']);
+test('availableModes: a variant restricts to its declared modes — Statistics swaps `all` for a fixed count', () => {
+  // The argument Phases 2 and 3 deferred. Statistics has nothing to exhaust, so
+  // `all` would never end; the variant declares its own pair and this is where
+  // it takes effect. `20q` is the endurance substitute: a round that ends
+  // because you answered 20, not because the pool ran out.
+  assert.deepEqual(availableModes(195, 'facts'), ['60s', '20q']);
+  // Pool size never gates it — the deck generates questions, it doesn't deal
+  // them from the pool, so 20 questions are always available.
+  assert.deepEqual(availableModes(0, 'facts'), ['60s', '20q']);
 });
 
-test('availableModes: a variant with no modes declared offers all of them', () => {
+test('availableModes: `20q` stays off the flag decks — it is opt-in, not a third mode everywhere', () => {
+  // Without DEFAULT_MODES this is exactly what would regress: `20q` has
+  // count 20 <= every real pool, so an "absent means all of MODES" rule would
+  // silently grow a third chip on every row of the stats grid.
   assert.deepEqual(availableModes(195, 'countries'), ['60s', 'all']);
   assert.deepEqual(availableModes(54, 'weird'), ['60s', 'all']);
   assert.deepEqual(availableModes(157, 'outlines'), ['60s', 'all']);
 });
 
-test('availableModes: an unknown variant offers everything rather than silently narrowing', () => {
+test('availableModes: an unknown variant gets the default pair rather than every mode', () => {
   assert.deepEqual(availableModes(195, 'mars'), ['60s', 'all']);
 });
 
-test('defaultModeFor / resolveMode thread the variant through to Facts', () => {
+test('MODES: 20q is a count mode of exactly 20, and targetFor honours it against any pool', () => {
+  assert.equal(MODES['20q'].kind, 'count');
+  assert.equal(targetFor('20q', { length: 195 }), 20);
+  // Statistics never deals from the pool, but the clamp is what every other
+  // count mode gets, and a 20q round on a hypothetical 12-flag deck should ask
+  // 12 rather than promise 20 it cannot deliver.
+  assert.equal(targetFor('20q', { length: 12 }), 12);
+});
+
+test('defaultModeFor / resolveMode thread the variant through to Statistics', () => {
   assert.equal(defaultModeFor(195, 'facts'), '60s');
-  // `all` is not offered on Facts, so a ?n=all deep-link falls back to 60s.
+  // `all` is not offered on Statistics, so a ?n=all deep-link falls back to 60s.
   assert.equal(resolveMode('all', 195, 'facts'), '60s');
+  // ...but `20q` is offered, so that deep-link survives.
+  assert.equal(resolveMode('20q', 195, 'facts'), '20q');
   assert.equal(resolveMode('60s', 195, 'facts'), '60s');
   // Unchanged for a normal deck: the URL mode is honoured.
   assert.equal(resolveMode('all', 195, 'countries'), 'all');
