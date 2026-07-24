@@ -1957,15 +1957,38 @@ of them care whether a seat is human. Decisions:
   | Hard | ~90% | 1–3 s | punishes hesitation |
   Accuracy and delay are rolled **per question**, so a bot is never perfectly predictable, and a Hard
   bot still occasionally whiffs.
+
+  **Shipped 2026-07-24: the preset is only the starting point.** Three things move it, and they live in
+  `flags/partyBot.js`. The **mode** (`MODE_PROFILE`, keyed on the PARTY_MODES mode id — *not* the
+  question id, because flags-all and flags-weird are the same `flagPick` module over different pools):
+  | Mode | Easy | Medium | Hard |
+  |---|---|---|---|
+  | Spot the flag | 80% | 90% | 97% |
+  | Flags | 50% | 75% | 90% |
+  | Weird flags | 35% | 60% | 80% |
+  | Map outlines | 30% | 52% | 75% |
+
+  The **question**, for statistics rounds only, which have no fixed difficulty worth stating — a coffee
+  question between Brazil and Iceland is not the coffee question between Brazil and Vietnam. Accuracy
+  runs 40→75% (Easy), 60→92% (Medium), 78→99% (Hard) across `spreadGapOf`: how far the answer beats the
+  runner-up, over how far it beats the far end of the board. A **spread fraction, not the generator's
+  `GAP_RATIO`** — several metrics are index scores where a ratio is meaningless, and average temperature
+  goes negative, where a ratio is sign-flipped. And the **seat**: `PICKER_BONUS` (+8%, capped at 99%) on
+  the round a bot drafted itself, because a person picks the category they know and otherwise the pick
+  is the one thing at the table that means nothing to a bot. Only accuracy moves for any of the three —
+  spot-the-flag is still the only mode that touches the delay window.
 - **The brain is pure and tested.** `flags/partyBot.js`: `decideBuzz(question, skill, rng) -> {
   willAnswer, choice, delayMs }`. The exact "extract the testable logic into a `flags/*.js` sibling"
   shape the repo asks for — no DOM, no timers, injectable rng, so the accuracy distribution and the
   wrong-answer pick are unit-tested. The **server** owns the actual `setTimeout` (or a PartyKit alarm)
   that fires the buzz; the brain only says *what* and *when*, never *does* it.
-- **Skill is uniform across question types (MVP).** One skill value drives flags, outlines, and the
+- ~~**Skill is uniform across question types (MVP).** One skill value drives flags, outlines, and the
   superlative/metric rounds alike. A more human-textured bot — strong at flags, near-random at "Honey
   production" — is a real future refinement (per-category skill), noted and deferred so v1 stays one
-  dial.
+  dial.~~ **Superseded 2026-07-24** — the refinement landed; see the difficulty table above. What is
+  still uniform is the *seat*: one skill dial per bot, which the mode / question / picker layers bend.
+  Per-metric texture (good at population, hopeless at honey) is still deferred, and is now a smaller
+  step than it was — it would be one more layer on `buzzAccuracy`.
 - **The draft already covers a bot picker.** If a bot is in last place it becomes the round picker.
   `forcePick` already picks a random valid card from the hand for an idle picker, so the machinery
   exists; the clean version is the bot picking *itself* through the same path (a random valid card,
@@ -1991,8 +2014,10 @@ of them care whether a seat is human. Decisions:
 - [ ] `npm run validate` green + end-to-end in-browser (solo + bot: a race with a real first-correct
       bonus; a friends game with a bot; a bot as last-place picker).
 
-**Deferred:** per-category skill (human-textured bots); plausible-distractor wrong picks (vs a random
-other option); multiple bots as an explicit designed mode (the seat model allows it, but tune the UX);
+**Deferred:** ~~per-category skill (human-textured bots)~~ *(shipped 2026-07-24 — mode ladder, statistics
+gap, picker bonus; per-metric texture is what remains)*; plausible-distractor wrong picks (vs a random
+other option — on statistics rounds this would mean favouring rank 2, where the reveal already awards a
+near miss); multiple bots as an explicit designed mode (the seat model allows it, but tune the UX);
 bot personalities / names theming.
 
 ## Out of scope (don't sweep in)

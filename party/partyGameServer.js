@@ -155,7 +155,7 @@ export default class PartyGameServer {
    * Generate a question for an explicit question type + pool, independent of the
    * plan. Shared by {@link generateQuestion} (plan-driven) and the draft pick
    * path (mode-driven, where the round isn't in the plan yet). Stamps `questionId`,
-   * the veil `clearFrac`, and records the
+   * `modeId`, the veil `clearFrac`, and records the
    * answer as used.
    * @param {string} questionId
    * @param {string} poolId
@@ -172,7 +172,13 @@ export default class PartyGameServer {
     // / outline recognition is the whole point there). The metric name-reveal
     // needs no stamp: it fires at a fixed NAME_REVEAL_SECONDS, and whether a
     // question gets names at all is derivable client-side from its questionId.
-    return { ...q, questionId, clearFrac: rev[revealCategoryFor(questionId)] };
+    // `modeId` is what the bot's difficulty table keys on, and it carries the one
+    // thing `questionId` cannot: flags-all and flags-weird are the same flagPick
+    // module over different pools, and a territory flag is far harder than a
+    // sovereign one. Undefined for a (questionId, poolId) pair no catalog mode
+    // names — nothing generates one today, and the bot falls back to its base
+    // preset if one ever does.
+    return { ...q, questionId, modeId: modeIdForSegment({ questionId, poolId }), clearFrac: rev[revealCategoryFor(questionId)] };
   }
 
   async onStart() {
@@ -684,7 +690,14 @@ export default class PartyGameServer {
       if (this.room.buzzes.some((b) => b.playerId === pid)) continue;
       // `tricky` rides along so a veiled round delays the bot too — without it the
       // veil is a handicap on the humans alone and the speed bonus is unwinnable.
-      const { choice, delayMs } = decideBuzz(q, seat.skill ?? '', Math.random, { tricky: this.room.tricky === true });
+      // `picked` gives a bot the edge a picker has on the round they chose: a
+      // person drafts the category they know, so a seat that picked and then
+      // played the round exactly as it plays every other one is the only one for
+      // which the pick meant nothing.
+      const { choice, delayMs } = decideBuzz(q, seat.skill ?? '', Math.random, {
+        tricky: this.room.tricky === true,
+        picked: this.room.roundPicker === pid,
+      });
       this.botTimers.push(setTimeout(() => { this.botBuzz(pid, choice); }, delayMs));
     }
   }

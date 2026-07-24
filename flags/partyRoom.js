@@ -96,6 +96,14 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from '
  *   pick order — the no-repeat set the draft's picker selection reads.
  * @property {string | null} picker  during `picking`, the seat whose turn it is to
  *   choose the next round; null otherwise.
+ * @property {string | null} roundPicker  the seat whose pick the **live round**
+ *   is — set when a round starts and held for its whole five questions, where
+ *   `picker` is cleared the moment the choice is made. Read by the server so a bot
+ *   playing its own drafted round gets the picker's edge (`flags/partyBot.js`).
+ *   Deliberately not derived from `pickedBy`'s tail: the Decider sits outside the
+ *   rotation and never appends, so the tail names the wrong seat for exactly the
+ *   round where it matters most (double points). Null in a non-draft game, where
+ *   nobody picked anything.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from (server-dealt); null otherwise. Stored so a reconnect mid-pick
  *   sees the same hand.
@@ -170,6 +178,7 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     targetRounds: 0,
     pickedBy: [],
     picker: null,
+    roundPicker: null,
     hand: null,
     decider: false,
   };
@@ -297,6 +306,13 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
     // because the minimum simply moves up with them.
     pickedBy: draft ? [playerId] : [],
     picker: null,
+    // Round 1 is the host's pick (see `pickedBy` above and the `draftPick`
+    // attribution below), so the host owns it exactly as a drafting player owns
+    // theirs — including the picker's edge when the host is... never a bot, today.
+    // Set anyway rather than left null: "the seat whose pick this round is" has
+    // one answer here and encoding it now is what keeps the field honest if the
+    // first pick ever moves.
+    roundPicker: draft ? playerId : null,
     hand: null,
     decider: false,
   };
@@ -525,6 +541,10 @@ export function applyPick(room, pickerId, modeId, segment, question) {
     // number of times") the closing round was moved out of the rotation to keep.
     pickedBy: room.decider ? room.pickedBy : [...room.pickedBy, pickerId],
     picker: null,
+    // Unlike `pickedBy`, this IS set for the Decider: the question it answers is
+    // "whose round is this", not "who has spent a rotation slot", and the Decider
+    // is as much its picker's round as any other.
+    roundPicker: pickerId,
     hand: null,
     decider: false,
   };
@@ -562,6 +582,7 @@ function resetToLobby(room) {
     targetRounds: 0,
     pickedBy: [],
     picker: null,
+    roundPicker: null,
     hand: null,
     decider: false,
   };
@@ -1071,6 +1092,7 @@ export function serializeRoom(room) {
     targetRounds: room.targetRounds,
     pickedBy: room.pickedBy,
     picker: room.picker,
+    roundPicker: room.roundPicker,
     hand: room.hand,
     decider: room.decider,
   };
@@ -1104,6 +1126,10 @@ export function deserializeRoom(snapshot) {
     targetRounds: snapshot.targetRounds ?? 0,
     pickedBy: snapshot.pickedBy ?? [],
     picker: snapshot.picker ?? null,
+    // A snapshot from before this field existed reads as "nobody's round", so a
+    // bot mid-round loses the picker's edge across an eviction and gains nothing
+    // it shouldn't. The safe direction of the two.
+    roundPicker: snapshot.roundPicker ?? null,
     hand: snapshot.hand ?? null,
     decider: snapshot.decider ?? false,
   };

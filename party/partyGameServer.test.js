@@ -936,6 +936,54 @@ test('a bot re-added after a remove keeps a distinct name (no collision)', async
   assert.equal(new Set(names).size, names.length, 'names stay distinct across a remove-then-add');
 });
 
+test('every question the server deals is stamped with the mode it came from', async (t) => {
+  // The stamp the bot's difficulty table keys on. `questionId` cannot carry it:
+  // flags-all and flags-weird are the same flagPick module over different pools,
+  // and a territory flag is far harder for a person than a sovereign one.
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const conn = mockConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'setFirstPick', firstPick: 'flags-weird' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+  assert.equal(srv.room.question.questionId, 'flagPick', 'same question module as flags-all…');
+  assert.equal(srv.room.question.modeId, 'flags-weird', '…but the mode says which flags');
+});
+
+test("a bot plays the round it drafted a little better than anyone else's", async (t) => {
+  // The wiring this pins is one argument: the server passing `roundPicker === pid`
+  // into `decideBuzz` as `picked`. A person drafts the category they know, so a
+  // seat that picked and then played the round exactly as it plays every other one
+  // is the only one for which the pick meant nothing. The bonus maths itself is
+  // `flags/partyBot.test.js`.
+  //
+  // 0.55 sits between Easy's base accuracy (0.5) and its picked accuracy (0.58),
+  // so one roll gives two verdicts: a miss on someone else's round, a hit on its
+  // own. Mocked after the question is generated, so the draw stays ordinary.
+  /** @param {(botId: string) => string | null} pickerFor */
+  const correctnessWhenPickerIs = async (pickerFor) => {
+    const conn = mockConn('a');
+    const srv = new PartyGameServer(mockParty([conn]));
+    await srv.onStart();
+    await srv.onConnect(conn, ctxFor('alice'));
+    await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'easy' }), conn);
+    const botId = conn.last('roster').roster.find((/** @type {any} */ r) => r.bot).playerId;
+    await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+    t.mock.method(Math, 'random', () => 0.55);
+    srv.room.roundPicker = pickerFor(botId);
+    srv.scheduleBotBuzzes();
+    t.mock.timers.tick(20000); await settle();
+    t.mock.restoreAll();
+    const buzz = srv.room.buzzes.find((/** @type {any} */ b) => b.playerId === botId);
+    assert.ok(buzz, 'the bot buzzed');
+    return buzz.correct;
+  };
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  assert.equal(await correctnessWhenPickerIs(() => null), false, "not its round: the roll misses");
+  assert.equal(await correctnessWhenPickerIs((botId) => botId), true, 'its own round: the same roll lands');
+});
+
 test('a veiled round delays the bot too — the veil is not a handicap on humans alone', async (t) => {
   // The wiring this pins is one argument: the server passing `room.tricky` into
   // `decideBuzz`. Without it a Hard bot buzzed at 1-3 s against tiles that are not
