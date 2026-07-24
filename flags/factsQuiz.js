@@ -12,8 +12,9 @@
  * it. Facts has no such list. Each question picks a metric AND a quartet, so the
  * same country can headline several questions (Brazil for coffee, then for
  * area) and the space is metrics × quartets, not countries. That is also exactly
- * why the deck is 60s-only (`VARIANTS.facts.modes`): there is nothing to
- * exhaust, so an endurance run would never end.
+ * why the deck has no `all` mode (`VARIANTS.facts.modes`): there is nothing to
+ * exhaust, so an endurance run would never end. An untimed round is possible
+ * only by counting questions instead — see `limit`, which the `20q` mode sets.
  *
  * Questions are therefore generated **lazily**, one at a time, with a one-deep
  * lookahead so `peek()` can warm the next round's flags the way the flag decks'
@@ -77,9 +78,16 @@ function shuffle(arr, rng) {
  *   metrics: LoadedMetric[],
  *   pool: Country[],
  *   rng?: () => number,
+ *   limit?: number,
  * }} args  `pool` must be the sovereign pool — see `VARIANTS.facts`, the
  *   uninhabited-territory zeros make a wider pool answer "Least populous?" with
  *   Bouvet Island.
+ *
+ *   `limit` caps how many questions the round serves; `next()` returns null
+ *   after that, which is the only signal `flagQuiz/page.js` has for "the round
+ *   is over". Omit it for a timed round, where the clock does the stopping.
+ *   The `20q` mode passes 20 — without a cap that mode could not exist, since
+ *   an untimed round with nothing to exhaust never ends.
  * @returns {{
  *   total: number,
  *   next: () => FactsQuestion | null,
@@ -87,7 +95,7 @@ function shuffle(arr, rng) {
  *   addToCabinet: (answer: Country) => void,
  * }}
  */
-export function createFactsQuiz({ metrics, pool, rng = Math.random }) {
+export function createFactsQuiz({ metrics, pool, rng = Math.random, limit = Infinity }) {
   if (metrics.length === 0) throw new Error('createFactsQuiz: no metrics loaded');
   if (pool.length < 4) throw new Error(`createFactsQuiz: need at least 4 countries, got ${pool.length}`);
 
@@ -136,22 +144,28 @@ export function createFactsQuiz({ metrics, pool, rng = Math.random }) {
     };
   }
 
+  /** How many questions `next()` has handed out, against `limit`. */
+  let served = 0;
+
   /** @type {FactsQuestion | null} */
-  let lookahead = generate();
+  let lookahead = limit > 0 ? generate() : null;
 
   return {
-    // Not a question count — Facts has no end. The page uses `total` for the
-    // count-mode progress bar and the "cleared the pool" leaderboard check,
-    // neither of which 60s-only Facts reaches. It's the pool size so anything
-    // that does read it sees the honest number of countries in play.
-    total: pool.length,
+    // Bounded: the round length, which is what every other deck's `total`
+    // means. Unbounded: the pool size, the only honest number available — a
+    // timed round has no question count, so anything reading `total` there sees
+    // the countries in play rather than a made-up ceiling.
+    total: Number.isFinite(limit) ? limit : pool.length,
     next() {
       const q = lookahead;
       if (q) {
+        served++;
         recent.push(q.answer.code);
         while (recent.length > RECENT_ANSWERS) recent.shift();
       }
-      lookahead = generate();
+      // Generating past the limit would warm flags for a question that can
+      // never be rendered, so the lookahead stops with the round.
+      lookahead = served < limit ? generate() : null;
       return q;
     },
     peek() {

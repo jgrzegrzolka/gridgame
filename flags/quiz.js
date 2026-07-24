@@ -97,9 +97,14 @@ export function setQuizLastVariant(store, key) {
  *   keeps the common case quiet. Read via `artKindFor` / `artBaseFor`, never
  *   directly, so the fallback lives in one place.
  * @property {string[]} [modes] Which of `MODES` this variant offers. Absent
- *   means all of them, which is every deck but Facts. Declared here rather than
- *   decided at each call site, for the same reason `art` is: five places ask
- *   the question and they must not disagree. Read via `availableModes`.
+ *   means `DEFAULT_MODES` (60s + all), which is every deck but Statistics.
+ *   Declared here rather than decided at each call site, for the same reason
+ *   `art` is: five places ask the question and they must not disagree. Read via
+ *   `availableModes`.
+ * @property {boolean} [endless] The pool is the set of countries that can
+ *   appear, not a question set you play through. Absent means false. Only
+ *   Statistics sets it — it generates each question from a metric and a fresh
+ *   quartet. Read via `isEndlessVariant`, never directly.
  * @property {'country' | 'superlative'} [ask] What the prompt says. Absent means
  *   'country' — the deck names a country and you pick its flag. Facts asks a
  *   superlative instead ("Most forest cover?"), which is the first prompt on
@@ -331,11 +336,17 @@ export const VARIANTS = {
   // `art` stays 'flag' — the choices ARE four flags. What's new is `ask`: the
   // prompt is a criterion, not a country name.
   //
-  // **60s-only, and this is the one deck where that's forced rather than
+  // **No `all` mode, and this is the one deck where that's forced rather than
   // chosen.** Every other deck has a finite pool you can play through, so `all`
-  // means something. Facts has nothing to exhaust: each question draws a fresh
-  // metric and a fresh quartet, so an endurance run would never end. This is the
-  // rule Phases 2 and 3 deferred to here, and `modes` is where it lands.
+  // means something. Statistics has nothing to exhaust: each question draws a
+  // fresh metric and a fresh quartet, so an endurance run would never end. This
+  // is the rule Phases 2 and 3 deferred to here, and `modes` is where it lands.
+  //
+  // `20q` is the replacement rather than a second timed mode: the thing `all`
+  // offered was a round with no clock, and a fixed question count delivers that
+  // without needing a pool to run dry. `endless: true` is the same fact stated
+  // for the two readers that can't infer it from `modes` — see
+  // `isEndlessVariant`.
   //
   // **The pool is sovereign, and that is load-bearing, not a default.** Four
   // metrics carry a real 0 for uninhabited territories (population, density,
@@ -345,9 +356,10 @@ export const VARIANTS = {
   // an unanswerable question wearing a correct answer. Flag Party avoids it by
   // dealing `poolId: 'sovereign'`; this is the same choice, made explicitly.
   facts: {
-    label: 'Facts',
+    label: 'Statistics',
     filter: isSovereignFlag,
-    modes: ['60s'],
+    modes: ['60s', '20q'],
+    endless: true,
     ask: 'superlative',
   },
 };
@@ -437,12 +449,32 @@ export function poolFor(variantKey, countries) {
  * `all` is the original endurance mode: play through every flag in the
  * pool. Score is the percentage correct.
  *
+ * `20q` is endurance for a deck whose pool is not a question set. It ends
+ * after a fixed 20 questions rather than when the pool runs dry, which is what
+ * makes an untimed round possible on Statistics at all (see `endless` on
+ * `VARIANTS.facts`). Scored like `all` — one shot per question, so the stored
+ * score is a mistake count.
+ *
  * @type {Record<string, Mode>}
  */
 export const MODES = {
   '60s': { kind: 'timed', budgetMs: 60_000, penaltyMs: 4_000 },
   all: { kind: 'count', count: Infinity },
+  '20q': { kind: 'count', count: 20 },
 };
+
+/**
+ * What a variant offers when it declares no `modes` of its own: the original
+ * pair, which is every flag deck.
+ *
+ * This is why `20q` doesn't appear site-wide the moment it joins `MODES`.
+ * "Absent means all of MODES" was fine while MODES held exactly the two modes
+ * every deck wanted; the first opt-in mode breaks that, because `20q`'s count
+ * clears every real pool size and would grow a third chip on every stats row.
+ * Opt-in is also the honest default: a new mode is a per-deck design decision,
+ * not something a deck inherits by existing.
+ */
+const DEFAULT_MODES = ['60s', 'all'];
 
 /**
  * @param {string} modeKey
@@ -508,13 +540,25 @@ export function shouldShowBestTime(modeKey, best) {
  *     era (where wrongCount could exceed the pool size) from rendering
  *     as negative.
  *
+ * On an endless deck a timed score has no denominator: `target` is the country
+ * pool, and rendering "6/195" reads as "6 of 195 questions" — a total that
+ * doesn't exist and can't be reached. The bare score is the whole truth there,
+ * and matches what the result screen already shows. Count modes still carry
+ * their denominator on those decks, because a 20-question round genuinely has
+ * 20 questions in it.
+ *
  * @param {string} modeKey
  * @param {{ score: number }} best
  * @param {number} target
+ * @param {string} [variantKey] omit where no variant is in play; a deck that
+ *   can't be identified is treated as finite, the pre-existing behaviour.
  * @returns {string}
  */
-export function formatBestScoreLabel(modeKey, best, target) {
-  if (isTimedMode(modeKey)) return `${best.score}/${target}`;
+export function formatBestScoreLabel(modeKey, best, target, variantKey) {
+  if (isTimedMode(modeKey)) {
+    if (isEndlessVariant(variantKey)) return `${best.score}`;
+    return `${best.score}/${target}`;
+  }
   return `${Math.max(0, target - best.score)}/${target}`;
 }
 
@@ -570,8 +614,9 @@ export function mistakesAfterGiveUp({ modeKey, target, answeredCount, wrongCount
  * about. The variant declares it (`VARIANTS.facts.modes`) rather than this
  * function knowing deck names, so the next such deck is a data change.
  *
- * An unknown variant offers every mode: a stale `?v=` is already going to fall
- * back elsewhere, and silently narrowing its modes would be a second surprise.
+ * An unknown variant gets `DEFAULT_MODES`: a stale `?v=` is already going to
+ * fall back elsewhere, and the default pair is what it would have rendered
+ * before any opt-in mode existed.
  *
  * @param {number} poolSize
  * @param {string} [variantKey] omit only where no variant is in play; every real
@@ -580,13 +625,38 @@ export function mistakesAfterGiveUp({ modeKey, target, answeredCount, wrongCount
  */
 export function availableModes(poolSize, variantKey) {
   const variant = variantKey === undefined ? undefined : VARIANTS[variantKey];
-  const offered = variant && variant.modes;
+  const offered = (variant && variant.modes) || DEFAULT_MODES;
   return Object.keys(MODES).filter((m) => {
-    if (offered && !offered.includes(m)) return false;
+    if (!offered.includes(m)) return false;
     const def = MODES[m];
     if (def.kind === 'timed') return true;
-    return def.count === Infinity || def.count <= poolSize;
+    if (def.count === Infinity) return true;
+    // A fixed-count mode needs enough questions to fill the round. An endless
+    // deck generates them rather than dealing them, so its pool size says
+    // nothing about how many questions it can produce — the gate would reject
+    // a round it can serve perfectly well.
+    return isEndlessVariant(variantKey) || def.count <= poolSize;
   });
+}
+
+/**
+ * Does this variant's pool stand in for its question set?
+ *
+ * False for every flag deck: the pool IS the questions, so "how many are
+ * there" has an answer and a round can exhaust it. True for Statistics, which
+ * draws a metric and a fresh quartet per question — the pool is only the set of
+ * countries eligible to APPEAR, and no amount of play uses it up.
+ *
+ * Two things read this, and both were bugs before it existed: `availableModes`
+ * (a count mode must not be gated on a pool it doesn't deal from) and
+ * `formatBestScoreLabel` (a timed score has no denominator to render).
+ *
+ * @param {string} [variantKey]
+ * @returns {boolean}
+ */
+export function isEndlessVariant(variantKey) {
+  const variant = variantKey === undefined ? undefined : VARIANTS[variantKey];
+  return Boolean(variant && variant.endless);
 }
 
 /**

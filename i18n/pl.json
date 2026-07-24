@@ -410,7 +410,8 @@
     "play": "Zagraj",
     "mode": {
       "60s": "60s",
-      "all": "wszystkie"
+      "all": "wszystkie",
+      "20q": "20 pytań"
     },
     "leaderboard": {
       "title": "Top 10: 7 dni",
@@ -767,7 +768,7 @@
     "oceania": "Oceania",
     "weird": "Dziwne flagi",
     "outlines": "Kształty",
-    "facts": "Fakty"
+    "facts": "Statystyki"
   },
   "color": {
     "red": "czerwony",
@@ -1808,6 +1809,6 @@
     "flags": "Flagi",
     "weird": "Dziwne",
     "outlines": "Kształty",
-    "facts": "Fakty"
+    "facts": "Statystyki"
   }
 }

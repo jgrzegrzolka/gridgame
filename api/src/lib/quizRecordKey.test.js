@@ -1,7 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { CONFIG_KEY_RE, CONFIG_KEY_MAX, lowerWinsFromConfigKey, maxScoreForConfigKey } = require('./quizRecordKey');
+const {
+  CONFIG_KEY_RE,
+  CONFIG_KEY_MAX,
+  lowerWinsFromConfigKey,
+  maxScoreForConfigKey,
+  MAX_COUNT_MODE_SCORE,
+} = require('./quizRecordKey');
 
 test('still accepts every legacy 3-part combo (cached clients keep sending these)', () => {
   const variants = ['countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania'];
@@ -84,6 +90,25 @@ test('lowerWinsFromConfigKey: 2-part keys derive from the same mode segment', ()
 
 test('lowerWinsFromConfigKey: unknown mode → null in the 2-part shape too', () => {
   assert.equal(lowerWinsFromConfigKey('countries:newmode'), null);
+});
+
+// The Statistics deck's fixed-count mode. This module enumerates MODES even
+// though it deliberately doesn't enumerate variants, so a client-side mode that
+// never lands here has its submissions rejected as `unknown_mode` — which is
+// the guard working, but it means shipping a mode is a two-repo change.
+test('lowerWinsFromConfigKey: 20q is a count mode → true (fewer mistakes wins)', () => {
+  assert.equal(lowerWinsFromConfigKey('facts:20q'), true);
+});
+
+test('maxScoreForConfigKey: 20q is bounded by the pool, not the clock — an untimed round can run as long as it likes', () => {
+  assert.equal(maxScoreForConfigKey('facts:20q', 30_000), MAX_COUNT_MODE_SCORE);
+  // Duration must not shrink the bound the way it does for 60s: a player who
+  // takes ten minutes over 20 questions is playing normally, not cheating.
+  assert.equal(maxScoreForConfigKey('facts:20q', 600_000), MAX_COUNT_MODE_SCORE);
+});
+
+test('CONFIG_KEY_RE accepts the 20q mode segment', () => {
+  assert.ok(CONFIG_KEY_RE.test('facts:20q'));
 });
 
 test('lowerWinsFromConfigKey: malformed key → null', () => {
