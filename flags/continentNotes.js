@@ -1,7 +1,7 @@
 /**
  * Continent-classification zoom captions for the daily result screen.
  *
- * Pure logic: no DOM, no fetch. Same shape and purpose as `populationRank.js`
+ * Pure logic: no DOM, no fetch. Same shape and purpose as `superlativeRank.js`
  * (a global per-flag fact installed via `setZoomNotes`), but for the handful of
  * flags whose continent a player commonly disagrees with. In a continent puzzle
  * ("European flags with a cross") a player clicks Georgia (its flag has five

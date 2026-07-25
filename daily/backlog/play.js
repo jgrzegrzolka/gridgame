@@ -3,7 +3,12 @@ import { buildAnswerPool } from '../answerPool.js';
 import { filterToCategory } from '../../flags/findFlag.js';
 import { t } from '../../i18n.js';
 import { findPuzzle, resolvePuzzleEntry, manualToCategory, superlativeToCategory } from '../../flags/daily.js';
-import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../../flags/populationRank.js';
+import {
+  buildPopulationRankNotes,
+  buildMetricRankNotes,
+  buildSuperlativeTileMeta,
+  metricFileFor,
+} from '../../flags/superlativeRank.js';
 import {
   wireZoom,
   showState,
@@ -76,20 +81,25 @@ export function bootBacklogPlay() {
       setZoomNotes(result.entry.notes);
       setTileMeta(null);
 
-      // Mirror daily/page.js: for a population superlative, the one metric
+      // Mirror daily/page.js: for a superlative on ANY metric, the one metric
       // fetch feeds both result-screen enrichments so the backlog preview
-      // renders identically to live — whole-pool population + world-rank zoom
+      // renders identically to live — whole-pool figure + world-rank zoom
       // captions (so even "Most missed" distractors read "#15 in the world")
-      // and the per-tile rank + population overlay on the Found / Missed grids.
+      // and the per-tile rank + value overlay on the Found / Missed grids.
       // Best-effort: the play-through finishes long after this resolves, so it
       // never needs awaiting here.
-      if (result.entry.kind === 'superlative' && result.entry.metric === 'population') {
-        fetch('../../flags/metrics/population.json')
+      const metricFile = metricFileFor(result.entry);
+      if (metricFile) {
+        fetch(`../../flags/metrics/${metricFile}`)
           .then((r) => r.json())
           .then((d) => {
             const values = d.values ?? {};
-            setZoomNotes(buildPopulationRankNotes(all, values));
-            setTileMeta(buildSuperlativeTileMeta(result.entry, values));
+            setZoomNotes(
+              result.entry.metric === 'population'
+                ? buildPopulationRankNotes(all, values)
+                : buildMetricRankNotes(all, values, d, result.entry.notes),
+            );
+            setTileMeta(buildSuperlativeTileMeta(result.entry, values, d));
           })
           .catch(() => {});
       }

@@ -10,6 +10,7 @@ import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
 import { auditPuzzle } from './ambiguityAudit.js';
 import { validateCatalog } from './dailyValidate.js';
+import { metricFileFor, buildSuperlativeTileMeta } from './superlativeRank.js';
 
 /** @typedef {import('./group.js').Country} Country */
 /** @typedef {import('./daily.js').DailyPuzzle} DailyPuzzle */
@@ -1149,6 +1150,61 @@ test('no idea has a flag-data ambiguity violation', () => {
       0,
       `IDEA (${entry.filter}) has ambiguity violations:\n` +
         violations.map((v) => `  [${v.kind}] ${v.country}: ${v.detail}`).join('\n'),
+    );
+  }
+});
+
+test('every superlative in the catalog can render its rank badges', () => {
+  // Puzzle #51 ("the 10 largest countries by area", 2026-07-26) shipped with no
+  // 1-2-3 numbering at all: the result screen gated the badge on
+  // `metric === 'population'`, and #51 was the first non-population superlative
+  // to go live. The numbering IS the mechanic of a superlative, so this walks
+  // every entry — released and future-dated — and asserts the whole chain the
+  // page walks at play time: the metric resolves to a real data file, and every
+  // frozen answer gets a rank plus a rendered figure in both languages.
+  //
+  // 24 of the ~36 scheduled superlatives after #51 are area / density. Without
+  // this, each new metric is a fresh chance to ship a numberless ranking.
+  for (const entry of PUZZLES) {
+    if (entry.kind !== 'superlative') continue;
+    const file = metricFileFor(entry);
+    assert.ok(
+      file,
+      `#${entry.n} (${entry.date}): metric "${entry.metric}" is not in METRIC_FILES — ` +
+        'the result screen cannot fetch it, so the puzzle would render without rank badges',
+    );
+    const data = JSON.parse(readFileSync(join(HERE, 'metrics', /** @type {string} */ (file)), 'utf-8'));
+    const values = data.values ?? {};
+    const meta = buildSuperlativeTileMeta(entry, values, data);
+    (entry.answers ?? []).forEach((code, i) => {
+      const cell = meta.get(code);
+      assert.equal(cell?.rank, i + 1, `#${entry.n}: ${code} must badge as #${i + 1}`);
+      assert.ok(
+        cell?.display?.en && cell?.display?.pl,
+        `#${entry.n}: ${code} has no ${entry.metric} value — its tile pill would be blank`,
+      );
+    });
+  }
+});
+
+test('the daily result screen fetches a superlative metric by registry, not by name', () => {
+  // The exact shape of the #51 bug: `daily/page.js` hardcoded
+  // `fetch('../flags/metrics/population.json')` behind a
+  // `metric === 'population'` gate, so every other metric got no rank badges.
+  // `metricFileFor(entry)` is the fix; pinning it here means re-hardcoding a
+  // single metric's file fails the suite instead of shipping a numberless
+  // ranking. (These pages are DOM glue with no unit tests of their own — this
+  // is the cheapest real guard.)
+  for (const rel of ['../daily/page.js', '../daily/backlog/play.js']) {
+    const src = readFileSync(join(HERE, rel), 'utf-8');
+    assert.ok(
+      src.includes('metricFileFor('),
+      `${rel} must resolve a superlative's metric file via metricFileFor()`,
+    );
+    assert.doesNotMatch(
+      src,
+      /metrics\/[a-zA-Z]+\.json/,
+      `${rel} must not hardcode one metric's data file — that is how #51 lost its rank badges`,
     );
   }
 });
