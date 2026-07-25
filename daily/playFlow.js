@@ -34,7 +34,6 @@ import { saveProgress, clearProgress } from './progress.js';
 import { renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
 import { resolveNote } from '../flags/daily.js';
-import { formatPopulationShort } from '../flags/populationRank.js';
 import { wireFlagLightbox } from '../flags/flagLightbox.js';
 import { t, countryName } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
@@ -224,25 +223,25 @@ export function setZoomNotes(notes) {
 }
 
 /**
- * Per-tile rank + population overlay for the active puzzle's RESULT grids,
+ * Per-tile rank + value overlay for the active puzzle's RESULT grids,
  * keyed by country code. Set once per puzzle from the page boot flow (only the
- * daily page, only for population superlatives); read by `flagTile` when it
- * renders a result tile with `showMeta`. Module-scope for the same reason as
- * `zoomNotes` — `flagTile` is called deep inside `renderResult` and only ever
- * paints one puzzle's flags at a time. `null` on every other page / puzzle, so
- * tiles render exactly as before.
+ * daily + backlog pages, for a superlative on any metric); read by `flagTile`
+ * when it renders a result tile with `showMeta`. Module-scope for the same
+ * reason as `zoomNotes` — `flagTile` is called deep inside `renderResult` and
+ * only ever paints one puzzle's flags at a time. `null` on every other page /
+ * puzzle, so tiles render exactly as before.
  *
- * @type {Map<string, { rank: number, pop: number | null }> | null}
+ * @type {Map<string, { rank: number, value: number | null, display: { en: string, pl: string } | null }> | null}
  */
 let tileMeta = null;
 
 /**
- * Install (or clear, with `null`) the active puzzle's per-tile rank/population
+ * Install (or clear, with `null`) the active puzzle's per-tile rank/value
  * overlay. Only the result grids read it, and only when `flagTile` is asked for
  * meta — the in-game found grid never shows it, so rank stays hidden while the
  * player is still guessing.
  *
- * @param {Map<string, { rank: number, pop: number | null }> | null | undefined} meta
+ * @param {Map<string, { rank: number, value: number | null, display: { en: string, pl: string } | null }> | null | undefined} meta
  */
 export function setTileMeta(meta) {
   tileMeta = meta ?? null;
@@ -369,8 +368,8 @@ export function wireZoom() {
  * Build one tile in either the in-progress "found" list or the result
  * "found/missed" lists. Click opens the zoom dialog.
  *
- * `showMeta` opts the tile into the rank + population overlay (`tileMeta`):
- * a rank badge in the top-left corner and a compact population pill in the
+ * `showMeta` opts the tile into the rank + value overlay (`tileMeta`):
+ * a rank badge in the top-left corner and a compact metric-value pill in the
  * top-right, leaving the bottom strip free for the community find-rate
  * (`.find-stats-pct`). Only the result grids pass `true` — the in-game found
  * grid never does, so a correct guess doesn't leak its rank mid-play.
@@ -402,11 +401,15 @@ function flagTile(c, showMeta = false) {
       rank.className = 'find-tile-rank';
       rank.textContent = `#${m.rank}`;
       li.appendChild(rank);
-      if (typeof m.pop === 'number') {
-        const pop = document.createElement('span');
-        pop.className = 'find-tile-pop';
-        pop.textContent = formatPopulationShort(m.pop, document.documentElement.lang || 'en');
-        li.appendChild(pop);
+      // Pre-formatted per language upstream (buildSuperlativeTileMeta) — this
+      // glue picks a string, it never formats one, so a new metric needs no
+      // change here.
+      if (m.display) {
+        const lang = document.documentElement.lang || 'en';
+        const value = document.createElement('span');
+        value.className = 'find-tile-metric';
+        value.textContent = m.display[lang] ?? m.display.en;
+        li.appendChild(value);
       }
     }
   }
@@ -739,8 +742,8 @@ export function startGame(n, category, targets, all, opts = {}) {
 
   /** @param {Country} c */
   function appendFound(c) {
-    // `showMeta: true` so a correct guess on a population superlative slots in
-    // with its rank + population pills right away — the player watches the
+    // `showMeta: true` so a correct guess on a superlative slots in
+    // with its rank + value pills right away — the player watches the
     // ranked list fill as they play. `tileMeta` is null on every non-superlative
     // puzzle, so those found tiles stay bare flags (flagTile no-ops the overlay).
     foundEl.insertBefore(flagTile(c, true), foundEl.firstChild);

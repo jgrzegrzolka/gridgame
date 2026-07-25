@@ -7,7 +7,12 @@ import { visiblePuzzles } from '../flags/puzzleFilter.js';
 import { loadScores, isCompleteRecord, migrateScores, livesFromRecord } from './scores.js';
 import { loadProgress } from './progress.js';
 import { filterToCategory } from '../flags/findFlag.js';
-import { buildPopulationRankNotes, buildSuperlativeTileMeta } from '../flags/populationRank.js';
+import {
+  buildPopulationRankNotes,
+  buildMetricRankNotes,
+  buildSuperlativeTileMeta,
+  metricFileFor,
+} from '../flags/superlativeRank.js';
 import { buildContinentNotes, mergeNotes } from '../flags/continentNotes.js';
 import {
   wireZoom,
@@ -740,31 +745,40 @@ export async function bootDaily() {
       setZoomNotes(mergeNotes(result.entry.notes, buildContinentNotes(result.entry)));
       setTileMeta(null);
 
-      // Population superlatives: one metric fetch feeds two enrichments of the
-      // result screen —
-      //   1. zoom captions across the WHOLE sovereign pool (population + world
+      // Superlatives: one metric fetch feeds two enrichments of the result
+      // screen —
+      //   1. zoom captions across the WHOLE sovereign pool (figure + world
       //      rank), so even the "Most missed" distractor tiles say "#15 in the
       //      world", not just a bare name (vs. baked `entry.notes`, which only
       //      cover the frozen answers);
-      //   2. a per-tile overlay (in-puzzle rank badge + population pill) on the
+      //   2. a per-tile overlay (in-puzzle rank badge + value pill) on the
       //      Found / Missed grids.
+      // `metricFileFor` resolves ANY superlative's metric against the shared
+      // registry — this used to read `metric === 'population'`, which is why
+      // #51 ("the 10 largest countries by area") shipped with no rank numbers.
       // Best-effort: `popReady` gates only the revisit path's immediate render
       // so the badges are present first paint. The play path finishes long
       // after this resolves, so it never blocks on the fetch. On failure the
       // baked zoom notes stand and the tiles render without the overlay.
       let popReady = Promise.resolve();
-      if (result.entry.kind === 'superlative' && result.entry.metric === 'population') {
-        popReady = fetch('../flags/metrics/population.json')
+      const metricFile = metricFileFor(result.entry);
+      if (metricFile) {
+        popReady = fetch(`../flags/metrics/${metricFile}`)
           .then((r) => r.json())
           .then((d) => {
             const values = d.values ?? {};
-            // Population figure first, then the continent note where both apply
+            // Metric figure first, then the continent note where both apply
             // (e.g. Russia in "most populous Asia" shows its world rank AND why
             // it isn't on the list). Off continent scope the second map is {}.
-            setZoomNotes(
-              mergeNotes(buildPopulationRankNotes(all, values), buildContinentNotes(result.entry)),
-            );
-            setTileMeta(buildSuperlativeTileMeta(result.entry, values));
+            // Population phrases its own captions ("129.7 million"); every other
+            // metric prefixes the puzzle's baked note (or a formatted figure for
+            // an unbaked distractor) and appends the same rank.
+            const notes =
+              result.entry.metric === 'population'
+                ? buildPopulationRankNotes(all, values)
+                : buildMetricRankNotes(all, values, d, result.entry.notes);
+            setZoomNotes(mergeNotes(notes, buildContinentNotes(result.entry)));
+            setTileMeta(buildSuperlativeTileMeta(result.entry, values, d));
           })
           .catch(() => {});
       }
