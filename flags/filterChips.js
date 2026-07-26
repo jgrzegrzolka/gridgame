@@ -42,6 +42,13 @@ import { makeColorSwatch } from '../common.js';
  * flag can't be built from the brand tokens). Sized / placed by
  * `.find-cat .crit-flag`; unlike the old line glyph it does NOT tint with the
  * text, so that CSS drops the opacity fade the mono mark relied on.
+ *
+ * SAME MARK AS `flags/glyphFlag.svg`, which is the flags deck's icon in flagQuiz
+ * and Flag Party — edit both or neither. Two files because they are framed
+ * differently: this one is padded inside a square viewBox so it sits beside the
+ * square motif icons in a text row, the asset is edge-to-edge so it fills an icon
+ * slot that crops with `object-fit`. `flags/deckIcons.test.js` pins the hues and
+ * the shape count so the two can't drift apart.
  */
 const FLAG_GLYPH =
   '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="1.8" fill="#2a9d8f"/><rect x="7.6" y="4" width="3" height="16" fill="#f4efe6"/><rect x="2" y="10.5" width="20" height="3" fill="#f4efe6"/></svg>';

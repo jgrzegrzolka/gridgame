@@ -15,9 +15,15 @@
  * it back off.
  *
  * The set is deliberately a matched quartet:
- *   flags     — a real country flag. France: a clean tricolour that still
- *               reads as "a flag" at 20px. Nothing keys off which country;
- *               swap the code to re-pick.
+ *   flags     — the invented generic flag (`glyphFlag.svg`): a Nordic cross
+ *               offset to the hoist, flown by no country. This was France's
+ *               tricolour until it wasn't: a real flag here quietly claims that
+ *               one country represents the deck, and at 20px players read it as
+ *               "the France round" rather than "the flags round". The invented
+ *               mark says "a flag" without naming one — the same argument
+ *               `weird` makes below, and the same mark `filterChips.js` already
+ *               draws for "this criterion is about the flag's design", so one
+ *               picture now means "flag" site-wide.
  *   weird     — the Jolly Roger. A flag with no country, and unmistakably not
  *               a specific one, which is exactly why it works as a symbol FOR
  *               the non-sovereign pool rather than a sample FROM it. (The
@@ -50,7 +56,7 @@ export const DECK_ICON_IDS = /** @type {const} */ (['flags', 'weird', 'outlines'
  * @type {Record<string, string>}
  */
 const ASSET_ICONS = {
-  flags: 'flags/svg/fr.svg',
+  flags: 'flags/glyphFlag.svg',
   outlines: 'flags/contours/it.svg',
 };
 
