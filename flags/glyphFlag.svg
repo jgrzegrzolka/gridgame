@@ -1,0 +1,14 @@
+<svg viewBox="0 0 20 16" xmlns="http://www.w3.org/2000/svg">
+  <!-- The invented generic flag: a Nordic cross offset to the hoist, flown by no
+       country, so it reads "a flag" without standing in for a specific one.
+
+       Same mark as FLAG_GLYPH in flags/filterChips.js — edit both or neither.
+       That copy is framed square (a 24x24 viewBox with this rectangle padded
+       inside it) because it sits inline in a text row beside the square motif
+       icons; this one is edge-to-edge because it fills an icon slot that crops
+       with object-fit. Same artwork, two framings; the shared hues are pinned by
+       flags/deckIcons.test.js. -->
+  <rect width="20" height="16" fill="#2a9d8f"/>
+  <rect x="5.6" width="3" height="16" fill="#f4efe6"/>
+  <rect y="6.5" width="20" height="3" fill="#f4efe6"/>
+</svg>
