@@ -342,7 +342,7 @@ export const VARIANTS = {
   // fresh metric and a fresh quartet, so an endurance run would never end. This
   // is the rule Phases 2 and 3 deferred to here, and `modes` is where it lands.
   //
-  // `20q` is the replacement rather than a second timed mode: the thing `all`
+  // `10q` is the replacement rather than a second timed mode: the thing `all`
   // offered was a round with no clock, and a fixed question count delivers that
   // without needing a pool to run dry. `endless: true` is the same fact stated
   // for the two readers that can't infer it from `modes` — see
@@ -358,7 +358,7 @@ export const VARIANTS = {
   facts: {
     label: 'Statistics',
     filter: isSovereignFlag,
-    modes: ['60s', '20q'],
+    modes: ['60s', '10q'],
     endless: true,
     ask: 'superlative',
   },
@@ -449,8 +449,8 @@ export function poolFor(variantKey, countries) {
  * `all` is the original endurance mode: play through every flag in the
  * pool. Score is the percentage correct.
  *
- * `20q` is endurance for a deck whose pool is not a question set. It ends
- * after a fixed 20 questions rather than when the pool runs dry, which is what
+ * `10q` is endurance for a deck whose pool is not a question set. It ends
+ * after a fixed 10 questions rather than when the pool runs dry, which is what
  * makes an untimed round possible on Statistics at all (see `endless` on
  * `VARIANTS.facts`). Scored like `all` — one shot per question, so the stored
  * score is a mistake count.
@@ -460,16 +460,16 @@ export function poolFor(variantKey, countries) {
 export const MODES = {
   '60s': { kind: 'timed', budgetMs: 60_000, penaltyMs: 4_000 },
   all: { kind: 'count', count: Infinity },
-  '20q': { kind: 'count', count: 20 },
+  '10q': { kind: 'count', count: 10 },
 };
 
 /**
  * What a variant offers when it declares no `modes` of its own: the original
  * pair, which is every flag deck.
  *
- * This is why `20q` doesn't appear site-wide the moment it joins `MODES`.
+ * This is why `10q` doesn't appear site-wide the moment it joins `MODES`.
  * "Absent means all of MODES" was fine while MODES held exactly the two modes
- * every deck wanted; the first opt-in mode breaks that, because `20q`'s count
+ * every deck wanted; the first opt-in mode breaks that, because `10q`'s count
  * clears every real pool size and would grow a third chip on every stats row.
  * Opt-in is also the honest default: a new mode is a per-deck design decision,
  * not something a deck inherits by existing.

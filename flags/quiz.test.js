@@ -324,11 +324,11 @@ test('createQuiz.addToCabinet — main queue served before cabinet', () => {
 });
 
 test('MODES key order is display order — chips and the mode toggle both render in it', () => {
-  // `20q` sits beside `all`, its fellow count mode. No deck offers both (it
+  // `10q` sits beside `all`, its fellow count mode. No deck offers both (it
   // exists precisely because `all` can't work on Statistics), so their relative
   // order never shows up on screen; grouping them keeps the timed/untimed split
   // readable here.
-  assert.deepEqual(Object.keys(MODES), ['60s', 'all', '20q']);
+  assert.deepEqual(Object.keys(MODES), ['60s', 'all', '10q']);
 });
 
 test('MODES["60s"] is a 60-second budget with a 3-second-per-wrong penalty', () => {
@@ -414,11 +414,11 @@ test('formatBestScoreLabel: a finite deck keeps its denominator in timed mode', 
   assert.equal(formatBestScoreLabel('60s', { score: 22 }, 195), '22/195');
 });
 
-test('formatBestScoreLabel: an endless deck KEEPS the denominator in count mode — 20 really is the round length', () => {
-  // The suppression is about the pool, not the deck. A 20-question round has a
-  // genuine, reachable total, so "18/20" reads correctly even on Statistics.
-  assert.equal(formatBestScoreLabel('20q', { score: 2 }, 20, 'facts'), '18/20');
-  assert.equal(formatBestScoreLabel('20q', { score: 0 }, 20, 'facts'), '20/20');
+test('formatBestScoreLabel: an endless deck KEEPS the denominator in count mode — 10 really is the round length', () => {
+  // The suppression is about the pool, not the deck. A 10-question round has a
+  // genuine, reachable total, so "8/10" reads correctly even on Statistics.
+  assert.equal(formatBestScoreLabel('10q', { score: 2 }, 10, 'facts'), '8/10');
+  assert.equal(formatBestScoreLabel('10q', { score: 0 }, 10, 'facts'), '10/10');
 });
 
 // ---- mistakesAfterGiveUp ----
@@ -495,17 +495,17 @@ test('availableModes offers both 60s and all for any pool size — the timed mod
 test('availableModes: a variant restricts to its declared modes — Statistics swaps `all` for a fixed count', () => {
   // The argument Phases 2 and 3 deferred. Statistics has nothing to exhaust, so
   // `all` would never end; the variant declares its own pair and this is where
-  // it takes effect. `20q` is the endurance substitute: a round that ends
-  // because you answered 20, not because the pool ran out.
-  assert.deepEqual(availableModes(195, 'facts'), ['60s', '20q']);
+  // it takes effect. `10q` is the endurance substitute: a round that ends
+  // because you answered 10, not because the pool ran out.
+  assert.deepEqual(availableModes(195, 'facts'), ['60s', '10q']);
   // Pool size never gates it — the deck generates questions, it doesn't deal
-  // them from the pool, so 20 questions are always available.
-  assert.deepEqual(availableModes(0, 'facts'), ['60s', '20q']);
+  // them from the pool, so 10 questions are always available.
+  assert.deepEqual(availableModes(0, 'facts'), ['60s', '10q']);
 });
 
-test('availableModes: `20q` stays off the flag decks — it is opt-in, not a third mode everywhere', () => {
-  // Without DEFAULT_MODES this is exactly what would regress: `20q` has
-  // count 20 <= every real pool, so an "absent means all of MODES" rule would
+test('availableModes: `10q` stays off the flag decks — it is opt-in, not a third mode everywhere', () => {
+  // Without DEFAULT_MODES this is exactly what would regress: `10q` has
+  // count 10 <= every real pool, so an "absent means all of MODES" rule would
   // silently grow a third chip on every row of the stats grid.
   assert.deepEqual(availableModes(195, 'countries'), ['60s', 'all']);
   assert.deepEqual(availableModes(54, 'weird'), ['60s', 'all']);
@@ -516,21 +516,21 @@ test('availableModes: an unknown variant gets the default pair rather than every
   assert.deepEqual(availableModes(195, 'mars'), ['60s', 'all']);
 });
 
-test('MODES: 20q is a count mode of exactly 20, and targetFor honours it against any pool', () => {
-  assert.equal(MODES['20q'].kind, 'count');
-  assert.equal(targetFor('20q', { length: 195 }), 20);
+test('MODES: 10q is a count mode of exactly 10, and targetFor honours it against any pool', () => {
+  assert.equal(MODES['10q'].kind, 'count');
+  assert.equal(targetFor('10q', { length: 195 }), 10);
   // Statistics never deals from the pool, but the clamp is what every other
-  // count mode gets, and a 20q round on a hypothetical 12-flag deck should ask
-  // 12 rather than promise 20 it cannot deliver.
-  assert.equal(targetFor('20q', { length: 12 }), 12);
+  // count mode gets, and a 10q round on a hypothetical 6-flag deck should ask
+  // 6 rather than promise 10 it cannot deliver.
+  assert.equal(targetFor('10q', { length: 6 }), 6);
 });
 
 test('defaultModeFor / resolveMode thread the variant through to Statistics', () => {
   assert.equal(defaultModeFor(195, 'facts'), '60s');
   // `all` is not offered on Statistics, so a ?n=all deep-link falls back to 60s.
   assert.equal(resolveMode('all', 195, 'facts'), '60s');
-  // ...but `20q` is offered, so that deep-link survives.
-  assert.equal(resolveMode('20q', 195, 'facts'), '20q');
+  // ...but `10q` is offered, so that deep-link survives.
+  assert.equal(resolveMode('10q', 195, 'facts'), '10q');
   assert.equal(resolveMode('60s', 195, 'facts'), '60s');
   // Unchanged for a normal deck: the URL mode is honoured.
   assert.equal(resolveMode('all', 195, 'countries'), 'all');

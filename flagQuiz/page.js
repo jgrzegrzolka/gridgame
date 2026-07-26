@@ -390,7 +390,7 @@ export async function bootFlagQuiz() {
     const quiz = ask === 'superlative'
       // `limit` only bites in a count mode: `targetFor` gives the pool size for
       // 60s (195, which no one reaches inside a minute) and the round length
-      // for 20q. Same argument createQuiz gets, so both sources stop the round
+      // for 10q. Same argument createQuiz gets, so both sources stop the round
       // the same way — by running out.
       ? createFactsQuiz({ metrics: /** @type {any} */ (factsMetrics) || [], pool, limit: target })
       : createQuiz(pool, target);
