@@ -96,19 +96,29 @@ test('lowerWinsFromConfigKey: unknown mode → null in the 2-part shape too', ()
 // though it deliberately doesn't enumerate variants, so a client-side mode that
 // never lands here has its submissions rejected as `unknown_mode` — which is
 // the guard working, but it means shipping a mode is a two-repo change.
-test('lowerWinsFromConfigKey: 20q is a count mode → true (fewer mistakes wins)', () => {
-  assert.equal(lowerWinsFromConfigKey('facts:20q'), true);
+test('lowerWinsFromConfigKey: 10q is a count mode → true (fewer mistakes wins)', () => {
+  assert.equal(lowerWinsFromConfigKey('facts:10q'), true);
 });
 
-test('maxScoreForConfigKey: 20q is bounded by the pool, not the clock — an untimed round can run as long as it likes', () => {
-  assert.equal(maxScoreForConfigKey('facts:20q', 30_000), MAX_COUNT_MODE_SCORE);
+test('maxScoreForConfigKey: 10q is bounded by the pool, not the clock — an untimed round can run as long as it likes', () => {
+  assert.equal(maxScoreForConfigKey('facts:10q', 30_000), MAX_COUNT_MODE_SCORE);
   // Duration must not shrink the bound the way it does for 60s: a player who
-  // takes ten minutes over 20 questions is playing normally, not cheating.
-  assert.equal(maxScoreForConfigKey('facts:20q', 600_000), MAX_COUNT_MODE_SCORE);
+  // takes ten minutes over 10 questions is playing normally, not cheating.
+  assert.equal(maxScoreForConfigKey('facts:10q', 600_000), MAX_COUNT_MODE_SCORE);
 });
 
-test('CONFIG_KEY_RE accepts the 20q mode segment', () => {
-  assert.ok(CONFIG_KEY_RE.test('facts:20q'));
+test('CONFIG_KEY_RE accepts the 10q mode segment', () => {
+  assert.ok(CONFIG_KEY_RE.test('facts:10q'));
+});
+
+// `20q` is 10q's former name, and it is deliberately NOT carried as a legacy
+// alias. Only leaderboard variants submit, that is `countries` alone, and
+// `countries` has always offered `60s` / `all` — `20q` lived on Statistics,
+// which submits nothing. So no client ever sent it and no stored row uses it;
+// an alias here would be dead surface pretending to protect real data.
+test('lowerWinsFromConfigKey: the retired 20q name is not a known mode', () => {
+  assert.equal(lowerWinsFromConfigKey('facts:20q'), null);
+  assert.equal(maxScoreForConfigKey('facts:20q', 30_000), null);
 });
 
 test('lowerWinsFromConfigKey: malformed key → null', () => {

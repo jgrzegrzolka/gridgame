@@ -411,7 +411,7 @@
     "mode": {
       "60s": "60s",
       "all": "all",
-      "20q": "20 questions"
+      "10q": "10 questions"
     },
     "leaderboard": {
       "title": "Top 10: 7 days",

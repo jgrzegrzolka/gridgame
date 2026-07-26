@@ -43,12 +43,20 @@ const CONFIG_KEY_MAX = 40;
  *
  *   timed — score is CORRECT answers, bounded by the clock. Higher wins.
  *   count — score is MISTAKES over a fixed number of questions, bounded by the
- *           pool. Lower wins. `all` runs until the pool is exhausted; `20q`
- *           stops at 20, which is how the Statistics deck (whose pool is never
+ *           pool. Lower wins. `all` runs until the pool is exhausted; `10q`
+ *           stops at 10, which is how the Statistics deck (whose pool is never
  *           exhausted) gets an untimed mode at all.
+ *
+ * `10q` was `20q` until the round was shortened, and the old name is NOT kept
+ * here — unlike CONFIG_KEY_RE's legacy 3-part shape, which is kept precisely
+ * because cached clients still emit it. The difference is who submits: the
+ * client only POSTs for variants with a leaderboard (`countries`), and
+ * `countries` has always offered `60s` / `all`. `20q` lived on the Statistics
+ * deck alone, which submits nothing, so no client has ever sent it and there is
+ * no stored row using it.
  */
 const TIMED_MODES = new Set(['60s']);
-const COUNT_MODES = new Set(['all', '20q']);
+const COUNT_MODES = new Set(['all', '10q']);
 
 /**
  * Derive `lowerWins` (the comparator direction) from a configKey's mode
@@ -58,7 +66,7 @@ const COUNT_MODES = new Set(['all', '20q']);
  * the client already used to write.
  *
  *   '60s' (timed)          → false  // more correct wins
- *   'all' / '20q' (count)  → true   // fewer mistakes wins
+ *   'all' / '10q' (count)  → true   // fewer mistakes wins
  *
  * Returns `null` for any other mode token — defensive against a new mode
  * shipping client-side without this map being updated. The endpoint
@@ -114,8 +122,8 @@ const MAX_COUNT_MODE_SCORE = 250;
  *     through. Scales with the clock, so a round that ended early bounds
  *     lower, and a future timed mode with a different budget needs no change
  *     here.
- *   - `all` / `20q` (count): run for as long as they take, so time says
- *     nothing — a player mulling over 20 questions for ten minutes is playing
+ *   - `all` / `10q` (count): run for as long as they take, so time says
+ *     nothing — a player mulling over 10 questions for ten minutes is playing
  *     normally. Bounded by the pool instead.
  *
  * @param {string} configKey
