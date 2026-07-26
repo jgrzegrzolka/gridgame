@@ -111,13 +111,14 @@ test('CONFIG_KEY_RE accepts the 10q mode segment', () => {
   assert.ok(CONFIG_KEY_RE.test('facts:10q'));
 });
 
-// `20q` is 10q's former name — the round was 20 questions before it was
-// shortened. A browser on cached JS keeps emitting it, and the direction and
-// ceiling it derives are identical, so it stays accepted rather than being
-// rejected as `unknown_mode` and dropping a real finish on the floor.
-test('lowerWinsFromConfigKey: the legacy 20q name still resolves as a count mode', () => {
-  assert.equal(lowerWinsFromConfigKey('facts:20q'), true);
-  assert.equal(maxScoreForConfigKey('facts:20q', 30_000), MAX_COUNT_MODE_SCORE);
+// `20q` is 10q's former name, and it is deliberately NOT carried as a legacy
+// alias. Only leaderboard variants submit, that is `countries` alone, and
+// `countries` has always offered `60s` / `all` — `20q` lived on Statistics,
+// which submits nothing. So no client ever sent it and no stored row uses it;
+// an alias here would be dead surface pretending to protect real data.
+test('lowerWinsFromConfigKey: the retired 20q name is not a known mode', () => {
+  assert.equal(lowerWinsFromConfigKey('facts:20q'), null);
+  assert.equal(maxScoreForConfigKey('facts:20q', 30_000), null);
 });
 
 test('lowerWinsFromConfigKey: malformed key → null', () => {

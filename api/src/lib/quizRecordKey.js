@@ -47,13 +47,16 @@ const CONFIG_KEY_MAX = 40;
  *           stops at 10, which is how the Statistics deck (whose pool is never
  *           exhausted) gets an untimed mode at all.
  *
- * `20q` is the same mode under its former name (the round was 20 questions
- * before it was shortened to 10). It stays listed because a browser holding
- * cached JS keeps emitting it, and the direction/ceiling it derives are
- * identical — same reason CONFIG_KEY_RE still accepts the legacy 3-part shape.
+ * `10q` was `20q` until the round was shortened, and the old name is NOT kept
+ * here — unlike CONFIG_KEY_RE's legacy 3-part shape, which is kept precisely
+ * because cached clients still emit it. The difference is who submits: the
+ * client only POSTs for variants with a leaderboard (`countries`), and
+ * `countries` has always offered `60s` / `all`. `20q` lived on the Statistics
+ * deck alone, which submits nothing, so no client has ever sent it and there is
+ * no stored row using it.
  */
 const TIMED_MODES = new Set(['60s']);
-const COUNT_MODES = new Set(['all', '10q', '20q']);
+const COUNT_MODES = new Set(['all', '10q']);
 
 /**
  * Derive `lowerWins` (the comparator direction) from a configKey's mode
