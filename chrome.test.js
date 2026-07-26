@@ -166,9 +166,19 @@ test('chrome: the coffee item carries menu-divider only when something sits abov
 // shape means a one-place edit + a sed across the HTML keeps them
 // in lockstep.
 const LANG_TOGGLE_SYNC_PAINT = `    <script>
-      // Sync lang-flag paint — sets data-current before any module imports
-      // start, so the toggle shows the flag with first paint instead of
-      // after the i18n.js graph resolves. Pinned by chrome.test.js.
+      // Sync lang paint — resolves the language before any module imports
+      // start, so <html lang> and the toggle flag are both right at first
+      // paint instead of after the i18n.js graph resolves. Pinned by
+      // chrome.test.js.
+      //
+      // <html lang> is not just an a11y nicety here. Every page ships its
+      // markup in English and swaps to Polish from JS, so a Polish phone
+      // rendered Polish text under a declared lang="en" — and Chrome, seeing
+      // content that disagrees with the declaration, offered to translate the
+      // page on every single visit. bootI18n() does set lang, but only after
+      // fetching i18n/pl.json, which is far too late: the prompt has already
+      // been decided. Declaring the resolved language synchronously is what
+      // stops it.
       (function () {
         var lang = null;
         try {
@@ -179,9 +189,28 @@ const LANG_TOGGLE_SYNC_PAINT = `    <script>
           var n = (navigator.language || '').toLowerCase().split('-')[0];
           lang = n === 'pl' ? 'pl' : 'en';
         }
+        document.documentElement.lang = lang;
         document.getElementById('lang-toggle').setAttribute('data-current', lang);
       })();
     </script>`;
+
+// The byte-match test above would happily pass a block that had quietly lost
+// the `<html lang>` write, since it only asks "do all copies agree". This one
+// pins the behaviour that actually stops Chrome's translate prompt, so removing
+// the line fails with a message naming the reason rather than a diff.
+test('chrome: the sync paint declares the resolved language on <html>', () => {
+  assert.match(
+    LANG_TOGGLE_SYNC_PAINT,
+    /document\.documentElement\.lang = lang;/,
+    'without this, Polish content ships under lang="en" and Chrome offers to translate every visit',
+  );
+  // It must land BEFORE the toggle paint: the toggle is cosmetic, the lang
+  // declaration is what a language detector reads, so it goes first.
+  assert.ok(
+    LANG_TOGGLE_SYNC_PAINT.indexOf('documentElement.lang')
+      < LANG_TOGGLE_SYNC_PAINT.indexOf("getElementById('lang-toggle')"),
+  );
+});
 
 test('chrome: every page with #lang-toggle ships the canonical synchronous paint script', () => {
   /** @type {string[]} */
