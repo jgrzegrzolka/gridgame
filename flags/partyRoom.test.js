@@ -1357,3 +1357,20 @@ test('bots survive serialization and play-again keeps them, zeroing the score', 
   // Deserialize drops present (no live sockets survive) — the server restores bots.
   assert.equal(restored.present.size, 0);
 });
+
+// ---- lastActiveAt ----
+
+test('createRoom: lastActiveAt starts null — the server stamps it on first traffic', () => {
+  assert.equal(createRoom(3).lastActiveAt, null);
+});
+
+test('serialize/deserialize: lastActiveAt survives an eviction, so a woken room knows if it is stale', () => {
+  const room = { ...createRoom(3), lastActiveAt: 1_700_000_000_000 };
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.equal(restored.lastActiveAt, 1_700_000_000_000);
+});
+
+test('deserialize: a snapshot from before lastActiveAt existed reads as null (dead until proven live)', () => {
+  const legacy = deserializeRoom({ phase: 'lobby' });
+  assert.equal(legacy.lastActiveAt, null);
+});

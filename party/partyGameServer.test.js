@@ -1203,3 +1203,82 @@ test('heartbeat: the CURRENT socket closing still releases the seat', async () =
   assert.equal(srv.room.present.has('alice'), false, 'a real disconnect still releases');
   assert.equal(srv.lastSeen.has('alice'), false);
 });
+
+// ---- room liveness probe (onRequest) ----
+// The client shows the "resume the room you were in" button only after asking
+// the server whether that room is still worth walking back into. Two failure
+// modes to prevent: offering a dead room whose players all gave up hours ago
+// (walks the returner into a solo scoreboard), and calling a live room dead
+// while people are still in it (denies the returner their seat). The probe
+// answers over plain HTTP so it does not open a WS just to close it.
+
+test('onMessage: any inbound message stamps lastActiveAt on the room, so liveness reflects real traffic', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  const beforeBuzz = srv.room.lastActiveAt;
+  assert.ok(beforeBuzz, 'onConnect already stamped it');
+  await new Promise((r) => setTimeout(r, 5));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+  assert.ok(srv.room.lastActiveAt > beforeBuzz, 'the ping moved the timestamp forward');
+});
+
+test('onRequest: a live room with a present human answers alive', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  const res = await srv.onRequest(new Request('https://example.test/parties/party/ABC12'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.alive, true);
+  assert.equal(body.playerCount, 1);
+  assert.equal(body.phase, 'lobby');
+});
+
+test('onRequest: a room whose last message was longer than ROOM_STALE_MS ago answers dead', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  // Rewind the timestamp past the staleness window without touching the socket
+  // (a real room would sit like this because everyone left; nobody is sending
+  // messages any more).
+  srv.room = { ...srv.room, lastActiveAt: Date.now() - 10 * 60 * 1000 };
+  const res = await srv.onRequest(new Request('https://example.test/parties/party/ABC12'));
+  const body = await res.json();
+  assert.equal(body.alive, false, 'stale by wall-clock reads as dead');
+});
+
+test('onRequest: a room with only bots present answers dead — bots cannot welcome a returning human', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'addBot', skill: 'medium' }), conn);
+  // Simulate Alice's socket dropping — the bot's `present` entry is restored
+  // on load but bots do not qualify as human presence.
+  await srv.onClose(conn);
+  const res = await srv.onRequest(new Request('https://example.test/parties/party/ABC12'));
+  const body = await res.json();
+  assert.equal(body.alive, false);
+});
+
+test('onRequest: a party with no room yet answers dead (nothing to return to)', async () => {
+  const srv = new PartyGameServer(mockParty([]));
+  await srv.onStart();
+  const res = await srv.onRequest(new Request('https://example.test/parties/party/ABC12'));
+  const body = await res.json();
+  assert.equal(body.alive, false);
+});
+
+test('onRequest: the response carries CORS headers — the site and PartyKit sit on different origins', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  const res = await srv.onRequest(new Request('https://example.test/parties/party/ABC12'));
+  assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
+  assert.equal(res.headers.get('Content-Type'), 'application/json');
+});

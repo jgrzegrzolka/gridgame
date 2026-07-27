@@ -68,3 +68,21 @@ export function serverUrlFor(hostname, party = 'main') {
   }
   return `ws://${hostname}:1999/parties/${party}/`;
 }
+
+/**
+ * Same routing as {@link serverUrlFor}, but with an http(s) scheme instead of
+ * ws(s). The client uses this for plain-GET requests — currently the room
+ * liveness probe (`onRequest` on the party server) which decides whether to
+ * offer the "resume the room you were in" shortcut. WebSocket and HTTP share
+ * origin and path on PartyKit; only the scheme changes.
+ *
+ * @param {string} hostname
+ * @param {string} [party]
+ * @returns {string}
+ */
+export function httpServerUrlFor(hostname, party = 'main') {
+  if (PROD_HOSTNAMES.has(hostname)) {
+    return `https://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/${party}/`;
+  }
+  return `http://${hostname}:1999/parties/${party}/`;
+}

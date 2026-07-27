@@ -1764,6 +1764,44 @@ dialog#zoom p.zoom-note {
   opacity: 0.5;
   cursor: default;
 }
+/* Focus visibility: keyboard users get the brand pink ring; anything else
+ * (pointer press, `dialog.showModal()` auto-focus on the first focusable
+ * button) draws nothing. Without this, Chromium falls back to its default
+ * `outline: rgb(16,16,16) auto 1px` — a thick dark rectangle — and paints
+ * it around the pause dialog's "Play on without waiting" the moment the
+ * card opens, since the browser auto-focuses that button. Matches the
+ * `.lang-toggle` / `.flags-link` / `.burger` pattern already in this file. */
+.profile-save:focus-visible,
+.lobby-btn:focus-visible,
+.rules-close:focus-visible,
+.help-close:focus-visible,
+.match-close:focus-visible,
+.rules-btn:focus-visible,
+.help-btn:focus-visible,
+.picker-close:focus-visible,
+.zoom-close:focus-visible,
+.map-fullscreen-btn:focus-visible,
+.map-hide-btn:focus-visible,
+.map-fs-exit:focus-visible,
+.map-resize-handle:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
+.profile-save:focus:not(:focus-visible),
+.lobby-btn:focus:not(:focus-visible),
+.rules-close:focus:not(:focus-visible),
+.help-close:focus:not(:focus-visible),
+.match-close:focus:not(:focus-visible),
+.rules-btn:focus:not(:focus-visible),
+.help-btn:focus:not(:focus-visible),
+.picker-close:focus:not(:focus-visible),
+.zoom-close:focus:not(:focus-visible),
+.map-fullscreen-btn:focus:not(:focus-visible),
+.map-hide-btn:focus:not(:focus-visible),
+.map-fs-exit:focus:not(:focus-visible),
+.map-resize-handle:focus:not(:focus-visible) {
+  outline: none;
+}
 /* Smaller dismiss buttons inside dialogs (rules / help / picker) —
  * same recipe as the affirmative pill, just a tighter slot. */
 .help-close {

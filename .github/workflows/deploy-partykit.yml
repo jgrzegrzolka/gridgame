@@ -58,6 +58,11 @@ on:
       # does not start with `party`, so no glob above reaches it — and a stale
       # server here means the quiet-seat sweep silently stops running.
       - 'flags/heartbeat.js'
+      # Room liveness rule (whether a room is worth resuming), read by the
+      # server's `onRequest` probe handler. Same reason as `heartbeat.js`
+      # above — no `party*` glob reaches it, and a stale server here would
+      # silently answer the probe with the old rule.
+      - 'flags/roomLiveness.js'
 
 jobs:
   test:
