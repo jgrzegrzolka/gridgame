@@ -596,6 +596,23 @@ test('applyPlayAgain: a new game starts with nothing paused and nobody left behi
   assert.deepEqual(next.waived, []);
 });
 
+test('applyNext: a pause dies with the game rather than riding into the final board', () => {
+  // Hard to reach in practice — the host's clock is frozen while paused, so it
+  // should never send `next` — which is exactly why it is pinned here instead of
+  // trusted. `final` is not a pausable phase, so nothing would ever recompute a
+  // flag left set: it would just ride every later `welcome`, telling arrivals a
+  // finished game was waiting for someone.
+  let room = startedTwoPlayer();
+  room = { ...room, questionIndex: room.totalQuestions - 1 };
+  room = applyForceReveal(room, 'alice').room;
+  room = applyDisconnect(room, 'bob').room;
+  assert.equal(room.pausedFor, 'bob', 'paused on the closing reveal');
+
+  const r = applyNext(room, 'alice', q('jp'));
+  assert.equal(r.room.phase, 'final');
+  assert.equal(r.room.pausedFor, null);
+});
+
 test('serialize/deserialize: the pause survives a durable-object eviction', () => {
   let room = startedThreePlayer();
   room = applyDisconnect(room, 'bob').room;

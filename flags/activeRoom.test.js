@@ -15,8 +15,6 @@ function fakeStore(/** @type {Record<string, string>} */ seed = {}) {
     getItem: (/** @type {string} */ k) => (m.has(k) ? /** @type {string} */ (m.get(k)) : null),
     setItem: (/** @type {string} */ k, /** @type {string} */ v) => { m.set(k, v); },
     removeItem: (/** @type {string} */ k) => { m.delete(k); },
-    /** test-only peek */
-    _raw: () => m.get(ACTIVE_ROOM_KEY),
   };
 }
 
