@@ -2,11 +2,16 @@ import { t, countryName } from '../i18n.js';
 import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
+// Note the near-collision with this file's own `activeRoom` local, which is the
+// room this tab is CONNECTED to right now. These three are about the room the
+// DEVICE remembers being in, which outlives the connection and is what the start
+// screen offers a way back into. The two disagree the moment you leave.
 import { rememberActiveRoom, readActiveRoom, forgetActiveRoom } from '../flags/activeRoom.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal, revealOrder } from '../flags/partyClient.js';
 import { showBotSeat } from './botSeat.js';
+import { pauseCardStep } from './pauseCard.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -1171,42 +1176,50 @@ export function bootFlagParty() {
     // so whoever is offered this button is always someone actually present.
     pauseGoEl.hidden = !state.isHost;
     // Everyone else is told whose call it is, rather than being shown a button
-    // that would do nothing for them.
-    const host = state.roster.find((r) => r.playerId !== who && r.playerId === hostPlayerId());
+    // that would do nothing for them. (No need to exclude the paused seat:
+    // `applyDisconnect` migrates hosting away before it settles the pause, so
+    // the host is never the player the room is waiting for.)
+    const host = state.roster.find((r) => r.playerId === roomHostId);
     pauseSubEl.hidden = state.isHost || !host;
     if (!pauseSubEl.hidden && host) {
       pauseSubEl.textContent = fmt(t('party.pausedHostHint', '{host} can choose to play on without them.'), { host: host.nickname });
     }
   }
 
-  /** Open, update or close the pause card as the room's answer changes. Cheap
-   *  and independent of render(), like `syncAndPaintHold`: a pause must not
-   *  rebuild the grid underneath a question people are mid-answer on. */
-  function paintPause() {
-    if (!state.pausedFor) {
-      // Covers both ways a pause can end, including the one that never showed:
-      // if it resolved inside the delay, the timer is dropped and no card ever
-      // appears.
+  /** Open, update or close the pause card. Cheap and independent of render(),
+   *  like `syncAndPaintHold`: a pause must not rebuild the grid underneath a
+   *  question people are mid-answer on.
+   *
+   *  The decision itself lives in `pauseCard.js` so every path through it is
+   *  unit-tested — including leaving the room mid-pause, which this used to get
+   *  wrong. Everything here is just carrying the answer out.
+   *
+   *  @param {boolean} [delayElapsed]  set only by the delay firing. */
+  function paintPause(delayElapsed = false) {
+    const step = pauseCardStep({
+      // Deliberately the room, not just `state.pausedFor`: on the way out those
+      // two disagree, and the card belongs to the room.
+      inRoom: activeRoom !== null,
+      pausedFor: state.pausedFor,
+      isOpen: pauseDialog.open,
+      timerPending: pausePopupTimer !== 0,
+      delayElapsed,
+    });
+    if (step === 'close') {
       if (pausePopupTimer) { clearTimeout(pausePopupTimer); pausePopupTimer = 0; }
       if (pauseDialog.open) pauseDialog.close();
       return;
     }
-    if (pauseDialog.open) { paintPauseText(); return; }
-    if (pausePopupTimer) return;
-    pausePopupTimer = window.setTimeout(() => {
-      pausePopupTimer = 0;
-      // Re-checked rather than assumed: the room can have resumed during the
-      // wait, and `showModal` on a room that is running again would be a card
-      // about nothing that only the host could dismiss.
-      if (!state.pausedFor || pauseDialog.open) return;
-      paintPauseText();
-      pauseDialog.showModal();
-    }, PAUSE_POPUP_DELAY_MS);
-  }
-
-  /** The seat currently hosting, per the last roster we were sent. */
-  function hostPlayerId() {
-    return roomHostId;
+    if (step === 'repaint') { paintPauseText(); return; }
+    if (step === 'open') { paintPauseText(); pauseDialog.showModal(); return; }
+    if (step === 'schedule') {
+      pausePopupTimer = window.setTimeout(() => {
+        pausePopupTimer = 0;
+        // Re-asked rather than assumed: the room can have resumed, or this
+        // client left it, while the delay was running.
+        paintPause(true);
+      }, PAUSE_POPUP_DELAY_MS);
+    }
   }
 
   /** Total ms the room has been paused for, across every phase, as of now. */
@@ -1701,7 +1714,11 @@ export function bootFlagParty() {
     // Leaving the room entirely (kicked, rejected): tear down every running loop,
     // the round-intro beat included, so nothing keeps animating a screen the
     // player can no longer see.
-    if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); paintResume(); showSection('start'); return; }
+    // `paintPause` before the early return, not after it: the card is a modal in
+    // the top layer, so a screen change does not take it down. Leaving a room
+    // mid-pause used to strand it over the start screen — Esc suppressed, and a
+    // guest with no button on it — until a reload.
+    if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); paintPause(); paintResume(); showSection('start'); return; }
     // Put the hold button away by default; only the chart-reveal path below turns
     // it back on. Doing it here rather than per-branch means every screen that
     // returns early (the standings break, the round card, the pick, the final

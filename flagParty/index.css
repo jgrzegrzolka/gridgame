@@ -111,8 +111,14 @@
    radius, shadow and backdrop all come from there, exactly as the TTT rules
    dialog gets them. The only thing this page adds is the quiet closing line that
    tells a guest whose call it is to move on. */
+/* The body line and this one read as a single block, so the gap between the two
+   is tightened on the line ABOVE rather than by pulling this one up with a
+   negative margin — which only held while the card's contents stayed exactly as
+   they are. Scoped to the pair, so the host's card (no sub-line) keeps the full
+   14px before its button. A browser without `:has()` simply gets the wider gap. */
+.pause-dialog p:has(+ .pause-sub) { margin-bottom: 8px; }
 .pause-sub {
-  margin: -6px 0 0;
+  margin: 0;
   font-size: 12px;
   color: var(--muted-color);
 }
