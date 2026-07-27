@@ -54,6 +54,10 @@ on:
       - 'flags/partyRounds/**'
       - 'flags/metrics.js'
       - 'flags/metrics/**'
+      # Connection liveness, shared by the server sweep and the client ping. It
+      # does not start with `party`, so no glob above reaches it — and a stale
+      # server here means the quiet-seat sweep silently stops running.
+      - 'flags/heartbeat.js'
 
 jobs:
   test:

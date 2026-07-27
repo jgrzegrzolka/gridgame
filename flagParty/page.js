@@ -33,8 +33,15 @@ import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRend
 import { createSectionSwapper } from './sectionSwap.js';
 import { nextRadioId, paintRadioGroup, RADIO_KEYS } from './radioGroup.js';
 import { buildAvatar, shareUrl } from '../common.js';
+import { heartbeatAction, PING_INTERVAL_MS } from '../flags/heartbeat.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
+
+/** How often the heartbeat wakes up to ask `heartbeatAction` what to do. Faster
+ *  than the ping interval on purpose: the tick is also what notices a stale
+ *  socket, and pacing it to PING_INTERVAL_MS would make that check granular to
+ *  15s — up to a third of the pick window spent on a screen we know is dead. */
+const HEARTBEAT_TICK_MS = Math.round(PING_INTERVAL_MS / 3);
 
 const NICKNAME_KEY = 'gridgame.nickname';
 // The host's chosen game length ('short' / 'medium' / 'long') — the only thing
@@ -421,6 +428,13 @@ export function bootFlagParty() {
   let rejected = false;
   let reconnectAttempts = 0;
   let reconnectTimer = 0;
+  /** Heartbeat marks — see `flags/heartbeat.js` for why an idle socket needs
+   *  traffic at all. `lastRecvAt` is stamped by EVERY inbound message, not just
+   *  pongs: any traffic proves the socket is alive, and on a busy round that
+   *  means the ping never fires. */
+  let lastRecvAt = /** @type {number | null} */ (null);
+  let lastPingAt = /** @type {number | null} */ (null);
+  let heartbeatTimer = 0;
   /** Fire the finish celebration (confetti / fireworks) exactly once per final
    *  screen. render() re-runs on every message and on a language switch, so a
    *  guard keeps the burst from re-triggering; reset when we leave the final
@@ -855,10 +869,76 @@ export function bootFlagParty() {
     // Connecting / reconnecting are waiting states, so they use the same
     // loading-dots idiom as daily-stats loading (not the bordered error box).
     setLoadingStatus('party.connecting', 'Connecting');
-    ws = new WebSocket(wsUrl(activeRoom.code, activeRoom.intent));
-    ws.addEventListener('open', () => { reconnectAttempts = 0; });
-    ws.addEventListener('message', (e) => handleMessage(String(e.data)));
-    ws.addEventListener('close', () => { if (!rejected) scheduleReconnect(); });
+    const socket = new WebSocket(wsUrl(activeRoom.code, activeRoom.intent));
+    ws = socket;
+    socket.addEventListener('open', () => { reconnectAttempts = 0; startHeartbeat(); });
+    socket.addEventListener('message', (e) => handleMessage(String(e.data)));
+    socket.addEventListener('close', () => {
+      // Only the CURRENT socket may drive a reconnect. The heartbeat abandons a
+      // stale socket by nulling `ws` and reconnecting immediately; if that
+      // abandoned socket's close event turns up later (ours took 30+ s to arrive
+      // in testing, and sometimes never did), this guard stops it advancing the
+      // backoff a second time and tearing down the connection that replaced it.
+      if (ws !== socket) return;
+      stopHeartbeat();
+      if (!rejected) scheduleReconnect();
+    });
+  }
+
+  /**
+   * Poke an idle connection and notice when it has died without saying so.
+   *
+   * A half-open socket never fires `close`, so `scheduleReconnect` is never
+   * reached and the client sits on a stale screen believing it is connected —
+   * the Flag Party bug where one player watched the standings while the rest of
+   * the table moved on to the pick. The tick runs faster than the ping interval
+   * and lets `heartbeatAction` decide; sizing the timer to the interval would
+   * make the stale check granular to 15s.
+   */
+  function startHeartbeat() {
+    stopHeartbeat();
+    lastRecvAt = Date.now();
+    lastPingAt = null;
+    heartbeatTimer = window.setInterval(() => {
+      const action = heartbeatAction(Date.now(), { lastRecvAt, lastPingAt });
+      if (action === 'ping') {
+        lastPingAt = Date.now();
+        // Deliberately not `send()` — that helper drops the message when the
+        // socket isn't OPEN, which is exactly the state we're trying to detect.
+        // A throw here means the socket is gone, so fall through to reconnect.
+        try {
+          if (ws) ws.send(JSON.stringify({ type: 'ping' }));
+          return;
+        } catch { /* dead socket — reconnect below */ }
+      } else if (action !== 'reconnect') {
+        return;
+      }
+      // Stale: abandon this socket and reconnect ourselves. We must NOT wait for
+      // the close event to do it.
+      //
+      // The first version of this did exactly that — call `close()` and let the
+      // close handler run the usual backoff — and it deadlocked. `close()` only
+      // *starts* the closing handshake; the event fires when the peer completes
+      // it. Against a connection that has stopped behaving, that never happens:
+      // in the browser the socket went to readyState 2 (CLOSING) and sat there
+      // for the remaining 28 s of the test with no close event. The heartbeat had
+      // already stopped itself, so nothing was left to retry and the client hung
+      // permanently — strictly worse than the stale screen this exists to fix.
+      //
+      // So: drop our reference first (which disarms the close handler via its
+      // `ws !== socket` guard), then close on a best-effort basis, then schedule
+      // the reconnect directly. The handshake can take as long as it likes.
+      stopHeartbeat();
+      const dead = ws;
+      ws = null;
+      try { if (dead) dead.close(); } catch { /* best effort — already gone */ }
+      if (!rejected) scheduleReconnect();
+    }, HEARTBEAT_TICK_MS);
+  }
+
+  function stopHeartbeat() {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = 0;
   }
 
   function scheduleReconnect() {
@@ -873,8 +953,15 @@ export function bootFlagParty() {
   }
 
   function handleMessage(/** @type {string} */ raw) {
+    // Any inbound traffic proves the socket is alive, so stamp before parsing —
+    // even a message this build can't understand is evidence of a live peer.
+    lastRecvAt = Date.now();
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    // The pong exists only to be received. It carries no state, and running it
+    // through the reducer + render would repaint the screen every 15s for
+    // nothing — including rebuilding the grid mid-question.
+    if (msg.type === 'pong') return;
     const { state: next, effects } = reducePartyMessage(state, msg);
     state = next;
     // A hold press/release must NOT go through render(): that rebuilds the grid,
