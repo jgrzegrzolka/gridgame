@@ -131,6 +131,42 @@ test('rejected: unknown reason carries the raw code for template substitution', 
   });
 });
 
+// ---- paused ----
+
+test('paused: adopts who the room is waiting for, and clears it again', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  const s0 = { ...initialPartyClientState(), you, phase: 'question', question: { prompt: 'q', options: ['jp'] }, myChoice: 'jp' };
+  const paused = reduce(s0, { type: 'paused', pausedFor: 'bob' });
+  assert.equal(paused.pausedFor, 'bob');
+  // The freeze must not disturb the screen it froze: same question, same answer
+  // already tapped, same phase.
+  assert.equal(paused.phase, 'question');
+  assert.equal(paused.myChoice, 'jp');
+  assert.deepEqual(paused.question, s0.question);
+
+  assert.equal(reduce(paused, { type: 'paused', pausedFor: null }).pausedFor, null);
+});
+
+test('paused: welcome carries a pause into a reconnecting client', () => {
+  const s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, phase: 'question', roster: [], pausedFor: 'bob',
+  });
+  assert.equal(s.pausedFor, 'bob');
+});
+
+test('paused: a server that never sends the field simply never pauses', () => {
+  // An older server predates the whole feature. Absent must read as "running",
+  // not as undefined leaking into the clock arithmetic.
+  const s = reduce(initialPartyClientState(), { type: 'welcome', you, phase: 'question', roster: [] });
+  assert.equal(s.pausedFor, null);
+});
+
+test('paused: a new game waits for nobody', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  const s0 = { ...initialPartyClientState(), you, phase: 'final', pausedFor: 'bob' };
+  assert.equal(reduce(s0, { type: 'lobby', hostId: you, roster: [] }).pausedFor, null);
+});
+
 test('unknown message type is a no-op', () => {
   const s0 = initialPartyClientState();
   const r = reducePartyMessage(s0, { type: 'whatever' });

@@ -536,6 +536,7 @@
   },
   "party": {
     "title": "Yet Another Quiz: Flagowa impreza",
+    "resumeLead": "Wróć do swojej gry",
     "createRoom": "Nowa gra online",
     "orJoin": "lub dołącz do gry",
     "codePlaceholder": "KOD POKOJU",
@@ -555,6 +556,10 @@
     "holdToRead": "Przytrzymaj, żeby czytać",
     "holdReading": "{name} czyta…",
     "holdReadingYou": "Czytasz…",
+    "pausedTitle": "Gra wstrzymana",
+    "pausedBody": "Czekamy na powrót: {name}. Gra ruszy dalej, gdy tylko wróci.",
+    "pausedHostHint": "{host} może zdecydować, żeby grać dalej bez czekania.",
+    "playOnAnyway": "Graj dalej bez czekania",
     "waitingHost": "Czekanie, aż gospodarz rozpocznie…",
     "startGame": "Rozpocznij grę",
     "mode": {

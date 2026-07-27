@@ -18,6 +18,7 @@ import {
   applyPlayAgain,
   applyReturnToLobby,
   applyDisconnect,
+  applyResume,
   pendingPickAfterReveal,
   applyEnterPicking,
   applyRepick,
@@ -463,6 +464,23 @@ export default class PartyGameServer {
           }
           break;
         }
+        case 'resume': {
+          // The host stops waiting for an absent player. The reducer waives them
+          // and either restarts the game or moves the pause onto a second
+          // absentee; either way the room is told.
+          const waitingFor = this.room.pausedFor;
+          result = applyResume(this.room, playerId);
+          // Their pick was held open for them while the room waited (see
+          // `onClose`). Now that the room has given up on them, hand the turn on
+          // the same way a departure outside a pause would have — immediately,
+          // by the rule that opened this pick.
+          if (result.room.phase === 'picking' && result.room.picker === waitingFor) {
+            this.room = result.room;
+            const repick = applyRepick(this.room, this.choosePicker(this.room.decider === true));
+            result = { room: repick.room, broadcasts: [...result.broadcasts, ...repick.broadcasts] };
+          }
+          break;
+        }
         case 'next': {
           // In a draft, a `next` that lands on a round boundary opens a pick
           // instead of dealing the next question: the lowest-ranked seat that
@@ -636,7 +654,11 @@ export default class PartyGameServer {
       // timer. Re-run the SAME rule that opened this pick — `room.decider` says
       // which one that was — so the replacement is chosen the way the original
       // was.
-      if (this.room.phase === 'picking' && this.room.picker === playerId) {
+      //
+      // Unless the room stopped to wait for them, which is the whole point of a
+      // pause: their turn is held exactly where they left it, and it only moves
+      // on if the host decides not to wait (see the `resume` case).
+      if (this.room.phase === 'picking' && this.room.picker === playerId && this.room.pausedFor !== playerId) {
         const repick = applyRepick(this.room, this.choosePicker(this.room.decider === true));
         this.room = repick.room;
         broadcasts.push(...repick.broadcasts);

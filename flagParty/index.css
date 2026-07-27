@@ -88,6 +88,35 @@
   padding: 8px 12px;
   margin: 0 0 14px;
 }
+/* The way back into a room this device is already in. Reuses .lobby-btn's pill
+   (common.css) rather than inventing a second button shape, and only adds the
+   second line: the room code, which is the one thing the player has no other way
+   to find once the page is gone. */
+.resume-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+/* The `[hidden]` trap again — see .hold-read further down. Pinned by hiddenGuards.test.js. */
+.resume-room[hidden] { display: none; }
+.resume-lead { font-size: 14px; }
+.resume-code {
+  font-weight: var(--weight-bold);
+  font-size: 16px;
+  letter-spacing: 0.12em;
+}
+
+/* The pause popup is `.help-dialog` from common.css, unchanged — card, border,
+   radius, shadow and backdrop all come from there, exactly as the TTT rules
+   dialog gets them. The only thing this page adds is the quiet closing line that
+   tells a guest whose call it is to move on. */
+.pause-sub {
+  margin: -6px 0 0;
+  font-size: 12px;
+  color: var(--muted-color);
+}
+
 /* Loading variant (connecting / reconnecting): drop the box and italicise, so
    the label + shared `.loading-dots` read as the same "loading…" idiom used on
    the daily-stats and sync screens rather than a bordered status pill. */
