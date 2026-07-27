@@ -124,6 +124,14 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from '
  *   Without it {@link applyResume} would re-pause for the same seat the instant
  *   it recomputed. A seat is un-waived when it reconnects, so someone who is
  *   left behind, returns, and drops again pauses the room afresh.
+ * @property {number | null} lastActiveAt  epoch-ms of the last inbound traffic
+ *   the server saw for this room (any onMessage, plus onConnect). The reducer
+ *   never sets this — the server (`party/partyGameServer.js`) stamps it before
+ *   every save. Read by `flags/roomLiveness.js` to decide whether the room is
+ *   still worth offering back to a returning player. Persisted so a woken DO
+ *   after eviction knows whether the room went cold or the eviction itself is
+ *   the reason nobody has said anything. Null means the server has never
+ *   stamped it — a brand-new room or an old snapshot from before this field.
  *
  * @typedef {{ to: string | 'all', message: object }} Broadcast
  * @typedef {{ room: Room, broadcasts: Broadcast[], rejectConnection?: boolean }} ApplyResult
@@ -194,6 +202,12 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     decider: false,
     pausedFor: null,
     waived: [],
+    // The server stamps this on every inbound message before saving. Null here
+    // is honest — a room nobody has yet touched has no activity time — and
+    // `flags/roomLiveness.js` reads null as dead, so a room in this state is
+    // not offered back to a returning player. The moment a client connects,
+    // the server bumps it and the room reads as alive.
+    lastActiveAt: null,
   };
 }
 
@@ -1284,6 +1298,7 @@ export function serializeRoom(room) {
     decider: room.decider,
     pausedFor: room.pausedFor,
     waived: room.waived,
+    lastActiveAt: room.lastActiveAt,
   };
 }
 
@@ -1327,5 +1342,10 @@ export function deserializeRoom(snapshot) {
     // as itself, and the first reconnect settles it honestly.
     pausedFor: snapshot.pausedFor ?? null,
     waived: snapshot.waived ?? [],
+    // A snapshot from before this field existed reads as "never touched" and
+    // therefore dead (see `flags/roomLiveness.js`). The next inbound message
+    // stamps a real time, which is the honest answer once the server can see
+    // for itself.
+    lastActiveAt: snapshot.lastActiveAt ?? null,
   };
 }

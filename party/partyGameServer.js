@@ -30,6 +30,7 @@ import {
   deserializeRoom,
 } from '../flags/partyRoom.js';
 import { decideBuzz, validateBotSkill } from '../flags/partyBot.js';
+import { isRoomAlive } from '../flags/roomLiveness.js';
 import * as flagPick from '../flags/partyQuestions/flagPick.js';
 import * as mapPick from '../flags/partyQuestions/mapPick.js';
 import * as superlative from '../flags/partyQuestions/superlative.js';
@@ -294,7 +295,7 @@ export default class PartyGameServer {
       this.connByPlayer.set(playerId, conn);
 
       const result = applyHello(this.room, playerId, nickname);
-      this.room = result.room;
+      this.room = { ...result.room, lastActiveAt: Date.now() };
       await this.saveRoom();
       this.dispatch(result.broadcasts);
       if (result.rejectConnection) {
@@ -333,6 +334,15 @@ export default class PartyGameServer {
         return;
       }
       if (!parsed || typeof parsed.type !== 'string') return;
+
+      // Stamp every inbound message on the room so the liveness probe
+      // (`onRequest`) can tell a live room from an abandoned one. Ping is
+      // included on purpose — a room whose only traffic is heartbeats from
+      // someone still sitting there is exactly a live room. The stamp lives
+      // only in memory on the ping path (no save is worth the extra
+      // per-heartbeat write); non-ping paths save via their existing
+      // `saveRoom` calls below and carry the fresh value with them.
+      this.room = { ...this.room, lastActiveAt: Date.now() };
 
       // Heartbeat. A `ping` is both the liveness proof and the opt-in: only
       // seats that have pinged at least once are ever swept for going quiet, so
@@ -883,4 +893,64 @@ export default class PartyGameServer {
       }
     }
   }
+
+  /**
+   * Liveness probe. The client uses this to decide whether to offer the
+   * "resume the room you were in" shortcut on the start screen: the device
+   * remembers a room code for up to six hours, but by then the room may have
+   * emptied out — walking a returner back into it alone with the old
+   * scoreboard reads as broken. The decision belongs on the server, which
+   * knows the last-inbound-traffic time and who is actually present.
+   *
+   * Loads the room the same way the WS path does, so a request to an evicted
+   * DO wakes it, reads the persisted `lastActiveAt`, and answers honestly.
+   * A DO whose room was never created yet (party has no storage snapshot)
+   * answers dead — there is nothing to return to.
+   *
+   * Response shape kept tiny on purpose: the client's only decision is
+   * show-the-button-or-not. `playerCount` and `phase` ride along for future
+   * use (a "N players, mid-question" caption on the resume button) and to
+   * make debugging by curl easier; the client's current paint reads only
+   * `alive`.
+   *
+   * CORS headers so the site and PartyKit can sit on different origins
+   * (`www.yetanotherquiz.com` vs `gridgame-ttt.jgrzegrzolka.partykit.dev`).
+   * A simple GET/JSON does not preflight, so `Access-Control-Allow-Origin`
+   * on the response is sufficient — no OPTIONS handler needed.
+   */
+  async onRequest(_req) {
+    await this.loadRoom();
+    const now = Date.now();
+    const alive = this.room !== null && isRoomAlive(this.room, now);
+    const body = {
+      alive,
+      playerCount: this.room === null ? 0 : humanPresentCount(this.room),
+      phase: this.room === null ? null : this.room.phase,
+    };
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        // The probe answer is a snapshot: a room that reads dead now may be
+        // live in a second, so a cached response is worse than useless.
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
+}
+
+/**
+ * Count human seats currently present. Bots do not count (see
+ * `flags/roomLiveness.js`), so a room with three bots and no humans reports
+ * zero — same shape the alive check uses.
+ * @param {import('../flags/partyRoom.js').Room} room
+ */
+function humanPresentCount(room) {
+  let n = 0;
+  for (const pid of room.present) {
+    const seat = room.seats.get(pid);
+    if (seat && seat.bot !== true) n++;
+  }
+  return n;
 }

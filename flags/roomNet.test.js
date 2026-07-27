@@ -6,6 +6,7 @@ import {
   generateCode,
   isValidRoomCode,
   serverUrlFor,
+  httpServerUrlFor,
 } from './roomNet.js';
 
 // ---- Room code generation ----
@@ -60,4 +61,15 @@ test('serverUrlFor: party arg routes to the named party namespace', () => {
   assert.equal(serverUrlFor('localhost', 'party'), 'ws://localhost:1999/parties/party/');
   assert.equal(serverUrlFor('yetanotherquiz.com', 'party'),
     'wss://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/party/');
+});
+
+test('httpServerUrlFor: same routing as serverUrlFor but with an http(s) scheme', () => {
+  // The liveness probe is a plain GET, not a WebSocket upgrade — same origin
+  // and path as the WS URL, just http/https instead of ws/wss.
+  assert.equal(httpServerUrlFor('localhost', 'party'), 'http://localhost:1999/parties/party/');
+  assert.equal(httpServerUrlFor('192.168.0.5', 'party'), 'http://192.168.0.5:1999/parties/party/');
+  assert.equal(httpServerUrlFor('www.yetanotherquiz.com', 'party'),
+    'https://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/party/');
+  assert.equal(httpServerUrlFor('jgrzegrzolka.github.io', 'party'),
+    'https://gridgame-ttt.jgrzegrzolka.partykit.dev/parties/party/');
 });

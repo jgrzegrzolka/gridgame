@@ -1,5 +1,6 @@
 import { t, countryName } from '../i18n.js';
-import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
+import { generateCode, isValidRoomCode, serverUrlFor, httpServerUrlFor } from '../flags/roomNet.js';
+import { probeRoomAlive } from '../flags/roomProbe.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 // Note the near-collision with this file's own `activeRoom` local, which is the
@@ -1317,13 +1318,43 @@ export function bootFlagParty() {
 
   // ---- back into a room this device is already in ----
 
+  const PROBE_URL_BASE = httpServerUrlFor(window.location.hostname, 'party');
+  /** Sequencer for in-flight probes, so a slow answer for a room we no longer
+   *  care about (a `forgetActiveRoom` from a rejected join, another paint
+   *  starting a fresh probe) cannot flip the button on later. Every paint
+   *  bumps this before dispatching, and only the paint that owns the top value
+   *  is allowed to touch the DOM. */
+  let probeSeq = 0;
+
   /** Show or hide the way back in, and name the room. Called on every render of
    *  the start screen, because the memory can change under us (a reject clears
-   *  it; a Back out of a room leaves one behind). */
-  function paintResume() {
+   *  it; a Back out of a room leaves one behind).
+   *
+   *  Hides the button by default and asks the server whether the room is still
+   *  worth walking back into (`flags/roomProbe.js`). A dead room silently
+   *  forgets itself — offering the resume shortcut into a room whose players
+   *  all gave up would land the returner alone with the old scoreboard, which
+   *  reads as broken. The alive check itself lives on the server, which is the
+   *  only side that knows both the last-traffic time and who is present. */
+  async function paintResume() {
     const entry = readActiveRoom(window.localStorage, 'party', Date.now(), isValidRoomCode);
-    resumeBtn.hidden = !entry;
-    if (entry) resumeCodeEl.textContent = entry.code;
+    // Hide first. If a stale button was showing from a previous paint, we
+    // must not leave it up while the probe is in flight (the room may already
+    // be gone). The probe's own callback re-shows it only if the answer is
+    // alive.
+    resumeBtn.hidden = true;
+    if (!entry) return;
+    const seq = ++probeSeq;
+    const alive = await probeRoomAlive(PROBE_URL_BASE + entry.code, window.fetch.bind(window));
+    // A later paint (or an entirely different session) already made this
+    // decision moot; do not touch the DOM.
+    if (seq !== probeSeq) return;
+    if (!alive) {
+      forgetActiveRoom(window.localStorage);
+      return;
+    }
+    resumeCodeEl.textContent = entry.code;
+    resumeBtn.hidden = false;
   }
 
   resumeBtn.addEventListener('click', () => {
