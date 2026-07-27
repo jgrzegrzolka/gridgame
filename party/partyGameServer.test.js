@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import PartyGameServer from './partyGameServer.js';
 import { roundCountFor, HAND_SIZE, usedIdForMode } from '../flags/partyDraft.js';
 import { ROUND_QUESTIONS } from '../flags/partyPlan.js';
+import { SERVER_QUIET_MS } from '../flags/heartbeat.js';
 
 /**
  * The party game server is otherwise the thin shell over the tested reducers
@@ -1008,4 +1009,166 @@ test('a veiled round delays the bot too — the veil is not a handicap on humans
   // By the ceiling it has answered, whatever it rolled.
   t.mock.timers.tick(14000); await settle();
   assert.equal(srv.room.buzzes.length, 1, 'the bot buzzed before the clock ran out');
+});
+
+// ---- heartbeat (flags/heartbeat.js wiring) ----
+//
+// The reason this exists: a WebSocket that dies badly never fires `close`, so
+// the server kept broadcasting into a dead socket and counting the seat as
+// present. It surfaced as a Flag Party report of one player still watching the
+// standings while the rest of the table had moved on to the draft pick.
+
+/** Like `mockConn`, but records `close()` so a sweep can be observed.
+ *  Plain data property, not a getter behind `Object.assign` — assign copies a
+ *  getter's VALUE, which froze `closed` at false and made the sweep look broken
+ *  when it was working. */
+function closableConn(/** @type {string} */ id) {
+  const c = /** @type {any} */ (mockConn(id));
+  c.closed = false;
+  c.close = () => { c.closed = true; };
+  return c;
+}
+
+test('heartbeat: a ping is answered with a pong and touches nothing else', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  const phaseBefore = srv.room.phase;
+
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+
+  assert.deepEqual(conn.last('pong'), { type: 'pong' });
+  assert.equal(srv.room.phase, phaseBefore, 'a ping must not advance the game');
+  assert.equal(conn.closed, false);
+});
+
+test('heartbeat: a client that never pings is never swept', async () => {
+  // The capability gate, and the regression this whole design is shaped around.
+  // A browser on an older build sends nothing on an idle connection — sweeping
+  // it would evict a healthy seat every SERVER_QUIET_MS for doing nothing wrong.
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+
+  assert.equal(srv.lastSeen.has('alice'), false, 'a silent seat is not tracked at all');
+  srv.sweepQuietConnections();
+  assert.equal(conn.closed, false, 'and so is never closed for being quiet');
+});
+
+test('heartbeat: a seat that pinged and then went silent is closed', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+  assert.equal(srv.lastSeen.has('alice'), true, 'the ping opted this seat in');
+
+  // Rewind its mark past the threshold: the socket died without closing.
+  srv.lastSeen.set('alice', Date.now() - SERVER_QUIET_MS - 1);
+  srv.sweepQuietConnections();
+
+  assert.equal(conn.closed, true, 'the ghost socket is closed');
+  assert.equal(srv.lastSeen.has('alice'), false, 'and its mark is dropped');
+});
+
+test('heartbeat: a fresh ping keeps a seat alive across a sweep', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+  srv.sweepQuietConnections();
+  assert.equal(conn.closed, false);
+});
+
+test('heartbeat: any later message refreshes the mark, not just pings', async () => {
+  // A seat mid-round sends buzzes, not pings — the client only pings when the
+  // connection is otherwise idle. Those messages must count as liveness too, or
+  // an actively playing seat could be swept.
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+
+  srv.lastSeen.set('alice', Date.now() - SERVER_QUIET_MS - 1);
+  await srv.onMessage(JSON.stringify({ type: 'start' }), conn);
+
+  srv.sweepQuietConnections();
+  assert.equal(conn.closed, false, 'a real game message proved the seat is alive');
+});
+
+test("heartbeat: one seat's ping sweeps another seat's dead socket", async () => {
+  // The sweep has no timer of its own — pings arrive from every heartbeating
+  // seat on an interval, so they are the clock. A timer would not survive a
+  // Durable Object eviction; traffic does.
+  const a = closableConn('a');
+  const b = closableConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), a);
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), b);
+
+  srv.lastSeen.set('bob', Date.now() - SERVER_QUIET_MS - 1);
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), a);
+
+  assert.equal(b.closed, true, "bob's ghost socket was swept by alice's ping");
+  assert.equal(a.closed, false);
+});
+
+test('heartbeat: onClose drops the mark so a reconnect starts clean', async () => {
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+  await srv.onClose(conn);
+  assert.equal(srv.lastSeen.has('alice'), false);
+});
+
+test('heartbeat: a superseded socket closing late does not evict the seat that replaced it', async () => {
+  // The client abandons a stale socket and reconnects immediately rather than
+  // waiting for a closing handshake that may never complete, so the OLD close
+  // arrives after the NEW connection is already serving the same seat. Without
+  // the guard in onClose, that close marks a player who is sitting right there
+  // as absent — and re-elects the draft picker out from under them.
+  const oldConn = closableConn('a1');
+  const newConn = closableConn('a2');
+  const srv = new PartyGameServer(mockParty([oldConn, newConn]));
+  await srv.onStart();
+  await srv.onConnect(oldConn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), oldConn);
+
+  // The reconnect lands while the old socket is still open.
+  await srv.onConnect(newConn, ctxFor('alice', 'join'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), newConn);
+  assert.equal(srv.room.present.has('alice'), true);
+
+  // Only now does the abandoned socket finally close.
+  await srv.onClose(oldConn);
+
+  assert.equal(srv.room.present.has('alice'), true, 'the live seat survives the late close');
+  assert.equal(srv.room.seats.has('alice'), true);
+  assert.equal(srv.connByPlayer.get('alice'), newConn, 'the current connection is untouched');
+  assert.equal(srv.lastSeen.has('alice'), true, 'and its liveness mark is not cleared');
+});
+
+test('heartbeat: the CURRENT socket closing still releases the seat', async () => {
+  // The guard must not swallow a real disconnect — the ordinary path still has
+  // to mark the seat absent.
+  const conn = closableConn('a');
+  const srv = new PartyGameServer(mockParty([conn]));
+  await srv.onStart();
+  await srv.onConnect(conn, ctxFor('alice'));
+  await srv.onMessage(JSON.stringify({ type: 'ping' }), conn);
+  assert.equal(srv.room.present.has('alice'), true);
+
+  await srv.onClose(conn);
+
+  assert.equal(srv.room.present.has('alice'), false, 'a real disconnect still releases');
+  assert.equal(srv.lastSeen.has('alice'), false);
 });

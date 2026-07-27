@@ -3,6 +3,7 @@ import { loadCountries } from '../flags/group.js';
 import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
+import { quietPlayerIds } from '../flags/heartbeat.js';
 import { roundCountFor, validateGameLength, validateFirstPickMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, DEFAULT_FIRST_PICK, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
@@ -127,6 +128,12 @@ export default class PartyGameServer {
     /** Pending bot self-pick timer, when a bot holds the draft pick.
      *  @type {ReturnType<typeof setTimeout> | null} */
     this.botPickTimer = null;
+    /** Last message time per HEARTBEAT-CAPABLE seat, so a socket that died
+     *  without closing stops counting as present. See `flags/heartbeat.js`.
+     *  Transient like `holders` — a DO eviction takes the sockets with it, so
+     *  there is nothing to persist.
+     *  @type {Map<string, number>} */
+    this.lastSeen = new Map();
   }
 
   /**
@@ -325,6 +332,23 @@ export default class PartyGameServer {
         return;
       }
       if (!parsed || typeof parsed.type !== 'string') return;
+
+      // Heartbeat. A `ping` is both the liveness proof and the opt-in: only
+      // seats that have pinged at least once are ever swept for going quiet, so
+      // a client on an older build (which never pings) keeps exactly the
+      // pre-heartbeat behaviour instead of being evicted every 45s for doing
+      // nothing wrong. Any later message from the same seat refreshes the mark.
+      if (this.lastSeen.has(playerId) || parsed.type === 'ping') {
+        this.lastSeen.set(playerId, Date.now());
+      }
+      if (parsed.type === 'ping') {
+        try { sender.send(JSON.stringify({ type: 'pong' })); } catch { /* closing */ }
+        // Pings arrive from every seat on an interval, which makes them the
+        // natural clock for the sweep — no timer to keep alive across a DO
+        // eviction, and it only runs when there is traffic to run it.
+        this.sweepQuietConnections();
+        return;
+      }
 
       /** @type {import('../flags/partyRoom.js').ApplyResult | null} */
       const phaseBefore = this.room ? this.room.phase : null;
@@ -547,15 +571,51 @@ export default class PartyGameServer {
   }
 
   /** @param {any} conn */
+  /**
+   * Close any heartbeat-capable connection that has gone quiet past
+   * {@link SERVER_QUIET_MS}.
+   *
+   * `close()` fires `onClose`, which is what actually releases the seat — this
+   * only decides who. Going through the real close path rather than mutating the
+   * room here means a swept seat gets the identical treatment to one that hung
+   * up: the hold released, the draft pick re-elected, the bots re-synced.
+   *
+   * Why it matters beyond tidiness: `room.present` gates the auto-reveal (a
+   * question waits on every present seat) and seeds the picker rotation, so one
+   * ghost stalls the whole table.
+   */
+  sweepQuietConnections() {
+    const now = Date.now();
+    for (const playerId of quietPlayerIds(now, this.lastSeen)) {
+      this.lastSeen.delete(playerId);
+      const conn = this.connByPlayer.get(playerId);
+      if (conn) {
+        try { conn.close(); } catch { /* already gone */ }
+      }
+    }
+  }
+
   async onClose(conn) {
     try {
       if (!this.room) return;
       const playerId = this.playerByConn.get(conn);
       if (!playerId) return;
       this.playerByConn.delete(conn);
-      if (this.connByPlayer.get(playerId) === conn) {
-        this.connByPlayer.delete(playerId);
-      }
+      // A SUPERSEDED socket closing late must not tear down the seat that
+      // replaced it. The client abandons a stale socket and reconnects without
+      // waiting for its closing handshake — which can sit in CLOSING
+      // indefinitely, observed at 28 s and still counting — so the old close
+      // routinely lands AFTER the new connection is already serving the same
+      // playerId. Releasing the seat here would mark a player sitting right
+      // there as absent: gone from `present`, dropped out of the roster, and, if
+      // they held the draft pick, re-elected out of their own turn.
+      //
+      // This was reachable before the heartbeat (any reconnect that overlapped
+      // its predecessor), just rare; abandoning the old socket on purpose makes
+      // the overlap the normal path.
+      if (this.connByPlayer.get(playerId) !== conn) return;
+      this.connByPlayer.delete(playerId);
+      this.lastSeen.delete(playerId);
       const phaseBefore = this.room.phase;
       const indexBefore = this.room.questionIndex;
       const result = applyDisconnect(this.room, playerId);
