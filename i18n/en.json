@@ -536,6 +536,7 @@
   },
   "party": {
     "title": "Yet Another Quiz: Flag Party",
+    "resumeLead": "Back into your game",
     "createRoom": "New online game",
     "orJoin": "or join a game",
     "codePlaceholder": "ROOM CODE",
@@ -555,6 +556,10 @@
     "holdToRead": "Hold to read",
     "holdReading": "{name} is reading…",
     "holdReadingYou": "You are reading…",
+    "pausedTitle": "Paused",
+    "pausedBody": "{name} dropped out. The game is holding for them, and starts again the moment they are back.",
+    "pausedHostHint": "{host} can choose to play on without them.",
+    "playOnAnyway": "Play on without waiting",
     "waitingHost": "Waiting for the host to start…",
     "startGame": "Start game",
     "mode": {

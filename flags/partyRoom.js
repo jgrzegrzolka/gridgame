@@ -113,6 +113,17 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from '
  *   the room rather than re-derived so a reconnect mid-pick paints the right
  *   screen, and so {@link applyPick} knows not to spend a rotation slot on it.
  *   False outside `picking`.
+ * @property {string | null} pausedFor  the absent seat the room is waiting for,
+ *   or null when the game is running. Set when a human seat drops mid-game
+ *   ({@link applyDisconnect}), cleared when they come back ({@link applyHello})
+ *   or when the host carries on without them ({@link applyResume}). The room
+ *   stays time-free: this is a flag every client's clock respects — the same
+ *   shape as the `holding` relay — not a duration the room counts down.
+ * @property {string[]} waived  playerIds whose continued absence no longer
+ *   pauses the room, because the host already chose to carry on without them.
+ *   Without it {@link applyResume} would re-pause for the same seat the instant
+ *   it recomputed. A seat is un-waived when it reconnects, so someone who is
+ *   left behind, returns, and drops again pauses the room afresh.
  *
  * @typedef {{ to: string | 'all', message: object }} Broadcast
  * @typedef {{ room: Room, broadcasts: Broadcast[], rejectConnection?: boolean }} ApplyResult
@@ -181,7 +192,91 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     roundPicker: null,
     hand: null,
     decider: false,
+    pausedFor: null,
+    waived: [],
   };
+}
+
+/**
+ * Phases where losing a player is worth stopping for. The lobby has no game to
+ * protect and the final board has none left; everything between them does.
+ * @param {Room} room
+ */
+function pausablePhase(room) {
+  return room.phase === 'question' || room.phase === 'reveal' || room.phase === 'picking';
+}
+
+/**
+ * Whether `playerId`'s absence is a reason to hold the game right now: a human
+ * seat, in the room, currently gone, not already left behind by the host.
+ * @param {Room} room
+ * @param {string} playerId
+ */
+function pausableSeat(room, playerId) {
+  const seat = room.seats.get(playerId);
+  if (!seat || seat.bot === true) return false;
+  return !room.present.has(playerId) && !room.waived.includes(playerId);
+}
+
+/**
+ * The seat the room should be waiting for, given who is present right now.
+ *
+ * An existing pause wins over seat order: once the room says "waiting for Anna"
+ * it keeps saying that until Anna is back or waived, even if someone earlier in
+ * the seat list drops too. Swapping the name on screen for a second absentee
+ * would read as the pause having ended and restarted when nothing changed.
+ *
+ * @param {Room} room
+ * @returns {string | null}
+ */
+export function pauseTargetFor(room) {
+  if (!pausablePhase(room)) return null;
+  if (room.pausedFor !== null && pausableSeat(room, room.pausedFor)) return room.pausedFor;
+  for (const pid of room.seats.keys()) {
+    if (pausableSeat(room, pid)) return pid;
+  }
+  return null;
+}
+
+/**
+ * The seat that should take over hosting, because the host's socket dropped:
+ * the first present human, in seat order. Bots are skipped — hosting means
+ * running the game clock in a real tab, and a bot has no tab.
+ *
+ * Null when nobody is left to hand it to. That is not a stuck room: `applyHello`
+ * gives the host to the first player through the door, so an empty room heals
+ * itself the moment anyone (including the original host) reconnects.
+ *
+ * @param {Room} room
+ * @returns {string | null}
+ */
+function nextHostFor(room) {
+  for (const [pid, seat] of room.seats) {
+    if (seat.bot !== true && room.present.has(pid)) return pid;
+  }
+  return null;
+}
+
+/** @param {Room} room */
+function pausedBroadcast(room) {
+  return { to: /** @type {const} */ ('all'), message: { type: 'paused', pausedFor: room.pausedFor } };
+}
+
+/**
+ * Recompute the pause after presence changed, appending a `paused` broadcast
+ * only when the answer actually moved. Callers pass the broadcast list they are
+ * already building.
+ *
+ * @param {Room} room
+ * @param {Broadcast[]} broadcasts  mutated in place
+ * @returns {Room}
+ */
+function settlePause(room, broadcasts) {
+  const target = pauseTargetFor(room);
+  if (target === room.pausedFor) return room;
+  const nextRoom = { ...room, pausedFor: target };
+  broadcasts.push(pausedBroadcast(nextRoom));
+  return nextRoom;
 }
 
 /**
@@ -221,20 +316,42 @@ export function applyHello(room, playerId, nickname) {
 
   if (!isReconnect) {
     seats.set(playerId, { nickname: name, score: 0 });
-    if (hostId === null) hostId = playerId;
   } else if (name) {
     const existing = /** @type {Seat} */ (seats.get(playerId));
     seats.set(playerId, { ...existing, nickname: name });
   }
+  // An ownerless room hands hosting to whoever is first through the door,
+  // reconnecting or brand new. It used to be enough to ask this of new seats
+  // only, because `hostId` went null exactly once, before anyone had joined.
+  // Host migration made it reachable mid-life too: everyone leaves, the last
+  // departure finds nobody to migrate to, and the room sits ownerless. Skipping
+  // reconnects there would strand a room whose whole roster comes back.
+  if (hostId === null) hostId = playerId;
   present.add(playerId);
 
-  const nextRoom = { ...room, seats, present, hostId };
+  // Coming back cancels having been left behind: the next time this seat drops,
+  // the room stops for them again like anyone else.
+  const waived = room.waived.includes(playerId)
+    ? room.waived.filter((pid) => pid !== playerId)
+    : room.waived;
+
+  /** @type {Room} */
+  let nextRoom = { ...room, seats, present, hostId, waived };
+  // Settled before the welcome is built, because the welcome has to carry the
+  // final answer: someone arriving mid-pause needs the pause in the same message
+  // that gives them the phase, and a returning player is usually the reason it
+  // just ended.
+  /** @type {Broadcast[]} */
+  const pauseBroadcasts = [];
+  nextRoom = settlePause(nextRoom, pauseBroadcasts);
+
   /** @type {Broadcast[]} */
   const broadcasts = [welcomeBroadcast(nextRoom, playerId)];
   const roster = rosterMessage(nextRoom);
   for (const pid of present) {
     if (pid !== playerId) broadcasts.push({ to: pid, message: roster });
   }
+  broadcasts.push(...pauseBroadcasts);
   return { room: nextRoom, broadcasts };
 }
 
@@ -441,7 +558,10 @@ export function applyNext(room, playerId, nextQuestion) {
 
   const isLast = room.questionIndex >= room.totalQuestions - 1;
   if (isLast) {
-    const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [] };
+    // Any pause dies with the game. `final` isn't a pausable phase, so a flag
+    // left set here would never be recomputed away — it would just ride every
+    // later `welcome` telling arrivals the finished game is waiting for someone.
+    const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [], pausedFor: null };
     return {
       room: nextRoom,
       broadcasts: [{ to: 'all', message: { type: 'final', scoreboard: scoreboardOf(nextRoom) } }],
@@ -585,6 +705,11 @@ function resetToLobby(room) {
     roundPicker: null,
     hand: null,
     decider: false,
+    // A new game starts with nobody owed a wait and nobody left behind. Keeping
+    // either across a reset would pause the next game for a seat that dropped
+    // out of the last one.
+    pausedFor: null,
+    waived: [],
   };
   return {
     room: nextRoom,
@@ -650,14 +775,66 @@ export function applyDisconnect(room, playerId) {
   if (!room.present.has(playerId)) return { room, broadcasts: [] };
   const present = new Set(room.present);
   present.delete(playerId);
-  const nextRoom = { ...room, present };
+  let nextRoom = { ...room, present };
+
+  // Host migration. The host is not just a badge: their tab runs the game clock
+  // and is the only seat allowed to send `reveal` / `next` / `forcePick`. A host
+  // who drops therefore freezes the room for everyone, which is the one stall a
+  // pause cannot rescue — nobody left would be allowed to un-pause it.
+  if (nextRoom.hostId === playerId) nextRoom = { ...nextRoom, hostId: nextHostFor(nextRoom) };
+
   /** @type {Broadcast[]} */
   const broadcasts = [{ to: 'all', message: rosterMessage(nextRoom) }];
+
+  // The in-flight question still resolves. Pausing protects the REST of the
+  // game, not the question already on screen: holding that one would leave
+  // everyone still here staring at a prompt they have all answered, and the
+  // player who left cannot answer it either way. They lose at most this one.
   if (nextRoom.phase === 'question' && allPresentBuzzed(nextRoom)) {
     const reveal = toReveal(nextRoom);
-    return { room: reveal.room, broadcasts: [...broadcasts, ...reveal.broadcasts] };
+    nextRoom = reveal.room;
+    broadcasts.push(...reveal.broadcasts);
   }
+
+  nextRoom = settlePause(nextRoom, broadcasts);
   return { room: nextRoom, broadcasts };
+}
+
+/**
+ * The host carries on without the seat the room is waiting for. The absent
+ * player is waived (their absence stops pausing the room) and the game runs
+ * again from wherever it froze.
+ *
+ * Waiving is per-absence, not permanent: reconnecting clears it, so the seat is
+ * a full member again the moment they are back — including their sticky score,
+ * which never stopped being theirs.
+ *
+ * No-op for a non-host, or when nothing is paused. Deliberately host-only: it
+ * decides for the whole room, and the host is already the seat that decides
+ * when the room advances.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @returns {ApplyResult}
+ */
+export function applyResume(room, playerId) {
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  if (room.pausedFor === null) return { room, broadcasts: [] };
+  const waived = room.waived.includes(room.pausedFor)
+    ? room.waived
+    : [...room.waived, room.pausedFor];
+  // Cleared before the recompute, or `pauseTargetFor`'s "an existing pause wins"
+  // rule would hand back the very seat just waived.
+  const cleared = { ...room, waived, pausedFor: /** @type {string | null} */ (null) };
+  // Usually null (the game runs again), but a second player who was already
+  // absent takes over the pause instead of the room lurching into a question
+  // two people are missing.
+  const nextRoom = { ...cleared, pausedFor: pauseTargetFor(cleared) };
+  // Broadcast unconditionally rather than through `settlePause`: this reducer
+  // ran because the host pressed something, and the common outcome is
+  // paused -> running, which `settlePause` reads as "null to null, nothing to
+  // say" and would swallow the one message the room is waiting for.
+  return { room: nextRoom, broadcasts: [pausedBroadcast(nextRoom)] };
 }
 
 /**
@@ -1041,6 +1218,12 @@ function welcomeBroadcast(room, playerId) {
       type: 'welcome',
       you: playerId,
       isHost: room.hostId === playerId,
+      // WHO hosts, not just whether it is you. A joiner used to learn this only
+      // from the next `roster` broadcast, which their own arrival does not send
+      // them — so until someone else came or went, a guest's screen could not
+      // name the host at all. That was survivable while nothing needed the name;
+      // the pause card does, to tell a guest whose call it is to move on.
+      hostId: room.hostId,
       phase: room.phase,
       questionIndex: room.questionIndex,
       totalQuestions: room.totalQuestions,
@@ -1061,6 +1244,10 @@ function welcomeBroadcast(room, playerId) {
       youPick: room.phase === 'picking' && room.picker === playerId,
       hand: (room.phase === 'picking' && room.picker === playerId) ? room.hand : null,
       decider: room.phase === 'picking' && room.decider === true,
+      // So a player who reconnects into a paused room paints the frozen clock
+      // and the "waiting for" line immediately, instead of running a countdown
+      // nobody else is running until the next `paused` broadcast happens by.
+      pausedFor: room.pausedFor,
     },
   };
 }
@@ -1095,6 +1282,8 @@ export function serializeRoom(room) {
     roundPicker: room.roundPicker,
     hand: room.hand,
     decider: room.decider,
+    pausedFor: room.pausedFor,
+    waived: room.waived,
   };
 }
 
@@ -1132,5 +1321,11 @@ export function deserializeRoom(snapshot) {
     roundPicker: snapshot.roundPicker ?? null,
     hand: snapshot.hand ?? null,
     decider: snapshot.decider ?? false,
+    // An eviction empties `present`, so every seat reads as absent for a moment
+    // and the room would pause for whoever happens to be first in seat order.
+    // Restoring the stored answer instead means the pause survives the eviction
+    // as itself, and the first reconnect settles it honestly.
+    pausedFor: snapshot.pausedFor ?? null,
+    waived: snapshot.waived ?? [],
   };
 }

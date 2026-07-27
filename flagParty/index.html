@@ -72,6 +72,14 @@
 
       <!-- Start: create or join -->
       <section class="pt-start" id="pt-start" hidden>
+        <!-- The way back into a room this device is already in. Above create /
+             join because when it is showing it is almost always what the player
+             came here to do: they lost the page, not the game. Hidden whenever
+             there is no remembered room, which is the normal case. -->
+        <button type="button" class="lobby-btn resume-room" id="resume-room" hidden>
+          <span class="resume-lead" data-i18n="party.resumeLead">Back into your game</span>
+          <span class="resume-code" id="resume-code"></span>
+        </button>
         <button type="button" class="lobby-btn primary" id="create-room" data-i18n="party.createRoom">New online game</button>
         <p class="start-sep" data-i18n="party.orJoin">or join a game</p>
         <form class="join-form" id="join-form">
@@ -331,6 +339,24 @@
         </p>
       </section>
     </main>
+
+    <!-- The room is holding for a player who dropped. A modal rather than
+         anything in the page: a pause can start during a question, a reveal or a
+         pick, so it has to read the same on all three, and the top layer means it
+         cannot shift the board underneath at the exact moment someone is aiming
+         at a tile. Wears the site's shared dialog (`.help-dialog`, same card as
+         the TTT rules and the sync wizard).
+
+         No dismiss ×, unlike those two: this describes a room state nobody
+         opened, so there is nothing to close it back to. The host's button is
+         the only way out, and guests do not get one — the last line names who
+         can release the room instead. -->
+    <dialog class="help-dialog pause-dialog" id="pause-dialog" aria-labelledby="pause-title">
+      <h2 id="pause-title" data-i18n="party.pausedTitle">Paused</h2>
+      <p id="pause-body"></p>
+      <p class="pause-sub" id="pause-sub" hidden></p>
+      <button type="button" class="help-close" id="pause-go" data-i18n="party.playOnAnyway" hidden>Play on without waiting</button>
+    </dialog>
 
     <script type="module">
       import { bootFlagParty } from './page.js';

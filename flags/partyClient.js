@@ -60,6 +60,11 @@
  *   naming the closing act is the point of it. False off the pick phase. The
  *   round card doesn't need this — once the round is playing it is simply the
  *   final round, which `isFinalRound` already answers from the question alone.
+ * @property {string | null} pausedFor  the playerId of an absent seat the room is
+ *   waiting for, or null when the game is running. Every client freezes its own
+ *   clock on this (the room stays time-free, so a pause is a flag to respect
+ *   rather than a duration anyone counts), and the host is offered the choice to
+ *   carry on without them. Null on an older server, which simply never pauses.
  * @property {{ picker: string, modeId: string } | null} lastPick  who picked the
  *   current round and which mode, for the "Zosia's pick" attribution; null in a
  *   non-drafted round.
@@ -95,6 +100,7 @@ export function initialPartyClientState() {
     hand: null,
     lastPick: null,
     decider: false,
+    pausedFor: null,
     statusOverride: null,
   };
 }
@@ -181,6 +187,10 @@ function reduceOne(state, message) {
             : (message.you != null && message.you === message.picker),
           hand: message.hand ?? null,
           decider: message.decider === true,
+          // Reconnecting into a paused room paints the frozen clock straight
+          // away, instead of running a countdown nobody else is running until
+          // the next `paused` broadcast happens along.
+          pausedFor: message.pausedFor ?? null,
           // A reconnect can't recover whether we already buzzed this question;
           // treat as fresh — the server ignores a duplicate buzz anyway.
           myChoice: null,
@@ -196,6 +206,15 @@ function reduceOne(state, message) {
           roster: message.roster ?? state.roster,
           isHost: message.hostId != null ? message.hostId === state.you : state.isHost,
         },
+        effects: [],
+      };
+    }
+    case 'paused': {
+      // The room stopped for an absent seat, or started again. Nothing else on
+      // the screen changes — the question, the scores and the pick all stay
+      // exactly where they were, which is the point.
+      return {
+        state: { ...state, pausedFor: message.pausedFor ?? null },
         effects: [],
       };
     }
@@ -233,6 +252,10 @@ function reduceOne(state, message) {
           hand: null,
           lastPick: null,
           decider: false,
+          // A new game waits for nobody. The room clears its own pause on the
+          // same reset, and says so through this message rather than a second
+          // `paused` broadcast.
+          pausedFor: null,
         },
         effects: [],
       };

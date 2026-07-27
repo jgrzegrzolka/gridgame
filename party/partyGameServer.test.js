@@ -489,19 +489,37 @@ test('the Decider: a forced pick still spends no rotation slot', async () => {
 
 // A seat outlives its socket (sticky score, for reconnect), so a player who quits
 // stops scoring and sinks toward last place — which is precisely who both picker
-// rules aim at, the Decider hardest and at the worst possible moment. Left alone,
-// the room waits on someone who is gone until the host's 45 s anti-stall fires.
-test('the Decider: a picker who leaves mid-pick hands the turn on, no waiting', async () => {
+// rules aim at, the Decider hardest and at the worst possible moment.
+//
+// The room now stops for them rather than routing around them: a pick is a turn
+// worth more than the 45 s it would take to expire, and a phone that locked
+// mid-choice is the common case. The turn is held; the host decides whether to
+// keep waiting. Re-election still exists — it just fires on `resume` instead of
+// on the disconnect.
+test('the Decider: a picker who leaves mid-pick has their turn held, not reassigned', async () => {
   const { srv, a, b } = await playToDeciderPick();
   assert.equal(srv.room.picker, 'bob');
 
-  await srv.onClose(b); // bob quits as the closing act opens
+  await srv.onClose(b); // bob's phone locks as the closing act opens
 
   assert.equal(srv.room.present.has('bob'), false, 'presence dropped');
   assert.ok(srv.room.seats.has('bob'), 'but the seat and its score stay, for reconnect');
   assert.equal(srv.room.phase, 'picking', 'still the closing pick');
-  assert.equal(srv.room.decider, true, 'still the Decider — only the seat changed');
+  assert.equal(srv.room.decider, true, 'still the Decider');
+  assert.equal(srv.room.picker, 'bob', 'and still his turn, waiting for him');
+  assert.equal(srv.room.pausedFor, 'bob', 'the room is holding for him');
+  assert.equal(a.last('paused').pausedFor, 'bob', 'and Alice is told what it is waiting on');
+});
+
+test('the Decider: the host carries on, and only then does the turn move', async () => {
+  const { srv, a, b } = await playToDeciderPick();
+  await srv.onClose(b);
+
+  await srv.onMessage(JSON.stringify({ type: 'resume' }), a); // alice hosts
+
+  assert.equal(srv.room.pausedFor, null, 'the game runs again');
   assert.equal(srv.room.picker, 'alice', 'handed to whoever is still here');
+  assert.equal(srv.room.decider, true, 'still the Decider — only the seat changed');
 
   const picking = a.last('picking');
   assert.equal(picking.youPick, true, 'and she is told it is hers, with a hand');
@@ -509,9 +527,9 @@ test('the Decider: a picker who leaves mid-pick hands the turn on, no waiting', 
   assert.equal(picking.decider, true);
 });
 
-test('a picker who leaves mid-ROTATION-pick is replaced the same way', async () => {
-  // The fix is not Decider-specific: the rotation had the identical stall, and
-  // both go through one picker-selection method so they cannot drift apart.
+test('a picker who leaves mid-ROTATION-pick is held and handed on the same way', async () => {
+  // The behaviour is not Decider-specific: the rotation goes through the same
+  // picker-selection method, so the two cannot drift apart.
   const { srv, a, b } = await startDuoDraft();
   await playRoundWon(srv, [['alice', a], ['bob', b]], 'alice');
   assert.equal(srv.room.phase, 'picking');
@@ -519,8 +537,21 @@ test('a picker who leaves mid-ROTATION-pick is replaced the same way', async () 
   assert.equal(srv.room.picker, 'bob');
 
   await srv.onClose(b);
+  assert.equal(srv.room.picker, 'bob', 'held for him first');
+
+  await srv.onMessage(JSON.stringify({ type: 'resume' }), a);
   assert.equal(srv.room.picker, 'alice', 'the rotation hands the turn on too');
   assert.equal(a.last('picking').youPick, true);
+});
+
+test('a guest cannot resume the room past a player the host is still waiting for', async () => {
+  const { srv, a, b } = await startDuoDraft();
+  await playRoundWon(srv, [['alice', a], ['bob', b]], 'alice');
+  await srv.onClose(b);
+
+  await srv.onMessage(JSON.stringify({ type: 'resume' }), b); // not the host, and not even here
+  assert.equal(srv.room.pausedFor, 'bob', 'still waiting');
+  assert.equal(srv.room.picker, 'bob', 'and his turn is still his');
 });
 
 test('an absent seat is never handed a pick in the first place', async () => {

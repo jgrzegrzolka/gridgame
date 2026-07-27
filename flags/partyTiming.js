@@ -16,6 +16,22 @@
  *  answered — the server auto-reveals the moment the last seat buzzes. */
 export const QUESTION_SECONDS = 20;
 
+/**
+ * How long a pause has to last before the popup explaining it appears.
+ *
+ * The freeze itself is instant — the clock stops the moment the server says a
+ * seat dropped. Only the modal waits. A phone that backgrounds for a second, a
+ * tunnel, a tab that reloads: all of those resolve inside this window, and
+ * flashing a full-screen card up and away again for each one would be worse than
+ * the stall it is explaining. Past that, the room deserves to be told why the
+ * clock stopped.
+ *
+ * Deliberately NOT a grace period before resuming — nothing here decides
+ * anything. The room stays paused until the player returns or the host says
+ * otherwise; this only governs when the explanation surfaces.
+ */
+export const PAUSE_POPUP_DELAY_MS = 2000;
+
 /** Seconds a clean reveal lingers — every present player got it right, so
  *  there's nothing to study and the question snaps on. Mirrors flagQuiz's pace
  *  (a correct pick advances almost immediately). */

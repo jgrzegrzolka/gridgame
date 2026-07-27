@@ -2,12 +2,13 @@ import { t, countryName } from '../i18n.js';
 import { generateCode, isValidRoomCode, serverUrlFor } from '../flags/roomNet.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
+import { rememberActiveRoom, readActiveRoom, forgetActiveRoom } from '../flags/activeRoom.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal, revealOrder } from '../flags/partyClient.js';
 import { showBotSeat } from './botSeat.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak, breakOpeningOrder } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally } from '../flags/partyRoundTally.js';
@@ -463,6 +464,12 @@ export function bootFlagParty() {
   const holdBtn = /** @type {HTMLButtonElement} */ ($('hold-btn'));
   const holdBtnLabel = $('hold-btn-label');
   const holdWho = $('hold-who');
+  const resumeBtn = /** @type {HTMLButtonElement} */ ($('resume-room'));
+  const resumeCodeEl = $('resume-code');
+  const pauseDialog = /** @type {HTMLDialogElement} */ ($('pause-dialog'));
+  const pauseBodyEl = $('pause-body');
+  const pauseSubEl = $('pause-sub');
+  const pauseGoEl = /** @type {HTMLButtonElement} */ ($('pause-go'));
   const footEl = $('question-foot');
   const finalSub = $('final-sub');
   const finalBoard = $('final-board');
@@ -969,13 +976,25 @@ export function bootFlagParty() {
     // time anyone pressed, the thing they were trying to read would jump. Only
     // the status line changes, so only the status line is repainted.
     if (msg.type === 'holding') { syncAndPaintHold(); return; }
+    // Same reasoning as `holding` above: a pause changes the clock and one line
+    // of text, and nothing else on screen. Going through render() would rebuild
+    // the grid — so the question people are mid-answer on would flicker and
+    // reshuffle at the exact moment the room froze.
+    if (msg.type === 'paused') { syncPauseAccounting(); paintPause(); return; }
     if (msg.type === 'roster' && typeof msg.hostId === 'string') roomHostId = msg.hostId;
-    if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
+    // `hostId` first: it names the host outright. The `isHost` fallback is for a
+    // server older than that field, which only ever told you about yourself.
+    if (msg.type === 'welcome' && typeof msg.hostId === 'string') roomHostId = msg.hostId;
+    else if (msg.type === 'welcome' && msg.isHost) roomHostId = state.you;
     for (const eff of effects) {
       if (eff.type === 'close') {
         rejected = true;
         try { if (ws) ws.close(); } catch { /* already closed */ }
         activeRoom = null;
+        // The server has told us this room is not somewhere we can be — gone,
+        // full, or already playing. Whatever the reason, offering a way back
+        // into it would just repeat the rejection, so the memory goes with it.
+        forgetActiveRoom(window.localStorage);
         history.replaceState(null, '', location.pathname);
       }
     }
@@ -993,18 +1012,67 @@ export function bootFlagParty() {
     render();
   }
 
-  function enterRoom(/** @type {string} */ code, /** @type {'create'|'join'} */ intent) {
+  /**
+   * @param {string} code
+   * @param {'create'|'join'} intent
+   * @param {{ push?: boolean }} [opts]  `push` adds a history entry, so Back
+   *   leaves the room instead of leaving the site. Set for every user-initiated
+   *   entry; left off on the boot path, where the URL already names the room and
+   *   pushing would bury the entry the player arrived on.
+   */
+  function enterRoom(code, intent, opts = {}) {
     rejected = false;
     reconnectAttempts = 0;
     clearJoinError();
     state = initialPartyClientState();
     activeRoom = { code, intent };
+    // Written down before the socket is even open, and deliberately not
+    // conditional on the join succeeding: the case this exists for is the player
+    // whose page went away, and the entry is what gets them back. A code that
+    // turns out to be dead is cleared when the server says so (the reject path).
+    rememberActiveRoom(window.localStorage, { game: 'party', code, at: Date.now() });
     const url = new URL(location.href);
     url.searchParams.set('room', code);
-    history.replaceState(null, '', url.toString());
+    if (opts.push) history.pushState(null, '', url.toString());
+    else history.replaceState(null, '', url.toString());
     render();
     connect();
   }
+
+  /**
+   * Leave the room and go back to the start screen, without touching history —
+   * the caller has either just been moved by the browser (Back) or is about to
+   * rewrite the URL itself.
+   */
+  function leaveRoom() {
+    // `activeRoom` first, so the close handler's `scheduleReconnect` sees there
+    // is no room to go back to; then the same drop-reference-then-close order the
+    // heartbeat uses above, so a socket that never completes its handshake can't
+    // hold anything up. The remembered room is deliberately KEPT: leaving is
+    // exactly when the way back matters.
+    activeRoom = null;
+    stopHeartbeat();
+    const dead = ws;
+    ws = null;
+    try { if (dead) dead.close(); } catch { /* best effort — already gone */ }
+    state = initialPartyClientState();
+    render();
+  }
+
+  // Back leaves the ROOM, not the site. Entering a room pushes a history entry
+  // (see `enterRoom`), so the browser's own Back — and the phone edge-swipe that
+  // is the same gesture, and the way most accidental exits actually happen —
+  // lands on the start screen with the way back in still offered, instead of
+  // dumping the player off the page with the code gone.
+  window.addEventListener('popstate', () => {
+    const code = new URLSearchParams(location.search).get('room');
+    const wanted = code && isValidRoomCode(code.toUpperCase()) ? code.toUpperCase() : null;
+    if (!wanted && activeRoom) { leaveRoom(); return; }
+    // Forward again, back into the room. Replace rather than push: the entry we
+    // are landing on already exists, and pushing here would grow the stack every
+    // time the player oscillated.
+    if (wanted && (!activeRoom || activeRoom.code !== wanted)) enterRoom(wanted, 'join');
+  });
 
   // ---- question clock ----
   // Everyone renders the countdown; only the host's timer fires the transition
@@ -1056,6 +1124,94 @@ export function bootFlagParty() {
   /** Total ms the current reveal has been frozen for, as of now. */
   function heldNow() {
     return heldMsAt(hold, Date.now());
+  }
+
+  // ---- paused for an absent player ----
+  // Same accounting as hold-to-read, and deliberately the same primitive: a
+  // pause is just a freeze nobody has to keep their finger on. The differences
+  // are that it applies to EVERY timed phase rather than the chart reveal (a
+  // player who dropped mid-question is exactly who a running question clock hurts
+  // most), and that it is driven by `state.pausedFor` from the server instead of
+  // a local press, so every screen in the room freezes on the same message.
+  //
+  // Reset per phase exactly like `hold`, and for the same reason: the offset is
+  // measured against the CURRENT phase's deadline, so banked time from an
+  // earlier beat would push a fresh clock absurdly far out. A pause can outlive
+  // its phase (buzzes still land while frozen, so a question can auto-reveal
+  // under one), which is why `startClock` re-arms the stretch immediately
+  // instead of just zeroing it.
+  /** @type {import('../flags/partyTiming.js').HoldState} */
+  let pause = initialHold();
+
+  /** Advance the pause clock to now, following the server's answer. */
+  function syncPauseAccounting() {
+    const now = Date.now();
+    pause = state.pausedFor ? beginHold(pause, now) : endHold(pause, now);
+  }
+
+  /** Pending "show the popup" timer, or 0. Held so a pause that ends inside the
+   *  delay never surfaces a card at all. */
+  let pausePopupTimer = 0;
+
+  /** Fill the card from the current pause. Separate from opening it so a pause
+   *  that moves to a SECOND absentee updates the text of a card already open. */
+  function paintPauseText() {
+    const who = state.pausedFor;
+    if (!who) return;
+    const entry = state.roster.find((r) => r.playerId === who);
+    // Same beat of uncertainty as a hold: the roster update and the pause can
+    // cross, so the name is briefly unknown. Say "someone" rather than painting
+    // a headless sentence.
+    const name = entry ? entry.nickname : t('party.holdReadingSomeone', 'Someone');
+    pauseBodyEl.textContent = fmt(
+      t('party.pausedBody', '{name} dropped out. The game is holding for them, and starts again the moment they are back.'),
+      { name },
+    );
+    // Only the host can release the room, and hosting migrates on a disconnect,
+    // so whoever is offered this button is always someone actually present.
+    pauseGoEl.hidden = !state.isHost;
+    // Everyone else is told whose call it is, rather than being shown a button
+    // that would do nothing for them.
+    const host = state.roster.find((r) => r.playerId !== who && r.playerId === hostPlayerId());
+    pauseSubEl.hidden = state.isHost || !host;
+    if (!pauseSubEl.hidden && host) {
+      pauseSubEl.textContent = fmt(t('party.pausedHostHint', '{host} can choose to play on without them.'), { host: host.nickname });
+    }
+  }
+
+  /** Open, update or close the pause card as the room's answer changes. Cheap
+   *  and independent of render(), like `syncAndPaintHold`: a pause must not
+   *  rebuild the grid underneath a question people are mid-answer on. */
+  function paintPause() {
+    if (!state.pausedFor) {
+      // Covers both ways a pause can end, including the one that never showed:
+      // if it resolved inside the delay, the timer is dropped and no card ever
+      // appears.
+      if (pausePopupTimer) { clearTimeout(pausePopupTimer); pausePopupTimer = 0; }
+      if (pauseDialog.open) pauseDialog.close();
+      return;
+    }
+    if (pauseDialog.open) { paintPauseText(); return; }
+    if (pausePopupTimer) return;
+    pausePopupTimer = window.setTimeout(() => {
+      pausePopupTimer = 0;
+      // Re-checked rather than assumed: the room can have resumed during the
+      // wait, and `showModal` on a room that is running again would be a card
+      // about nothing that only the host could dismiss.
+      if (!state.pausedFor || pauseDialog.open) return;
+      paintPauseText();
+      pauseDialog.showModal();
+    }, PAUSE_POPUP_DELAY_MS);
+  }
+
+  /** The seat currently hosting, per the last roster we were sent. */
+  function hostPlayerId() {
+    return roomHostId;
+  }
+
+  /** Total ms the room has been paused for, across every phase, as of now. */
+  function pausedNow() {
+    return heldMsAt(pause, Date.now());
   }
 
   /** Start / stop freezing, following the holders set. Called whenever it changes
@@ -1133,6 +1289,40 @@ export function bootFlagParty() {
     holdBtn.addEventListener(ev, () => setHoldPressed(false));
   }
   holdBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // The host stops waiting. The room decides what that means (usually the game
+  // runs again; occasionally the pause moves onto a second absentee), and the
+  // answer comes back as a `paused` broadcast like any other — so nothing is
+  // predicted here.
+  pauseGoEl.addEventListener('click', () => send({ type: 'resume' }));
+
+  // Esc closes a <dialog> for free, which here would let someone dismiss the
+  // only explanation on screen for a game that is still frozen — and nothing
+  // would bring it back until the pause changed. The card leaves when the room
+  // resumes, and not before.
+  pauseDialog.addEventListener('cancel', (e) => e.preventDefault());
+
+  // ---- back into a room this device is already in ----
+
+  /** Show or hide the way back in, and name the room. Called on every render of
+   *  the start screen, because the memory can change under us (a reject clears
+   *  it; a Back out of a room leaves one behind). */
+  function paintResume() {
+    const entry = readActiveRoom(window.localStorage, 'party', Date.now(), isValidRoomCode);
+    resumeBtn.hidden = !entry;
+    if (entry) resumeCodeEl.textContent = entry.code;
+  }
+
+  resumeBtn.addEventListener('click', () => {
+    const entry = readActiveRoom(window.localStorage, 'party', Date.now(), isValidRoomCode);
+    // Gone stale between paint and tap (a six-hour-old row, another tab that
+    // rejected out of it). Repaint rather than connect to a room we no longer
+    // believe in.
+    if (!entry) { paintResume(); return; }
+    // Always a join: the room already exists, and `create` on an occupied code
+    // is what the server rejects as a collision.
+    enterRoom(entry.code, 'join', { push: true });
+  });
   // Keyboard equivalent: space/enter held down repeat-fires keydown, and keyup
   // ends it — the same press-and-hold shape without a pointer.
   holdBtn.addEventListener('keydown', (e) => {
@@ -1240,6 +1430,11 @@ export function bootFlagParty() {
     // the room a second helping of reading time.
     hold = initialHold();
     holdPressed = false;
+    // Rebased onto this phase's deadline. The immediate re-sync matters: a
+    // question that auto-revealed while the room was frozen arrives here still
+    // paused, and zeroing without re-arming would quietly let the new clock run.
+    pause = initialHold();
+    syncPauseAccounting();
     // Which phases paint a bar is one rule, unit-pinned in partyTiming: the
     // question, plus the chart reveal (where the bar is hold-to-read's missing
     // feedback — see `barPaints`). The short reveal and the pick stay bar-less,
@@ -1260,7 +1455,11 @@ export function bootFlagParty() {
     // freeze survives a tick the browser skips (a backgrounded tab, a slow
     // frame) — the clock is always derived from wall time, never accumulated.
     if (mode === 'reveal' && !holdReadEl.hidden) syncAndPaintHold();
-    const held = mode === 'reveal' ? heldNow() : 0;
+    syncPauseAccounting();
+    // Both freezes ride the same offset. A pause applies to every timed phase,
+    // a hold only to the chart reveal, and they compose: the room can be paused
+    // while someone is also holding the chart open.
+    const held = (mode === 'reveal' ? heldNow() : 0) + pausedNow();
     // The boundary answer beat rides the SAME held offset as the reveal deadline
     // below, so the chart never disappears out from under a hold. Re-rendering
     // here (rather than from a timer callback) also means the break path gets to
@@ -1502,13 +1701,18 @@ export function bootFlagParty() {
     // Leaving the room entirely (kicked, rejected): tear down every running loop,
     // the round-intro beat included, so nothing keeps animating a screen the
     // player can no longer see.
-    if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); showSection('start'); return; }
+    if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); paintResume(); showSection('start'); return; }
     // Put the hold button away by default; only the chart-reveal path below turns
     // it back on. Doing it here rather than per-branch means every screen that
     // returns early (the standings break, the round card, the pick, the final
     // board) is covered — the break was the one that wasn't, which left the
     // button live inside a hidden section with a press still registered.
     syncHoldControl(false);
+    // Repainted on every render as well as on its own message, because two other
+    // things move it: a `welcome` (reconnecting into a room that is already
+    // paused) and a `roster` (hosting migrating onto this seat, which is what
+    // decides whether the button is ours to press).
+    paintPause();
     // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
     if (state.phase !== 'final') finalCelebrated = false;
     // Re-arm the pick guard whenever we're not mid-pick, so the next draft turn
@@ -2657,7 +2861,7 @@ export function bootFlagParty() {
   }
 
   // ---- wire controls ----
-  $('create-room').addEventListener('click', () => enterRoom(generateCode(), 'create'));
+  $('create-room').addEventListener('click', () => enterRoom(generateCode(), 'create', { push: true }));
 
   $('join-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -2668,7 +2872,7 @@ export function bootFlagParty() {
       return;
     }
     clearJoinError();
-    enterRoom(code, 'join');
+    enterRoom(code, 'join', { push: true });
   });
 
   for (const btn of draftPickBtns) {

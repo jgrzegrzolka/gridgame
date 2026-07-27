@@ -37,7 +37,19 @@ import {
   beginHold,
   endHold,
   heldMsAt,
+  PAUSE_POPUP_DELAY_MS,
 } from './partyTiming.js';
+
+test('the pause popup waits long enough to skip a blip, and less than a question', () => {
+  // Long enough that a backgrounded phone or a tab reload resolves before a
+  // full-screen card appears...
+  assert.ok(PAUSE_POPUP_DELAY_MS >= 1000, 'shorter than this and every wifi hiccup flashes a modal');
+  // ...and comfortably shorter than the question it interrupts. Past that the
+  // popup would be explaining a freeze that had already outlived the thing it
+  // froze, which is exactly when a player is most confused by it.
+  assert.ok(PAUSE_POPUP_DELAY_MS < QUESTION_SECONDS * 1000,
+    'the explanation must arrive while the question it stopped is still on screen');
+});
 
 test('durations are sane: a question outlasts either reveal, all positive', () => {
   assert.ok(QUESTION_SECONDS > 0);

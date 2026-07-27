@@ -1295,6 +1295,22 @@ body::after {
   100% { transform: translateY(0); }
 }
 
+/* No focus ring on the card itself.
+ *
+ * `showModal()` has to put focus somewhere. If the dialog holds no autofocus
+ * target it keeps focus on itself, and Chrome then paints its default focus ring
+ * — `outline: rgb(16,16,16) auto 1px`, drawn as a thick dark rectangle — around
+ * the whole card. It reads as a heavy black border nobody designed, and it lands
+ * inconsistently: only when the open wasn't attributed to a pointer, so the same
+ * dialog looks different opened by tap, by keyboard, or by script.
+ *
+ * Safe to drop because a <dialog> is a container, not a control. Nothing is
+ * actioned by "focusing the card", and every focusable thing INSIDE it keeps its
+ * own ring — buttons, inputs and the toggles in the TTT rules card are all
+ * untouched by this. It is the one focus outline on the site that carries no
+ * information. */
+dialog:focus { outline: none; }
+
 dialog#zoom {
   width: min(80vw, 320px);
   padding: 16px;

@@ -12,6 +12,8 @@ import {
   applyPlayAgain,
   applyReturnToLobby,
   applyDisconnect,
+  applyResume,
+  pauseTargetFor,
   pendingPickAfterReveal,
   applyEnterPicking,
   applyRepick,
@@ -439,6 +441,169 @@ test('applyDisconnect: reveals a question that was only waiting on the leaver', 
   room = applyBuzz(room, 'alice', 'jp', true).room; // Alice buzzed, Bob hasn't
   const r = applyDisconnect(room, 'bob');
   assert.equal(r.room.phase, 'reveal', 'no longer hangs waiting on Bob');
+});
+
+// ---- pause on departure ----
+
+/** Seat three players and start the show. Seat order is alice, bob, carol. */
+function startedThreePlayer(question = q('jp')) {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyHello(room, 'carol', 'Carol').room;
+  return applyStart(room, 'alice', question).room;
+}
+
+test('applyDisconnect: a player dropping mid-question pauses the room for them', () => {
+  const r = applyDisconnect(startedThreePlayer(), 'bob');
+  assert.equal(r.room.pausedFor, 'bob');
+  assert.equal(msg(r, 'paused').pausedFor, 'bob', 'the room is told who it is waiting for');
+});
+
+test('applyDisconnect: pauses during a reveal and during a pick, not in the lobby', () => {
+  let room = startedThreePlayer();
+  room = applyForceReveal(room, 'alice').room;
+  assert.equal(applyDisconnect(room, 'bob').room.pausedFor, 'bob', 'reveal pauses');
+
+  const picking = applyEnterPicking(room, 'alice', 'carol', ['flags-all'], false).room;
+  assert.equal(applyDisconnect(picking, 'bob').room.pausedFor, 'bob', 'pick pauses');
+
+  let lobby = createRoom(3);
+  lobby = applyHello(lobby, 'alice', 'Alice').room;
+  lobby = applyHello(lobby, 'bob', 'Bob').room;
+  const r = applyDisconnect(lobby, 'bob');
+  assert.equal(r.room.pausedFor, null, 'nothing to protect before the game starts');
+  assert.equal(msg(r, 'paused'), null, 'and nothing is broadcast');
+});
+
+test('applyDisconnect: the in-flight question still resolves, and the room is paused after it', () => {
+  let room = startedThreePlayer();
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'carol', 'jp', true).room; // only Bob is outstanding
+  const r = applyDisconnect(room, 'bob');
+  assert.equal(r.room.phase, 'reveal', 'the question everyone answered still reveals');
+  assert.equal(r.room.pausedFor, 'bob', 'but the game does not carry on past it');
+});
+
+test('applyHello: coming back clears the pause', () => {
+  let room = applyDisconnect(startedThreePlayer(), 'bob').room;
+  const r = applyHello(room, 'bob', 'Bob');
+  assert.equal(r.room.pausedFor, null);
+  assert.equal(msg(r, 'paused').pausedFor, null, 'the room is told it is running again');
+  assert.equal(msg(r, 'welcome').pausedFor, null, "and Bob's own welcome agrees");
+});
+
+test('applyHello: a joiner is told who hosts, not just whether it is them', () => {
+  // Their own arrival sends a roster to everyone ELSE, so without this a guest
+  // could not name the host until the next join or drop.
+  let room = applyHello(createRoom(3), 'alice', 'Alice').room;
+  const r = applyHello(room, 'bob', 'Bob');
+  const w = msg(r, 'welcome');
+  assert.equal(w.isHost, false);
+  assert.equal(w.hostId, 'alice');
+});
+
+test('applyHello: arriving mid-pause is told about it in the welcome', () => {
+  const room = applyDisconnect(startedThreePlayer(), 'bob').room;
+  // Carol's tab reloads and reconnects while Bob is still away.
+  const r = applyHello(applyDisconnect(room, 'carol').room, 'carol', 'Carol');
+  assert.equal(msg(r, 'welcome').pausedFor, 'bob');
+});
+
+test('applyResume: the host carries on without the absent player', () => {
+  const room = applyDisconnect(startedThreePlayer(), 'bob').room;
+  const r = applyResume(room, 'alice');
+  assert.equal(r.room.pausedFor, null, 'the game runs again');
+  assert.deepEqual(r.room.waived, ['bob'], 'and stops waiting for Bob');
+  assert.equal(msg(r, 'paused').pausedFor, null);
+  assert.equal(r.room.seats.get('bob')?.score, 0, "Bob's seat survives being left behind");
+});
+
+test('applyResume: a waived player who returns and drops again pauses the room afresh', () => {
+  let room = applyDisconnect(startedThreePlayer(), 'bob').room;
+  room = applyResume(room, 'alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  assert.deepEqual(room.waived, [], 'being back cancels having been left behind');
+  assert.equal(applyDisconnect(room, 'bob').room.pausedFor, 'bob');
+});
+
+test('applyResume: a second absentee takes over the pause instead of the game resuming', () => {
+  let room = applyDisconnect(startedThreePlayer(), 'bob').room;
+  room = applyDisconnect(room, 'carol').room;
+  assert.equal(room.pausedFor, 'bob', 'the first absence keeps the pause');
+
+  const r = applyResume(room, 'alice');
+  assert.equal(r.room.pausedFor, 'carol', 'the room does not lurch on two players short');
+  assert.equal(msg(r, 'paused').pausedFor, 'carol');
+});
+
+test('applyResume: no-op for a non-host, and when nothing is paused', () => {
+  const paused = applyDisconnect(startedThreePlayer(), 'bob').room;
+  assert.equal(applyResume(paused, 'carol').room.pausedFor, 'bob', 'a guest cannot decide for the room');
+  assert.equal(applyResume(paused, 'carol').broadcasts.length, 0);
+  assert.equal(applyResume(startedThreePlayer(), 'alice').broadcasts.length, 0, 'nothing to resume');
+});
+
+test('pauseTargetFor: a bot that is somehow absent is never waited for', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyAddBot(room, 'alice', 'bot-1', 'Botty', 'medium').room;
+  room = applyStart(room, 'alice', q('jp')).room;
+  // Bots hold no socket, so only a bug could take one out of `present`. The
+  // guard exists so that bug never freezes a room waiting for a tab that does
+  // not exist.
+  const broken = { ...room, present: new Set(['alice']) };
+  assert.equal(pauseTargetFor(broken), null);
+});
+
+// ---- host migration ----
+
+test('applyDisconnect: the host dropping hands hosting to the first present human', () => {
+  const r = applyDisconnect(startedThreePlayer(), 'alice');
+  assert.equal(r.room.hostId, 'bob', 'the room keeps a seat that can drive the clock');
+  assert.equal(msg(r, 'roster').hostId, 'bob', 'and every client is told');
+});
+
+test('applyDisconnect: hosting skips bots, which have no tab to run the clock in', () => {
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyAddBot(room, 'alice', 'bot-1', 'Botty', 'medium').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyStart(room, 'alice', q('jp')).room;
+  assert.equal(applyDisconnect(room, 'alice').room.hostId, 'bob');
+});
+
+test('applyDisconnect: an emptied room drops its host, and the next arrival takes it', () => {
+  let room = startedTwoPlayer();
+  room = applyDisconnect(room, 'bob').room;
+  room = applyDisconnect(room, 'alice').room;
+  assert.equal(room.hostId, null, 'nobody left to hold it');
+  // Including the original host: whoever is first through the door hosts.
+  assert.equal(applyHello(room, 'bob', 'Bob').room.hostId, 'bob');
+});
+
+test('applyDisconnect: a non-host leaving does not disturb the host', () => {
+  assert.equal(applyDisconnect(startedThreePlayer(), 'bob').room.hostId, 'alice');
+});
+
+test('applyPlayAgain: a new game starts with nothing paused and nobody left behind', () => {
+  let room = startedTwoPlayer();
+  room = applyDisconnect(room, 'bob').room;
+  room = applyResume(room, 'alice').room;
+  room = { ...room, phase: 'final' };
+  const next = applyPlayAgain(room, 'alice').room;
+  assert.equal(next.pausedFor, null);
+  assert.deepEqual(next.waived, []);
+});
+
+test('serialize/deserialize: the pause survives a durable-object eviction', () => {
+  let room = startedThreePlayer();
+  room = applyDisconnect(room, 'bob').room;
+  room = applyDisconnect(room, 'carol').room;
+  room = applyResume(room, 'alice').room; // waives bob, pauses for carol
+  const restored = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(room))));
+  assert.equal(restored.pausedFor, 'carol', 'not recomputed from an empty presence set');
+  assert.deepEqual(restored.waived, ['bob']);
 });
 
 // ---- persistence ----
