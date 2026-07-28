@@ -192,11 +192,13 @@ body::before {
   left: 0;
   right: 0;
   height: var(--strip-height);
-  /* Visible chrome bar: the same quiet --hover-color wash used for hovers
-   * site-wide (it's a step darker than the page, so the strip reads as its own
-   * band), holding the wordmark + chrome cluster, with the full-width underline
-   * below as its baseline. */
-  background: var(--hover-color);
+  /* Chrome bar: fills with the page background so the header blends into the
+   * page rather than reading as its own darker band (the design direction — a
+   * calmer top edge). Still an opaque fixed strip, so content scrolling under
+   * it is occluded cleanly; the wordmark + chrome cluster sit on it, and on
+   * wider viewports the hairline below (body::after) is the header's only
+   * separator. */
+  background: var(--page-bg-color);
   z-index: 10;
 }
 /* Hairline underline at the chrome bar's bottom edge, running the full
@@ -214,6 +216,15 @@ body::after {
   background: var(--muted-soft-color);
   z-index: 11;
   pointer-events: none;
+}
+/* On phones the header sits flush against the content with no rule — the
+ * blended strip already carries no band, and a hairline there read as a stray
+ * line under a bar you can barely see. Wider viewports keep the hairline as the
+ * header's baseline. Site-wide so every page's top bar matches. */
+@media (max-width: 600px) {
+  body::after {
+    display: none;
+  }
 }
 /* Top-left wordmark — pairs with the chrome cluster (lang / flag /
  * burger) on the top-right. Centres on the same vertical axis as the

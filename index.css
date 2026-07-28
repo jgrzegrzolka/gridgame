@@ -20,12 +20,6 @@ body {
    * chrome elements are body's children and inherit this custom property. */
   --chrome-x-offset: max(0px, calc(50vw - 520px));
 }
-/* The header blends into the page on the home — the design carries no darker
- * chrome band here, unlike the site-wide strip (--hover-color). Override just
- * the fill to the page background; the hairline baseline (body::after) stays. */
-body::before {
-  background: var(--page-bg-color);
-}
 
 /* Reading column. Wide enough for the desktop two-column hero + three-card row;
  * on phones it simply fills the viewport. Capped at the site content width so
@@ -275,13 +269,6 @@ body::before {
   }
   .hero {
     padding: 40px 0 0;
-  }
-  /* No divider under the header on phones — the design's mobile header sits
-   * flush against the content with no rule (the blended strip already carries
-   * no band). The desktop home keeps the hairline, matching the design's
-   * desktop header border. Home-scoped: other pages keep their divider. */
-  body::after {
-    display: none;
   }
 }
 
