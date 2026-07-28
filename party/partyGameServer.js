@@ -4,7 +4,7 @@ import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
 import { quietPlayerIds } from '../flags/heartbeat.js';
-import { roundCountFor, validateGameLength, validateFirstPickMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, DEFAULT_FIRST_PICK, eligiblePickers } from '../flags/partyDraft.js';
+import { resolveRoundCount, validateGameLength, validateFirstPickMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, DEFAULT_FIRST_PICK, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -23,6 +23,7 @@ import {
   applyEnterPicking,
   applyRepick,
   applySetLength,
+  applySetPicksPerPlayer,
   applyPick,
   applyAddBot,
   applyRemoveBot,
@@ -398,7 +399,10 @@ export default class PartyGameServer {
           // so a client that predates `setLength` can still reach this server and
           // would otherwise silently get a medium game whatever it chose.
           const length = validateGameLength(this.room.length ?? parsed.length);
-          const targetRounds = roundCountFor(this.room.present.size, length);
+          // Even-picks sizing (`picksPerPlayer` 1/2/3) overrides length with
+          // `seats * picksPerPlayer`; null resolves to the length table. Sized off
+          // the seats present right now, exactly as the length path always was.
+          const targetRounds = resolveRoundCount(this.room.present.size, length, this.room.picksPerPlayer);
           // The first round is the host's choice now (lobby, `setFirstPick`), not a
           // constant. `validateFirstPickMode` turns the never-set null -- and anything
           // a stale or malformed client sends -- back into Flags, which is exactly
@@ -432,6 +436,12 @@ export default class PartyGameServer {
           // Validated in the reducer (which also owns the host and phase
           // guards), so the raw value goes straight through.
           result = applySetLength(this.room, playerId, parsed.length);
+          break;
+        }
+        case 'setPicks': {
+          // Even-picks sizing toggle. Validated in the reducer (host + phase +
+          // coercion to 1/2/3/null), same as setLength.
+          result = applySetPicksPerPlayer(this.room, playerId, parsed.picksPerPlayer);
           break;
         }
         case 'addBot': {

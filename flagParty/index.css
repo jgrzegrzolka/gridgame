@@ -965,10 +965,11 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   gap: 6px;
 }
 .draft-length[hidden] { display: none; }
-/* Right-aligned on the length field's header line, opposite its label. Deliberately
-   the SAME size / weight / colour as the veil switch's label on the first-round
-   header row (`.veil-toggle` → `.scope-toggle` text: 12px, primary), so the two
-   header rows read as a matched pair rather than one loud and one faint. */
+/* The rounds summary, right-aligned under the length / even-picks segments. The
+   header line above it is now label + the "Even picks" switch (mirroring the
+   first-round row's label + veil switch), so the summary sits below the control
+   rather than on the header. Same 12px / primary as the switch label, so the
+   field reads as one family. */
 .dl-hint {
   font-size: 12px;
   color: var(--primary-color);
@@ -996,6 +997,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
      last segment paint square corners over the rounded border. */
   overflow: hidden;
 }
+/* The two sizing radiogroups (length, even picks) swap via `.hidden`, and a bare
+   `display: flex` outweighs the UA `[hidden]` rule — so guard it, or the hidden
+   group stays on screen under the shown one (pinned by hiddenGuards.test.js). */
+.dl-step[hidden] { display: none; }
 .dl-pick {
   appearance: none;
   flex: 1;

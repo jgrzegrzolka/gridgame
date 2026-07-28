@@ -18,6 +18,7 @@ import {
   applyEnterPicking,
   applyRepick,
   applySetLength,
+  applySetPicksPerPlayer,
   applySetFirstPick,
   applyPick,
   applyAddBot,
@@ -983,6 +984,75 @@ test('the length round-trips through persistence', () => {
   room = applyHello(room, 'alice', 'Alice').room;
   room = applySetLength(room, 'alice', 'short').room;
   assert.equal(deserializeRoom(serializeRoom(room)).length, 'short');
+});
+
+test('applySetPicksPerPlayer: the host turns even-picks on, and the whole room is told', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  assert.equal(room.picksPerPlayer, null, 'off by default');
+  const r = applySetPicksPerPlayer(room, 'alice', 2);
+  assert.equal(r.room.picksPerPlayer, 2);
+  assert.deepEqual(r.broadcasts[0].message, { type: 'settings', picksPerPlayer: 2 });
+  assert.equal(r.broadcasts[0].to, 'all', 'a guest has to see the sizing too');
+});
+
+test('applySetPicksPerPlayer: turning it off broadcasts null and leaves length intact', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetLength(room, 'alice', 'long').room;
+  room = applySetPicksPerPlayer(room, 'alice', 3).room;
+  const off = applySetPicksPerPlayer(room, 'alice', null);
+  assert.equal(off.room.picksPerPlayer, null);
+  assert.deepEqual(off.broadcasts[0].message, { type: 'settings', picksPerPlayer: null });
+  assert.equal(off.room.length, 'long', 'the length the host chose is still there to fall back on');
+});
+
+test('applySetPicksPerPlayer: junk coerces to null (length mode), never stored raw', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetPicksPerPlayer(room, 'alice', 2).room;
+  for (const bad of [0, 4, '2', 'huge', {}]) {
+    const r = applySetPicksPerPlayer(room, 'alice', /** @type {any} */ (bad));
+    assert.equal(r.room.picksPerPlayer, null, String(bad));
+  }
+});
+
+test('applySetPicksPerPlayer: a guest cannot change it, and it is refused once sized', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  assert.deepEqual(applySetPicksPerPlayer(room, 'bob', 2).broadcasts, [], 'guest ignored');
+  const started = startedTwoPlayer();
+  const r = applySetPicksPerPlayer(started, 'alice', 2);
+  assert.equal(r.room, started, 'refused once the game is sized');
+});
+
+test('applySetPicksPerPlayer: setting the value it already has says nothing', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  const first = applySetPicksPerPlayer(room, 'alice', 3);
+  assert.equal(first.broadcasts.length, 1);
+  const again = applySetPicksPerPlayer(first.room, 'alice', 3);
+  assert.deepEqual(again.broadcasts, []);
+});
+
+test('even-picks sizing survives Play again and round-trips through persistence', () => {
+  let room = createRoom();
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applySetPicksPerPlayer(room, 'alice', 2).room;
+  assert.equal(deserializeRoom(serializeRoom(room)).picksPerPlayer, 2, 'persisted');
+  room = applyStart(room, 'alice', q('jp')).room;
+  const back = applyPlayAgain({ ...room, phase: 'final' }, 'alice');
+  assert.equal(back.room.picksPerPlayer, 2, 'not reset by Play again');
+  const msg = back.broadcasts.find((b) => b.to === 'all');
+  assert.equal(/** @type {any} */ (msg?.message).picksPerPlayer, 2, 'and the lobby broadcast says so');
+});
+
+test('a snapshot from before even-picks sizing reads as off', () => {
+  const old = serializeRoom(createRoom());
+  delete (/** @type {any} */ (old)).picksPerPlayer;
+  assert.equal(deserializeRoom(old).picksPerPlayer, null);
 });
 
 test('applyRepick: the turn moves, the pick keeps its dealt hand', () => {

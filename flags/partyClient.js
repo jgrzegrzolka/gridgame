@@ -34,6 +34,10 @@
  * @property {string} length  the host's game-length choice, learned from the
  *   server. Every seat renders it in the lobby — the host as a control, everyone
  *   else read-only — so a guest can see what they are in for before it starts.
+ * @property {1 | 2 | 3 | null} picksPerPlayer  the host's even-picks sizing (1/2/3),
+ *   or null when the game is sized by {@link length}. Learned from the server and
+ *   rendered by every seat like `length`. Null on an older server, which never
+ *   sends it, so the control simply stays in length mode.
  * @property {PublicQuestion | null} question
  * @property {number} buzzedCount
  * @property {number} seatCount
@@ -67,7 +71,7 @@
  * @typedef {{ type: 'close' }} Effect
  */
 
-import { DEFAULT_GAME_LENGTH, DEFAULT_FIRST_PICK } from './partyDraft.js';
+import { DEFAULT_GAME_LENGTH, DEFAULT_FIRST_PICK, validatePicksPerPlayer } from './partyDraft.js';
 
 /** @returns {PartyClientState} */
 export function initialPartyClientState() {
@@ -80,6 +84,7 @@ export function initialPartyClientState() {
     questionIndex: 0,
     tricky: false,
     length: DEFAULT_GAME_LENGTH,
+    picksPerPlayer: null,
     firstPick: DEFAULT_FIRST_PICK,
     firstPickVeil: false,
     question: null,
@@ -167,6 +172,9 @@ function reduceOne(state, message) {
           // field entirely, and falling back to the default would stamp 'medium'
           // over whatever the host had already told us.
           length: message.length ?? state.length,
+          // Null is meaningful here (even-picks OFF), so `??` would be wrong — an
+          // absent field (older server) keeps what we have, a present null clears it.
+          picksPerPlayer: message.picksPerPlayer === undefined ? state.picksPerPlayer : validatePicksPerPlayer(message.picksPerPlayer),
           firstPick: message.firstPick ?? state.firstPick,
           firstPickVeil: message.firstPickVeil ?? state.firstPickVeil,
           question: message.question ?? null,
@@ -211,13 +219,16 @@ function reduceOne(state, message) {
       };
     }
     case 'settings': {
-      // The host changed a lobby setting -- `length` or `firstPick`, the two pieces
-      // of room state that move while nobody is playing. Each falls back to what
-      // we already hold, so a message naming only one does not blank the other.
+      // The host changed a lobby setting -- `length`, `picksPerPlayer`, or
+      // `firstPick`, the pieces of room state that move while nobody is playing.
+      // Each falls back to what we already hold, so a message naming only one does
+      // not blank the others. `picksPerPlayer` uses `=== undefined` rather than `??`
+      // because null is a real value (even-picks OFF) the host can set on purpose.
       return {
         state: {
           ...state,
           length: message.length ?? state.length,
+          picksPerPlayer: message.picksPerPlayer === undefined ? state.picksPerPlayer : validatePicksPerPlayer(message.picksPerPlayer),
           firstPick: message.firstPick ?? state.firstPick,
           firstPickVeil: message.firstPickVeil ?? state.firstPickVeil,
         },
@@ -232,6 +243,7 @@ function reduceOne(state, message) {
           phase: 'lobby',
           roster: message.roster ?? state.roster,
           length: message.length ?? state.length,
+          picksPerPlayer: message.picksPerPlayer === undefined ? state.picksPerPlayer : validatePicksPerPlayer(message.picksPerPlayer),
           firstPick: message.firstPick ?? state.firstPick,
           firstPickVeil: message.firstPickVeil ?? state.firstPickVeil,
           isHost: message.hostId != null ? message.hostId === state.you : state.isHost,

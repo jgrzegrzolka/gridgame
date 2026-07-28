@@ -16,6 +16,7 @@ import {
   modeHue,
   roundCardIconHtml,
   lengthIconHtml,
+  picksIconHtml,
   roundPipStates,
 } from './page.js';
 
@@ -312,6 +313,19 @@ test('round pips: a junk round number never paints a current dot', () => {
 test('an unknown length degrades to empty rather than a broken box', () => {
   for (const bad of ['huge', '', 'Short', undefined]) {
     assert.equal(lengthIconHtml(/** @type {any} */ (bad)), '', String(bad));
+  }
+});
+
+test('even-picks icon draws one pip per pick, and only for 1/2/3', () => {
+  // Filled dots, count = picks-per-player, so the control reads "each picks this
+  // many" — and distinct from the length control's strokes.
+  const counts = [1, 2, 3].map((n) => (picksIconHtml(n).match(/<circle/g) || []).length);
+  assert.deepEqual(counts, [1, 2, 3], '1/2/3 draw 1/2/3 pips');
+  for (const n of [1, 2, 3]) assert.match(picksIconHtml(n), /currentColor/);
+  // Off the offered set, an empty slot rather than a broken box — same contract as
+  // lengthIconHtml.
+  for (const bad of [0, 4, -1, NaN, undefined, '2']) {
+    assert.equal(picksIconHtml(/** @type {any} */ (bad)), '', String(bad));
   }
 });
 

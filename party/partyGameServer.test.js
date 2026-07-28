@@ -560,6 +560,39 @@ test('draft: the last round ends in the final board, no pick', async () => {
   assert.ok(conn.last('final'), 'the final board was broadcast');
 });
 
+test('even-picks sizing: the host sets it in the lobby and the game runs seats × N rounds', async () => {
+  const a = mockConn('a'), b = mockConn('b'), c = mockConn('c');
+  const srv = new PartyGameServer(mockParty([a, b, c]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+  await srv.onConnect(c, ctxFor('carol', 'join', 'Carol'));
+
+  await srv.onMessage(JSON.stringify({ type: 'setPicks', picksPerPlayer: 2 }), a);
+  // Every seat is told the sizing, guests included.
+  assert.equal(b.last('settings').picksPerPlayer, 2, 'a guest is told the sizing');
+
+  await srv.onMessage(JSON.stringify({ type: 'start' }), a);
+  assert.equal(srv.room.targetRounds, 6, '3 seats × 2 picks = 6 rounds');
+  assert.equal(srv.room.totalQuestions, 6 * ROUND_QUESTIONS);
+});
+
+test('even-picks sizing: a guest ignores it, and a late joiner learns it from the welcome', async () => {
+  const a = mockConn('a'), b = mockConn('b');
+  const srv = new PartyGameServer(mockParty([a, b]));
+  await srv.onStart();
+  await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
+  await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
+
+  await srv.onMessage(JSON.stringify({ type: 'setPicks', picksPerPlayer: 3 }), b); // guest
+  assert.equal(srv.room.picksPerPlayer, null, 'a guest cannot set the sizing');
+
+  await srv.onMessage(JSON.stringify({ type: 'setPicks', picksPerPlayer: 3 }), a); // host
+  const c = mockConn('c');
+  await srv.onConnect(c, ctxFor('carol', 'join', 'Carol'));
+  assert.equal(c.last('welcome').picksPerPlayer, 3, 'the welcome carries the sizing to a late joiner');
+});
+
 test('draft (3 players): the picking broadcast names the same picker for everyone', async () => {
   const a = mockConn('a'), b = mockConn('b'), c = mockConn('c');
   const srv = new PartyGameServer(mockParty([a, b, c]));

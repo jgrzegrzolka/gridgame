@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {
   roundCountFor,
   validateGameLength,
+  PICKS_PER_PLAYER_OPTIONS,
+  validatePicksPerPlayer,
+  resolveRoundCount,
   pickerFor,
   handFor,
   isValidPick,
@@ -112,6 +115,54 @@ test('validateGameLength: anything else falls back to the default, never guesses
   // a medium game rather than a crash.
   for (const bad of ['Short', 'huge', 0, 2, 99, NaN, null, undefined, {}, []]) {
     assert.equal(validateGameLength(/** @type {any} */ (bad)), DEFAULT_GAME_LENGTH, String(bad));
+  }
+});
+
+// ---- validatePicksPerPlayer / resolveRoundCount (even picks) ----
+
+test('validatePicksPerPlayer: accepts exactly 1, 2, 3', () => {
+  for (const n of PICKS_PER_PLAYER_OPTIONS) assert.equal(validatePicksPerPlayer(n), n);
+});
+
+test('validatePicksPerPlayer: anything else is null (length mode), never guessed', () => {
+  // null is the honest "not in even-picks mode" answer. 0/4/'2'/etc. are not the
+  // set, and a stale client must not have its junk coerced into a real pick count.
+  for (const bad of [0, 4, -1, 1.5, '2', 'short', NaN, null, undefined, {}, [], true]) {
+    assert.equal(validatePicksPerPlayer(/** @type {any} */ (bad)), null, String(bad));
+  }
+});
+
+test('resolveRoundCount: even picks is seats × N, so everyone picks exactly N', () => {
+  // The whole promise of the mode. n seats × k picks = n*k rounds, and n*k picks
+  // shared round-robin across n seats is exactly k each.
+  assert.equal(resolveRoundCount(2, 'short', 2), 4);
+  assert.equal(resolveRoundCount(4, 'medium', 2), 8);
+  assert.equal(resolveRoundCount(5, 'long', 3), 15);
+  assert.equal(resolveRoundCount(1, 'medium', 3), 3, 'a solo host picks all N themselves');
+});
+
+test('resolveRoundCount: even picks is deliberately uncapped at a big room', () => {
+  // The guarantee only holds if the count is exactly seats × N; clamping it would
+  // make "everyone picks N" a lie. 20 seats × 3 = 60 rounds, shown to the host.
+  assert.equal(resolveRoundCount(20, 'short', 3), 60);
+  assert.equal(resolveRoundCount(13, 'short', 1), 13);
+});
+
+test('resolveRoundCount: a null/invalid picksPerPlayer falls back to the length table', () => {
+  for (const picks of [null, undefined, 0, 4, 'short']) {
+    assert.equal(
+      resolveRoundCount(6, 'short', /** @type {any} */ (picks)),
+      roundCountFor(6, 'short'),
+      String(picks),
+    );
+  }
+  // And the length still matters when picks is off.
+  assert.equal(resolveRoundCount(4, 'long', null), roundCountFor(4, 'long'));
+});
+
+test('resolveRoundCount: a junk seat count coerces to a solo room in even-picks mode', () => {
+  for (const junk of [0, -5, NaN, undefined]) {
+    assert.equal(resolveRoundCount(/** @type {any} */ (junk), 'short', 2), 2, String(junk));
   }
 });
 

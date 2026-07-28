@@ -35,7 +35,7 @@ import { renderSpotCriteria } from '../flags/filterChips.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validateGameLength, validateFirstPickMode, DEFAULT_FIRST_PICK, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
+import { resolveRoundCount, validateGameLength, validateFirstPickMode, DEFAULT_FIRST_PICK, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH, PICKS_PER_PLAYER_OPTIONS, validatePicksPerPlayer } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { nextRadioId, paintRadioGroup, RADIO_KEYS } from './radioGroup.js';
@@ -70,6 +70,11 @@ const LENGTH_KEY = 'gridgame.party.gameLength';
 // it every game.
 const FIRST_PICK_KEY = 'gridgame.party.opener';
 const FIRST_PICK_VEIL_KEY = 'gridgame.party.openerVeil';
+// Even-picks sizing, remembered per device the same way the length is. Two keys:
+// whether the mode is on, and which count it holds — so toggling the mode off and
+// on again returns to the count the host last chose rather than a default.
+const PICKS_MODE_KEY = 'gridgame.party.evenPicks';
+const PICKS_N_KEY = 'gridgame.party.picksPerPlayer';
 
 /** Scattered reveal order for the six tricky-mode veil panels, so the flag
  *  materialises in patches rather than strictly left-to-right (which would give
@@ -329,6 +334,25 @@ export function lengthIconHtml(length) {
 }
 
 /**
+ * The glyph for an even-picks count: one, two or three filled pips — a pick per
+ * round, so the control reads as "each player picks this many" alongside the
+ * numeral. Filled dots rather than the length control's strokes so the two modes
+ * are distinct at a glance. Same `currentColor` contract as {@link lengthIconHtml}.
+ *
+ * @param {number} n  1, 2 or 3
+ * @returns {string}
+ */
+export function picksIconHtml(n) {
+  // Strict on the number, not just the object lookup: bracket access coerces
+  // `'2'` to the key `2`, so guard the type first to keep a stray string out.
+  if (n !== 1 && n !== 2 && n !== 3) return '';
+  const cols = { 1: [12], 2: [8, 16], 3: [6, 12, 18] }[n];
+  return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    cols.map((cx) => `<circle cx="${cx}" cy="12" r="2.6" fill="currentColor"/>`).join('') +
+    '</svg>';
+}
+
+/**
  * Resolve a mode's SHORT label to `{ key, fallback }` — pure, no `t()` — so the
  * mapping can be pinned by a test. **`modeShortLabel` currently has no production
  * caller** — its `t()` wrapper died with the custom-setup panel, and the round
@@ -492,17 +516,32 @@ export function bootFlagParty() {
   const botSeat = $('bot-seat');
   const botLevelBtns = /** @type {HTMLButtonElement[]} */ (
     [...botSeat.querySelectorAll('.bot-lv')]);
-  const draftLengthEl = $('draft-length');
   const draftLengthGroup = $('draft-length-group');
   const draftLengthHint = $('draft-length-hint');
+  // Scoped to the length group (not the whole field) so the even-picks segments
+  // below don't land in here — the two radiogroups are painted independently.
   const draftPickBtns = /** @type {HTMLButtonElement[]} */ (
-    [...draftLengthEl.querySelectorAll('.dl-pick')]);
+    [...draftLengthGroup.querySelectorAll('.dl-pick')]);
   // One, two, three strokes. Painted here rather than sitting in the HTML so the
   // markup stays the flat, translatable shell the rest of the page keeps.
   for (const btn of draftPickBtns) {
     const icon = btn.querySelector('.dl-ic');
     if (icon) icon.innerHTML = lengthIconHtml(btn.dataset.length ?? '');
   }
+  // Even-picks sizing: a switch on the header, a parallel 1/2/3 radiogroup that
+  // replaces the length one when the mode is on, and two label spans (one shown at
+  // a time) so the field names whichever mode is active.
+  const draftPicksGroup = $('draft-picks-group');
+  const draftPicksBtns = /** @type {HTMLButtonElement[]} */ (
+    [...draftPicksGroup.querySelectorAll('.dl-pick')]);
+  for (const btn of draftPicksBtns) {
+    const icon = btn.querySelector('.dl-ic');
+    if (icon) icon.innerHTML = picksIconHtml(Number(btn.dataset.picks));
+  }
+  const draftPicksToggle = /** @type {HTMLInputElement} */ ($('draft-picks-toggle'));
+  const draftPicksToggleLabel = /** @type {HTMLElement} */ (draftPicksToggle.closest('.scope-toggle'));
+  const draftLengthLabel = $('draft-length-label');
+  const draftPicksLabel = $('draft-picks-label');
   const draftFirstPickEl = $('draft-first-pick');
   const draftFirstPickGroup = $('draft-first-pick-group');
   const draftFirstPickVeil = /** @type {HTMLInputElement} */ ($('draft-first-pick-veil'));
@@ -691,6 +730,40 @@ export function bootFlagParty() {
     return validateGameLength(state.length);
   }
 
+  /** The remembered even-picks count (1/2/3), defaulting to 2 — the middle, and a
+   *  sensible game at most table sizes. Read only to seed a fresh room and to
+   *  restore the count when the mode is switched back on. */
+  function loadPicksN() {
+    try {
+      return validatePicksPerPlayer(Number(window.localStorage.getItem(PICKS_N_KEY))) ?? 2;
+    } catch { return 2; }
+  }
+  function savePicksN(/** @type {number} */ n) {
+    try { window.localStorage.setItem(PICKS_N_KEY, String(n)); } catch { /* private mode */ }
+  }
+  /** Whether this device last had even-picks sizing on. */
+  function loadPicksMode() {
+    try { return window.localStorage.getItem(PICKS_MODE_KEY) === '1'; } catch { return false; }
+  }
+  function savePicksMode(/** @type {boolean} */ on) {
+    try { window.localStorage.setItem(PICKS_MODE_KEY, on ? '1' : '0'); } catch { /* private mode */ }
+  }
+  /** The picksPerPlayer this device would seed a fresh room with: the remembered
+   *  count when the mode is on, null (size by length) when off. */
+  function loadPicks() {
+    return loadPicksMode() ? loadPicksN() : null;
+  }
+
+  /** The even-picks sizing to render: the room's value (1/2/3), or null when the
+   *  game is sized by length. Room-authoritative, like {@link currentLength}. */
+  function currentPicks() {
+    return validatePicksPerPlayer(state.picksPerPlayer);
+  }
+  /** Whether the lobby is showing even-picks mode right now. */
+  function picksModeOn() {
+    return currentPicks() !== null;
+  }
+
   function loadFirstPick() {
     try {
       return validateFirstPickMode(window.localStorage.getItem(FIRST_PICK_KEY));
@@ -748,6 +821,11 @@ export function bootFlagParty() {
     // requirement: it is what carries a host who always opens on Spot the flag
     // into their room without re-picking.
     send({ type: 'setFirstPick', firstPick: loadFirstPick(), veil: loadFirstPickVeil() });
+    // Even-picks sizing rides the same one-shot claim, carrying the host's
+    // remembered mode into the room. `loadPicks()` is null when the mode is off,
+    // which the server resolves to the length above — so an off host sends null
+    // and the room sizes by length, exactly as before this setting existed.
+    send({ type: 'setPicks', picksPerPlayer: loadPicks() });
   }
 
   /** Seats currently in the room — the other half of the length arithmetic. */
@@ -755,29 +833,50 @@ export function bootFlagParty() {
     return state.roster.filter((r) => r.present).length;
   }
 
-  /** Rounds a start would actually deal, given the seats present right now. */
+  /** Rounds a start would actually deal, given the seats present right now and the
+   *  active sizing mode (length table, or seats × N when even-picks is on). */
   function effectiveRounds() {
-    return roundCountFor(seatCount(), currentLength());
+    return resolveRoundCount(seatCount(), currentLength(), currentPicks());
   }
 
   /**
-   * The hint under the control: just how many rounds the game runs. The per-seat
-   * pick split used to ride here too, but at a big room it read as an unreadable
-   * "N of you pick a round" and did not survive the Decider's removal cleanly, so
-   * the line is now the one number every seat count can state plainly.
+   * The hint under the control: just how many rounds the game runs. It reads the
+   * same in both sizing modes — the length label and, in even-picks mode, the
+   * "Everyone picks N" field label already say how the number was reached, so the
+   * hint only carries the number itself.
    */
   function lengthHintText() {
     return fmt(t('party.lengthRounds', '{r} rounds'), { r: effectiveRounds() });
   }
 
   /**
-   * Paint the length control: which option is checked, what it buys, and whether
-   * this seat may change it. Guests see the same control in the same place,
-   * disabled — the length is something they are told, not something hidden from
-   * them, because it decides how long they are staying.
+   * Paint the length / even-picks control: which segment is checked, the mode
+   * switch, and whether this seat may change any of it. Guests see the same control
+   * in the same place, disabled — the sizing is something they are told, not
+   * hidden from them, because it decides how long they are staying.
+   *
+   * Two sizing modes share the field: the length table (Short/Medium/Long) and
+   * even picks (1/2/3). Only one radiogroup shows at a time; the switch flips
+   * between them and the field label names whichever is active.
    */
   function syncDraftLength() {
-    paintRadioGroup(draftPickBtns, draftLengthGroup, 'length', currentLength(), state.isHost);
+    const picks = currentPicks();
+    const on = picks !== null;
+    // Swap which radiogroup and which label span is shown.
+    draftLengthGroup.hidden = on;
+    draftPicksGroup.hidden = !on;
+    draftLengthLabel.hidden = on;
+    draftPicksLabel.hidden = !on;
+    if (on) {
+      paintRadioGroup(draftPicksBtns, draftPicksGroup, 'picks', String(picks), state.isHost);
+    } else {
+      paintRadioGroup(draftPickBtns, draftLengthGroup, 'length', currentLength(), state.isHost);
+    }
+    // The mode switch: shown to everyone (guests read it, like the segments), only
+    // the host may flip it — same read-only shape as the first-round veil switch.
+    draftPicksToggleLabel.classList.toggle('is-disabled', !state.isHost);
+    draftPicksToggle.disabled = !state.isHost;
+    draftPicksToggle.checked = on;
     draftLengthHint.textContent = lengthHintText();
   }
 
@@ -840,6 +939,34 @@ export function bootFlagParty() {
     }
     if (!focus) return;
     const active = draftPickBtns.find((b) => b.dataset.length === length);
+    if (active) active.focus();
+  }
+
+  /**
+   * Flip even-picks sizing on or off. On sends the remembered count (so the field
+   * comes back where the host left it); off sends null, which the server resolves
+   * back to the length the room still holds. Same ask-the-room pattern as the
+   * length: send it and let the broadcast repaint every seat.
+   */
+  function setPicksMode(on) {
+    if (!state.isHost) return;
+    savePicksMode(on);
+    const next = on ? loadPicksN() : null;
+    if (next !== currentPicks()) send({ type: 'setPicks', picksPerPlayer: next });
+  }
+
+  /**
+   * Choose the even-picks count (1/2/3). Remembered per device and sent to the
+   * room. Only reachable while the mode is on (the segments are hidden otherwise).
+   */
+  function setPicksValue(next, focus) {
+    if (!state.isHost) return;
+    const n = validatePicksPerPlayer(next);
+    if (n === null) return;
+    savePicksN(n);
+    if (n !== currentPicks()) send({ type: 'setPicks', picksPerPlayer: n });
+    if (!focus) return;
+    const active = draftPicksBtns.find((b) => Number(b.dataset.picks) === n);
     if (active) active.focus();
   }
 
@@ -2904,6 +3031,20 @@ export function bootFlagParty() {
     e.preventDefault();
     const next = nextRadioId([...GAME_LENGTHS], currentLength(), e.key);
     if (next) setGameLength(next, true);
+  });
+  // Even-picks: the switch flips the mode, the 1/2/3 segments pick the count. Same
+  // click + arrow-key contract as the length group, through the same helpers.
+  draftPicksToggle.addEventListener('change', () => setPicksMode(draftPicksToggle.checked));
+  for (const btn of draftPicksBtns) {
+    btn.addEventListener('click', () => setPicksValue(Number(btn.dataset.picks), false));
+  }
+  draftPicksGroup.addEventListener('keydown', (e) => {
+    if (!RADIO_KEYS.includes(e.key)) return;
+    if (!state.isHost) return;
+    e.preventDefault();
+    const ids = PICKS_PER_PLAYER_OPTIONS.map(String);
+    const next = nextRadioId(ids, String(currentPicks()), e.key);
+    if (next) setPicksValue(Number(next), true);
   });
   for (const btn of draftFirstPickBtns) {
     btn.addEventListener('click', () => setFirstPick(btn.dataset.firstPick, false));
