@@ -204,16 +204,29 @@
               </button>
             </span>
           </div>
-          <!-- Length below, so its rounds summary ("17 rounds · you each pick 2")
-               rides the same header line as its label — label left, summary right,
-               mirroring the first-round row's label + veil switch. It used to sit
-               centred under the control, reading as a floating line between the two
-               pickers. This field now carries a visible label too, so the two
-               header rows match. -->
+          <!-- Length below the first round. Two sizing modes share this field: the
+               default length table (Short / Medium / Long), or "even picks" (1 / 2 /
+               3) where the game grows so every player picks the same number of
+               rounds. The "Even picks" switch on the header mirrors the first-round
+               row's veil switch, so both header rows read as label + switch. The
+               segments swap by mode; the rounds summary sits under them. -->
           <div class="draft-length" id="draft-length">
             <div class="dl-fieldhead">
-              <span class="dl-group-label" data-i18n="party.gameLength">Game length</span>
-              <span class="dl-hint" id="draft-length-hint"></span>
+              <!-- The label names whichever mode is active. Both spans stay
+                   translated by i18n; the JS only toggles which is shown. -->
+              <span class="dl-group-label">
+                <span id="draft-length-label" data-i18n="party.gameLength">Game length</span>
+                <span id="draft-picks-label" data-i18n="party.everyonePicks" hidden>Everyone picks</span>
+              </span>
+              <label class="scope-toggle veil-toggle hover-tip" id="draft-picks-toggle-label"
+                     data-i18n-attr="data-tip:party.evenPicksHint"
+                     data-tip="Even picks: the game grows so every player picks the same number of rounds">
+                <span class="scope-toggle-text" data-i18n="party.evenPicks">Even picks</span>
+                <span class="scope-toggle-switch">
+                  <input type="checkbox" id="draft-picks-toggle" />
+                  <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
+                </span>
+              </label>
             </div>
             <span class="dl-step" role="radiogroup" id="draft-length-group"
                   data-i18n-attr="aria-label:party.gameLength" aria-label="Game length">
@@ -230,6 +243,24 @@
                 <span class="dl-lab" data-i18n="party.lengthLong">Long</span>
               </button>
             </span>
+            <!-- The even-picks segments: 1 / 2 / 3 rounds per player. Hidden until
+                 the switch is on. Numerals need no translation; the icon is N pips. -->
+            <span class="dl-step" role="radiogroup" id="draft-picks-group" hidden
+                  data-i18n-attr="aria-label:party.everyonePicks" aria-label="Everyone picks">
+              <button type="button" class="dl-pick" role="radio" data-picks="1" aria-checked="false" tabindex="-1">
+                <span class="dl-ic" aria-hidden="true"></span>
+                <span class="dl-lab">1</span>
+              </button>
+              <button type="button" class="dl-pick" role="radio" data-picks="2" aria-checked="false" tabindex="-1">
+                <span class="dl-ic" aria-hidden="true"></span>
+                <span class="dl-lab">2</span>
+              </button>
+              <button type="button" class="dl-pick" role="radio" data-picks="3" aria-checked="false" tabindex="-1">
+                <span class="dl-ic" aria-hidden="true"></span>
+                <span class="dl-lab">3</span>
+              </button>
+            </span>
+            <span class="dl-hint" id="draft-length-hint"></span>
           </div>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>

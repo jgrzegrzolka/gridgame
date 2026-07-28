@@ -113,6 +113,57 @@ export function validateGameLength(value) {
     : DEFAULT_GAME_LENGTH;
 }
 
+/** The per-player pick counts "even picks" sizing offers. Small on purpose: the
+ *  point is a fair, legible guarantee, and `seats * 3` is already a long game at a
+ *  full room. */
+export const PICKS_PER_PLAYER_OPTIONS = /** @type {const} */ ([1, 2, 3]);
+
+/**
+ * Coerce a host-supplied picks-per-player to 1, 2, 3, or **null**. Null is not a
+ * value in the set — it means "not in even-picks mode", so size the game by length
+ * instead. Untrusted like {@link validateGameLength}: the value arrives over the
+ * wire, so anything outside the offered set (a string, 0, 4, a stale `picks`
+ * number) falls back to null rather than being guessed at.
+ *
+ * @param {unknown} value
+ * @returns {1 | 2 | 3 | null}
+ */
+export function validatePicksPerPlayer(value) {
+  return /** @type {readonly unknown[]} */ (PICKS_PER_PLAYER_OPTIONS).includes(value)
+    ? /** @type {1 | 2 | 3} */ (value)
+    : null;
+}
+
+/**
+ * How many rounds a game runs, resolving the two ways the host can size it:
+ *
+ * - **even picks** — `picksPerPlayer` is 1/2/3: `seats * picksPerPlayer`, so every
+ *   seat picks exactly that many rounds. Round 1 is the host's own first pick and,
+ *   with the Decider gone, every round is a rotation pick, so `n * k` picks shared
+ *   round-robin across `n` seats is exactly `k` each. **Deliberately uncapped** —
+ *   the guarantee only holds if the total is exactly `n * k`, and clamping it would
+ *   make "everyone picks k" quietly false at a big room; the lobby shows the
+ *   resulting round count so the host sees the size before starting.
+ * - **length** — `picksPerPlayer` is null (or invalid): the wall-clock table,
+ *   {@link roundCountFor}.
+ *
+ * Seat counts below 1 read as a solo host (1 seat), matching {@link roundCountFor}'s
+ * own floor.
+ *
+ * @param {number} playerCount
+ * @param {string} [length]  one of {@link GAME_LENGTHS}
+ * @param {unknown} [picksPerPlayer]  1/2/3 for even picks, null/anything else for length
+ * @returns {number}
+ */
+export function resolveRoundCount(playerCount, length = DEFAULT_GAME_LENGTH, picksPerPlayer = null) {
+  const picks = validatePicksPerPlayer(picksPerPlayer);
+  if (picks) {
+    const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
+    return seats * picks;
+  }
+  return roundCountFor(playerCount, length);
+}
+
 /**
  * Coerce a host-supplied first-round id to a legal one, defaulting to
  * {@link DEFAULT_FIRST_PICK}.

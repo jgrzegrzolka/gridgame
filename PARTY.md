@@ -219,8 +219,21 @@ loser's-pick rotation. The lobby hint dropped the pick-share breakdown with it �
 round count (`party.lengthRounds`), and `pickShareFor` / `lengthEachPicks*` / `lengthSomePick` are
 gone. Round counts (`LENGTH_ROUNDS`) are unchanged; the even "you each pick k" division no longer
 holds (nothing surfaces it). Backward-compatible on the wire and in storage — a stale client or an
-old snapshot reads the absent `decider` as false and behaves ordinarily. **A follow-up is planned:**
-a host option that guarantees everyone picks 1 / 2 / 3 rounds, with its own clean lobby design.
+old snapshot reads the absent `decider` as false and behaves ordinarily.
+
+**Even-picks sizing (2026-07-28).** The follow-up the Decider entry planned. The lobby's Game-length
+field gains an "Even picks" switch (mirroring the first-round veil switch). Off: the length table
+(Short/Medium/Long), unchanged. On: the segments become 1 / 2 / 3 and the game runs `seats × N`
+rounds, so every player picks exactly N — a guarantee that only became expressible once the Decider
+left and every round became a rotation pick (`resolveRoundCount` in `flags/partyDraft.js`). It is
+**deliberately uncapped**: clamping a big room would make "everyone picks N" false, so instead the
+hint shows the resulting round count and the host decides. The sizing is a new `picksPerPlayer` field
+(null | 1 | 2 | 3) on the room, shared over the lobby exactly like `length` (set via a `setPicks`
+message → `applySetPicksPerPlayer`, carried on `settings` / `welcome` / `lobby` broadcasts and the
+snapshot). `length` stays set underneath, so toggling the mode off restores it. Backward-compatible:
+a stale client or old snapshot reads the absent field as null (size by length). Remembered per device
+across two keys (`gridgame.party.evenPicks` on/off + `gridgame.party.picksPerPlayer` count), so a host
+who likes "2 each" gets it in every room without re-picking.
 
 Still open:
 

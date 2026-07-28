@@ -1,6 +1,6 @@
 import { scoreQuestionDetailed } from './partyScore.js';
 import { isRoundBoundary, isFinalRound } from './partyPlan.js';
-import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from './partyDraft.js';
+import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode, validatePicksPerPlayer } from './partyDraft.js';
 
 /**
  * Flag Party room — the pure state machine behind the live show. Same shape as
@@ -57,6 +57,12 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from '
  *   what they are signing up for. **null means no client has ever set it**, which
  *   is how a room hosted by a pre-`setLength` build looks; the server reads that
  *   as permission to size the game from the start message instead.
+ * @property {1 | 2 | 3 | null} picksPerPlayer  the host's **even-picks** sizing:
+ *   when 1/2/3 it overrides {@link length}, and the game runs `seats * picksPerPlayer`
+ *   rounds so every seat picks exactly that many (see `resolveRoundCount`). Null is
+ *   the default and means "size by length" — both a fresh room and one hosted by a
+ *   build that predates this setting. Shared during the lobby exactly like `length`,
+ *   which stays set underneath so toggling the mode off restores the host's length.
  * @property {string | null} firstPick  the host's chosen first round (a picture
  *   mode id), the second lobby-shared setting. Null is *shaped* like `length`'s
  *   null but is **not** load-bearing the way that one is: a null `length` tells
@@ -171,6 +177,11 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     // that just want a value run it through `validateGameLength`, which turns
     // null into the default.
     length: null,
+    // Even-picks sizing, off by default. Null means "size by length" (both a
+    // fresh room and one hosted by a build that predates the setting); 1/2/3
+    // overrides length. `length` stays set underneath so switching the mode off
+    // restores it.
+    picksPerPlayer: null,
     // Same "nobody has said" null as `length` above, for the same reason: a room
     // hosted by a pre-setFirstPick build must be distinguishable from one whose host
     // deliberately chose Flags.
@@ -718,6 +729,7 @@ function resetToLobby(room) {
         // first round rides along for the same reason -- both survive Play
         // again, so a room that liked its setup does not re-choose it every game.
         length: nextRoom.length,
+        picksPerPlayer: nextRoom.picksPerPlayer,
         firstPick: nextRoom.firstPick,
         firstPickVeil: nextRoom.firstPickVeil,
       },
@@ -925,6 +937,33 @@ export function applySetLength(room, playerId, length) {
   return {
     room: nextRoom,
     broadcasts: [{ to: 'all', message: { type: 'settings', length: next } }],
+  };
+}
+
+/**
+ * The host switches even-picks sizing on (1/2/3) or off (null) from the lobby.
+ * Sibling of {@link applySetLength} with the same guards for the same reasons:
+ * refused off the lobby (sizing is fixed once a game starts) and refused from
+ * anyone but the host. An unchanged value broadcasts nothing.
+ *
+ * `length` is deliberately left untouched — when the host toggles the mode off
+ * (`picksPerPlayer` back to null) the room resizes by whatever length was already
+ * chosen, so the length control comes back exactly where they left it.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @param {unknown} picksPerPlayer  1/2/3 for even picks, anything else for off
+ * @returns {ApplyResult}
+ */
+export function applySetPicksPerPlayer(room, playerId, picksPerPlayer) {
+  if (room.phase !== 'lobby') return { room, broadcasts: [] };
+  if (room.hostId !== playerId) return { room, broadcasts: [] };
+  const next = validatePicksPerPlayer(picksPerPlayer);
+  if (next === room.picksPerPlayer) return { room, broadcasts: [] };
+  const nextRoom = { ...room, picksPerPlayer: next };
+  return {
+    room: nextRoom,
+    broadcasts: [{ to: 'all', message: { type: 'settings', picksPerPlayer: next } }],
   };
 }
 
@@ -1223,8 +1262,9 @@ function welcomeBroadcast(room, playerId) {
       totalQuestions: room.totalQuestions,
       tricky: room.tricky,
       // So a joiner paints the length immediately instead of waiting for the
-      // host to happen to change it. Same for the first round.
+      // host to happen to change it. Same for the first round and even-picks sizing.
       length: room.length,
+      picksPerPlayer: room.picksPerPlayer,
       firstPick: room.firstPick,
       firstPickVeil: room.firstPickVeil,
       roster: rosterList(room),
@@ -1261,6 +1301,7 @@ export function serializeRoom(room) {
     totalQuestions: room.totalQuestions,
     plan: room.plan,
     length: room.length,
+    picksPerPlayer: room.picksPerPlayer,
     firstPick: room.firstPick,
     firstPickVeil: room.firstPickVeil,
     questionIndex: room.questionIndex,
@@ -1297,6 +1338,9 @@ export function deserializeRoom(snapshot) {
     // A snapshot written before the lobby had a length stays null — "nobody set
     // this" — rather than being given a default nobody chose.
     length: snapshot.length ?? null,
+    // A snapshot from before even-picks sizing reads as null (off), so it resizes
+    // by length exactly as it did when written.
+    picksPerPlayer: snapshot.picksPerPlayer ?? null,
     firstPick: snapshot.firstPick ?? null,
     firstPickVeil: snapshot.firstPickVeil ?? false,
     questionIndex: snapshot.questionIndex ?? 0,
