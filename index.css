@@ -141,6 +141,14 @@ body {
   font-weight: var(--weight-bold);
   padding: 13px 22px;
   flex: none;
+  /* Ease the shared pill's hover brightness (the base .lobby-btn transition
+   * doesn't cover `filter`) and add the design's press. Scoped to #hero-cta so
+   * the shared lobby button elsewhere is unchanged. */
+  transition: background-color 0.16s ease, border-color 0.16s ease,
+    filter 0.16s ease, transform 0.09s ease;
+}
+#hero-cta:active {
+  transform: translateY(1px);
 }
 #hero-cta .game-icon {
   width: 20px;
@@ -184,12 +192,19 @@ body {
   border-bottom: 1px solid var(--muted-soft-color);
   text-decoration: none;
   color: var(--primary-color);
+  transition: background-color 0.16s ease, border-color 0.16s ease,
+    box-shadow 0.16s ease, transform 0.09s ease;
 }
 .game-row:last-child {
   border-bottom: none;
 }
 .game-row:hover {
   background: var(--hover-color);
+}
+/* Press: a rose wash + a 1px nudge down, matching the design's active state. */
+.game-row:active {
+  background: var(--home-rose-soft);
+  transform: translateY(1px);
 }
 .game-row-ic {
   display: inline-flex;
@@ -363,7 +378,14 @@ body {
   }
   .game-row:hover {
     background: var(--surface-color);
+    border-color: var(--home-rose-soft);
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
+  }
+  /* Defined after :hover so a press wins over the hover state on desktop. */
+  .game-row:active {
+    background: var(--home-rose-soft);
+    box-shadow: none;
+    transform: translateY(1px);
   }
   /* Icon in a soft rose chip — the same rose surface as the CTA. */
   .game-row-ic {
