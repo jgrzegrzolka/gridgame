@@ -13,12 +13,12 @@ before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
 - **Question** — one prompt: a flag to pick, an outline to name, a "which grows the most
   coffee?". The smallest unit of play.
 - **Round** — five questions of a single mode. The unit a drafter picks and the unit the
-  standings break follows. Every round scores the same; the closing round (the **Decider**)
-  is distinguished by *who chooses it*, not by what it pays.
+  standings break follows. Every round scores the same. (There was once a distinguished closing
+  round, the **Decider**; it was removed — see the Decider entry below.)
 - **Game** — a sequence of rounds. The host chooses a **length** (Short / Medium / Long) and
-  `roundCountFor` reads the round total off a table keyed by length and seat count; the picks are
-  what falls out. Two of those rounds are fixed: the opening Flags round (dealt, never picked) and
-  the closing Decider.
+  `roundCountFor` reads the round total off a table keyed by length and seat count. One round is
+  fixed: the opening Flags round (dealt, never picked); every round after it, the last included, is
+  an ordinary rotation pick.
 
 **Weird flags, not "others" (2026-07-18).** The non-sovereign picture mode is `flags-weird`
 (`party.mode.flagsWeird`), labelled "Weird flags" / "Dziwne flagi" to match `variant.weird` and
@@ -207,6 +207,20 @@ for why.
 **Double points is gone (2026-07-19).** The Decider no longer scores double — see
 "Scoring analysis" below. The Decider itself stays: it is still the closing act, still picked by
 last place, and that pick is now the whole comeback mechanic.
+
+**The Decider is gone (2026-07-28).** Removed entirely — the closing round is now an ordinary
+rotation pick (chosen by `pickerFor`, recorded in `pickedBy`, rendered as "Round N of N" with pips
+like any other). What it cost: the special last-place picker (`deciderPickerFor`), the `isDeciderPick`
+boundary check, the `decider` flag on the room / both `picking` messages / the client state, and the
+`🏁 The Decider` / "your pick decides the game" / "{name} chooses The Decider" copy. Why: at a big
+room the lobby's pick-share hint read as an unreadable "6 of you pick a round", and the mechanic no
+longer earned its complexity once it stopped paying double. The comeback lever is now just the
+loser's-pick rotation. The lobby hint dropped the pick-share breakdown with it — it shows only the
+round count (`party.lengthRounds`), and `pickShareFor` / `lengthEachPicks*` / `lengthSomePick` are
+gone. Round counts (`LENGTH_ROUNDS`) are unchanged; the even "you each pick k" division no longer
+holds (nothing surfaces it). Backward-compatible on the wire and in storage — a stale client or an
+old snapshot reads the absent `decider` as false and behaves ordinarily. **A follow-up is planned:**
+a host option that guarantees everyone picks 1 / 2 / 3 rounds, with its own clean lobby design.
 
 Still open:
 

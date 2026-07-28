@@ -465,7 +465,7 @@ test('applyDisconnect: pauses during a reveal and during a pick, not in the lobb
   room = applyForceReveal(room, 'alice').room;
   assert.equal(applyDisconnect(room, 'bob').room.pausedFor, 'bob', 'reveal pauses');
 
-  const picking = applyEnterPicking(room, 'alice', 'carol', ['flags-all'], false).room;
+  const picking = applyEnterPicking(room, 'alice', 'carol', ['flags-all']).room;
   assert.equal(applyDisconnect(picking, 'bob').room.pausedFor, 'bob', 'pick pauses');
 
   let lobby = createRoom(3);
@@ -776,16 +776,17 @@ test('roundPicker names whose round is live, for the whole round', () => {
   assert.equal(room.roundPicker, 'bob', '…and the round is bob’s until the next pick');
 });
 
-test('roundPicker: the Decider is its picker’s round, even though it spends no slot', () => {
-  // Deliberately NOT derived from pickedBy's tail, and this is why: the Decider
-  // never appends, so the tail would name the previous picker for exactly the
-  // round where being wrong costs the most (double points).
+test('applyPick: every pick spends a rotation slot, the last round included', () => {
+  // The Decider used to sit outside the rotation and NOT append here. It is gone:
+  // the final round is an ordinary rotation pick, so choosing it records the picker
+  // exactly like any other round.
   let room = draftRevealAtBoundary(4);
-  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true).room;
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
   const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
   const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
-  assert.deepEqual(r.room.pickedBy, ['alice'], 'no rotation slot spent');
-  assert.equal(r.room.roundPicker, 'bob', 'but the round is still bob’s');
+  // alice from the host's round-1 pick, then bob's rotation slot.
+  assert.deepEqual(r.room.pickedBy, ['alice', 'bob'], 'the pick history records the picker');
+  assert.equal(r.room.roundPicker, 'bob', 'and the round is bob’s');
 });
 
 test('roundPicker: null in a game nobody drafted, and after a reset', () => {
@@ -807,9 +808,9 @@ test('applyPick: only the designated picker can pick, and only in the picking ph
 });
 
 test('the scoreboard keeps join order when scores tie', () => {
-  // The ordering guarantee `deciderPickerFor` rests on: it takes the bottom row,
-  // so "who picks the round that decides the game" when two players are level is
-  // decided entirely by this sort being stable over insertion-ordered seats.
+  // The ordering guarantee `pickerFor` rests on: it reads the bottom row for the
+  // lowest-ranked seat, so "who picks next" when two players are level is decided
+  // entirely by this sort being stable over insertion-ordered seats.
   // Pinned here as well as in partyDraft.test.js because the two halves can break
   // independently — this is the half that could change under a sort swap.
   let room = createRoom(15);
@@ -827,18 +828,19 @@ test('the scoreboard keeps join order when scores tie', () => {
   assert.equal(board[board.length - 1], 'late', 'a tie for last puts the LAST-JOINED seat on the bottom row');
 });
 
-test('applyEnterPicking: the Decider flag rides both the picker and the watcher message', () => {
-  // Every seat has to know the closing act has started — the watcher screen names
-  // it just as the picker's does, so `decider` is not picker-only like the hand.
+test('applyEnterPicking: the picker gets the hand, the watcher is only told who is choosing', () => {
+  // `youPick` is server-authoritative and the hand is picker-only — never leaked
+  // to a watcher, who just needs to know whose turn it is.
   const room = draftRevealAtBoundary(4);
-  const r = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true);
-  assert.equal(r.room.decider, true);
-  assert.equal(/** @type {any} */ (r.broadcasts.find((b) => b.to === 'bob')?.message).decider, true);
-  assert.equal(/** @type {any} */ (r.broadcasts.find((b) => b.to === 'alice')?.message).decider, true);
-  // ...and an ordinary rotation pick says so explicitly rather than omitting it.
-  const ordinary = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']);
-  assert.equal(ordinary.room.decider, false);
-  assert.equal(/** @type {any} */ (ordinary.broadcasts.find((b) => b.to === 'bob')?.message).decider, false);
+  const r = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']);
+  assert.equal(r.room.phase, 'picking');
+  assert.equal(r.room.picker, 'bob');
+  const toBob = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'bob')?.message);
+  assert.equal(toBob.youPick, true);
+  assert.deepEqual(toBob.hand, ['map-outlines']);
+  const toAlice = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'alice')?.message);
+  assert.equal(toAlice.youPick, false);
+  assert.equal(toAlice.hand, undefined, 'the hand is not leaked to a watcher');
 });
 
 // ---- applySetLength / applySetFirstPick ----
@@ -983,19 +985,17 @@ test('the length round-trips through persistence', () => {
   assert.equal(deserializeRoom(serializeRoom(room)).length, 'short');
 });
 
-test('applyRepick: the turn moves, the pick keeps its identity', () => {
+test('applyRepick: the turn moves, the pick keeps its dealt hand', () => {
   let room = draftRevealAtBoundary(4);
-  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee'], true).room;
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines', 'superlative-coffee']).room;
   const r = applyRepick(room, 'alice');
   assert.equal(r.room.picker, 'alice');
   assert.equal(r.room.phase, 'picking', 'still picking, not re-entered from reveal');
-  assert.equal(r.room.decider, true, 'still the Decider');
   assert.deepEqual(r.room.hand, ['map-outlines', 'superlative-coffee'], 'and the same dealt hand');
   // The new picker is told it is theirs, with the hand; the watcher is not.
   const toAlice = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'alice')?.message);
   assert.equal(toAlice.youPick, true);
   assert.deepEqual(toAlice.hand, ['map-outlines', 'superlative-coffee']);
-  assert.equal(toAlice.decider, true);
   const toBob = /** @type {any} */ (r.broadcasts.find((b) => b.to === 'bob')?.message);
   assert.equal(toBob.youPick, false);
   assert.equal(toBob.hand, undefined, 'the hand is not leaked to a watcher');
@@ -1010,18 +1010,11 @@ test('applyRepick: refuses outside picking, and no-ops with nobody to promote', 
   assert.equal(applyRepick(picking, null).room.picker, 'bob', 'and the room is left alone');
 });
 
-test('applyPick: the Decider does not spend a rotation slot', () => {
-  // The promise the Decider was moved outside the rotation to keep: choosing it
-  // must not count as one of your `picksPerPlayer` picks.
+test('applyPick: the chosen round is appended to the plan and attributed', () => {
   let room = draftRevealAtBoundary(4);
-  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines'], true).room;
+  room = applyEnterPicking(room, 'alice', 'bob', ['map-outlines']).room;
   const segment = { poolId: 'sovereign', questionId: 'mapPick', questions: 5 };
   const r = applyPick(room, 'bob', 'map-outlines', segment, q('pa', ['pa', 'us', 'fr', 'de']));
-  // Untouched, not empty: the host's firstPick sits in there from applyStart, and
-  // the Decider must not add to it.
-  assert.deepEqual(r.room.pickedBy, ['alice'], 'the pick history is untouched');
-  assert.equal(r.room.decider, false, 'and the flag is cleared with the rest of the pick state');
-  // The round itself is dealt exactly like any other pick.
   assert.equal(r.room.phase, 'question');
   assert.deepEqual(r.room.plan?.[r.room.plan.length - 1], segment);
   assert.deepEqual(msg(r, 'question').draftPick, { picker: 'bob', modeId: 'map-outlines' });
@@ -1036,13 +1029,7 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
   assert.equal(restored.picker, 'bob');
   assert.equal(restored.roundPicker, 'alice', 'the live round keeps its owner across an eviction');
   assert.deepEqual(restored.hand, ['map-outlines', 'superlative-coffee']);
-  assert.equal(restored.decider, false);
-  const midDecider = deserializeRoom(JSON.parse(JSON.stringify(serializeRoom(
-    applyEnterPicking(draftRevealAtBoundary(4), 'alice', 'bob', ['map-outlines'], true).room,
-  ))));
-  assert.equal(midDecider.decider, true, 'an eviction mid-Decider-pick still knows what it is');
   const legacy = deserializeRoom({ phase: 'lobby' });
-  assert.equal(legacy.decider, false);
   assert.equal(legacy.draft, false);
   assert.equal(legacy.targetRounds, 0);
   assert.deepEqual(legacy.pickedBy, []);
@@ -1052,12 +1039,12 @@ test('serialize/deserialize: draft state survives an eviction; a legacy snapshot
 // ---- final-round double points (final-round polish) ----
 
 test('the final round scores exactly like every other round', () => {
-  // The Decider used to pay double. Measured over simulated four-player games it
-  // did not do the job it was added for: doubling scales the expected drift and
-  // the variance together, so the leader pulled away as fast as the swing grew,
-  // and last place won 0.0% of games. The multiplier is gone -- the comeback
-  // mechanic is last place CHOOSING the closing round (`deciderPickerFor`). This
-  // pins that no round scores differently, so it cannot quietly come back.
+  // The final round once paid double (as "the Decider"). Measured over simulated
+  // four-player games it did not do the job it was added for: doubling scales the
+  // expected drift and the variance together, so the leader pulled away as fast as
+  // the swing grew, and last place won 0.0% of games. The multiplier is gone and
+  // so is the special round. This pins that no round scores differently, so it
+  // cannot quietly come back.
   let room = createRoom(10);
   room = applyHello(room, 'alice', 'Alice').room;
   room = applyStart(room, 'alice', q('jp'), [{ poolId: 'sovereign', questionId: 'flagPick', questions: 10 }], 10).room;

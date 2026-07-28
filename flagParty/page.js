@@ -15,7 +15,7 @@ import { showBotSeat } from './botSeat.js';
 import { pauseCardStep } from './pauseCard.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS } from '../flags/partyTiming.js';
-import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, isFinalRound, roundIndexAt, roundCount } from '../flags/partyPlan.js';
+import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak, breakOpeningOrder } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally } from '../flags/partyRoundTally.js';
 import { formatValue } from '../flags/metricLens.js';
@@ -35,7 +35,7 @@ import { renderSpotCriteria } from '../flags/filterChips.js';
 import { METRIC_ICONS, METRIC_HUES, METRIC_SHORT } from '../flags/metricVisuals.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, hintFor } from '../flags/partyQuestions/superlativeCatalog.js';
-import { roundCountFor, validateGameLength, validateFirstPickMode, DEFAULT_FIRST_PICK, pickShareFor, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, validateFirstPickMode, DEFAULT_FIRST_PICK, canVeilMode, representativeModeFor, GAME_LENGTHS, DEFAULT_GAME_LENGTH } from '../flags/partyDraft.js';
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { nextRadioId, paintRadioGroup, RADIO_KEYS } from './radioGroup.js';
@@ -761,28 +761,13 @@ export function bootFlagParty() {
   }
 
   /**
-   * The hint under the control: how many rounds, and how the picks land. Three
-   * shapes, because the pick share genuinely has three cases — see
-   * {@link pickShareFor}. Up to six seats it always divides evenly, so the common
-   * reading is the flat "you each pick N".
+   * The hint under the control: just how many rounds the game runs. The per-seat
+   * pick split used to ride here too, but at a big room it read as an unreadable
+   * "N of you pick a round" and did not survive the Decider's removal cleanly, so
+   * the line is now the one number every seat count can state plainly.
    */
   function lengthHintText() {
-    const rounds = effectiveRounds();
-    const seats = seatCount();
-    const { each, extra } = pickShareFor(rounds, seats);
-    const roundsText = fmt(t('party.lengthRounds', '{r} rounds'), { r: rounds });
-    // A host alone in a fresh room is the state this line is seen in most, and
-    // "you each pick 10" is nonsense addressed to one person. The share only
-    // means anything once there is somebody to share with.
-    if (seats < 2) return roundsText;
-    if (each === 0) {
-      // A big room on a short game: fewer rotation slots than seats.
-      return `${roundsText} · ${fmt(t('party.lengthSomePick', '{n} of you pick a round'), { n: extra })}`;
-    }
-    const share = extra === 0
-      ? fmt(t('party.lengthEachPicks', 'you each pick {n}'), { n: each })
-      : fmt(t('party.lengthEachPicksPlus', 'you each pick {n}, {x} pick one more'), { n: each, x: extra });
-    return `${roundsText} · ${share}`;
+    return fmt(t('party.lengthRounds', '{r} rounds'), { r: effectiveRounds() });
   }
 
   /**
@@ -2269,14 +2254,9 @@ export function bootFlagParty() {
   function renderPick() {
     const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
     const nextRound = roundIndexAt(state.questionIndex) + 2; // 1-based: the round being chosen
-    // The Decider is announced as its own act rather than as "round N of N": it
-    // sits outside the rotation, and the whole table is told (the flag rides the
-    // watcher message too, unlike the hand) so everyone knows the stakes just
-    // changed. `state.decider` is server-set — never re-derived here, so the pick
-    // screen and the server's choice of picker can't disagree.
-    pickPill.textContent = state.decider
-      ? t('party.decider', 'The Decider')
-      : fmt(t('party.choosingRound', 'Choosing round {n} of {total}'), { n: nextRound, total: totalRounds });
+    // Every round is announced the same way, the last one included — it is an
+    // ordinary rotation pick, so "round N of N" is the whole story.
+    pickPill.textContent = fmt(t('party.choosingRound', 'Choosing round {n} of {total}'), { n: nextRound, total: totalRounds });
 
     // Server-authoritative: the server told us whether we're the picker (never
     // re-derived from `you === picker`, which a stale identity could get wrong).
@@ -2286,9 +2266,7 @@ export function bootFlagParty() {
 
     if (youPick) {
       pickLead.hidden = false;
-      pickLead.textContent = state.decider
-        ? t('party.yourPickDecider', 'Your pick, and it decides the game')
-        : t('party.yourPick', 'Your pick, choose the next round');
+      pickLead.textContent = t('party.yourPick', 'Your pick, choose the next round');
       pickWatch.hidden = true;
       pickHand.hidden = false;
       pickHand.innerHTML = '';
@@ -2356,9 +2334,8 @@ export function bootFlagParty() {
       pickWatch.hidden = false;
       pickWatch.innerHTML = '';
       pickWatch.appendChild(buildAvatar(state.picker || ''));
-      pickWatch.appendChild(el('p', 'pick-watch-name', state.decider
-        ? fmt(t('party.isChoosingDecider', '{name} chooses The Decider'), { name: pickerName })
-        : fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
+      pickWatch.appendChild(el('p', 'pick-watch-name',
+        fmt(t('party.isChoosing', '{name} is choosing…'), { name: pickerName })));
     }
 
     renderPickBoard();
@@ -2412,31 +2389,21 @@ export function bootFlagParty() {
   function renderRoundCard() {
     const totalRounds = Math.max(1, Math.ceil(state.totalQuestions / ROUND_QUESTIONS));
     const roundNum = roundIndexAt(state.questionIndex) + 1;
-    // The closing round is named, not numbered: it is explicitly not "round N of
-    // N" but a separate act, chosen from outside the rotation by whoever was
-    // last. Derived from the question alone (the same rule that doubles its
-    // points), so a client that joined mid-game still announces it correctly.
-    const isFinal = isFinalRound(state.questionIndex, state.totalQuestions);
     // Dots, not "Round 3 of 6": the shape of the game reads at a glance and the
-    // card opens on its artwork instead of a sentence. The Decider keeps its
-    // words — it is the one round whose name carries more than its position.
+    // card opens on its artwork instead of a sentence. Every round is a pip row,
+    // the last one included — it is an ordinary round now, not a named closing act.
     //
     // The dots are decoration to a screen reader, so the sentence they replace
     // rides along as the container's label. That is why `party.roundCardCount`
     // is still here despite nothing rendering it as text.
     roundCardCount.textContent = '';
-    roundCardCount.classList.toggle('is-pips', !isFinal);
-    if (isFinal) {
-      roundCardCount.removeAttribute('aria-label');
-      roundCardCount.textContent = `🏁 ${t('party.decider', 'The Decider')}`;
-    } else {
-      roundCardCount.setAttribute('aria-label',
-        fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds }));
-      for (const state of roundPipStates(roundNum, totalRounds)) {
-        const pip = el('span', 'roundcard-pip' + (state ? ` ${state}` : ''));
-        pip.setAttribute('aria-hidden', 'true');
-        roundCardCount.appendChild(pip);
-      }
+    roundCardCount.classList.add('is-pips');
+    roundCardCount.setAttribute('aria-label',
+      fmt(t('party.roundCardCount', 'Round {n} of {total}'), { n: roundNum, total: totalRounds }));
+    for (const state of roundPipStates(roundNum, totalRounds)) {
+      const pip = el('span', 'roundcard-pip' + (state ? ` ${state}` : ''));
+      pip.setAttribute('aria-hidden', 'true');
+      roundCardCount.appendChild(pip);
     }
 
     const modeId = roundModeId(state.lastPick, state.question ? state.question.questionId : undefined);

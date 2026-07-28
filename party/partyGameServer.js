@@ -4,7 +4,7 @@ import { sovereignPool, nonSovereignPool } from '../flags/flagPools.js';
 import { DEFAULT_PLAN, totalQuestions, poolIdAt, questionIdAt, PARTY_MODES, ROUND_QUESTIONS } from '../flags/partyPlan.js';
 import { DEFAULT_REVEAL, revealCategoryFor } from '../flags/partyTiming.js';
 import { quietPlayerIds } from '../flags/heartbeat.js';
-import { roundCountFor, validateGameLength, validateFirstPickMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, DEFAULT_FIRST_PICK, isDeciderPick, deciderPickerFor, eligiblePickers } from '../flags/partyDraft.js';
+import { roundCountFor, validateGameLength, validateFirstPickMode, pickerFor, handFor, isValidPick, canVeilMode, resolveFamilyPick, usedIdForMode, DEFAULT_FIRST_PICK, eligiblePickers } from '../flags/partyDraft.js';
 import {
   createRoom,
   applyHello,
@@ -240,22 +240,22 @@ export default class PartyGameServer {
   }
 
   /**
-   * Who should be holding the pick right now. Both picker rules run over the
-   * seats actually in the room (`eligiblePickers`), so a player who has left is
-   * never handed a turn they cannot take — see that helper for why absent seats
-   * are exactly the ones both rules would otherwise aim at.
+   * Who should be holding the pick right now: the lowest-ranked seat that hasn't
+   * picked yet (`pickerFor`), run over the seats actually in the room
+   * (`eligiblePickers`) so a player who has left is never handed a turn they
+   * cannot take — see that helper for why absent seats are exactly the ones the
+   * rule would otherwise aim at.
    *
    * One method, used both when the pick opens and when the picker leaves
    * mid-pick, so the rule that chose the original seat is the rule that chooses
    * the replacement.
    *
-   * @param {boolean} decider  whether this pick is for the closing Decider round
    * @returns {string | null}
    */
-  choosePicker(decider) {
+  choosePicker() {
     if (!this.room) return null;
     const board = eligiblePickers(this.scoreboard(), this.room.present);
-    return decider ? deciderPickerFor(board) : pickerFor(board, this.room.pickedBy);
+    return pickerFor(board, this.room.pickedBy);
   }
 
   async saveRoom() {
@@ -378,8 +378,8 @@ export default class PartyGameServer {
           this.usedModes = new Set();
           // Draft is the only way a game starts. The plan grows one round per
           // pick: open with the host's chosen round-1 mode, then run one round per
-          // pick, with that first pick and the closing Decider bookending the draft.
-          // Question 0 comes from the first round.
+          // pick until the round count is reached. Question 0 comes from the first
+          // round.
           //
           // The host sends a LENGTH ('short' / 'medium' / 'long'), not a pick
           // count: `roundCountFor` reads the round total off a table and the
@@ -486,7 +486,7 @@ export default class PartyGameServer {
           // by the rule that opened this pick.
           if (result.room.phase === 'picking' && result.room.picker === waitingFor) {
             this.room = result.room;
-            const repick = applyRepick(this.room, this.choosePicker(this.room.decider === true));
+            const repick = applyRepick(this.room, this.choosePicker());
             result = { room: repick.room, broadcasts: [...result.broadcasts, ...repick.broadcasts] };
           }
           break;
@@ -494,20 +494,14 @@ export default class PartyGameServer {
         case 'next': {
           // In a draft, a `next` that lands on a round boundary opens a pick
           // instead of dealing the next question: the lowest-ranked seat that
-          // hasn't picked chooses the next round from a dealt hand. Otherwise
-          // it advances the question or ends the game.
-          //
-          // The LAST boundary is different: it opens **the Decider**, the closing
-          // double-points act, which sits outside the rotation and goes to
-          // whoever is in last place right now — pick history and all. The
-          // rotation's tie-break would hand this exact round to the leader 85% of
-          // the time (see PARTY.md Iteration 12), which is the one thing here a
-          // player could call unfair.
+          // hasn't picked chooses the next round from a dealt hand. Every boundary
+          // works this way, the last one included — it is an ordinary rotation
+          // pick, not a separate closing act. Otherwise `next` advances the
+          // question or ends the game.
           const pending = pendingPickAfterReveal(this.room);
-          const decider = pending && isDeciderPick(this.room.questionIndex, this.room.totalQuestions);
-          const picker = pending ? this.choosePicker(decider) : null;
+          const picker = pending ? this.choosePicker() : null;
           if (picker) {
-            result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes), decider);
+            result = applyEnterPicking(this.room, playerId, picker, handFor(this.usedModes));
           } else {
             // Not a pick boundary, or (defensively) no eligible picker — the
             // round-count formula guarantees one, but never freeze the room on a
@@ -661,15 +655,14 @@ export default class PartyGameServer {
       }
       // If the seat that just left was the one holding a pick, hand the turn to
       // whoever is still here rather than waiting out the host's anti-stall
-      // timer. Re-run the SAME rule that opened this pick — `room.decider` says
-      // which one that was — so the replacement is chosen the way the original
-      // was.
+      // timer. Re-run the same rotation rule that opened this pick, so the
+      // replacement is chosen the way the original was.
       //
       // Unless the room stopped to wait for them, which is the whole point of a
       // pause: their turn is held exactly where they left it, and it only moves
       // on if the host decides not to wait (see the `resume` case).
       if (this.room.phase === 'picking' && this.room.picker === playerId && this.room.pausedFor !== playerId) {
-        const repick = applyRepick(this.room, this.choosePicker(this.room.decider === true));
+        const repick = applyRepick(this.room, this.choosePicker());
         this.room = repick.room;
         broadcasts.push(...repick.broadcasts);
       }
@@ -855,9 +848,8 @@ export default class PartyGameServer {
    * A bot holding the draft pick chooses a random valid card from its dealt hand
    * and starts its round — the exact `randomModeFromHand` + `startRoundFromMode`
    * the host's `forcePick` runs, so an idle-picker path and a bot-picker path build
-   * the round identically (including the closing Decider, which needs no branch
-   * here: `applyPick` reads `room.decider`). No veil: like a forced pick, the veil
-   * is a deliberate bet a bot never places.
+   * the round identically, the last round included. No veil: like a forced pick,
+   * the veil is a deliberate bet a bot never places.
    * @param {string} botId
    */
   async botPick(botId) {

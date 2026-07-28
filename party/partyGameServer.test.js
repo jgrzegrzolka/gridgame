@@ -342,9 +342,9 @@ test('draft: a boundary where everyone has picked wraps the rotation, never free
   assert.equal(srv.room.picker, 'alice');
 });
 
-// ---- the Decider ----
+// ---- the closing round (an ordinary rotation pick) ----
 
-/** Two seats, one pick each: round 1, alice's round, bob's round, the Decider. */
+/** Two seats: the host's round 1, then a rotation pick per round to the end. */
 async function startDuoDraft() {
   const a = mockConn('a'), b = mockConn('b');
   const srv = new PartyGameServer(mockParty([a, b]));
@@ -368,64 +368,57 @@ async function playRoundWon(srv, conns, winner) {
   }
 }
 
-test('the Decider: the closing pick goes to last place, not to the rotation', async () => {
-  // The finding this phase exists for. Alice wins every round, so the rotation's
-  // tie-break pushes her to the back and would hand her the double-points round.
+/** The 0-based question index the final round starts at. */
+const finalRoundStart = (srv) => (srv.room.targetRounds - 1) * ROUND_QUESTIONS;
+
+/** Play a duo game up to the moment the pick for the FINAL round opens. `winner`
+ *  takes every round, so the standings are unambiguous. The open pick is the last
+ *  one when every round but the final has been dealt (`plan.length` is one short
+ *  of `targetRounds`).
+ *
+ *  Loops rather than counting rounds: how many rotation picks a duo game has is a
+ *  property of the length table, and these tests are about the closing pick's
+ *  rules, not that number. Every rotation pick takes `flags-all`, which is exempt
+ *  from the no-repeat rule and so is always legal however many the length asks. */
+async function playToFinalPick(winner = 'alice') {
   const { srv, a, b } = await startDuoDraft();
   const conns = [['alice', a], ['bob', b]];
-
-  await playRoundWon(srv, conns, 'alice');          // firstPick -> pick 1
-  assert.equal(srv.room.phase, 'picking');
-  assert.equal(srv.room.decider, false, 'a rotation pick, not the Decider');
-  assert.equal(srv.room.picker, 'bob', 'bob is last, and has not picked');
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'map-outlines' }), b);
-
-  await playRoundWon(srv, conns, 'alice');          // bob's round -> pick 2
-  // bob again, and that is the first pick counting. alice picked it in the lobby, so
-  // after bob's first pick the two are level at one each -- and a tie goes to the
-  // lowest-ranked, which is bob, who is losing every round. He draws level-plus-one
-  // before alice picks again, which is exactly the catch-up the seeding is for.
-  // (Before the host chose round 1, alice held zero picks here and went next.)
-  assert.equal(srv.room.picker, 'bob', 'tied on picks, so the lower-ranked seat goes');
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-weird' }), b);
-
-  // ...and however many rotation picks the length asks for after that, the last
-  // boundary is the Decider's.
-  for (let guard = 0; guard < 40 && !srv.room.decider; guard++) {
-    await playRoundWon(srv, conns, 'alice');
-    if (srv.room.decider) break;
+  const atFinalPick = () => srv.room.phase === 'picking' && srv.room.plan.length === srv.room.targetRounds - 1;
+  for (let guard = 0; guard < 40 && !atFinalPick(); guard++) {
+    await playRoundWon(srv, conns, winner);
+    if (atFinalPick()) break;
     await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-all' }), srv.room.picker === 'alice' ? a : b);
   }
-  assert.equal(srv.room.phase, 'picking');
-  assert.equal(srv.room.decider, true, 'the last boundary opens the Decider');
-  assert.equal(srv.room.picker, 'bob', 'last place picks it, though the rotation is spent');
-  assert.equal(b.last('picking').decider, true, 'and the picker is told what they are choosing');
-  assert.equal(a.last('picking').decider, true, 'as is the watcher');
-});
+  assert.ok(atFinalPick(), 'the game reached the pick for its final round');
+  return { srv, a, b, conns };
+}
 
-test('the Decider: the picks are spent within one of each other, and the Decider spends no slot', async () => {
-  const { srv, b } = await playToDeciderPick();
+test('the closing pick is an ordinary rotation pick that spends a slot', async () => {
+  // The Decider is gone: the final round is chosen by the same rotation rule as
+  // every other, and choosing it records the picker exactly like any other round
+  // (it used to sit outside the rotation and spend no slot).
+  const { srv, b, conns } = await playToFinalPick();
   const before = [...srv.room.pickedBy];
-  // This used to assert an exact tie: LENGTH_ROUNDS was built so `rounds - 2`
-  // divided evenly by the seat count. The firstPick is a pick now -- the host chose
-  // it in the lobby -- so the total is `rounds - 1`, which is odd at two seats and
-  // cannot tie. Within one is the strongest true statement, and it is what
-  // `pickShareFor` reports to the lobby as `extra`.
-  const alice = before.filter((p) => p === 'alice').length;
-  const bob = before.filter((p) => p === 'bob').length;
-  assert.ok(Math.abs(alice - bob) <= 1, `picks within one: ${JSON.stringify(before)}`);
-  assert.equal(alice + bob, srv.room.targetRounds - 1,
-    'every round but the Decider -- the first pick counts now, as the host pick');
+  assert.equal(before.length, srv.room.targetRounds - 1, 'every round but the last is picked so far');
+  // A normal picking phase: a hand is dealt, and no closing-act flag rides along.
+  const picking = (srv.room.picker === 'alice' ? conns[0][1] : conns[1][1]).last('picking');
+  assert.equal(picking.decider, undefined, 'no Decider flag on the wire anymore');
+  assert.ok(Array.isArray(srv.room.hand) && srv.room.hand.length > 0);
 
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), b);
-  assert.deepEqual(srv.room.pickedBy, before, 'the Decider spent no rotation slot');
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), srv.room.picker === 'alice' ? conns[0][1] : b);
+  assert.equal(srv.room.pickedBy.length, srv.room.targetRounds, 'the closing pick spends a rotation slot');
+  // Every seat's pick count stays within one of every other's — the round-robin
+  // keeps it balanced across the whole game, the final round included.
+  const alice = srv.room.pickedBy.filter((p) => p === 'alice').length;
+  const bob = srv.room.pickedBy.filter((p) => p === 'bob').length;
+  assert.ok(Math.abs(alice - bob) <= 1, `picks within one: ${JSON.stringify(srv.room.pickedBy)}`);
 });
 
-test('the Decider: it is the last round, and playing it out ends the game', async () => {
-  const { srv, a, b } = await playToDeciderPick();
-  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), b);
+test('the closing round is the last round, and playing it out ends the game', async () => {
+  const { srv, a, b, conns } = await playToFinalPick();
+  await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'superlative-coffee' }), srv.room.picker === 'alice' ? conns[0][1] : b);
 
-  assert.equal(srv.room.questionIndex, finalRoundStart(srv), 'the Decider is the last round');
+  assert.equal(srv.room.questionIndex, finalRoundStart(srv), 'the closing round is the last round');
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: srv.room.question.answer }), b);
   await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), a);
 
@@ -437,46 +430,21 @@ test('the Decider: it is the last round, and playing it out ends the game', asyn
     await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), b);
   }
   await srv.onMessage(JSON.stringify({ type: 'next' }), a);
-  assert.equal(srv.room.phase, 'final', 'the Decider is the last round of the game');
+  assert.equal(srv.room.phase, 'final', 'the closing round is the last round of the game');
 });
 
-/** Play a duo game up to the moment the Decider pick opens. `winner` takes every
- *  round, so the standings are unambiguous and last place is the other seat.
- *
- *  Loops to the Decider rather than counting rounds: how many rotation picks a
- *  duo game has is a property of the length table, and these tests are about the
- *  Decider's rules, not about that number. Every rotation pick takes `flags-all`,
- *  which is exempt from the no-repeat rule and so is always a legal pick however
- *  many the length asks for. */
-async function playToDeciderPick(winner = 'alice') {
-  const { srv, a, b } = await startDuoDraft();
-  const conns = [['alice', a], ['bob', b]];
-  for (let guard = 0; guard < 40 && !srv.room.decider; guard++) {
-    await playRoundWon(srv, conns, winner);
-    if (srv.room.decider) break;
-    await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-all' }), srv.room.picker === 'alice' ? a : b);
-  }
-  assert.equal(srv.room.decider, true, 'the game reached its Decider');
-  return { srv, a, b, conns };
-}
-
-/** The 0-based question index the final round starts at. */
-const finalRoundStart = (srv) => (srv.room.targetRounds - 1) * ROUND_QUESTIONS;
-
-test('the Decider: a forced pick still spends no rotation slot', async () => {
-  // The anti-stall path routes through `applyPick` like a real pick, so it
-  // inherits the Decider's rules for free — but "for free" is exactly the kind of
-  // thing that stops being true silently, so it is pinned rather than reasoned.
-  const { srv, a, b } = await playToDeciderPick();
-  assert.equal(srv.room.decider, true);
+test('the closing pick: a forced pick is dealt and spends a slot', async () => {
+  // The anti-stall path routes through `applyPick` like a real pick, so the closing
+  // round it deals records the picker just like a real pick would.
+  const { srv, a, b } = await playToFinalPick();
   const before = [...srv.room.pickedBy];
+  const forcedPicker = srv.room.picker;
 
   await srv.onMessage(JSON.stringify({ type: 'forcePick' }), a); // host's clock ran out
   assert.equal(srv.room.phase, 'question', 'the closing round was dealt on timeout');
-  assert.deepEqual(srv.room.pickedBy, before, 'a forced Decider spends no rotation slot either');
-  assert.equal(srv.room.decider, false, 'and the flag is cleared');
+  assert.equal(srv.room.pickedBy.length, before.length + 1, 'a forced closing pick spends a slot too');
   assert.equal(srv.room.questionIndex, finalRoundStart(srv), 'it is still the last round');
-  assert.equal(a.last('question').draftPick.picker, 'bob', 'attributed to the seat that timed out');
+  assert.equal(a.last('question').draftPick.picker, forcedPicker, 'attributed to the seat that timed out');
 
   // Both seats must buzz before the reveal fires, or `last('reveal')` is still
   // the PREVIOUS round's, and this would read the wrong beat.
@@ -488,52 +456,48 @@ test('the Decider: a forced pick still spends no rotation slot', async () => {
 });
 
 // A seat outlives its socket (sticky score, for reconnect), so a player who quits
-// stops scoring and sinks toward last place — which is precisely who both picker
-// rules aim at, the Decider hardest and at the worst possible moment.
+// stops scoring and sinks toward last place — which is precisely who the picker
+// rule aims at.
 //
 // The room now stops for them rather than routing around them: a pick is a turn
 // worth more than the 45 s it would take to expire, and a phone that locked
 // mid-choice is the common case. The turn is held; the host decides whether to
 // keep waiting. Re-election still exists — it just fires on `resume` instead of
 // on the disconnect.
-test('the Decider: a picker who leaves mid-pick has their turn held, not reassigned', async () => {
-  const { srv, a, b } = await playToDeciderPick();
+test('the closing pick: a picker who leaves mid-pick has their turn held, not reassigned', async () => {
+  const { srv, a, b } = await playToFinalPick();
   assert.equal(srv.room.picker, 'bob');
 
-  await srv.onClose(b); // bob's phone locks as the closing act opens
+  await srv.onClose(b); // bob's phone locks as the closing pick opens
 
   assert.equal(srv.room.present.has('bob'), false, 'presence dropped');
   assert.ok(srv.room.seats.has('bob'), 'but the seat and its score stay, for reconnect');
   assert.equal(srv.room.phase, 'picking', 'still the closing pick');
-  assert.equal(srv.room.decider, true, 'still the Decider');
   assert.equal(srv.room.picker, 'bob', 'and still his turn, waiting for him');
   assert.equal(srv.room.pausedFor, 'bob', 'the room is holding for him');
   assert.equal(a.last('paused').pausedFor, 'bob', 'and Alice is told what it is waiting on');
 });
 
-test('the Decider: the host carries on, and only then does the turn move', async () => {
-  const { srv, a, b } = await playToDeciderPick();
+test('the closing pick: the host carries on, and only then does the turn move', async () => {
+  const { srv, a, b } = await playToFinalPick();
   await srv.onClose(b);
 
   await srv.onMessage(JSON.stringify({ type: 'resume' }), a); // alice hosts
 
   assert.equal(srv.room.pausedFor, null, 'the game runs again');
   assert.equal(srv.room.picker, 'alice', 'handed to whoever is still here');
-  assert.equal(srv.room.decider, true, 'still the Decider — only the seat changed');
 
   const picking = a.last('picking');
   assert.equal(picking.youPick, true, 'and she is told it is hers, with a hand');
   assert.ok(Array.isArray(picking.hand) && picking.hand.length > 0);
-  assert.equal(picking.decider, true);
 });
 
-test('a picker who leaves mid-ROTATION-pick is held and handed on the same way', async () => {
-  // The behaviour is not Decider-specific: the rotation goes through the same
-  // picker-selection method, so the two cannot drift apart.
+test('a picker who leaves mid-rotation-pick is held and handed on the same way', async () => {
+  // The behaviour is not specific to the closing round: every rotation pick goes
+  // through the same picker-selection method, so the two cannot drift apart.
   const { srv, a, b } = await startDuoDraft();
   await playRoundWon(srv, [['alice', a], ['bob', b]], 'alice');
   assert.equal(srv.room.phase, 'picking');
-  assert.equal(srv.room.decider, false, 'an ordinary rotation pick');
   assert.equal(srv.room.picker, 'bob');
 
   await srv.onClose(b);
@@ -569,7 +533,7 @@ test('the last player standing still holds the pick — nobody left to hand it t
   // Degenerate case: with no eligible replacement, `applyRepick` is a no-op and
   // the turn stays put rather than the room dropping into a null-picker state it
   // has no way out of.
-  const { srv, a, b } = await playToDeciderPick();
+  const { srv, a, b } = await playToFinalPick();
   assert.equal(srv.room.picker, 'bob');
   await srv.onClose(a);   // the host leaves; bob (the picker) is all that's left
   assert.equal(srv.room.picker, 'bob', 'unchanged — there was no one to promote');
