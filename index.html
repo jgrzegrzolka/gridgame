@@ -87,85 +87,88 @@
     <main>
       <h1 class="sr-only">Yet Another Quiz: country flag games</h1>
       <section class="home" aria-label="Flags" data-i18n-attr="aria-label:domain.flags">
-        <!-- Hero: fully static, fabricated on purpose. A fixed headline + a
-             decorative criteria line (Europe / cross / not blue — an EXAMPLE of
-             the kind of rule, not today's actual one) + three fake flags. It
-             touches no puzzle data, so the landing page makes no catalog fetch
-             and stays instant; the "Today's puzzle" button links to the real
-             daily. The criteria chips reuse the site's own marks — the red
-             cross motif icon (filterChips.js MOTIF_ICONS) and a colour swatch —
-             so the home speaks the same visual language as the games. The whole
-             line is aria-hidden: it's illustrative, not a rule to announce. -->
+        <!-- Hero: fully static, fabricated on purpose. Fixed headline + subtitle +
+             a row of decorative invented flags, so the landing page touches no
+             puzzle data — no catalog fetch, instant paint. The "Today's puzzle"
+             button links to the real daily. The only dynamic touch is the "No. N"
+             caption, which bootHome() computes client-side from LAUNCH_DATE (still
+             no fetch — the contiguous-date rule makes days-since-launch the exact
+             puzzle number). -->
         <section class="hero" id="hero">
-          <h2 class="hero-title" data-i18n="home.hero.headline">Can you find them all?</h2>
-          <p class="hero-crit" aria-hidden="true">
-            <span class="crit-tok"><span data-i18n="home.hero.critPlace">Europe</span></span>
-            <span class="crit-sep">·</span>
-            <span class="crit-tok">
-              <svg class="crit-gly" viewBox="0 0 24 24" fill="#cf2b2b" aria-hidden="true"><rect x="1.5" y="10" width="21" height="4" rx="0.5"/><rect x="7" y="2.5" width="4" height="19" rx="0.5"/></svg>
-              <span data-i18n="home.hero.critShape">cross</span>
-            </span>
-            <span class="crit-sep">·</span>
-            <span class="crit-tok crit-not">
-              <span class="crit-swatch" style="background:#2f6fd0"></span>
-              <span class="crit-not-pre" data-i18n="home.hero.critNot">not</span>
-              <span data-i18n="home.hero.critColor">blue</span>
-            </span>
-          </p>
-          <!-- Three fabricated flags plus one empty "to find" box — pure
-               decoration, and deliberately STATIC MARKUP rather than painted by
-               bootHome(). Being fake is the point: they fill the hero with flag
-               imagery without spoiling today's answers, and the Jolly Roger
-               winks that these aren't the ones to find.
-
-               Inline, in the HTML, because this row is the first thing the eye
-               lands on. Built in JS it waited on the module graph AND the 91KB
-               translation fetch (mountHeroFlags used to sit inside
-               bootI18n().then), so the headline and CTA painted instantly while
-               the flags popped in visibly late. Nothing here needs i18n or the
-               catalog; as markup it paints with everything else. Pinned by
-               home.test.js — including that page.js must not touch it.
-
-               Redrawn native 3:2 so they fill the same stamp boxes as the real
-               found-flags. The artwork reuses the site's existing invented-flag
-               set: the two-tone Nordic cross is FLAG_GLYPH from filterChips.js,
-               the Jolly Roger is the "weird deck" symbol from deckIcons.js. The
-               two fixed illustrative hues per flag are the documented exception
-               to the eight-colour palette rule, the same standing as the real
-               flag SVGs — a mark that depicts a flag can't be built from brand
-               tokens. -->
-          <div class="hero-stamps" aria-hidden="true">
-            <span class="hero-stamp fake"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24"><rect width="36" height="24" fill="#2a9d8f"/><rect x="10" y="0" width="4.5" height="24" fill="#f4efe6"/><rect x="0" y="9.75" width="36" height="4.5" fill="#f4efe6"/></svg></span>
-            <span class="hero-stamp fake"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24"><rect width="36" height="24" fill="#c65f9a"/><path d="M0 0L36 24M36 0L0 24" stroke="#f4efe6" stroke-width="5"/></svg></span>
-            <span class="hero-stamp fake"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24"><rect width="36" height="24" fill="#241f22"/><g stroke="#fff" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="13" x2="24" y2="19"/><line x1="24" y1="13" x2="12" y2="19"/></g><g fill="#fff"><circle cx="11.4" cy="12.6" r="1.5"/><circle cx="24.6" cy="12.6" r="1.5"/><circle cx="11.4" cy="19.4" r="1.5"/><circle cx="24.6" cy="19.4" r="1.5"/></g><ellipse cx="18" cy="10.5" rx="5" ry="5.3" fill="#fff"/><rect x="14.6" y="13.6" width="6.8" height="3.4" rx="1" fill="#fff"/><circle cx="16" cy="10" r="1.4" fill="#241f22"/><circle cx="20" cy="10" r="1.4" fill="#241f22"/><rect x="17.3" y="11.6" width="1.4" height="2" fill="#241f22"/></svg></span>
-            <span class="hero-stamp todo"></span>
+          <div class="hero-copy">
+            <h2 class="hero-title" data-i18n="home.hero.headline">Can you find all flags?</h2>
+            <p class="hero-sub" data-i18n="home.hero.sub">Small country games. Find them all, race the clock, or play together on your phones.</p>
           </div>
-          <a class="lobby-btn primary" id="hero-cta" href="daily/">
-            <span class="game-icon icon-daily" aria-hidden="true"></span>
-            <span class="hero-cta-label" data-i18n="home.hero.cta">Today's puzzle</span>
-          </a>
+          <!-- The invented-flag row — the page's signature, at a size no quiz site
+               gives flags. Decorative and aria-hidden: abstract flags in the site's
+               invented palette (teal / magenta / blue / near-black over cream), never
+               real country flags, so they fill the hero without spoiling any answer.
+               Each stamp slowly cross-fades through three designs via the pure-CSS
+               `faceCalm` animation (index.css) — no JS, no requests, so the row paints
+               with the document (home.test.js pins that, and that page.js never touches
+               it). Motion is disabled under prefers-reduced-motion. The illustrative
+               hues are the documented flag-depiction exception to the eight-token
+               palette, same standing as the real flag SVGs. -->
+          <div class="hero-stamps" aria-hidden="true">
+            <span class="hero-stamp">
+              <i style="background:linear-gradient(#f4efe6,#f4efe6) no-repeat,linear-gradient(#f4efe6,#f4efe6) no-repeat,#2a9d8f;background-size:100% 20%,16% 100%;background-position:0 40%,34% 0"></i>
+              <i style="background:linear-gradient(90deg,#c65f9a 33.33%,#f4efe6 33.33% 66.66%,#c65f9a 66.66%);animation-delay:-8s"></i>
+              <i style="background:radial-gradient(circle at 50% 50%,#2f6fd0 0 27%,#f4efe6 28.4%);animation-delay:-16s"></i>
+            </span>
+            <span class="hero-stamp">
+              <i style="background:linear-gradient(45deg,transparent calc(50% - 5px),#f4efe6 calc(50% - 3.5px) calc(50% + 3.5px),transparent calc(50% + 5px)),linear-gradient(-45deg,transparent calc(50% - 5px),#f4efe6 calc(50% - 3.5px) calc(50% + 3.5px),transparent calc(50% + 5px)),#2f6fd0;animation-delay:-4s"></i>
+              <i style="background:linear-gradient(#2a9d8f 33.33%,#f4efe6 33.33% 66.66%,#2a9d8f 66.66%);animation-delay:-12s"></i>
+              <i style="background:radial-gradient(circle at 50% 50%,#c65f9a 0 27%,#f4efe6 28.4%);animation-delay:-20s"></i>
+            </span>
+            <span class="hero-stamp">
+              <i style="background:linear-gradient(#f4efe6,#f4efe6) no-repeat,linear-gradient(#f4efe6,#f4efe6) no-repeat,#2f6fd0;background-size:100% 20%,16% 100%;background-position:0 40%,34% 0;animation-delay:-2s"></i>
+              <i style="background:radial-gradient(circle at 50% 50%,#2a9d8f 0 27%,#f4efe6 28.4%);animation-delay:-10s"></i>
+              <i style="background:linear-gradient(90deg,#241f22 50%,#f4efe6 50%);animation-delay:-18s"></i>
+            </span>
+            <span class="hero-stamp hero-stamp-4">
+              <i style="background:linear-gradient(45deg,transparent calc(50% - 5px),#f4efe6 calc(50% - 3.5px) calc(50% + 3.5px),transparent calc(50% + 5px)),linear-gradient(-45deg,transparent calc(50% - 5px),#f4efe6 calc(50% - 3.5px) calc(50% + 3.5px),transparent calc(50% + 5px)),#c65f9a;animation-delay:-6s"></i>
+              <i style="background:linear-gradient(#f4efe6,#f4efe6) no-repeat,linear-gradient(#f4efe6,#f4efe6) no-repeat,#241f22;background-size:100% 20%,16% 100%;background-position:0 40%,34% 0;animation-delay:-14s"></i>
+              <i style="background:linear-gradient(#2f6fd0 33.33%,#f4efe6 33.33% 66.66%,#2f6fd0 66.66%);animation-delay:-22s"></i>
+            </span>
+          </div>
+          <div class="hero-actions">
+            <a class="lobby-btn primary" id="hero-cta" href="daily/">
+              <span class="game-icon icon-daily" aria-hidden="true"></span>
+              <span class="hero-cta-label" data-i18n="home.hero.cta">Today's puzzle</span>
+            </a>
+            <p class="hero-meta">
+              <span class="hero-meta-no"><span data-i18n="home.hero.no">No.</span> <span id="hero-puzzle-n" class="hero-meta-n"></span></span>
+              <span data-i18n="home.hero.new">New one at midnight</span>
+            </p>
+          </div>
         </section>
 
-        <!-- The other games: one quiet, consistent list instead of four
-             preview cards — each a slim row (icon · name · one-liner · arrow). -->
-        <p class="start-sep" data-i18n="home.more">More ways to play</p>
+        <!-- The other games: one quiet, consistent list. On phones a single card
+             of slim rows (icon · name · chevron); on desktop three cards in a row
+             (icon chip · name · one-liner · chevron). -->
         <nav class="game-list" aria-label="More ways to play" data-i18n-attr="aria-label:home.more">
           <a class="game-row" href="flagQuiz/?n=60s">
-            <span class="game-icon icon-quiz" aria-hidden="true"></span>
-            <span class="game-row-name" data-i18n="tile.quiz">60s Quiz</span>
-            <span class="game-row-desc" data-i18n="home.desc.quiz">Beat the clock</span>
+            <span class="game-row-ic"><span class="game-icon icon-quiz" aria-hidden="true"></span></span>
+            <span class="game-row-text">
+              <span class="game-row-name" data-i18n="tile.quiz">60s Quiz</span>
+              <span class="game-row-desc" data-i18n="home.desc.quiz">Beat the clock</span>
+            </span>
             <span class="game-row-arrow" aria-hidden="true"></span>
           </a>
           <a class="game-row" href="flagParty/">
-            <span class="game-icon icon-party" aria-hidden="true"></span>
-            <span class="game-row-name" data-i18n="tile.party">Party</span>
-            <span class="game-row-desc" data-i18n="home.desc.party">Play together on your phones</span>
+            <span class="game-row-ic"><span class="game-icon icon-party" aria-hidden="true"></span></span>
+            <span class="game-row-text">
+              <span class="game-row-name" data-i18n="tile.party">Party</span>
+              <span class="game-row-desc" data-i18n="home.desc.party">Play together on your phones</span>
+            </span>
             <span class="game-row-arrow" aria-hidden="true"></span>
           </a>
           <a class="game-row" href="ticTacToe/">
-            <span class="game-icon icon-ttt" aria-hidden="true"></span>
-            <span class="game-row-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
-            <span class="game-row-desc" data-i18n="home.desc.ttt">Three flags in a row</span>
+            <span class="game-row-ic"><span class="game-icon icon-ttt" aria-hidden="true"></span></span>
+            <span class="game-row-text">
+              <span class="game-row-name" data-i18n="tile.ticTacToe">Tic Tac Toe</span>
+              <span class="game-row-desc" data-i18n="home.desc.ttt">Three flags in a row</span>
+            </span>
             <span class="game-row-arrow" aria-hidden="true"></span>
           </a>
         </nav>

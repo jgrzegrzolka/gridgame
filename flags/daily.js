@@ -167,6 +167,27 @@ export function puzzleDate(n, launchDate = LAUNCH_DATE) {
 }
 
 /**
+ * Puzzle number for a given Warsaw date, computed purely from `LAUNCH_DATE`
+ * — no catalog fetch. The inverse of `puzzleDate()`. Because the validator
+ * enforces contiguous dates in `puzzles.json` (one puzzle per day, no gaps),
+ * counting days from launch lands on the same number `todayN(catalog)` would,
+ * which lets the fetch-free landing page show today's "No. N" without loading
+ * the catalog. Returns 0 for any date before launch (caller renders that edge
+ * case — e.g. before go-live).
+ *
+ * @param {string} warsawDate  a `YYYY-MM-DD` string (e.g. from `warsawToday()`)
+ * @param {string} [launchDate]  injectable for tests; defaults to LAUNCH_DATE.
+ * @returns {number}
+ */
+export function todayNFromDate(warsawDate, launchDate = LAUNCH_DATE) {
+  const launch = Date.parse(`${launchDate}T00:00:00Z`);
+  const day = Date.parse(`${warsawDate}T00:00:00Z`);
+  if (Number.isNaN(launch) || Number.isNaN(day)) return 0;
+  const n = Math.round((day - launch) / 86_400_000) + 1;
+  return n < 1 ? 0 : n;
+}
+
+/**
  * "DD.MM.YYYY" rendering for a puzzle-release Date.
  *
  * @param {Date} d

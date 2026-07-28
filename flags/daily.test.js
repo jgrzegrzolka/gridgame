@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { todayN, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, superlativeToCategory, resolveNote, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
+import { todayN, todayNFromDate, getPuzzle, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, findPuzzle, resolvePuzzleEntry, isFilterRefinement, manualToCategory, superlativeToCategory, resolveNote, puzzleDate, formatPuzzleDate, LAUNCH_DATE } from './daily.js';
 import { parseFilterString } from './findFlag.js';
 import { matchesFilters } from './flagsFilter.js';
 import { flagsGamePool, loadCountries, createCountry } from './group.js';
@@ -1096,6 +1096,32 @@ test('puzzleDate: throws for n < 1 (no zeroth puzzle)', () => {
   assert.throws(() => puzzleDate(0), /expected n ≥ 1/);
   assert.throws(() => puzzleDate(-3), /expected n ≥ 1/);
   assert.throws(() => puzzleDate(1.5), /expected n ≥ 1/);
+});
+
+test('todayNFromDate: inverse of puzzleDate, counting contiguous days from launch', () => {
+  // The fetch-free landing page relies on this matching todayN(catalog).
+  assert.equal(todayNFromDate('2026-06-06'), 1); // launch day = No. 1
+  assert.equal(todayNFromDate('2026-06-07'), 2);
+  assert.equal(todayNFromDate('2026-06-11'), 6);
+  assert.equal(todayNFromDate('2026-07-01'), 26); // crosses the month cleanly
+});
+
+test('todayNFromDate: agrees with puzzleDate for a spread of N', () => {
+  for (const n of [1, 2, 6, 26, 100, 365]) {
+    const iso = puzzleDate(n).toISOString().slice(0, 10);
+    assert.equal(todayNFromDate(iso), n);
+  }
+});
+
+test('todayNFromDate: 0 before launch, injectable launchDate', () => {
+  assert.equal(todayNFromDate('2026-06-05'), 0); // day before launch
+  assert.equal(todayNFromDate('2020-01-01'), 0);
+  assert.equal(todayNFromDate('2027-01-15', '2027-01-15'), 1);
+  assert.equal(todayNFromDate('2027-01-24', '2027-01-15'), 10);
+});
+
+test('todayNFromDate: 0 for an unparseable date', () => {
+  assert.equal(todayNFromDate('not-a-date'), 0);
 });
 
 test('formatPuzzleDate: DD.MM.YYYY format', () => {

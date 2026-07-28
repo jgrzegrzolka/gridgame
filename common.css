@@ -81,6 +81,13 @@
    * `font-weight` still resolves through one of these three tokens — change a
    * value here to retune. (The former semibold values collapsed to bold: 600 /
    * 650 → bold.) */
+  /* A light display weight, used in exactly one place: the home hero headline
+   * ("Can you find all flags?"), where thin large type is the landing page's
+   * signature and reads as designed rather than as the default UI weight. Not
+   * for body text — at small sizes 300 renders anaemic. The two working weights
+   * remain regular / bold; this is the deliberate display-only exception the
+   * way --weight-medium is the burger-menu exception. */
+  --weight-light: 300;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-bold: 700;
