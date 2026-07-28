@@ -1,217 +1,237 @@
-/* Home page — "The Daily, front and centre".
+/* Home page — "Can you find all flags?".
  *
- * One front door (today's puzzle, its flags shown large) over one quiet,
- * consistent list of the other games — not four competing preview cards. The
- * flags are the only bold element; everything else stays disciplined. All
- * colour comes from the eight site tokens (common.css) plus the flags
- * themselves. Painted by bootHome() (page.js) from the live daily catalog. */
+ * A calm landing page: a light display headline, a row of oversized invented
+ * flags that slowly cross-fade, one rose CTA into today's puzzle, and a quiet
+ * list of the other games. The flags are the only bold element; everything
+ * else stays disciplined. All colour comes from the eight site tokens
+ * (common.css) plus the rose accent below and the invented-flag hues (the
+ * documented flag-depiction exception). Fully static markup — no catalog fetch,
+ * instant paint (see index.html); page.js only fills the "No. N" caption. */
 
 body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   /* The home has nothing between the chrome strip (70px) and the hero, so it
    * doesn't need the full --page-top (104px) reservation the busier pages use —
-   * that left a wide dead band above the eyebrow. Start content just below the
+   * that left a wide dead band above the headline. Start content just below the
    * strip. */
   padding-top: 84px;
+  /* The landing page is wider than the 756px site column (the design is a
+   * spacious full-bleed hero), so re-anchor the fixed chrome cluster + wordmark
+   * to the home's own 1040px content edge instead of the site default. The
+   * chrome elements are body's children and inherit this custom property. */
+  --chrome-x-offset: max(0px, calc(50vw - 520px));
+}
+/* The header blends into the page on the home — the design carries no darker
+ * chrome band here, unlike the site-wide strip (--hover-color). Override just
+ * the fill to the page background; the hairline baseline (body::after) stays. */
+body::before {
+  background: var(--page-bg-color);
 }
 
-/* Centered reading column. Narrower than the old 720px tile grid: the hero is
- * a single focused column, so a tighter measure keeps the title, stamps and
- * list visually anchored together. */
+/* Reading column. Wide enough for the desktop two-column hero + three-card row;
+ * on phones it simply fills the viewport. Capped at the site content width so
+ * the fixed chrome cluster (which anchors to that same 756px cap) stays aligned
+ * with the page's right edge. */
 .home {
   width: 100%;
-  max-width: 560px;
+  max-width: 1040px;
   margin: 0 auto 40px;
+  /* The home's rose accent. These two values are the site's existing CTA rose —
+   * common.css `.lobby-btn.primary` already defines the identical
+   * `--cta-rose` (#9F6D82) / `--cta-rose-soft` (#F2EAEE) for the "Today's
+   * puzzle" pill. Reused here (not a second pink) so the game-card icons and
+   * their chips speak the same accent as the button above them. Kept as a
+   * home-scoped pair rather than promoted to a root token so the palette
+   * surface stays unchanged elsewhere. */
+  --home-rose: #9f6d82;
+  --home-rose-soft: #f2eaee;
 }
 
 /* ---------------------------------------------------------------- the hero */
+/* Generous top breathing room before the headline — the design lets the hero
+ * sit low with air above it rather than hugging the header. */
 .hero {
-  text-align: center;
-  padding: 20px 8px 8px;
+  padding: 48px 0 0;
 }
-/* Fixed copy (not the puzzle's description), so it never varies in length. Uses
- * the site's regular weight — same as the other big prompt headings now
- * (flagQuiz's `.country-name`, Flag Party's `.prompt-target`), since the whole
- * app runs on just `--weight-regular` / `--weight-bold`. Scales down fluidly on
- * phones. */
-.hero-title {
-  font-size: clamp(21px, 4vw, 27px);
-  font-weight: var(--weight-regular);
-  line-height: 1.2;
-  margin: 0 auto 28px;
-  max-width: 20ch;
-  color: var(--primary-color);
-}
-/* Decorative criteria line — an EXAMPLE rule, not today's. Speaks the site's
- * own criteria language: a continent word, a motif glyph, a colour swatch,
- * with `·` separators. The illustrative glyph/swatch colours are the documented
- * exception to the eight-token palette (same standing as the real flag SVGs and
- * the filterChips criteria marks — a mark that depicts a flag detail can't be
- * built from brand tokens). */
-.hero-crit {
-  /* Block-level flex (not inline-flex) so the margin below actually lays out —
-   * as inline-flex the vertical margin barely rendered, which made the gap to
-   * the flags read too tight and the gap above too loose. */
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 6px;
-  margin: 0 auto 14px;
-  font-size: 17px;
-  color: var(--primary-color);
-}
-.hero-crit .crit-sep {
-  color: var(--muted-color);
-  font-size: 14px;
-}
-.hero-crit .crit-tok {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.hero-crit .crit-gly {
-  width: 17px;
-  height: 17px;
-  flex: none;
-}
-.hero-crit .crit-swatch {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  flex: none;
-}
-/* The negation reads like every other criterion — "not" and the colour word both
- * inherit the line's ink and 17px regular weight, exactly like "cross". The word
- * "not" carries the exclusion; the swatch (rendered first, before "not blue")
- * marks which colour. No quieter styling — muted grey read as a different,
- * thinner font. */
 
-/* The day's flags. Found ones show the real flag (the player already knows
- * them); still-to-find ones are blank stamps; a large answer set collapses its
- * tail into a "+N" marker (see heroStamps). The row IS the puzzle's progress.
- * This is the page's signature: flags at a size no quiz site gives them. */
+/* Fixed copy (not the puzzle's description), so it never varies in length. The
+ * one place on the site that uses the light display weight (--weight-light):
+ * thin large type is the landing page's signature. Scales fluidly on phones. */
+.hero-title {
+  margin: 0;
+  font-weight: var(--weight-light);
+  font-size: clamp(36px, 11.5vw, 44px);
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+  color: var(--primary-color);
+  animation: riseIn 0.5s ease both;
+}
+/* Subtitle — desktop only. On phones the headline + flags carry the hero and
+ * a second line of prose would crowd the fold, exactly as the mockup omits it. */
+.hero-sub {
+  display: none;
+}
+
+/* The invented-flag row — the page's signature, flags at a size no quiz site
+ * gives them. Left-aligned on phones, centred beside the copy on desktop. */
 .hero-stamps {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  /* Center, don't stretch: min-height reserves the 50px row, but the default
-   * align-items: stretch would pull each stamp to 50px and break its own 3:2
-   * aspect-ratio — the flag SVG then letterboxes and shows a white strip top and
-   * bottom (worse on phones, where a 54px stamp stretched to 50px strips ~7px).
-   * Centering keeps the true 3:2 box so the flag fills edge to edge. */
   align-items: center;
-  gap: 10px;
-  max-width: 460px;
-  margin: 0 auto 38px; /* one clear step down to the CTA (was 34px) */
-  /* Taller than the 48px stamps, so this sets the row height rather than just
-   * reserving it — don't drop it expecting a no-op, the CTA moves up 2px.
-   * It originally existed to stop that CTA jumping while the stamps were
-   * painted by JS after boot; the stamps are static markup now (see
-   * index.html), so there's no jump left to absorb. */
-  min-height: 50px;
+  justify-content: flex-start;
+  margin: 52px 0 0;
 }
 .hero-stamp {
-  width: 72px;
+  position: relative;
+  /* Big flags — the page's signature. At ~100px, four of them overrun the phone
+   * viewport and the last one bleeds off the right edge (clipped by body's
+   * overflow-x: clip), exactly as the design intends. */
+  width: clamp(80px, 25.5vw, 100px);
   aspect-ratio: 3 / 2;
-  border-radius: 7px;
+  border-radius: 5px;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+  flex: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 6px 14px rgba(0, 0, 0, 0.12);
 }
-.hero-stamp img,
-.hero-stamp svg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+/* Overlap + a little rotation so the row reads as a loose stack of stamps
+ * rather than a filmstrip. */
+.hero-stamp + .hero-stamp {
+  margin-left: -6px;
 }
-/* Empty "to find" box trailing the fake flags — a quiet dashed placeholder,
- * never a real flag (no spoiler, no progress). */
-.hero-stamp.todo {
-  background: var(--selected-color);
-  box-shadow: none;
-  border: 1px dashed var(--muted-color);
+.hero-stamp:nth-child(1) { transform: rotate(-3deg); }
+.hero-stamp:nth-child(2) { transform: rotate(1.5deg); }
+.hero-stamp:nth-child(3) { transform: rotate(-1.5deg); }
+.hero-stamp:nth-child(4) { transform: rotate(3deg); }
+/* Each stamp holds three flag layers; `faceCalm` fades one out as the next
+ * fades in, staggered by per-layer animation-delay (inline in the markup), so a
+ * stamp slowly cycles through its three invented designs. Pure CSS — no JS, no
+ * requests — so the whole row paints with the document. */
+.hero-stamp > i {
+  position: absolute;
+  inset: 0;
+  animation: faceCalm 24s ease-in-out infinite;
+}
+@keyframes faceCalm {
+  0%   { opacity: 1; }
+  31%  { opacity: 1; }
+  35%  { opacity: 0; }
+  96%  { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+/* Respect a reduced-motion preference: freeze each stamp on its first design
+ * (hide the other two layers) and drop the headline's rise-in. The page reads
+ * identically, just still. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-title { animation: none; }
+  .hero-stamp > i { animation: none; }
+  .hero-stamp > i ~ i { display: none; }
 }
 
-/* The hero CTA reuses the site's one accent pill — `.lobby-btn.primary`
- * (common.css), the soft-rose button. Only the icon + label layout and a
- * slightly larger hero footprint are added here; the rose fill / border / hover
- * all come from the shared recipe so the button reads identically to the online
- * start screens. */
+/* CTA + caption. The button reuses the site's one accent pill —
+ * `.lobby-btn.primary` (common.css), the soft-rose button — so the fill /
+ * border / hover all come from the shared recipe; only the icon + label layout
+ * and the hero footprint are added here. */
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 48px;
+}
 #hero-cta {
   display: inline-flex;
   align-items: center;
   gap: 9px;
   font-size: 15px;
   font-weight: var(--weight-bold);
-  padding: 13px 24px;
+  padding: 13px 22px;
+  flex: none;
 }
 #hero-cta .game-icon {
   width: 20px;
   height: 20px;
 }
-
-/* --------------------------------------------------------- the game list */
-/* "More ways to play" reuses the shared `.start-sep` divider from common.css —
- * the same "─ or join a game ─" separator the Flag Party / Tic-Tac-Toe start
- * screens use (sentence case, muted, hairline either side). Only the home's
- * roomier vertical spacing is set here; the look comes from the shared class. */
-.home .start-sep {
-  margin: 30px 0 12px;
-}
-.game-list {
+/* "No. N" over "New one at midnight". The number is filled by page.js from
+ * LAUNCH_DATE (no fetch); the whole line is hidden before go-live (n = 0). */
+.hero-meta {
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+  /* Keep each caption line intact — beside the button the column is narrow
+   * enough that "New one at midnight" would otherwise wrap word-by-word. */
+  white-space: nowrap;
 }
-/* One slim row per game: icon · name · one-liner · arrow. Shares the site's
- * surface-card + hairline + quiet-hover recipe. */
-.game-row {
-  display: flex;
-  align-items: center;
-  /* No flex gap: the icon carries its own margin and the name/desc spacing is
-   * owned by the middot separator (see .game-row-desc::before), so that gap
-   * stays symmetric around the dot. */
-  gap: 0;
-  padding: 14px 16px;
+.hero-meta[hidden] {
+  display: none;
+}
+
+/* --------------------------------------------------------- the game list */
+/* Phones: one white card of slim rows (icon · name · chevron), separated by
+ * hairlines. Desktop turns this into three standalone cards (below). */
+.game-list {
+  margin-top: 56px;
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
   border-radius: 12px;
+  overflow: hidden;
+}
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 16px;
+  height: 58px;
+  border-bottom: 1px solid var(--muted-soft-color);
   text-decoration: none;
   color: var(--primary-color);
+}
+.game-row:last-child {
+  border-bottom: none;
 }
 .game-row:hover {
   background: var(--hover-color);
 }
+.game-row-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+/* The game icons carry the rose accent — the same rose as the CTA — so the
+ * whole hero reads as one family. */
 .game-row .game-icon {
-  width: 22px;
-  height: 22px;
-  margin-right: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--home-rose);
+}
+.game-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .game-row-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: var(--weight-bold);
+  letter-spacing: -0.005em;
 }
-/* Name and one-liner read as one line — "60s Quiz · Beat the clock" — joined by
- * a muted middot rather than aligned into a fixed column (which left short names
- * with a big gap). The dot is a `::before` on the desc, so on phones — where the
- * desc is hidden — the separator disappears with it. */
+/* One-liner hidden on phones — the name carries the row, and it stays a
+ * comfortable thumb target without wrapping. Shown on the desktop cards. */
 .game-row-desc {
+  display: none;
   font-size: 13px;
-  color: var(--muted-color);
-}
-.game-row-desc::before {
-  content: "·";
-  margin: 0 8px;
   color: var(--muted-color);
 }
 .game-row-arrow {
   margin-left: auto;
-  width: 20px;
-  height: 20px;
+  flex: none;
+  width: 18px;
+  height: 18px;
   background-color: var(--muted-color);
   -webkit-mask: center / contain no-repeat;
           mask: center / contain no-repeat;
@@ -221,7 +241,7 @@ body {
 
 /* ------------------------------------------------------------ game icons */
 /* Shared glyph mechanic: a mask filled with currentColor, so an icon inherits
- * its context's colour (rose inside the accent CTA, primary in a list row). */
+ * its context's colour (rose in the list rows, rose inside the accent CTA). */
 .game-icon {
   display: block;
   flex: none;
@@ -250,25 +270,133 @@ body {
 
 /* ---------------------------------------------------------------- mobile */
 @media (max-width: 600px) {
-  /* Reclaim the dead gap under the fixed chrome strip (home has nothing else
-   * above the hero). */
   body {
     padding-top: 78px;
   }
   .hero {
-    padding: 10px 6px 6px;
+    padding: 40px 0 0;
+  }
+  /* No divider under the header on phones — the design's mobile header sits
+   * flush against the content with no rule (the blended strip already carries
+   * no band). The desktop home keeps the hairline, matching the design's
+   * desktop header border. Home-scoped: other pages keep their divider. */
+  body::after {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------- desktop */
+/* Two-column hero (copy + CTA left, flags right) and a three-card game row —
+ * the roomier layout the mockup uses once there's width for it. */
+@media (min-width: 760px) {
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "copy   stamps"
+      "actions stamps";
+    align-items: center;
+    column-gap: 64px;
+    row-gap: 34px;
+    padding: 40px 0 24px;
+    min-height: 60vh;
+  }
+  .hero-copy {
+    grid-area: copy;
+    align-self: end;
+  }
+  .hero-title {
+    font-size: clamp(52px, 5.4vw, 68px);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+  }
+  .hero-sub {
+    display: block;
+    margin: 22px 0 0;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--muted-color);
+    max-width: 420px;
   }
   .hero-stamps {
-    gap: 7px;
-    max-width: 340px;
+    grid-area: stamps;
+    justify-content: center;
+    margin: 0;
   }
   .hero-stamp {
-    width: 54px;
-    border-radius: 5px;
+    width: 168px;
+    border-radius: 7px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 12px 28px rgba(0, 0, 0, 0.14);
   }
-  /* Drop each game's one-liner on phones: the name + icon carry it, and the
-   * row stays a comfortable thumb target without wrapping. */
-  .game-row-desc {
+  .hero-stamp + .hero-stamp {
+    margin-left: -10px;
+  }
+  /* The desktop hero shows three stamps; the fourth is a phone-row filler. */
+  .hero-stamp-4 {
     display: none;
+  }
+  .hero-stamp:nth-child(1) { transform: rotate(-3.5deg); }
+  .hero-stamp:nth-child(2) { transform: rotate(1.5deg); }
+  .hero-stamp:nth-child(3) { transform: rotate(3.5deg); }
+  .hero-actions {
+    grid-area: actions;
+    align-self: start;
+    gap: 22px;
+    margin-top: 0;
+  }
+  #hero-cta {
+    font-size: 16px;
+    padding: 16px 28px;
+  }
+  .hero-meta {
+    font-size: 14px;
+  }
+
+  /* Three standalone cards instead of one connected list. */
+  .game-list {
+    margin-top: 48px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    background: none;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+  .game-row {
+    height: auto;
+    gap: 16px;
+    padding: 22px;
+    background: var(--surface-color);
+    border: 1px solid var(--muted-soft-color);
+    border-radius: 12px;
+  }
+  .game-row:last-child {
+    border-bottom: 1px solid var(--muted-soft-color);
+  }
+  .game-row:hover {
+    background: var(--surface-color);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
+  }
+  /* Icon in a soft rose chip — the same rose surface as the CTA. */
+  .game-row-ic {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--home-rose-soft);
+  }
+  .game-row .game-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .game-row-text {
+    gap: 6px;
+  }
+  .game-row-name {
+    font-size: 18px;
+    letter-spacing: -0.01em;
+  }
+  .game-row-desc {
+    display: block;
   }
 }

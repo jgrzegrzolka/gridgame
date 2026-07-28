@@ -377,12 +377,11 @@
   },
   "home": {
     "hero": {
-      "headline": "Czy znajdziesz je wszystkie?",
-      "critPlace": "Europa",
-      "critShape": "krzyż",
-      "critNot": "bez",
-      "critColor": "niebieskiego",
-      "cta": "Dzisiejsza zagadka"
+      "headline": "Czy znajdziesz wszystkie flagi?",
+      "sub": "Małe gry o krajach. Znajdź wszystkie, ścigaj się z czasem albo grajcie razem na telefonach.",
+      "cta": "Dzisiejsza zagadka",
+      "no": "Nr",
+      "new": "Nowa o północy"
     },
     "more": "Więcej sposobów gry",
     "desc": {
