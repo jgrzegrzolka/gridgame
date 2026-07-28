@@ -1145,11 +1145,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   width: 100%;
   max-width: 320px;
 }
-/* The count line carries one of two things. The Decider gets words (it is the
-   one round whose name says more than its position); every other round gets a
-   dot per round, which reads at a glance and lets the card open on its artwork
-   instead of a sentence. `.is-pips` switches between the two. */
-.roundcard-count { font-size: 12px; font-weight: var(--weight-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-color); }
+/* The count line is a dot per round — reads at a glance and lets the card open
+   on its artwork instead of a sentence. Every round is drawn this way (the sentence
+   it replaces rides along as the container's aria-label). */
+.roundcard-count { color: var(--muted-color); }
 .roundcard-count.is-pips { display: flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .roundcard-pip {
   width: 6px;

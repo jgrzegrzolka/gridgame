@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   roundCountFor,
   validateGameLength,
-  pickShareFor,
   pickerFor,
   handFor,
   isValidPick,
@@ -14,8 +13,6 @@ import {
   DEFAULT_GAME_LENGTH,
   HAND_SIZE,
   canVeilMode,
-  isDeciderPick,
-  deciderPickerFor,
   eligiblePickers,
   METRIC_FAMILIES,
   familyForMode,
@@ -23,7 +20,7 @@ import {
   representativeModeFor,
   resolveFamilyPick,
 } from './partyDraft.js';
-import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound, ROUND_QUESTIONS } from './partyPlan.js';
+import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
 import { veilActive } from './partyTiming.js';
 
 /** Small seeded LCG so the shuffle-based helpers are deterministic in tests.
@@ -63,20 +60,6 @@ test('roundCountFor: seven or more seats reuse the six-seat column', () => {
     const atSix = roundCountFor(6, length);
     for (const seats of [7, 8, 12, 20, 500]) {
       assert.equal(roundCountFor(seats, length), atSix, `${length} @ ${seats}`);
-    }
-  }
-});
-
-test('roundCountFor: every cell divides the rotation evenly up to six seats', () => {
-  // rounds - 1 (round 1 is the host's own first pick, only the Decider sits outside
-  // the rotation) is the number of rotation picks. Every cell sits on `seats * k + 1`
-  // so the lobby can promise "you each pick k" and be telling the truth. This is the
-  // constraint the table was built around; a cell edited off the lattice makes
-  // that hint a lie, which is exactly what this pins.
-  for (const length of GAME_LENGTHS) {
-    for (const seats of [2, 3, 4, 5, 6]) {
-      const rotation = roundCountFor(seats, length) - 1;
-      assert.equal(rotation % seats, 0, `${length} @ ${seats} leaves ${rotation % seats} over`);
     }
   }
 });
@@ -130,31 +113,6 @@ test('validateGameLength: anything else falls back to the default, never guesses
   for (const bad of ['Short', 'huge', 0, 2, 99, NaN, null, undefined, {}, []]) {
     assert.equal(validateGameLength(/** @type {any} */ (bad)), DEFAULT_GAME_LENGTH, String(bad));
   }
-});
-
-// ---- pickShareFor ----
-
-test('pickShareFor: splits the picks evenly across the seats', () => {
-  // Round 1 is the host's own first pick, so only the Decider sits outside the
-  // count. Every cell of LENGTH_ROUNDS sits on `seats * k + 1`, so `rounds - 1`
-  // divides evenly and the hint "you each pick k" is literally true.
-  // 4 seats, medium -> 9 rounds -> 8 picks -> 2 each, none left over.
-  assert.deepEqual(pickShareFor(roundCountFor(4, 'medium'), 4), { each: 2, extra: 0 });
-  // 5 seats, short -> 6 rounds -> 5 picks -> 1 each, none left over.
-  assert.deepEqual(pickShareFor(roundCountFor(5, 'short'), 5), { each: 1, extra: 0 });
-});
-
-test('pickShareFor: past six seats somebody misses out, and that is the trade', () => {
-  // `pickerFor` hands picks to the lowest-ranked first, so the seats that miss
-  // out are the ones ahead — the deliberate cost of letting a big room still
-  // choose a short game.
-  // 8 seats, short -> 7 rounds -> 6 picks over 8 seats. Two players do not pick.
-  assert.deepEqual(pickShareFor(roundCountFor(8, 'short'), 8), { each: 0, extra: 6 });
-});
-
-test('pickShareFor: never returns a negative share for a degenerate round count', () => {
-  assert.deepEqual(pickShareFor(0, 4), { each: 0, extra: 0 });
-  assert.deepEqual(pickShareFor(1, 4), { each: 0, extra: 0 });
 });
 
 // ---- pickerFor ----
@@ -212,29 +170,7 @@ test('pickerFor: a departed seat does not stall the rotation', () => {
   assert.equal(pickerFor(board('a', 'b'), ['c', 'a', 'b']), 'b');
 });
 
-// ---- the Decider ----
-
-test('deciderPickerFor: last place picks, whatever their pick history', () => {
-  // The rotation's "hasn't picked yet" clause is deliberately ignored here: the
-  // Decider is outside the rotation, so it reads the board and nothing else.
-  assert.equal(deciderPickerFor(board('ola', 'jan', 'marek', 'zosia')), 'zosia');
-  assert.equal(deciderPickerFor(board('a', 'b')), 'b');
-  assert.equal(deciderPickerFor(board('solo')), 'solo');
-  assert.equal(deciderPickerFor([]), null);
-  assert.equal(deciderPickerFor(/** @type {any} */ (null)), null);
-});
-
-test('deciderPickerFor: the leader never picks the Decider, where pickerFor would hand it to them', () => {
-  // The finding this phase exists for. Every seat has picked once, so the
-  // rotation wraps and hands the decisive round to whoever the tie-break favours
-  // — the leader, who lost that tie-break every round and sits last in line.
-  const seats = board('leader', 'second', 'last');
-  assert.equal(pickerFor(seats, ['last', 'second', 'leader']), 'last');
-  assert.equal(deciderPickerFor(seats), 'last');
-  // ...and where the histories diverge, the Decider still ignores them.
-  assert.equal(pickerFor(seats, ['last', 'last', 'second']), 'leader');
-  assert.equal(deciderPickerFor(seats), 'last');
-});
+// ---- eligiblePickers ----
 
 test('eligiblePickers: absent seats drop out, order and scores untouched', () => {
   const full = board('leader', 'middle', 'gone', 'last');
@@ -249,85 +185,16 @@ test('eligiblePickers: absent seats drop out, order and scores untouched', () =>
   assert.deepEqual(eligiblePickers(/** @type {any} */ (null), ['a']), []);
 });
 
-test('eligiblePickers: the seat that left stops being the one both rules aim at', () => {
+test('eligiblePickers: the seat that left stops being the one the picker rule aims at', () => {
   // The reason this filter exists. A player who quits stops scoring, so they sink
-  // to the bottom of the board — exactly where both picker rules look. Without
-  // the filter the room hands the turn (and, for the Decider, the round that
-  // decides the game) to whoever is most likely to have just walked away.
+  // to the bottom of the board — exactly where the picker rule looks. Without the
+  // filter the room hands the turn to whoever is most likely to have just walked
+  // away.
   const afterQuit = board('leader', 'still-here', 'quitter');
-  assert.equal(deciderPickerFor(afterQuit), 'quitter', 'unfiltered, the leaver is chosen');
-  assert.equal(pickerFor(afterQuit, []), 'quitter', 'by both rules');
+  assert.equal(pickerFor(afterQuit, []), 'quitter', 'unfiltered, the leaver is chosen');
 
   const here = eligiblePickers(afterQuit, new Set(['leader', 'still-here']));
-  assert.equal(deciderPickerFor(here), 'still-here');
   assert.equal(pickerFor(here, []), 'still-here');
-});
-
-test('isDeciderPick: true only at the boundary into the game\'s last round', () => {
-  // A 4-round draft: 20 questions, boundaries after questions 4, 9 and 14.
-  const total = 4 * 5;
-  assert.equal(isDeciderPick(4, total), false, 'boundary into round 2');
-  assert.equal(isDeciderPick(9, total), false, 'boundary into round 3');
-  assert.equal(isDeciderPick(14, total), true, 'boundary into round 4 — the Decider');
-});
-
-test('isDeciderPick: the round it opens is exactly the round that pays double', () => {
-  // The claim worth pinning is NOT `isDeciderPick(i, t) === isFinalRound(i + 1, t)`
-  // — that is this function's own body restated, so it catches drift but cannot
-  // catch a wrong shared premise. What actually has to hold is a statement about
-  // two different questions: the round a Decider pick OPENS is the game's last
-  // round, and `isFinalRound` is asked about the round's own questions, never
-  // about the boundary that opened it. If those ever part company, the screen
-  // announcing the closing act would name a round that is not the closing act.
-  for (const rounds of [2, 3, 5, 8]) {
-    const total = rounds * ROUND_QUESTIONS;
-    let deciderPicks = 0;
-    // Every round boundary: the last question of a round with another to follow.
-    for (let i = ROUND_QUESTIONS - 1; i < total - 1; i += ROUND_QUESTIONS) {
-      /** The questions of the round this pick opens. */
-      const opened = [];
-      for (let q = i + 1; q < Math.min(i + 1 + ROUND_QUESTIONS, total); q++) opened.push(q);
-      const paysDouble = opened.map((q) => isFinalRound(q, total));
-      if (isDeciderPick(i, total)) {
-        deciderPicks += 1;
-        assert.ok(paysDouble.every(Boolean), `the pick at q${i} of ${rounds} rounds opens a round that pays double`);
-      } else {
-        assert.ok(paysDouble.every((d) => !d), `the pick at q${i} of ${rounds} rounds opens a round that pays single`);
-      }
-    }
-    assert.equal(deciderPicks, 1, `${rounds} rounds: exactly one closing act, never zero or two`);
-  }
-});
-
-test('deciderPickerFor: a tie for last goes to the last-joined tied seat', () => {
-  // The board arrives sorted by score descending with a STABLE sort over
-  // insertion-ordered seats (`scoreboardOf`), so seats level on points keep join
-  // order and the bottom row is the last of them to have joined. That is the rule
-  // — deterministic, and it survives an eviction or a reconnect because
-  // `Map.set` on an existing key keeps its position — but nothing stated it, so
-  // it was one refactor away from silently changing. Now it is stated.
-  //
-  // If this test ever fails, the question is not "fix the assertion" but "did the
-  // ordering guarantee break", because every client and the server must agree on
-  // who picks the round that decides the game.
-  const tiedAtBottom = [
-    { playerId: 'leader' },   // 30
-    { playerId: 'early' },    // 10, joined first
-    { playerId: 'late' },     // 10, joined second
-  ];
-  assert.equal(deciderPickerFor(tiedAtBottom), 'late');
-
-  // The degenerate case: everyone level, so the whole board is one tie.
-  assert.equal(deciderPickerFor([{ playerId: 'a' }, { playerId: 'b' }, { playerId: 'c' }]), 'c');
-});
-
-test('isDeciderPick: the shortest real draft still has one', () => {
-  // The smallest cell in the table: three seats, short: round 1, one pick each,
-  // then the Decider.
-  const total = roundCountFor(3, 'short') * 5;
-  assert.equal(total, 20);
-  assert.equal(isDeciderPick(9, total), false);  // the boundary one round earlier
-  assert.equal(isDeciderPick(14, total), true);  // the pick that opens the last round
 });
 
 // ---- handFor ----

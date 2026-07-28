@@ -9,7 +9,7 @@
  * unit-tested. No DOM, no I/O.
  */
 
-import { PARTY_MODES, PICTURE_MODES, METRIC_MODES, isFinalRound } from './partyPlan.js';
+import { PARTY_MODES, PICTURE_MODES, METRIC_MODES } from './partyPlan.js';
 import { veilActive } from './partyTiming.js';
 
 /** The round every draft opens with — establishes the loop before anyone picks,
@@ -46,26 +46,25 @@ export const GAME_LENGTHS = /** @type {const} */ (['short', 'medium', 'long']);
 export const DEFAULT_GAME_LENGTH = 'medium';
 
 /**
- * Rounds per (length, seats). **A table, not a formula**, because the two things
- * a formula has to trade off cannot both be had:
+ * Rounds per (length, seats). **A table, not a formula**, hand-picked so a named
+ * length means roughly the same wall-clock at every table size — near
+ * 10 / 20 / 30 minutes for short / medium / long — rather than whatever a
+ * `seats x picks` arithmetic fell on (which meant 7 minutes at two players and 45
+ * at ten, the answer moving under the host every time somebody joined). Pinned
+ * cell-for-cell by `partyDraft.test.js`.
  *
- * - picks divide evenly exactly when `rounds = seats * k + 1` (round 1 is the
- *   host's own first pick and the Decider sits outside the rotation, so `rounds - 1`
- *   picks are shared out, `k` per seat), and
- * - a length worth naming has to mean roughly the same wall-clock at every table
- *   size.
- *
- * The old `seats x picks + 1` was the first of those, which is why a single
- * setting meant 7 minutes at two players and 45 at ten. Every cell here sits on
- * that same lattice — so "you each pick k" stays literally true — while being
- * hand-picked to land near 10 / 20 / 30 minutes rather than wherever the
- * arithmetic fell. Pinned cell-for-cell by `partyDraft.test.js`.
+ * The counts sit on the old `seats * k + 1` lattice for historical reasons only —
+ * it no longer buys the even "you each pick k" split, because the closing round is
+ * now an ordinary rotation pick rather than a separate act sitting outside the
+ * count. The exact per-seat pick distribution is deliberately not surfaced anymore
+ * (the lobby shows only the round count).
  *
  * **Seven or more seats reuse the six-seat column.** Growing past that is what
  * made a big room unable to play a short game at all: the old floor was
  * `seats + 1` rounds, so twenty players could not have anything under 21 rounds.
- * The cost is that past six seats the rotation no longer reaches everyone — see
- * {@link pickShareFor}.
+ * The cost is that past six seats the rotation no longer reaches everyone —
+ * {@link pickerFor} hands picks to the lowest-ranked seats first, so the seats
+ * that miss out are the ones ahead.
  */
 /** @type {Record<GameLength, Record<number, number>>} */
 const LENGTH_ROUNDS = {
@@ -83,10 +82,8 @@ export const HAND_SIZE = 10;
  *
  * **Round 1 is the host's own first pick** — chosen in the lobby, which is how the
  * cold-start hole is closed (no scores yet means no last place means no rotation
- * picker, so the host picks first by fiat). It is a share like any other, not a
- * separate warm-up round on top. The **Decider** is the closing act (see
- * {@link isDeciderPick}), which sits outside the rotation so the pick share stays
- * predictable rather than being quietly bent by the final round.
+ * picker, so the host picks first by fiat). Every round after it, including the
+ * last, is an ordinary rotation pick.
  *
  * Seat counts below 2 read the 2-seat column (a solo host testing the flow) and
  * 7+ read the 6-seat column.
@@ -114,34 +111,6 @@ export function validateGameLength(value) {
   return /** @type {readonly string[]} */ (GAME_LENGTHS).includes(/** @type {string} */ (value))
     ? /** @type {GameLength} */ (value)
     : DEFAULT_GAME_LENGTH;
-}
-
-/**
- * How the rotation picks split across the seats: `each` per player, with `extra`
- * players getting one more. Purely for the lobby hint — the actual order is
- * {@link pickerFor}'s job.
- *
- * Up to six seats every cell of {@link LENGTH_ROUNDS} divides evenly, so this
- * returns `extra: 0` and the hint can say "you each pick N". Past six it cannot:
- * a short game at eight seats has six rotation picks to share, so two players do
- * not pick at all. That is the deliberate trade for letting a big room choose a
- * short game, and it lands on the right people — {@link pickerFor} hands picks
- * to the lowest-ranked first, so the seats that miss out are the ones ahead.
- *
- * @param {number} rounds
- * @param {number} playerCount
- * @returns {{ each: number, extra: number }}
- */
-export function pickShareFor(rounds, playerCount) {
-  const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
-  // `- 1`: only the Decider sits outside the count. Round 1 is the host's own first
-  // pick (chosen in the lobby), so it is one of the shares, not a warm-up on top.
-  // Every cell of LENGTH_ROUNDS sits on `seats * k + 1`, so up to six seats
-  // `rounds - 1` divides evenly and `extra` is 0 — the hint says "you each pick k"
-  // and it is literally true. The `extra` branch only fires past six seats, where
-  // the six-seat column can't stretch to reach everyone (see the doc above).
-  const rotation = Math.max(0, (Number.isFinite(rounds) ? Math.floor(rounds) : 0) - 1);
-  return { each: Math.floor(rotation / seats), extra: rotation % seats };
 }
 
 /**
@@ -216,12 +185,10 @@ export function pickerFor(scoreboard, alreadyPicked) {
  * players who have left. Picking one of them stalls the room on a turn nobody
  * can take, until the host's anti-stall timer fires. And it is not a rare
  * accident: a player who leaves stops scoring, so they *sink toward last place*,
- * which is precisely who both picker rules aim at. The Decider aims there hardest
- * and at the worst moment — it would structurally hand the round that decides the
- * game to whoever was most likely to have just quit.
+ * which is precisely who {@link pickerFor} aims at.
  *
- * Filtering here (rather than inside either picker rule) keeps the two rules
- * about *ranking* and puts "can this seat actually act" in one place they share.
+ * Filtering here (rather than inside the picker rule) keeps the rule about
+ * *ranking* and puts "can this seat actually act" in a place of its own.
  * The scoreboard the players SEE is untouched — a departed player keeps their row
  * and their score, they simply stop being dealt turns.
  *
@@ -236,54 +203,6 @@ export function pickerFor(scoreboard, alreadyPicked) {
 export function eligiblePickers(scoreboard, present) {
   const here = present instanceof Set ? present : new Set(present);
   return (Array.isArray(scoreboard) ? scoreboard : []).filter((e) => here.has(e.playerId));
-}
-
-/**
- * Whether the pick opening at this reveal is for **the Decider** — the closing
- * double-points round — rather than an ordinary rotation slot.
- *
- * Asked at a round boundary, where the round about to be chosen starts at
- * `questionIndex + 1`; the Decider is always the game's last round, so this is
- * {@link isFinalRound} asked one question ahead. Derived rather than counted so
- * there is exactly one definition of "which round is the Decider", shared with
- * the client's title card.
- *
- * @param {number} questionIndex  the 0-based question the reveal is sitting on
- * @param {number} totalQuestions
- * @returns {boolean}
- */
-export function isDeciderPick(questionIndex, totalQuestions) {
-  return isFinalRound(questionIndex + 1, totalQuestions);
-}
-
-/**
- * Who picks the Decider: **whoever is in last place when it starts**, full stop.
- *
- * Deliberately NOT {@link pickerFor}. The rotation's "lowest-ranked player who
- * hasn't picked yet" is right round by round, but it pushes the leader — who
- * loses that tie-break every round — to the back of the rotation and therefore
- * onto the last slot: over 2000 simulated four-player games the player choosing
- * the decisive round was in 1st place 84.6% of the time, so the comeback rule
- * inverted itself exactly where it mattered most. The Decider sits outside the
- * rotation, so it ignores pick history entirely and simply reads the board.
- *
- * **This pick is now the whole comeback mechanic.** The Decider used to also
- * score double, on the theory that a trailing player could swing the game there.
- * Measured, it could not: doubling scales the expected drift and the variance
- * together, so the leader pulls away exactly as fast as the swing grows, and
- * last place won 0.0% of simulated games at 2x (and 1.4% at 3x). The multiplier
- * is gone; choosing the ground the game ends on is the real asymmetry, and it is
- * this function.
- *
- * `scoreboard` is descending by score (as the room sends it), so last place is
- * the last entry. Returns null only for an empty board.
- *
- * @param {Array<{ playerId: string }>} scoreboard  descending by score
- * @returns {string | null}
- */
-export function deciderPickerFor(scoreboard) {
-  const board = Array.isArray(scoreboard) ? scoreboard : [];
-  return board.length === 0 ? null : board[board.length - 1].playerId;
 }
 
 /**

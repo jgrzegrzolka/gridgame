@@ -100,19 +100,11 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode } from '
  *   is — set when a round starts and held for its whole five questions, where
  *   `picker` is cleared the moment the choice is made. Read by the server so a bot
  *   playing its own drafted round gets the picker's edge (`flags/partyBot.js`).
- *   Deliberately not derived from `pickedBy`'s tail: the Decider sits outside the
- *   rotation and never appends, so the tail names the wrong seat for exactly the
- *   round where it matters most (double points). Null in a non-draft game, where
- *   nobody picked anything.
+ *   Held explicitly rather than derived from `pickedBy`'s tail so it stays correct
+ *   across a reconnect. Null in a non-draft game, where nobody picked anything.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from (server-dealt); null otherwise. Stored so a reconnect mid-pick
  *   sees the same hand.
- * @property {boolean} decider  during `picking`, whether this pick is for **the
- *   Decider** — the closing double-points round, which sits outside the rotation
- *   and is picked by whoever is in last place (see `deciderPickerFor`). Held on
- *   the room rather than re-derived so a reconnect mid-pick paints the right
- *   screen, and so {@link applyPick} knows not to spend a rotation slot on it.
- *   False outside `picking`.
  * @property {string | null} pausedFor  the absent seat the room is waiting for,
  *   or null when the game is running. Set when a human seat drops mid-game
  *   ({@link applyDisconnect}), cleared when they come back ({@link applyHello})
@@ -199,7 +191,6 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     picker: null,
     roundPicker: null,
     hand: null,
-    decider: false,
     pausedFor: null,
     waived: [],
     // The server stamps this on every inbound message before saving. Null here
@@ -445,7 +436,6 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
     // first pick ever moves.
     roundPicker: draft ? playerId : null,
     hand: null,
-    decider: false,
   };
   const bcs = questionBroadcasts(nextRoom);
   // Round 1's first question carries the same `draftPick` attribution as any
@@ -612,26 +602,21 @@ export function pendingPickAfterReveal(room) {
  * dealt via `handFor`). Both are held on the room so a reconnect mid-pick sees
  * the same turn. Host-driven, same as {@link applyNext}.
  *
- * **Who the picker is depends on which pick this is**, and the caller resolves it
- * before calling: a rotation pick goes to the lowest-ranked seat that hasn't
- * picked yet (`pickerFor`), the closing Decider to whoever is in last place
- * outright (`deciderPickerFor`). The room stays out of that choice — it is told
- * the seat and the `decider` flag, and only enforces what follows from them.
+ * **Who the picker is the caller resolves** before calling: the lowest-ranked seat
+ * that hasn't picked yet (`pickerFor`). The room stays out of that choice — it is
+ * told the seat and only enforces what follows from it.
  *
  * @param {Room} room
  * @param {string} playerId  must be the host
  * @param {string | null} picker  the seat whose turn it is
  * @param {string[]} hand  the mode ids the picker may choose from
- * @param {boolean} [decider]  whether this pick is for the closing Decider round
- *   (the caller decides via `isDeciderPick`, and chose the picker accordingly).
  * @returns {ApplyResult}
  */
-export function applyEnterPicking(room, playerId, picker, hand, decider = false) {
+export function applyEnterPicking(room, playerId, picker, hand) {
   if (room.phase !== 'reveal') return { room, broadcasts: [] };
   if (room.hostId !== playerId) return { room, broadcasts: [] };
   if (!picker) return { room, broadcasts: [] };
-  const isDecider = decider === true;
-  const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice(), decider: isDecider };
+  const nextRoom = { ...room, phase: /** @type {Phase} */ ('picking'), picker, hand: hand.slice() };
   return { room: nextRoom, broadcasts: pickingBroadcasts(nextRoom) };
 }
 
@@ -669,18 +654,14 @@ export function applyPick(room, pickerId, modeId, segment, question) {
     // than carried over. Assigning unconditionally is the point — a veiled round
     // must not latch the veil on for every round after it.
     tricky: segment.veil === true,
-    // The Decider is outside the rotation, so choosing it does NOT spend a
-    // rotation slot: recording it would say this seat has picked one more time
-    // than everyone else, which is the exact promise ("everyone picks the same
-    // number of times") the closing round was moved out of the rotation to keep.
-    pickedBy: room.decider ? room.pickedBy : [...room.pickedBy, pickerId],
+    // Every drafted round spends a rotation slot for its picker — including the
+    // last one, now an ordinary rotation pick like any other.
+    pickedBy: [...room.pickedBy, pickerId],
     picker: null,
-    // Unlike `pickedBy`, this IS set for the Decider: the question it answers is
-    // "whose round is this", not "who has spent a rotation slot", and the Decider
-    // is as much its picker's round as any other.
+    // "Whose round is this" — the seat whose pick started it, held for its whole
+    // run where `picker` is cleared the moment the choice is made.
     roundPicker: pickerId,
     hand: null,
-    decider: false,
   };
   const bcs = questionBroadcasts(nextRoom);
   for (const bc of bcs) /** @type {any} */ (bc.message).draftPick = { picker: pickerId, modeId };
@@ -718,7 +699,6 @@ function resetToLobby(room) {
     picker: null,
     roundPicker: null,
     hand: null,
-    decider: false,
     // A new game starts with nobody owed a wait and nobody left behind. Keeping
     // either across a reset would pause the next game for a seat that dropped
     // out of the last one.
@@ -854,18 +834,18 @@ export function applyResume(room, playerId) {
 /**
  * Hand the current pick to a different seat, because the one whose turn it was
  * left the room. Same shape as {@link applyEnterPicking} but from `picking` to
- * `picking`, and it keeps the pick's identity (`decider`) and its dealt `hand` —
- * only the seat holding the turn changes.
+ * `picking`, and it keeps the dealt `hand` — only the seat holding the turn
+ * changes.
  *
  * Without this the room waits on someone who is gone until the host's anti-stall
- * timer fires, which is up to 45 s of "Bob chooses The Decider" with Bob no
+ * timer fires, which is up to 45 s of "Bob chooses the next round" with Bob no
  * longer in the room. `eligiblePickers` stops an ALREADY-absent seat being
  * chosen; this covers the seat that leaves once the pick is open.
  *
- * The caller re-runs the same selection it used to open the pick (rotation vs
- * Decider) over whoever is left, so the rule that picked the original seat is the
- * rule that picks the replacement. A null `picker` is a no-op: with nobody left
- * to pick there is nothing better to do than hold the turn.
+ * The caller re-runs the same rotation selection it used to open the pick over
+ * whoever is left, so the rule that picked the original seat is the rule that
+ * picks the replacement. A null `picker` is a no-op: with nobody left to pick
+ * there is nothing better to do than hold the turn.
  *
  * @param {Room} room
  * @param {string | null} picker  the seat taking over
@@ -1020,13 +1000,13 @@ export function applyRemoveBot(room, playerId, botId) {
  * exactly what an original picker is told — a second copy of this would be the
  * obvious place for the two to drift.
  *
- * @param {Room} room  already in `picking`, with `picker` / `hand` / `decider` set
+ * @param {Room} room  already in `picking`, with `picker` / `hand` set
  * @returns {Broadcast[]}
  */
 function pickingBroadcasts(room) {
   const picker = /** @type {string} */ (room.picker);
   const hand = room.hand ?? [];
-  const base = { type: 'picking', picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions, decider: room.decider === true };
+  const base = { type: 'picking', picker, questionIndex: room.questionIndex, totalQuestions: room.totalQuestions };
   /** @type {Broadcast[]} */
   const broadcasts = [{ to: picker, message: { ...base, youPick: true, hand: hand.slice() } }];
   for (const pid of room.present) {
@@ -1257,7 +1237,6 @@ function welcomeBroadcast(room, playerId) {
       picker: room.picker,
       youPick: room.phase === 'picking' && room.picker === playerId,
       hand: (room.phase === 'picking' && room.picker === playerId) ? room.hand : null,
-      decider: room.phase === 'picking' && room.decider === true,
       // So a player who reconnects into a paused room paints the frozen clock
       // and the "waiting for" line immediately, instead of running a countdown
       // nobody else is running until the next `paused` broadcast happens by.
@@ -1295,7 +1274,6 @@ export function serializeRoom(room) {
     picker: room.picker,
     roundPicker: room.roundPicker,
     hand: room.hand,
-    decider: room.decider,
     pausedFor: room.pausedFor,
     waived: room.waived,
     lastActiveAt: room.lastActiveAt,
@@ -1335,7 +1313,6 @@ export function deserializeRoom(snapshot) {
     // it shouldn't. The safe direction of the two.
     roundPicker: snapshot.roundPicker ?? null,
     hand: snapshot.hand ?? null,
-    decider: snapshot.decider ?? false,
     // An eviction empties `present`, so every seat reads as absent for a moment
     // and the room would pause for whoever happens to be first in seat order.
     // Restoring the stored answer instead means the pause survives the eviction

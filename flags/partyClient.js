@@ -54,12 +54,6 @@
  *   identity can't make the picker miss their own hand. False off the pick phase.
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from; null otherwise (and never sent to a watcher).
- * @property {boolean} decider  during `picking`, whether the round being chosen is
- *   **the Decider** — the closing double-points act, picked by last place from
- *   outside the rotation. Server-set and sent to watchers too (unlike the hand):
- *   naming the closing act is the point of it. False off the pick phase. The
- *   round card doesn't need this — once the round is playing it is simply the
- *   final round, which `isFinalRound` already answers from the question alone.
  * @property {string | null} pausedFor  the playerId of an absent seat the room is
  *   waiting for, or null when the game is running. Every client freezes its own
  *   clock on this (the room stays time-free, so a pause is a flag to respect
@@ -99,7 +93,6 @@ export function initialPartyClientState() {
     youPick: false,
     hand: null,
     lastPick: null,
-    decider: false,
     pausedFor: null,
     statusOverride: null,
   };
@@ -186,7 +179,6 @@ function reduceOne(state, message) {
             ? message.youPick === true
             : (message.you != null && message.you === message.picker),
           hand: message.hand ?? null,
-          decider: message.decider === true,
           // Reconnecting into a paused room paints the frozen clock straight
           // away, instead of running a countdown nobody else is running until
           // the next `paused` broadcast happens along.
@@ -251,7 +243,6 @@ function reduceOne(state, message) {
           youPick: false,
           hand: null,
           lastPick: null,
-          decider: false,
           // A new game waits for nobody. The room clears its own pause on the
           // same reset, and says so through this message rather than a second
           // `paused` broadcast.
@@ -276,7 +267,6 @@ function reduceOne(state, message) {
             ? message.youPick === true
             : (state.you != null && state.you === message.picker),
           hand: Array.isArray(message.hand) ? message.hand : null,
-          decider: message.decider === true,
           questionIndex: message.questionIndex ?? state.questionIndex,
           totalQuestions: message.totalQuestions ?? state.totalQuestions,
           reveal: null,
@@ -307,7 +297,6 @@ function reduceOne(state, message) {
           picker: null,
           youPick: false,
           hand: null,
-          decider: false,
           lastPick: message.draftPick ?? null,
         },
         effects: [],
