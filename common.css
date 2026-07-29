@@ -82,6 +82,16 @@
    * (--secondary-color) remains the accent everywhere else; reach for this
    * only when a dock item needs its transient pressed/hover tint. */
   --accent-rose: #9F6D82;
+  /* One step sharper than --muted-soft-color (#eee): the hover border for the
+   * pressable button family (the Button-Motion grammar in Part 3). A deliberate
+   * tenth token, same posture as --accent-rose above — the design calls for the
+   * outlined/white buttons to firm their 1px edge a touch on hover (bg fills to
+   * --hover-color, border sharpens from #eee to this), a cue too subtle to fake
+   * with the existing greys: #eee is the resting hairline, #999 (--muted-color)
+   * is far too dark for a border. Scope is intentionally narrow — the pressable
+   * pill family's :hover border only. Not a general grey: reach for
+   * --muted-soft-color for resting hairlines, this only for their hover firm-up. */
+  --border-strong-color: #e2e2e2;
   /* The site runs on essentially two font weights — a regular and a bold — so
    * type emphasis reads consistently everywhere and there's no drift into ad-hoc
    * 600 / 650. The one deliberate exception is the burger menu, which keeps a
@@ -359,7 +369,7 @@ body::before {
 .lang-toggle:focus-visible,
 .flags-link:focus-visible,
 .burger:focus-visible {
-  outline: 2px solid var(--secondary-color);
+  outline: 2px solid var(--accent-rose);
   outline-offset: 2px;
 }
 .lang-toggle:focus:not(:focus-visible),
@@ -682,7 +692,7 @@ body::before {
   left: 15px;
 }
 .scope-toggle-switch input:focus-visible ~ .scope-toggle-track {
-  outline: 2px solid var(--link-color);
+  outline: 2px solid var(--accent-rose);
   outline-offset: 2px;
 }
 /* Read-only switch: still reports its value, but this player can't set it.
@@ -1352,7 +1362,7 @@ body::before {
   background: none;
   border: 0;
   font-family: inherit;
-  transition: color 0.15s ease,
+  transition: color 0.15s cubic-bezier(0.23, 1, 0.32, 1),
     transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .dock-item[hidden] { display: none; }
@@ -1373,7 +1383,7 @@ body::before {
   color: var(--accent-rose);
 }
 .dock-item:focus-visible {
-  outline: 2px solid var(--secondary-color);
+  outline: 2px solid var(--accent-rose);
   outline-offset: 2px;
 }
 /* Desktop: the bar stops being a full-width strip and becomes a centred
@@ -1411,7 +1421,7 @@ body::before {
 }
 /* Honour reduced-motion: keep the colour cue, drop the spring press. */
 @media (prefers-reduced-motion: reduce) {
-  .dock-item { transition: color 0.15s ease; }
+  .dock-item { transition: color 0.15s cubic-bezier(0.23, 1, 0.32, 1); }
   .dock-item:active { transform: none; }
 }
 /* Reserve room for the fixed mobile dock so the last of the page content is
@@ -1862,11 +1872,16 @@ dialog#zoom p.zoom-note {
   padding: 10px 16px;
   cursor: pointer;
   text-decoration: none;
-  /* Two transitions on purpose: bg snaps in / out on hover (120 ms,
-   * tight feedback), border takes 600 ms to fade so a press leaves a
-   * brief pink afterglow on release. */
-  transition: background-color 120ms ease-out,
-              border-color 600ms ease-out;
+  /* Button-motion grammar (Part 3): the hover cues fade with a snappy
+   * ease-out (bg fills to --hover-color, border sharpens one step to
+   * --border-strong-color), and the press adds a spring scale that overshoots
+   * back on release. The scale itself lives on the shared :active rule further
+   * down, gated behind prefers-reduced-motion; its transition is declared here
+   * so the spring-back animates. Replaces the old border-pink afterglow press —
+   * one motion per element, the same grammar the dock uses. */
+  transition: background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+              transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .profile-save:hover:not(:disabled),
 .lobby-btn:hover,
@@ -1882,26 +1897,66 @@ dialog#zoom p.zoom-note {
 .map-fs-exit:hover,
 .map-resize-handle:hover {
   background: var(--hover-color);
+  border-color: var(--border-strong-color);
 }
-.profile-save:active:not(:disabled),
-.lobby-btn:active,
-.rules-close:active,
-.help-close:active,
-.match-close:active,
-.rules-btn:active,
-.help-btn:active,
-.picker-close:active,
-.zoom-close:active,
-.map-fullscreen-btn:active,
-.map-hide-btn:active,
-.map-fs-exit:active,
-.map-resize-handle:active {
-  /* Border-only pink so the bg / text stay legible during press; on
-   * release, the base rule's 600 ms border-color transition fades it
-   * back to --muted-soft-color (the brief "you tapped this" afterglow). */
-  border-color: var(--secondary-color);
-  transition: border-color 0s,
-              background-color 120ms ease-out;
+/* ── Pressable — the app-wide button-motion grammar (Part 3) ─────────────
+ * One press feel for the site's pressable controls: a tap springs the element
+ * down to var(--press-scale) and the overshoot easing lets it spring back on
+ * release. Applied to the shared pill family above, the autocomplete suggestion
+ * rows, and anything that opts in with the `.pressable` class. `--press-scale`
+ * is set per size so the visual "give" reads the same regardless of width:
+ *   normal buttons (~100–200px) .96   (the default fallback)
+ *   full-width buttons / rows   .985  (lobby buttons, suggestion rows)
+ *   icon-only targets (≤60px)   .90   (dialog × / ? buttons, map controls)
+ * The dock keeps its own .88 (see the dock block). High-frequency controls
+ * (suggestion rows during rapid typing, the guess input's submit) get the
+ * least motion by design — the .985 rows already respect this, and the input
+ * keeps its shake only, never a press transform. The scale is gated behind
+ * prefers-reduced-motion; the hover colour cues above are not. */
+/* Opt-in carrier: a bare element gets the full grammar (snappy hover fades +
+ * the spring-back transform) just by adding `.pressable` (+ a size modifier).
+ * The pill family / suggestion rows below already carry their own transition,
+ * so they only need the --press-scale value, not this. */
+.pressable {
+  --press-scale: 0.96;
+  transition: background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+              color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+              transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pressable--wide { --press-scale: 0.985; }
+.pressable--icon { --press-scale: 0.90; }
+.lobby-btn { --press-scale: 0.985; }
+.rules-close, .help-close, .match-close, .rules-btn, .help-btn,
+.picker-close, .zoom-close, .map-fullscreen-btn, .map-hide-btn,
+.map-fs-exit, .map-resize-handle { --press-scale: 0.90; }
+/* Suggestion rows live in findFlag/index.css; common.css owns the press so the
+ * grammar stays single-sourced (it already styles cross-feature classes like
+ * .lobby-btn / .map-*). The transition rides here too, since the base row rule
+ * carries none. `.tried` rows (a wrong-guessed country) are inert — no press. */
+.find-suggestions li {
+  --press-scale: 0.985;
+  transition: background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+              transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pressable:active:not(:disabled):not([aria-disabled="true"]),
+  .profile-save:active:not(:disabled),
+  .lobby-btn:active,
+  .rules-close:active,
+  .help-close:active,
+  .match-close:active,
+  .rules-btn:active,
+  .help-btn:active,
+  .picker-close:active,
+  .zoom-close:active,
+  .map-fullscreen-btn:active,
+  .map-hide-btn:active,
+  .map-fs-exit:active,
+  .map-resize-handle:active,
+  .find-suggestions li:not(.tried):active {
+    transform: scale(var(--press-scale, 0.96));
+  }
 }
 .profile-save:disabled,
 .lobby-btn:disabled,
@@ -1910,7 +1965,7 @@ dialog#zoom p.zoom-note {
 .rules-btn:disabled,
 .help-btn:disabled,
 .picker-close:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 /* Focus visibility: keyboard users get the brand pink ring; anything else
@@ -1933,7 +1988,7 @@ dialog#zoom p.zoom-note {
 .map-hide-btn:focus-visible,
 .map-fs-exit:focus-visible,
 .map-resize-handle:focus-visible {
-  outline: 2px solid var(--secondary-color);
+  outline: 2px solid var(--accent-rose);
   outline-offset: 2px;
 }
 .profile-save:focus:not(:focus-visible),
@@ -1993,23 +2048,25 @@ dialog#zoom p.zoom-note {
    never jumps to a different colour. 8px corners, a hair softer than the base pill. */
 .lobby-btn.primary {
   --cta-rose: var(--accent-rose); /* deeper rose: border + ink — the shared token */
-  --cta-rose-soft: #F2EAEE;  /* pale rose: the fill */
+  --cta-rose-soft: #F2EAEE;  /* pale rose: the resting fill */
+  --cta-rose-hover: #ECDFE6; /* one step darker: the Button-Motion filled-hover fill */
   background: var(--cta-rose-soft);
   color: var(--cta-rose);
   border-color: var(--cta-rose);
   border-radius: 8px;
 }
-/* Keep the rose fill on hover (explicit, so the base pill's grey --hover-color
-   wash never wins) and just darken the whole button ~4% — a quiet cue, not the
-   colour change it was before. */
+/* Hover steps the rose fill one shade darker (#F2EAEE → #ECDFE6) — a deepen of
+   the same rose, not a colour flip. Explicit bg + border so the base pill's
+   grey --hover-color / --border-strong-color hover never wins on the primary.
+   The press is the shared spring scale (.985 via .lobby-btn); the hover tint
+   rides along with it. */
 .lobby-btn.primary:hover {
-  background: var(--cta-rose-soft);
-  filter: brightness(0.96);
+  background: var(--cta-rose-hover);
+  border-color: var(--cta-rose);
 }
 .lobby-btn.primary:active {
-  background: var(--cta-rose-soft);
+  background: var(--cta-rose-hover);
   border-color: var(--cta-rose);
-  filter: brightness(0.91);
 }
 
 /* Start / lobby screen container — the create-or-join column shared by Flag
@@ -2067,7 +2124,7 @@ dialog#zoom p.zoom-note {
   border-radius: 6px;
 }
 .join-code::placeholder { color: var(--muted-color); }
-.join-code:focus { outline: 2px solid var(--link-color); outline-offset: -2px; }
+.join-code:focus { outline: 2px solid var(--accent-rose); outline-offset: -2px; }
 
 /* Validation / reject error under the join form — shared by Flag Party
    (`.join-error`) and Tic-Tac-Toe (`.lobby-error`) so "Code must be 5
