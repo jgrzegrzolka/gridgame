@@ -80,13 +80,7 @@
       <p class="country-name" id="country-name" data-i18n="quiz.loading">Loading…</p>
       <div class="choices" id="choices"></div>
       <section id="flag-map-section" hidden aria-hidden="true"></section>
-      <div class="actions-row">
-        <a id="play-again-inline" href="#" data-i18n="game.playAgain">Play again</a>
-        ·
-        <button type="button" id="give-up" data-i18n="game.giveUp">Give up</button>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
-      </div>
+      <nav class="dock" data-dock="playAgainInline giveUp home" data-home="../"></nav>
     </div>
     <section id="result" hidden>
       <p class="final-score" id="final-score-line">
@@ -98,11 +92,7 @@
         <h2 class="leaderboard-title" id="leaderboard-title" data-i18n="quiz.leaderboard.title">Today's leaderboard</h2>
         <div id="leaderboard-body"></div>
       </section>
-      <p class="result-links">
-        <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
-      </p>
+      <nav class="dock" data-dock="playAgain home" data-home="../"></nav>
     </section>
     <dialog id="zoom">
       <img alt="" />

@@ -98,9 +98,7 @@
           <button type="submit" class="lobby-btn" data-i18n="party.join">Join</button>
         </form>
         <p class="join-error" id="join-error" hidden></p>
-        <div class="actions-row">
-          <a href="../" data-i18n="menu.home">Home</a>
-        </div>
+        <nav class="dock" data-dock="home" data-home="../"></nav>
       </section>
 
       <!-- Lobby -->
@@ -264,11 +262,11 @@
           </div>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
-        <div class="actions-row">
-          <button type="button" class="row-cta" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
-          <span class="actions-sep" aria-hidden="true">·</span>
-          <a href="../" data-i18n="menu.home">Home</a>
-        </div>
+        <!-- Start game is the host's page-primary action, so it's a real
+             primary button below the settings card (not a dock item). The
+             dock carries only Home. -->
+        <button type="button" class="lobby-btn primary party-start-btn" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
+        <nav class="dock" data-dock="home" data-home="../"></nav>
       </section>
 
       <!-- Question (question + reveal share this) -->
@@ -304,11 +302,7 @@
           <p class="hold-who" id="hold-who" aria-live="polite"></p>
         </div>
         <div class="question-foot" id="question-foot"></div>
-        <div class="actions-row">
-          <button type="button" id="question-to-settings" data-i18n="party.backToSettings" hidden>Back to settings</button>
-          <span class="actions-sep" aria-hidden="true">·</span>
-          <a href="../" data-i18n="menu.home">Home</a>
-        </div>
+        <nav class="dock" data-dock="backToSettings home" data-home="../"></nav>
       </section>
 
       <!-- Round title card: a short beat announcing the next round (2..N) before
@@ -363,11 +357,7 @@
       <section class="pt-final" id="pt-final" hidden>
         <p class="party-sub" id="final-sub"></p>
         <div class="final-board" id="final-board"></div>
-        <p class="result-links">
-          <button type="button" class="result-link" id="play-again" data-i18n="party.playAgain" hidden>Play again</button>
-          <span class="result-sep" id="result-sep" aria-hidden="true" hidden>·</span>
-          <a href="../" data-i18n="menu.home">Home</a>
-        </p>
+        <nav class="dock" data-dock="playAgainParty home" data-home="../"></nav>
       </section>
     </main>
 

@@ -72,6 +72,16 @@
   --correct-color: #2a9d4a;
   --wrong-color: #c0392b;
   --link-color: var(--primary-color);
+  /* Interaction rose — the hover / press accent for the bottom dock (the
+   * shared nav bar mountDock() builds). A deliberate ninth token, added
+   * alongside the dock redesign: the design calls for a darker, warmer
+   * rose than the brand pink on press so the spring-scale reads as a
+   * genuine "pushed" state, and --secondary-color (#C2899F) sits too light
+   * against --primary to register that dip. Scope is intentionally narrow —
+   * dock item hover/active only. It is NOT a second brand accent: pink
+   * (--secondary-color) remains the accent everywhere else; reach for this
+   * only when a dock item needs its transient pressed/hover tint. */
+  --accent-rose: #9F6D82;
   /* The site runs on essentially two font weights — a regular and a bold — so
    * type emphasis reads consistently everywhere and there's no drift into ad-hoc
    * 600 / 650. The one deliberate exception is the burger menu, which keeps a
@@ -1270,6 +1280,142 @@ body::before {
 }
 .result-link:hover { text-decoration: none; }
 .result-link[disabled] { color: var(--muted-color); cursor: default; text-decoration: none; }
+
+/* ── Bottom dock ──────────────────────────────────────────────────────
+ * The shared navigation / round-action bar that mountDock() (common.js)
+ * builds on every player-facing page, replacing the old .actions-row /
+ * .result-links link rows. One component, two responsive postures at the
+ * 700px breakpoint:
+ *   - mobile (default): a pinned, full-width bar with stacked icon-over-
+ *     label items in an N-column grid;
+ *   - desktop (>=700px): a floating, centred pill sitting directly under
+ *     the content, items laid out horizontally (icon + inline label).
+ * States are identical in both postures: link colour at rest, rose
+ * (--accent-rose) on hover, and a spring scale(.88) + rose on press. No
+ * item is ever greyed — a greyed item reads as disabled. The item markup
+ * (icons, labels, ids, wiring) is owned entirely by mountDock(); a page
+ * only declares which items appear, via `data-dock`. */
+/* Mobile: a bar pinned to the viewport bottom — always on screen, never
+ * floating mid-page when content is short. Fixed (not sticky) so it stays
+ * put regardless of how tall the page content is; `body:has(.dock)` reserves
+ * matching bottom padding below so nothing hides behind it. The fill /
+ * hairline / blur sit directly on the bar (fixed already spans the viewport,
+ * so no 100vw band trick is needed). page-bg token at 94% keeps content
+ * legible-but-blurred behind it; color-mix resolves through the token. */
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  border-top: 1px solid var(--muted-soft-color);
+  background: color-mix(in srgb, var(--page-bg-color) 94%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.dock[hidden] { display: none; }
+.dock-inner {
+  max-width: 420px;
+  margin: 0 auto;
+  /* Flex (not grid) so items that a page toggles `hidden` at runtime —
+   * online TTT's Give up before the peer joins, flagParty final's Play
+   * again for non-hosts — simply drop out and the remaining items
+   * redistribute to equal widths, staying centred. flex:1 on each item
+   * gives the even columns a grid would, without a fixed column count. */
+  display: flex;
+  /* env() clears the iOS home indicator so the labels aren't under it. */
+  padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+.dock-item { flex: 1; }
+.dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+  /* Reset for the items that render as <button> (give-up, and the WS
+   * rematch play-again) so they match the <a> items exactly. */
+  background: none;
+  border: 0;
+  font-family: inherit;
+  transition: color 0.15s ease,
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dock-item[hidden] { display: none; }
+.dock-item svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.dock-item__label {
+  font-weight: var(--weight-medium);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.dock-item:hover { color: var(--accent-rose); }
+.dock-item:active {
+  transform: scale(0.88);
+  color: var(--accent-rose);
+}
+.dock-item:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
+/* Desktop: the bar stops being a full-width strip and becomes a centred
+ * floating pill under the content — no border-top, no frosted band. */
+@media (min-width: 700px) {
+  .dock {
+    position: static;
+    border-top: none;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    display: flex;
+    justify-content: center;
+    padding: 6px 0 40px;
+  }
+  .dock-inner {
+    display: inline-flex;
+    max-width: none;
+    gap: 2px;
+    padding: 4px;
+    background: var(--surface-color);
+    border: 1px solid var(--muted-soft-color);
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(43, 29, 36, 0.1);
+  }
+  .dock-item {
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 7px;
+    padding: 10px 14px;
+    border-radius: 999px;
+  }
+  .dock-item svg { width: 16px; height: 16px; }
+  .dock-item__label { font-size: 13px; }
+}
+/* Honour reduced-motion: keep the colour cue, drop the spring press. */
+@media (prefers-reduced-motion: reduce) {
+  .dock-item { transition: color 0.15s ease; }
+  .dock-item:active { transform: none; }
+}
+/* Reserve room for the fixed mobile dock so the last of the page content is
+ * never hidden behind it. Only pages that actually carry a dock get the
+ * padding (`:has`), and only in the pinned mobile posture — on desktop the
+ * dock is an in-flow pill, so the reserve is dropped. --dock-height matches
+ * the bar's rendered height (icon + label + paddings + hairline). */
+:root { --dock-height: 66px; }
+body:has(nav.dock) {
+  padding-bottom: calc(var(--dock-height) + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 700px) {
+  body:has(nav.dock) { padding-bottom: 0; }
+}
 .best .new-badge {
   display: inline-block;
   color: var(--correct-color);
@@ -1830,11 +1976,13 @@ dialog#zoom p.zoom-note {
    off from the match-strip mockup. Plain --secondary (#C2899F) alone read too
    light and mauve for it, so the two rose tints below are defined here as a
    scoped, documented exception (same posture as ticTacToe's --x-color/--o-color
-   game colours). Rest is a quiet rose; hover and press just deepen that same
-   rose a touch (a gentle brightness dip, not a fill flip) so the button never
-   jumps to a different colour. 8px corners, a hair softer than the base pill. */
+   game colours). The deeper rose is now the shared --accent-rose token (the
+   dock hover/press accent is the same colour), so only the pale --cta-rose-soft
+   fill is scoped here. Rest is a quiet rose; hover and press just deepen that
+   same rose a touch (a gentle brightness dip, not a fill flip) so the button
+   never jumps to a different colour. 8px corners, a hair softer than the base pill. */
 .lobby-btn.primary {
-  --cta-rose: #9F6D82;       /* deeper rose: border + ink */
+  --cta-rose: var(--accent-rose); /* deeper rose: border + ink — the shared token */
   --cta-rose-soft: #F2EAEE;  /* pale rose: the fill */
   background: var(--cta-rose-soft);
   color: var(--cta-rose);

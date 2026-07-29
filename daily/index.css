@@ -56,14 +56,15 @@
  * Play-only children hidden here: the live count (redundant with the
  * result's "You found N/N" line), the typed-input wrap, the sovereign
  * note, the in-game found grid (replaced by #find-result-found), and
- * the give-up actions row. The class is added by
+ * the play-only dock (Give up · Previous · Home) — the result section
+ * carries its own finished-state dock. The class is added by
  * playFlow.js::renderResult. */
 #game.is-finished .find-count,
 #game.is-finished .find-input-wrap,
 #game.is-finished .daily-desc,
 #game.is-finished .daily-note,
 #game.is-finished #find-found,
-#game.is-finished .actions-row {
+#game.is-finished .dock {
   display: none;
 }
 

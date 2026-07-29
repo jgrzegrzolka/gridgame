@@ -79,6 +79,11 @@
 
     <section id="lobby" class="lobby" hidden>
       <button type="button" class="lobby-btn primary" id="create-room" data-i18n="ttt.createRoom">New online game</button>
+      <!-- The two local modes are page-primary choices, so they live in the
+           body as buttons (not the dock) — quiet secondary pills under the
+           online CTA, above the join separator. -->
+      <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
+      <a class="lobby-btn" href="solo/" data-i18n="ttt.playSolo">Play solo</a>
       <p class="start-sep" data-i18n="ttt.orJoin">or join a game</p>
       <form id="join-form" class="join-form">
         <input
@@ -96,13 +101,7 @@
         <button type="submit" class="lobby-btn" data-i18n="ttt.join">Join</button>
       </form>
       <p class="lobby-error" id="lobby-error" hidden></p>
-      <div class="actions-row">
-        <a href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
-        <span class="actions-sep" aria-hidden="true">·</span>
-        <a href="solo/" data-i18n="ttt.playSolo">Play solo</a>
-        <span class="actions-sep" aria-hidden="true">·</span>
-        <a href="../" data-i18n="menu.home">Home</a>
-      </div>
+      <nav class="dock" data-dock="home" data-home="../"></nav>
     </section>
 
     <section id="game" class="online-game" hidden>
@@ -128,18 +127,10 @@
         </thead>
         <tbody id="grid-body"></tbody>
       </table>
-      <div class="actions-row">
-        <button type="button" id="give-up" data-i18n="game.giveUp" hidden>Give up</button>
-        <span class="actions-sep" aria-hidden="true">·</span>
-        <a href="../" data-i18n="menu.home">Home</a>
-      </div>
+      <nav class="dock" data-dock="giveUp home" data-home="../"></nav>
       <section id="result" hidden>
         <p class="final-score" id="final-score-line"><span id="final-score"></span></p>
-        <p class="result-links">
-          <button type="button" class="result-link" id="play-again" data-i18n="game.playAgain">Play again</button>
-          ·
-          <a href="../" data-i18n="menu.home">Home</a>
-        </p>
+        <nav class="dock" data-dock="playAgainBtn home" data-home="../"></nav>
       </section>
     </section>
 

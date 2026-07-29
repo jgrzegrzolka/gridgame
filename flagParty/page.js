@@ -2940,12 +2940,11 @@ export function bootFlagParty() {
     // swapper is settled), so kick the sequence off here instead.
     if (swapper.shown === 'final') startFinalReveal();
 
-    // Only the host can restart, so both "Play again" and the "·" separator
-    // that divides it from "Home" show for the host alone; everyone else sees
-    // just "Home".
+    // Only the host can restart, so "Play again" shows for the host alone;
+    // everyone else sees just "Home". (The dock has no separators, and hidden
+    // items drop out with the remaining ones re-centring — so hiding Play
+    // again leaves Home centred on its own.)
     playAgainBtn.hidden = !state.isHost;
-    const sep = document.getElementById('result-sep');
-    if (sep) sep.hidden = !state.isHost;
   }
 
   function prefersReducedMotion() {

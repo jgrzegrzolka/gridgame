@@ -110,13 +110,9 @@
       </div>
       <p class="daily-desc" id="daily-desc" hidden></p>
       <ul class="find-found" id="find-found"></ul>
-      <div class="actions-row">
-        <button type="button" class="row-cta" id="give-up" data-i18n="game.giveUp">Give up</button>
-        ·
-        <a id="prev-puzzles-link" href="archive.html" data-i18n="daily.archive">Previous puzzles</a>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
-      </div>
+      <!-- Bottom dock (playing): Give up · Previous puzzles · Home.
+           mountDock() builds the items; #game.is-finished hides it. -->
+      <nav class="dock" data-dock="giveUp archive home" data-home="../"></nav>
     </section>
 
     <dialog id="zoom">
@@ -153,13 +149,9 @@
            appears beneath the flags it describes, after the player has
            scanned both Most-recognised / Most-common-mistake rails. -->
       <p id="daily-caption" class="daily-stats-caption" hidden></p>
-      <p class="result-links">
-        <a id="result-prev-puzzles-link" href="archive.html" data-i18n="daily.archive">Previous puzzles</a>
-        ·
-        <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
-      </p>
+      <!-- Bottom dock (finished): Previous puzzles · Play again · Home.
+           #play-again's href is set to the replay URL in page.js. -->
+      <nav class="dock" data-dock="archive playAgain home" data-home="../"></nav>
     </section>
 
     <script type="module">

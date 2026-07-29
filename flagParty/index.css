@@ -750,27 +750,12 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   color: var(--muted-color);
 }
 
-/* Final screen actions reuse the site's shared `.result-links` + `.result-link`
-   (common.css) — the same inline "Play again · Home" row as flagQuiz / TTT,
-   instead of Flag Party's old pair of big buttons. This is a short centered
-   column, not a long scrolling result page, so the sticky full-bleed rail is
-   dropped here; only the inline link look is kept. */
-.pt-final .result-links {
-  position: static;
-  margin: 8px 0 0;
-  padding: 0;
-  background: none;
-}
-/* Drop the shared full-bleed background band too (common.css
-   `.result-links::before`). It's part of the sticky rail this screen opts out
-   of: that band is `position: absolute; top: 0; bottom: 0` and relies on the
-   row being a positioned containing round to size itself to the row. With the
-   row set `static` above it has no positioned ancestor, so it stretches to the
-   viewport (100vw × 100vh) and — painting above the board — covers the whole
-   final scoreboard with page-bg. The inline links here need no background fill,
-   so suppress the pseudo entirely. */
-.pt-final .result-links::before { content: none; }
-.result-sep { color: var(--muted-color); }
+/* Final-screen actions are now the shared bottom dock (Play again · Home),
+   like every other page. The old `.pt-final .result-links` overrides — which
+   opted this screen out of the sticky rail and suppressed the full-bleed
+   ::before band that once painted over the scoreboard — are gone with the
+   row: the dock has no such band (it's a fixed bar, no 100vw pseudo), so
+   there is nothing to cover the board. */
 
 /* Final board */
 .final-board { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
