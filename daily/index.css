@@ -46,6 +46,43 @@
   margin-bottom: 12px;
 }
 
+/* Found tiles enter with a "drop & settle" — falling in from above and
+ * overshooting once before resting — instead of the shared findFlag
+ * scale-in pop. The `#find-found` id outweighs findFlag's `.find-found`
+ * rule, and this stylesheet only loads on daily, so findFlag keeps its
+ * faster pop. The green counter pulse + shake on a correct guess are
+ * unchanged (they live on the count element, not the tile). */
+#find-found .find-tile {
+  animation: tile-drop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.1);
+}
+@keyframes tile-drop {
+  0% { opacity: 0; transform: translateY(-22px) scale(1.14); }
+  55% { opacity: 1; transform: translateY(2px) scale(0.98); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #find-found .find-tile { animation: none; }
+}
+
+/* A country already guessed wrong this round stays in the suggestion list
+ * but muted + struck through, non-clickable, with an "already tried" note
+ * pushed to the row end — the player sees they've been there without being
+ * able to spend a (free) re-pick on it. Only playFlow (daily) marks rows
+ * `.tried`, so this lives here rather than the shared findFlag sheet. */
+.find-suggestions li.tried {
+  pointer-events: none;
+  cursor: default;
+}
+.find-suggestions li.tried > span:first-child {
+  color: var(--muted-color);
+  text-decoration: line-through;
+}
+.find-suggestion-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted-color);
+}
+
 /* Post-finish, #game stays mounted so its .find-header (puzzle # +
  * category label) keeps sitting above the result — the player sees
  * what they solved at a glance. The longer .daily-desc sentence is
@@ -351,6 +388,11 @@
   list-style: none;
   margin: 0 0 12px;
   padding: 0;
+}
+/* A little more air between the right-aligned description and the found-
+ * tiles grid (the shared findFlag rule leaves them flush). */
+#find-found {
+  margin-top: 22px;
 }
 /* The hue lives here, not in the SVG: `heartSvg` paints with
  * `currentColor`, so both the filled and the outline heart follow this

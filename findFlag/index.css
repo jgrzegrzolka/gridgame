@@ -230,8 +230,15 @@ body {
   padding: 6px 12px;
   cursor: pointer;
 }
-.find-suggestions li.selected,
+/* Mouse hover gets the quiet wash; the keyboard-highlighted row keeps the
+ * heavier --selected-color. .selected is ordered last so it wins when a
+ * row is both (findFlag couples mouseenter → selected, so its hovered row
+ * stays the heavier grey; daily decouples them, so its hover reads as the
+ * lighter wash and only the arrow-key row is the heavier grey). */
 .find-suggestions li:hover {
+  background: var(--hover-color);
+}
+.find-suggestions li.selected {
   background: var(--selected-color);
 }
 .find-suggestions span {

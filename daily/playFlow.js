@@ -695,34 +695,65 @@ export function startGame(n, category, targets, all, opts = {}) {
     countEl.classList.add('find-count--pulse');
   }
 
+  /** A country already guessed wrong this round: stays listed but muted. */
+  const isTried = (/** @type {Country} */ c) => wrongCodes.has(c.code);
   function renderSuggestions() {
     sugEl.innerHTML = '';
     matches.forEach((c, i) => {
       const li = document.createElement('li');
-      if (i === selected) li.classList.add('selected');
-      const span = document.createElement('span');
-      span.textContent = countryName(c);
-      li.appendChild(span);
-      li.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        submitCountry(c);
-      });
-      li.addEventListener('mouseenter', () => {
-        selected = i;
-        renderSelected();
-      });
+      if (isTried(c)) {
+        // Muted, struck, non-clickable, with an "already tried" note. No
+        // mousedown (and CSS pointer-events:none) so it can't be re-picked;
+        // re-picking a wrong country is free anyway (lives.spend dedupes),
+        // but showing it as spent is clearer than letting it look pickable.
+        li.classList.add('tried');
+        const span = document.createElement('span');
+        span.textContent = countryName(c);
+        li.appendChild(span);
+        const note = document.createElement('span');
+        note.className = 'find-suggestion-note';
+        note.setAttribute('data-i18n', 'findFlag.alreadyTried');
+        note.textContent = t('findFlag.alreadyTried', 'already tried');
+        li.appendChild(note);
+      } else {
+        if (i === selected) li.classList.add('selected');
+        const span = document.createElement('span');
+        span.textContent = countryName(c);
+        li.appendChild(span);
+        // No mouseenter → selected: the keyboard-highlighted row (heavier
+        // --selected-color) stays distinct from a plain mouse :hover (the
+        // lighter --hover-color). Mouse users click; keyboard users arrow.
+        li.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          submitCountry(c);
+        });
+      }
       sugEl.appendChild(li);
     });
     sugEl.hidden = matches.length === 0;
   }
   function renderSelected() {
     for (const [i, li] of sugEl.querySelectorAll('li').entries()) {
-      li.classList.toggle('selected', i === selected);
+      li.classList.toggle('selected', i === selected && !isTried(matches[i]));
+    }
+  }
+  /** First non-tried row index (keyboard highlight never lands on a muted row). */
+  function firstSelectable() {
+    const i = matches.findIndex((c) => !isTried(c));
+    return i === -1 ? 0 : i;
+  }
+  /** Move the keyboard highlight to the next/prev non-tried row. */
+  function stepSelectable(/** @type {1 | -1} */ dir) {
+    if (matches.length === 0) return;
+    let i = selected;
+    for (let k = 0; k < matches.length; k++) {
+      i = (i + dir + matches.length) % matches.length;
+      if (!isTried(matches[i])) { selected = i; renderSelected(); return; }
     }
   }
   function updateSuggestions() {
     matches = suggest(pool, inputEl.value, { excludeCodes: foundCodes });
-    selected = 0;
+    selected = firstSelectable();
     renderSuggestions();
     const auto = exactSingleMatch(matches, inputEl.value);
     if (auto) submitCountry(auto);
@@ -814,22 +845,19 @@ export function startGame(n, category, targets, all, opts = {}) {
     if (e.key === 'Enter') {
       e.preventDefault();
       const picked = matches[selected];
-      if (picked) submitCountry(picked);
+      // Enter never acts on a tried row (it's spent); treat as no match.
+      if (picked && !isTried(picked)) submitCountry(picked);
       else shakeInput();
       return;
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (matches.length === 0) return;
-      selected = (selected + 1) % matches.length;
-      renderSelected();
+      stepSelectable(1);
       return;
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (matches.length === 0) return;
-      selected = (selected - 1 + matches.length) % matches.length;
-      renderSelected();
+      stepSelectable(-1);
       return;
     }
     if (e.key === 'Escape') {
@@ -837,6 +865,15 @@ export function startGame(n, category, targets, all, opts = {}) {
       matches = [];
       renderSuggestions();
     }
+  });
+  // Close the dropdown when focus leaves the input. The 120ms delay lets a
+  // suggestion's mousedown (which submits) land first — blur fires before
+  // the click would otherwise complete.
+  inputEl.addEventListener('blur', () => {
+    setTimeout(() => {
+      matches = [];
+      renderSuggestions();
+    }, 120);
   });
 
   giveUpEl.addEventListener('click', () => finish());
