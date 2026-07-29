@@ -274,10 +274,11 @@ body.game-over .cell:hover::after {
   background: transparent;
 }
 /* Once the game is over the result section takes over with its own
- * Play again link, so the mid-game actions row (Give up · Play again
- * on offline, just Give up on online) is redundant — hide it whole
- * rather than relying on each child to hide itself. */
-body.game-over .actions-row {
+ * Play again, so the mid-game action bar (Give up · Play again on
+ * offline, just Give up on online) is redundant — hide it whole rather
+ * than relying on each child to hide itself. The live dock is hidden;
+ * the finished-state dock inside #result is excluded so it stays visible. */
+body.game-over .dock:not(#result .dock) {
   display: none;
 }
 /* Drop the shared 32 px top margin on #result so the post-game

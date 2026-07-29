@@ -883,9 +883,9 @@ export function bootFindFlag() {
       for (const c of missed) missedEl.appendChild(flagTile(c));
       document.getElementById('missed-title').hidden = missed.length === 0;
 
-      /** @type {HTMLAnchorElement} */ (document.getElementById('play-again')).href =
-        window.location.pathname + window.location.search;
-
+      // Result dock is Random · Make another · Home (no "Play again" — a
+      // build-your-own puzzle replays via Random or the builder). `play-random`
+      // is the dock's Random item; it starts a fresh random puzzle.
       /** @type {HTMLAnchorElement} */ (document.getElementById('play-random')).onclick = (e) => {
         e.preventDefault();
         goRandom(all);

@@ -80,19 +80,8 @@
  * the shared `padding: 10px 16px` lines up cleanly with the nickname
  * input's height. */
 
-/* Sync link in the actions row — lighter weight than the adjacent
- * Save action since this is navigation, not a primary action.
- * Inherits the body weight; matches the privacy link beside it.
- * Underline on hover for the usual link affordance. */
-.profile-sync-link {
-  font: inherit;
-  font-size: 14px;
-  color: var(--link-color);
-  text-decoration: none;
-}
-.profile-sync-link:hover {
-  text-decoration: underline;
-}
+/* (The old `.profile-sync-link` rules were removed with the bottom-row →
+ * dock migration — Sync is now a dock item styled by `.dock-item`.) */
 
 .profile-status {
   font-size: 13px;

@@ -318,15 +318,14 @@ body {
 .find-result-found {
   text-align: left;
 }
-.result-links {
-  /* Only override the top margin — common.css's sticky-bar rule sets
-   * the horizontal bleed (margin-left/right: -24px) that we want to keep. */
-  margin-top: 24px;
-}
-.result-links a {
-  text-decoration: none;
-  margin: 0 6px;
-}
-.result-links a:hover {
-  text-decoration: underline;
+/* Chooser Play / Random — page-primary buttons in a centred column below
+ * the filters (the dock carries only Home). Buttons themselves are the
+ * shared .lobby-btn recipe; this just lays out the column. */
+.find-chooser-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 360px;
+  margin: 20px auto 0;
 }

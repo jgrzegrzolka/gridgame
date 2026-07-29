@@ -80,13 +80,14 @@
       <h1 class="sr-only" data-i18n="findFlag.heading">Make a puzzle</h1>
       <p class="find-blurb" data-i18n="findFlag.blurb">Pick filters to build your puzzle, then play it or share the link.</p>
       <div id="chooser-sections"></div>
-      <div class="actions-row">
-        <button type="button" class="row-cta" id="find-play" data-i18n="findFlag.play" disabled>Play</button>
-        ·
-        <button type="button" id="find-random" data-i18n="menu.random">Random</button>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
+      <!-- Play / Random are the page-primary "build a puzzle" actions, so
+           they live in the body as buttons (Play the rose primary, Random
+           the quiet secondary), never in the dock. -->
+      <div class="find-chooser-actions">
+        <button type="button" class="lobby-btn primary" id="find-play" data-i18n="findFlag.play" disabled>Play</button>
+        <button type="button" class="lobby-btn" id="find-random" data-i18n="menu.random">Random</button>
       </div>
+      <nav class="dock" data-dock="home" data-home="../"></nav>
     </section>
 
     <section id="game" hidden>
@@ -111,13 +112,7 @@
         <ul class="find-suggestions" id="find-suggestions" hidden></ul>
       </div>
       <ul class="find-found" id="find-found"></ul>
-      <div class="actions-row">
-        <button type="button" class="row-cta" id="give-up" data-i18n="game.giveUp">Give up</button>
-        ·
-        <a id="game-random" href="#" data-i18n="menu.random">Random</a>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
-      </div>
+      <nav class="dock" data-dock="giveUp random home" data-home="../"></nav>
     </section>
 
     <dialog id="zoom">
@@ -131,15 +126,7 @@
       <ul class="find-result-found" id="find-result-found"></ul>
       <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
       <ul class="find-missed" id="find-missed"></ul>
-      <p class="result-links">
-        <a id="play-again" href="#" data-i18n="game.playAgain">Play again</a>
-        ·
-        <a id="play-random" href="#" data-i18n="menu.random">Random</a>
-        ·
-        <a href="./" data-i18n="findFlag.pickAnotherCategory">Make another puzzle</a>
-        ·
-        <a href="../" data-i18n="menu.home">Home</a>
-      </p>
+      <nav class="dock" data-dock="randomResult makeAnother home" data-home="../"></nav>
     </section>
 
     <script type="module">

@@ -75,11 +75,33 @@ test('chrome: the legacy `.coffee` chrome button is gone from every page', () =>
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
-// Every page except the root must give the player a way home — an inline
-// link in an action row, with the correct relative href and the shared
-// `menu.home` i18n key. One page going to "the wrong home" feels like
-// the menu is broken, not like a fix-on-this-page deal.
-test('chrome: every non-root page has at least one Home link pointing at the site root', () => {
+// Every page's way home. Two affordances count, since the bottom nav is
+// mid-migration from static link rows to the shared dock:
+//   1. the legacy inline anchor `<a data-i18n="menu.home" href="../…">`;
+//   2. a dock placeholder `<nav class="dock" data-dock="… home" data-home="../…">`
+//      — mountDock() builds the Home <a> from `home` in data-dock, and
+//      `data-home` carries the same relative-root href statically so this
+//      grep can still verify depth without executing the page.
+// Collect both so a page (or an individual dock) pointing at the wrong
+// home is caught either way.
+/** @param {string} html @returns {{ anchorHrefs: (string|null)[], dockHomeHrefs: (string|null)[] }} */
+function homeAffordances(html) {
+  const anchorHrefs = (html.match(/<a[^>]*\bdata-i18n="menu\.home"[^>]*>/g) ?? []).map((tag) => {
+    const m = tag.match(/\bhref="([^"]*)"/);
+    return m ? m[1] : null;
+  });
+  const dockHomeHrefs = [];
+  for (const tag of html.match(/<nav[^>]*\bclass="dock"[^>]*>/g) ?? []) {
+    const dockAttr = tag.match(/\bdata-dock="([^"]*)"/);
+    const tokens = dockAttr ? dockAttr[1].trim().split(/\s+/) : [];
+    if (!tokens.includes('home')) continue;
+    const homeAttr = tag.match(/\bdata-home="([^"]*)"/);
+    dockHomeHrefs.push(homeAttr ? homeAttr[1] : null);
+  }
+  return { anchorHrefs, dockHomeHrefs };
+}
+
+test('chrome: every non-root page has at least one Home affordance pointing at the site root', () => {
   /** @type {string[]} */
   const offenders = [];
   for (const file of findHtmlFiles(HERE)) {
@@ -88,32 +110,39 @@ test('chrome: every non-root page has at least one Home link pointing at the sit
     if (depth === 0) continue;
     const html = readFileSync(file, 'utf-8');
     const expectedHref = '../'.repeat(depth);
+    const { anchorHrefs, dockHomeHrefs } = homeAffordances(html);
 
-    const homeLinks = html.match(/<a[^>]*\bdata-i18n="menu\.home"[^>]*>/g) ?? [];
-    if (homeLinks.length === 0) {
-      offenders.push(`${rel}: no <a data-i18n="menu.home"> link found`);
+    if (anchorHrefs.length === 0 && dockHomeHrefs.length === 0) {
+      offenders.push(`${rel}: no Home affordance found (neither <a data-i18n="menu.home"> nor a dock with a home item)`);
       continue;
     }
-    for (const tag of homeLinks) {
-      const hrefMatch = tag.match(/\bhref="([^"]*)"/);
-      const href = hrefMatch ? hrefMatch[1] : null;
+    // Every affordance present must point at the correct relative root —
+    // a single wrong one still reads as a broken menu.
+    for (const href of anchorHrefs) {
       if (href !== expectedHref) {
-        offenders.push(
-          `${rel}: Home link href is "${href}", expected "${expectedHref}" (page is ${depth} folder${depth === 1 ? '' : 's'} deep) — got: ${tag}`,
-        );
+        offenders.push(`${rel}: Home link href is "${href}", expected "${expectedHref}" (page is ${depth} deep)`);
+      }
+    }
+    for (const href of dockHomeHrefs) {
+      if (href !== expectedHref) {
+        offenders.push(`${rel}: dock data-home is "${href}", expected "${expectedHref}" (page is ${depth} deep)`);
       }
     }
   }
   assert.deepEqual(offenders, [], '\n  ' + offenders.join('\n  '));
 });
 
-// Symmetric guard: the root must NOT carry a Home link in its content
-// rows. The whole point of the rewrite was to drop the no-op affordance
-// on home itself.
-test('chrome: the root index.html does NOT carry a Home link', () => {
+// Symmetric guard: the root must NOT carry a Home affordance — neither a
+// legacy anchor nor a dock with a home item. The whole point of the
+// rewrite was to drop the no-op affordance on home itself.
+test('chrome: the root index.html does NOT carry a Home affordance', () => {
   const html = readFileSync(join(HERE, 'index.html'), 'utf-8');
-  const homeLinks = html.match(/<a[^>]*\bdata-i18n="menu\.home"[^>]*>/g) ?? [];
-  assert.equal(homeLinks.length, 0, `root index.html unexpectedly has ${homeLinks.length} Home link(s)`);
+  const { anchorHrefs, dockHomeHrefs } = homeAffordances(html);
+  assert.equal(
+    anchorHrefs.length + dockHomeHrefs.length,
+    0,
+    `root index.html unexpectedly has ${anchorHrefs.length} Home link(s) and ${dockHomeHrefs.length} dock home item(s)`,
+  );
 });
 
 // The coffee CTA closes every burger, and `menu-divider` is what separates it
