@@ -246,7 +246,7 @@
   cursor: pointer;
 }
 .bot-lv:hover { background: var(--hover-color); }
-.bot-lv:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+.bot-lv:focus-visible { outline: 2px solid var(--accent-rose); outline-offset: -2px; }
 .bot-dots { display: flex; gap: 3px; }
 /* border-box explicitly: this file has no global reset, so a bordered 6px dot
    would otherwise measure 8px and the filled/hollow pair would differ in size
@@ -287,7 +287,7 @@
   cursor: pointer;
 }
 .chip-remove:hover { color: var(--primary-color); }
-.chip-remove:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: 2px; border-radius: 4px; }
+.chip-remove:focus-visible { outline: 2px solid var(--accent-rose); outline-offset: 2px; border-radius: 4px; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
 
 /* Question: prompt + flags */
@@ -1014,7 +1014,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 .dl-step.is-readonly { cursor: default; }
 .dl-pick:disabled { cursor: default; }
 .dl-pick[aria-checked='true'] { background: var(--surface-color); color: var(--primary-color); }
-.dl-pick:focus-visible { outline: 2px solid var(--secondary-color); outline-offset: -2px; }
+.dl-pick:focus-visible { outline: 2px solid var(--accent-rose); outline-offset: -2px; }
 .dl-lab { font-size: 11px; font-weight: var(--weight-bold); }
 /* One, two or three strokes — the count IS the length, so the control says
    "longer" before the label is read. Pink throughout; the two you have not

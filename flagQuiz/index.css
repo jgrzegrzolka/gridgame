@@ -220,7 +220,7 @@ body {
 /* Keyboard focus still needs a mark even though pointer users get none —
    the no-affordance rule is about resting state, not accessibility. */
 .deck-ind:focus-visible {
-  outline: 2px solid var(--secondary-color);
+  outline: 2px solid var(--accent-rose);
   outline-offset: 2px;
 }
 /* Flag artwork carries its own colours (like every flags/svg/*.svg), so the
