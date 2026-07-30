@@ -217,24 +217,13 @@ function paintCommunity(stats, targets, all, userWrongCodes, { animate }) {
   communityCtx = { rail, all, userWrongCodes };
   if (rail.collapsed.length > 0) container.appendChild(buildMistakeSection());
 
-  // Nothing to show (uniform data with no shared mistakes) → hide the whole
-  // section and its top margin rather than leave an empty gap.
-  if (!container.firstChild) {
-    container.hidden = true;
-    captionEl.hidden = true;
-    captionEl.textContent = '';
-    return;
-  }
+  // Hide the community box (and its 44px top margin) when neither the facts
+  // line nor a mistake rail rendered — the per-tile %s + caption still stand.
+  if (!container.firstChild) container.hidden = true;
 
-  // The caption explains the per-tile %s, which only render alongside the
-  // hardest/easiest facts (the all-equal case hides both).
-  if (factsLine) {
-    captionEl.textContent = statsLabels().caption;
-    captionEl.hidden = false;
-  } else {
-    captionEl.hidden = true;
-    captionEl.textContent = '';
-  }
+  // The caption explains the per-tile %s, which always render.
+  captionEl.textContent = statsLabels().caption;
+  captionEl.hidden = false;
 }
 
 /**
@@ -246,11 +235,9 @@ function paintCommunity(stats, targets, all, userWrongCodes, { animate }) {
  * @param {Country[]} all
  */
 function buildFactsLine(facts, all) {
-  // Nothing to show when there are no stats, or when every flag shares one
-  // find-rate (`allEqual` — no hardest/easiest exists). The `=== false` guard
-  // (not `!facts.allEqual`) narrows the discriminated union to the
-  // hardest/easiest variant — the codebase's DailyResolution pattern.
-  if (!facts || facts.allEqual !== false) return null;
+  // Always render the two-fact line when there are stats — pickDifficultyFacts
+  // guarantees a distinct hardest + easiest even when every flag is tied.
+  if (!facts) return null;
   const wrap = document.createElement('div');
   wrap.className = 'daily-facts';
   wrap.appendChild(buildFact(t('daily.result.hardest', 'hardest'), facts.hardest, all));
@@ -393,12 +380,9 @@ function sortMissedByFindRate(stats) {
 function applyStats(stats, targets, all, userWrongCodes, animate) {
   communityStats = stats;
   updateScoreStats();
-  const facts = pickDifficultyFacts({ stats, targetCodes: targets.map((c) => c.code) });
-  if (!(facts && facts.allEqual)) {
-    applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
-    applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
-    sortMissedByFindRate(stats);
-  }
+  applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
+  applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
+  sortMissedByFindRate(stats);
   paintCommunity(stats, targets, all, userWrongCodes, { animate });
 }
 

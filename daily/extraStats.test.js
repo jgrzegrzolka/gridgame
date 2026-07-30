@@ -368,7 +368,6 @@ test('difficulty facts: hardest = lowest pct, easiest = highest', () => {
     targetCodes: ['us', 'gd', 'fr'],
   });
   assert.deepEqual(r, {
-    allEqual: false,
     hardest: { pct: 0, codes: ['gd'], extra: 0 },
     easiest: { pct: 71, codes: ['us'], extra: 0 },
   });
@@ -379,7 +378,6 @@ test('difficulty facts: missing perCodeFinds code counts as 0%', () => {
     stats: statsOf({ attempts: 10, finds: { fr: 5 } }),
     targetCodes: ['fr', 'zz'],
   });
-  assert.equal(r.allEqual, false);
   assert.deepEqual(r.hardest, { pct: 0, codes: ['zz'], extra: 0 });
   assert.deepEqual(r.easiest, { pct: 50, codes: ['fr'], extra: 0 });
 });
@@ -391,28 +389,34 @@ test('difficulty facts: ties share a fact — up to 3 named, rest counted', () =
     stats: statsOf({ attempts: 10, finds }),
     targetCodes: ['us', 'ee', 'dd', 'cc', 'bb', 'aa'], // aa..ee all 0%
   });
-  assert.equal(r.allEqual, false);
   // hardest: 5 tied at 0 → alphabetical aa,bb,cc named, +2 extra
   assert.deepEqual(r.hardest, { pct: 0, codes: ['aa', 'bb', 'cc'], extra: 2 });
   assert.deepEqual(r.easiest, { pct: 80, codes: ['us'], extra: 0 });
 });
 
-test('difficulty facts: all equal (every flag same pct) → collapse signal', () => {
+test('difficulty facts: all equal (every flag same pct) → null (no hardest/easiest exists)', () => {
+  // When every flag ties there is no hardest or easiest, so naming one of each
+  // would be nonsense — return null and render no facts line. The per-tile %s
+  // still carry each flag's number.
   const finds = Object.fromEntries(T.map((c) => [c, 10]));
-  const r = pickDifficultyFacts({
-    stats: statsOf({ attempts: 10, finds }),
-    targetCodes: T,
-  });
-  assert.deepEqual(r, { allEqual: true, pct: 100 });
+  assert.equal(pickDifficultyFacts({ stats: statsOf({ attempts: 10, finds }), targetCodes: T }), null);
 });
 
-test('difficulty facts: all equal at a non-100 value too', () => {
+test('difficulty facts: all equal at a non-100 value too → null', () => {
   const finds = Object.fromEntries(T.map((c) => [c, 5])); // 50% each
+  assert.equal(pickDifficultyFacts({ stats: statsOf({ attempts: 10, finds }), targetCodes: T }), null);
+});
+
+test('difficulty facts: even a hair of spread → facts show (not treated as tied)', () => {
+  // 71% vs 70% is spread → line renders.
   const r = pickDifficultyFacts({
-    stats: statsOf({ attempts: 10, finds }),
-    targetCodes: T,
+    stats: statsOf({ attempts: 100, finds: { us: 71, gd: 70 } }),
+    targetCodes: ['us', 'gd'],
   });
-  assert.deepEqual(r, { allEqual: true, pct: 50 });
+  assert.deepEqual(r, {
+    hardest: { pct: 70, codes: ['gd'], extra: 0 },
+    easiest: { pct: 71, codes: ['us'], extra: 0 },
+  });
 });
 
 // ---- pickMistakeRail (collapsed vs full) ----

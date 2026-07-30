@@ -116,7 +116,7 @@ export function pickMarkerKind({ code, targetCodes, userFoundCodes, userWrongCod
  * @typedef {{ pct: number, codes: string[], extra: number }} DifficultyFact
  *   `codes` names up to DIFFICULTY_FACT_MAX tied flags; `extra` is how many
  *   more share the same pct beyond those named (the "+N" tail).
- * @typedef {{ allEqual: true, pct: number } | { allEqual: false, hardest: DifficultyFact, easiest: DifficultyFact }} DifficultyFacts
+ * @typedef {{ hardest: DifficultyFact, easiest: DifficultyFact }} DifficultyFacts
  */
 
 /**
@@ -126,13 +126,12 @@ export function pickMarkerKind({ code, targetCodes, userFoundCodes, userWrongCod
  * DIFFICULTY_FACT_MAX flags are named on each side, with `extra` counting the
  * rest.
  *
- * When every flag lands on the SAME find-% (e.g. all 100%) the two facts would
- * be identical and the per-tile % strips already repeat the number, so the
- * caller collapses to a single sentence — signalled by `allEqual: true` with
- * the shared `pct`.
- *
- * `null` when there are no stats to rank by (no submissions, or an empty
- * target list) — the caller renders no community facts at all.
+ * `null` when there's nothing meaningful to show: no stats (no submissions /
+ * empty targets), OR every flag ties on one find-rate — there is no hardest or
+ * easiest when they're all equal, so naming one of each would be nonsense. In
+ * both cases the caller renders no facts line; the per-tile %s still carry each
+ * flag's own number. The line returns on its own once real plays spread the
+ * find-rates out.
  *
  * @param {{ stats: StatsInput | null | undefined, targetCodes: string[] }} input
  * @returns {DifficultyFacts | null}
@@ -147,9 +146,8 @@ export function pickDifficultyFacts({ stats, targetCodes }) {
   }));
   const min = Math.min(...pcts.map((p) => p.pct));
   const max = Math.max(...pcts.map((p) => p.pct));
-  if (min === max) return { allEqual: true, pct: min };
+  if (min === max) return null;
   return {
-    allEqual: false,
     hardest: factAt(pcts, min),
     easiest: factAt(pcts, max),
   };
