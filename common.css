@@ -1397,7 +1397,11 @@ body::before {
     backdrop-filter: none;
     display: flex;
     justify-content: center;
-    padding: 6px 0 40px;
+    /* Generous top gap so the floating pill breathes clear of the content
+     * above it — 6px read as cramped on desktop where the pill is an in-flow
+     * element, not a pinned bar. Kept a touch under the 40px bottom so the
+     * pill still sits closer to the content it acts on than to the page end. */
+    padding: 32px 0 40px;
   }
   .dock-inner {
     display: inline-flex;
