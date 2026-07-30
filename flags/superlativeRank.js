@@ -98,24 +98,89 @@ export function rankByMetric(countries, values) {
 }
 
 /**
+ * Continent label for the "· #N in <continent>" rank suffix: the English name,
+ * and the Polish LOCATIVE form used after "w" (w Europie, w Azji, w Afryce, w
+ * Ameryce Północnej / Południowej, w Oceanii). Only the six ranked continents —
+ * a puzzle scoped to the world (or to anything not listed) gets no continental
+ * rank. Hardcoded here alongside the file's other hardcoded pl strings ("na
+ * świecie", the magnitude words) rather than routed through i18n, because the
+ * note map is built as plain `{ en, pl }` before any locale is active.
+ * @type {Record<string, { en: string, pl: string }>}
+ */
+const CONTINENT_RANK_LABEL = {
+  Europe: { en: 'Europe', pl: 'Europie' },
+  Asia: { en: 'Asia', pl: 'Azji' },
+  Africa: { en: 'Africa', pl: 'Afryce' },
+  'North America': { en: 'North America', pl: 'Ameryce Północnej' },
+  'South America': { en: 'South America', pl: 'Ameryce Południowej' },
+  Oceania: { en: 'Oceania', pl: 'Oceanii' },
+};
+
+/**
+ * Rank map (code -> 1-based rank) of the countries that belong to `continent`,
+ * by the same metric + tie-break as the world ranking. Empty when `continent`
+ * isn't one of the six ranked continents (e.g. a world-scoped superlative).
+ *
+ * The pool is the caller's country list filtered by each country's own
+ * `continent` field — the single-continent-per-country classification the daily
+ * already uses. So a straddler (Russia → Europe) is ranked in the one continent
+ * the data assigns it, and a country outside the scoped continent simply isn't
+ * in the map, so it never gets an "in <continent>" suffix.
+ *
+ * @param {{ code: string, continent?: string }[]} countries
+ * @param {Record<string, number>} values
+ * @param {string | null | undefined} continent
+ * @returns {Map<string, number>}
+ */
+export function rankWithinContinent(countries, values, continent) {
+  if (!continent || !CONTINENT_RANK_LABEL[continent]) return new Map();
+  return rankByMetric(countries.filter((c) => c.continent === continent), values);
+}
+
+/**
+ * The localized "· #N in <continent>" caption suffix for one code, or null when
+ * the code has no place in the continental pool (it's outside that continent,
+ * or the metric has no value for it).
+ *
+ * @param {Map<string, number>} contRank
+ * @param {string | null | undefined} continent
+ * @param {string} code
+ * @returns {{ en: string, pl: string } | null}
+ */
+function continentRankSuffix(contRank, continent, code) {
+  const label = continent ? CONTINENT_RANK_LABEL[continent] : null;
+  const rc = contRank.get(code);
+  if (!label || typeof rc !== 'number') return null;
+  return { en: ` · #${rc} in ${label.en}`, pl: ` · ${rc}. w ${label.pl}` };
+}
+
+/**
  * Build zoom captions (`{ en, pl }` per code) for every sovereign country with
  * a population value: its figure plus its world rank among sovereign states.
  *
- * @param {{ code: string }[]} countries
+ * When `continent` names one of the six ranked continents, each country IN that
+ * continent also gets its rank within it appended ("· #8 in Europe"). Off a
+ * continent scope (or for a country outside the scoped continent) nothing is
+ * added — see {@link rankWithinContinent}.
+ *
+ * @param {{ code: string, continent?: string }[]} countries
  * @param {Record<string, number>} values
+ * @param {string | null} [continent]  the puzzle's continent scope, or null
  * @returns {Record<string, { en: string, pl: string }>}
  */
-export function buildPopulationRankNotes(countries, values) {
+export function buildPopulationRankNotes(countries, values, continent = null) {
   const rank = rankByMetric(countries, values);
+  const contRank = rankWithinContinent(countries, values, continent);
   /** @type {Record<string, { en: string, pl: string }>} */
   const notes = {};
   for (const c of countries) {
     const v = values[c.code];
     if (typeof v !== 'number') continue;
     const r = rank.get(c.code);
+    const cs = continentRankSuffix(contRank, continent, c.code);
     notes[c.code] = {
-      en: `Population: ${formatPopulation(v, 'en')} · #${r} in the world`,
-      pl: `Ludność: ${formatPopulation(v, 'pl')} · ${r}. na świecie`,
+      en: `Population: ${formatPopulation(v, 'en')} · #${r} in the world${cs ? cs.en : ''}`,
+      pl: `Ludność: ${formatPopulation(v, 'pl')} · ${r}. na świecie${cs ? cs.pl : ''}`,
     };
   }
   return notes;
@@ -187,14 +252,20 @@ export function formatMetricPill(v, format, lang = 'en') {
  * Reusing the baked note as the prefix keeps the answers' captions exactly as
  * authored — this only adds the one fact the catalog can't bake, the rank.
  *
- * @param {{ code: string }[]} countries
+ * When `continent` names one of the six ranked continents, each answer / distractor
+ * IN that continent also gets its rank within it appended after the world rank
+ * ("· #8 in Europe" / "· 8. w Europie"). See {@link rankWithinContinent}.
+ *
+ * @param {{ code: string, continent?: string }[]} countries
  * @param {Record<string, number>} values
  * @param {{ unit?: string, format?: string }} [meta]  the metric file's header
  * @param {Record<string, Record<string, string>>} [baked]  entry.notes
+ * @param {string | null} [continent]  the puzzle's continent scope, or null
  * @returns {Record<string, { en: string, pl: string }>}
  */
-export function buildMetricRankNotes(countries, values, meta = {}, baked = undefined) {
+export function buildMetricRankNotes(countries, values, meta = {}, baked = undefined, continent = null) {
   const rank = rankByMetric(countries, values);
+  const contRank = rankWithinContinent(countries, values, continent);
   const unit = meta.unit ? ` ${meta.unit}` : '';
   /** @type {Record<string, { en: string, pl: string }>} */
   const notes = {};
@@ -205,9 +276,10 @@ export function buildMetricRankNotes(countries, values, meta = {}, baked = undef
     const base = baked && baked[c.code];
     const en = base?.en ?? `${formatMetricShort(v, meta.format, 'en')}${unit}`;
     const pl = base?.pl ?? `${formatMetricShort(v, meta.format, 'pl')}${unit}`;
+    const cs = continentRankSuffix(contRank, continent, c.code);
     notes[c.code] = {
-      en: `${en} · #${r} in the world`,
-      pl: `${pl} · ${r}. na świecie`,
+      en: `${en} · #${r} in the world${cs ? cs.en : ''}`,
+      pl: `${pl} · ${r}. na świecie${cs ? cs.pl : ''}`,
     };
   }
   return notes;

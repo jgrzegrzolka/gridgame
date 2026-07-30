@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import {
   formatPopulation,
   rankByMetric,
+  rankWithinContinent,
   buildPopulationRankNotes,
   buildMetricRankNotes,
   formatMetricShort,
@@ -173,6 +174,56 @@ test('buildMetricRankNotes: unbaked distractor still gets a figure + rank', () =
 test('buildMetricRankNotes: no unit → no stray space', () => {
   const notes = buildMetricRankNotes([{ code: 'us' }], VALUES, { format: 'compact' });
   assert.equal(notes.us.en, '336.8M · #1 in the world');
+});
+
+// A tiny Europe-scoped roster: fr/es/de are Europe, tr is Asia. Areas descend
+// fr > es > de so their in-Europe ranks are 1/2/3; tr is outside the scope.
+const EU_COUNTRIES = [
+  { code: 'fr', continent: 'Europe' },
+  { code: 'es', continent: 'Europe' },
+  { code: 'de', continent: 'Europe' },
+  { code: 'tr', continent: 'Asia' },
+];
+const EU_AREA = { fr: 551_695, es: 505_990, de: 357_590, tr: 783_562 };
+
+test('rankWithinContinent: ranks only the scoped continent, empty off-scope', () => {
+  const r = rankWithinContinent(EU_COUNTRIES, EU_AREA, 'Europe');
+  assert.equal(r.get('fr'), 1);
+  assert.equal(r.get('es'), 2);
+  assert.equal(r.get('de'), 3);
+  assert.equal(r.has('tr'), false); // Asia — not in the Europe pool
+  // World scope (or any non-continent) yields no continental ranking.
+  assert.equal(rankWithinContinent(EU_COUNTRIES, EU_AREA, 'world').size, 0);
+  assert.equal(rankWithinContinent(EU_COUNTRIES, EU_AREA, null).size, 0);
+});
+
+test('buildMetricRankNotes: continent scope appends the in-continent rank', () => {
+  const notes = buildMetricRankNotes(EU_COUNTRIES, EU_AREA, { unit: 'km²', format: 'plain' }, {}, 'Europe');
+  // A European answer: world rank then Europe rank, in both languages.
+  assert.equal(notes.es.en, '505,990 km² · #3 in the world · #2 in Europe');
+  assert.equal(notes.es.pl, '505 990 km² · 3. na świecie · 2. w Europie');
+  // A distractor outside the scoped continent gets the world rank only.
+  assert.equal(notes.tr.en, '783,562 km² · #1 in the world');
+  assert.equal(notes.tr.pl, '783 562 km² · 1. na świecie');
+});
+
+test('buildMetricRankNotes: no continent arg leaves the world-rank-only caption', () => {
+  const notes = buildMetricRankNotes(EU_COUNTRIES, EU_AREA, { unit: 'km²', format: 'plain' }, {});
+  assert.equal(notes.fr.en, '551,695 km² · #2 in the world');
+});
+
+test('buildPopulationRankNotes: continent scope appends the in-continent rank', () => {
+  const countries = [
+    { code: 'ru', continent: 'Europe' },
+    { code: 'de', continent: 'Europe' },
+    { code: 'cn', continent: 'Asia' },
+  ];
+  const pop = { ru: 143_800_000, de: 83_200_000, cn: 1_410_710_000 };
+  const notes = buildPopulationRankNotes(countries, pop, 'Europe');
+  assert.equal(notes.de.en, 'Population: 83.2 million · #3 in the world · #2 in Europe');
+  assert.equal(notes.de.pl, 'Ludność: 83,2 mln · 3. na świecie · 2. w Europie');
+  // Asia country in a Europe-scoped puzzle: world rank only, no "in Europe".
+  assert.equal(notes.cn.en, 'Population: 1.41 billion · #1 in the world');
 });
 
 test('buildSuperlativeTileMeta: rank is 1-based place in the answers array', () => {

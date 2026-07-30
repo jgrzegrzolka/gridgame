@@ -13,7 +13,7 @@ import {
   buildSuperlativeTileMeta,
   metricFileFor,
 } from '../flags/superlativeRank.js';
-import { buildContinentNotes, mergeNotes } from '../flags/continentNotes.js';
+import { buildContinentNotes, mergeNotes, continentScopeOf } from '../flags/continentNotes.js';
 import {
   wireZoom,
   openZoom,
@@ -767,6 +767,11 @@ export async function bootDaily() {
           .then((r) => r.json())
           .then((d) => {
             const values = d.values ?? {};
+            // On a continent-scoped superlative ("largest countries of Europe")
+            // the rank notes also carry each in-continent country's rank within
+            // that continent ("· #8 in Europe"), after the world rank. Null for
+            // a world-scoped superlative, so nothing extra is appended.
+            const contScope = continentScopeOf(result.entry);
             // Metric figure first, then the continent note where both apply
             // (e.g. Russia in "most populous Asia" shows its world rank AND why
             // it isn't on the list). Off continent scope the second map is {}.
@@ -775,8 +780,8 @@ export async function bootDaily() {
             // an unbaked distractor) and appends the same rank.
             const notes =
               result.entry.metric === 'population'
-                ? buildPopulationRankNotes(all, values)
-                : buildMetricRankNotes(all, values, d, result.entry.notes);
+                ? buildPopulationRankNotes(all, values, contScope)
+                : buildMetricRankNotes(all, values, d, result.entry.notes, contScope);
             setZoomNotes(mergeNotes(notes, buildContinentNotes(result.entry)));
             setTileMeta(buildSuperlativeTileMeta(result.entry, values, d));
           })
