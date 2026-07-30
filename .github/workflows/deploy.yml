@@ -31,7 +31,11 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    # 6, not 3: the budget covers `npm ci` + tsc×2 for the whole job, and a
+    # cold/slow runner's `npm ci` alone can approach 3 min. At 3 the job was
+    # cancelled at the cap on an otherwise-green build (run 30550083425),
+    # which blocks the dependent `deploy`. 6 keeps a real guard with headroom.
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
