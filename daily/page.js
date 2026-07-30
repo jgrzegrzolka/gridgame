@@ -226,19 +226,23 @@ function paintCommunity(stats, targets, all, userWrongCodes, { animate }) {
  * @param {Country[]} all
  */
 function buildFactsLine(facts, all) {
-  // Always render the two-fact line when there are stats — pickDifficultyFacts
-  // guarantees a distinct hardest + easiest even when every flag is tied.
   if (!facts) return null;
   const wrap = document.createElement('div');
   wrap.className = 'daily-facts';
-  wrap.appendChild(buildFact(t('daily.result.hardest', 'hardest'), facts.hardest, all));
-  wrap.appendChild(buildFact(t('daily.result.easiest', 'easiest'), facts.easiest, all));
+  if (facts.kind === 'uniform') {
+    // Every flag tied on one % — one line naming them all (no fake split).
+    wrap.appendChild(buildFact(t('daily.result.allFlags', 'all flags'), facts.all, all));
+  } else {
+    wrap.appendChild(buildFact(t('daily.result.hardest', 'hardest'), facts.hardest, all));
+    wrap.appendChild(buildFact(t('daily.result.easiest', 'easiest'), facts.easiest, all));
+  }
   return wrap;
 }
 
 /**
- * One hardest/easiest fact: label · flag thumbnail(s) · name (single) or +N
- * (ties) · pct. Thumbnails open the zoom dialog like the grid tiles.
+ * One difficulty fact: label · a thumbnail for every tied flag · the country
+ * name (only when a single flag holds this %) · pct. Thumbnails open the zoom
+ * dialog like the grid tiles.
  *
  * @param {string} label
  * @param {import('./extraStats.js').DifficultyFact} fact
@@ -265,17 +269,14 @@ function buildFact(label, fact, all) {
     }
     span.appendChild(img);
   }
+  // Name the country only when a single flag holds this % (with many tied,
+  // the thumbnails speak for themselves and names would overflow the line).
   if (fact.codes.length === 1) {
     const c = findCountry(all, fact.codes[0]);
     const name = document.createElement('span');
     name.className = 'daily-fact-name';
     name.textContent = c ? countryName(c) : fact.codes[0].toUpperCase();
     span.appendChild(name);
-  } else if (fact.extra > 0) {
-    const extra = document.createElement('span');
-    extra.className = 'daily-fact-extra';
-    extra.textContent = `+${fact.extra}`;
-    span.appendChild(extra);
   }
   const pct = document.createElement('b');
   pct.className = 'daily-fact-pct';

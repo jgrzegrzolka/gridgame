@@ -368,8 +368,9 @@ test('difficulty facts: hardest = lowest pct, easiest = highest', () => {
     targetCodes: ['us', 'gd', 'fr'],
   });
   assert.deepEqual(r, {
-    hardest: { pct: 0, codes: ['gd'], extra: 0 },
-    easiest: { pct: 71, codes: ['us'], extra: 0 },
+    kind: 'spread',
+    hardest: { pct: 0, codes: ['gd'] },
+    easiest: { pct: 71, codes: ['us'] },
   });
 });
 
@@ -378,44 +379,51 @@ test('difficulty facts: missing perCodeFinds code counts as 0%', () => {
     stats: statsOf({ attempts: 10, finds: { fr: 5 } }),
     targetCodes: ['fr', 'zz'],
   });
-  assert.deepEqual(r.hardest, { pct: 0, codes: ['zz'], extra: 0 });
-  assert.deepEqual(r.easiest, { pct: 50, codes: ['fr'], extra: 0 });
+  assert.equal(r.kind, 'spread');
+  assert.deepEqual(r.hardest, { pct: 0, codes: ['zz'] });
+  assert.deepEqual(r.easiest, { pct: 50, codes: ['fr'] });
 });
 
-test('difficulty facts: ties share a fact — up to 3 named, rest counted', () => {
+test('difficulty facts: ties name ALL flags at the extreme — no cap, no +N', () => {
   // 5 flags tie at the floor (0%), 1 at the top.
   const finds = { us: 8 }; // 80%
   const r = pickDifficultyFacts({
     stats: statsOf({ attempts: 10, finds }),
     targetCodes: ['us', 'ee', 'dd', 'cc', 'bb', 'aa'], // aa..ee all 0%
   });
-  // hardest: 5 tied at 0 → alphabetical aa,bb,cc named, +2 extra
-  assert.deepEqual(r.hardest, { pct: 0, codes: ['aa', 'bb', 'cc'], extra: 2 });
-  assert.deepEqual(r.easiest, { pct: 80, codes: ['us'], extra: 0 });
+  // hardest: all 5 tied at 0, alphabetical, none hidden.
+  assert.deepEqual(r.hardest, { pct: 0, codes: ['aa', 'bb', 'cc', 'dd', 'ee'] });
+  assert.deepEqual(r.easiest, { pct: 80, codes: ['us'] });
 });
 
-test('difficulty facts: all equal (every flag same pct) → null (no hardest/easiest exists)', () => {
-  // When every flag ties there is no hardest or easiest, so naming one of each
-  // would be nonsense — return null and render no facts line. The per-tile %s
-  // still carry each flag's number.
+test('difficulty facts: all equal (every flag same pct) → uniform, all flags at that pct', () => {
+  // No hardest vs easiest — one group with every flag. Sorted T = be,de,es,fr,
+  // gr,it,nl,pl,pt.
   const finds = Object.fromEntries(T.map((c) => [c, 10]));
-  assert.equal(pickDifficultyFacts({ stats: statsOf({ attempts: 10, finds }), targetCodes: T }), null);
+  const r = pickDifficultyFacts({ stats: statsOf({ attempts: 10, finds }), targetCodes: T });
+  assert.deepEqual(r, {
+    kind: 'uniform',
+    all: { pct: 100, codes: ['be', 'de', 'es', 'fr', 'gr', 'it', 'nl', 'pl', 'pt'] },
+  });
 });
 
-test('difficulty facts: all equal at a non-100 value too → null', () => {
+test('difficulty facts: all equal at a non-100 value too → uniform', () => {
   const finds = Object.fromEntries(T.map((c) => [c, 5])); // 50% each
-  assert.equal(pickDifficultyFacts({ stats: statsOf({ attempts: 10, finds }), targetCodes: T }), null);
+  const r = pickDifficultyFacts({ stats: statsOf({ attempts: 10, finds }), targetCodes: T });
+  assert.equal(r.kind, 'uniform');
+  assert.equal(r.all.pct, 50);
+  assert.equal(r.all.codes.length, T.length);
 });
 
-test('difficulty facts: even a hair of spread → facts show (not treated as tied)', () => {
-  // 71% vs 70% is spread → line renders.
+test('difficulty facts: even a hair of spread → spread (not uniform)', () => {
   const r = pickDifficultyFacts({
     stats: statsOf({ attempts: 100, finds: { us: 71, gd: 70 } }),
     targetCodes: ['us', 'gd'],
   });
   assert.deepEqual(r, {
-    hardest: { pct: 70, codes: ['gd'], extra: 0 },
-    easiest: { pct: 71, codes: ['us'], extra: 0 },
+    kind: 'spread',
+    hardest: { pct: 70, codes: ['gd'] },
+    easiest: { pct: 71, codes: ['us'] },
   });
 });
 

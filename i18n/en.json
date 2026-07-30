@@ -479,6 +479,7 @@
       "verdictLevel": "on par with the average",
       "hardest": "hardest",
       "easiest": "easiest",
+      "allFlags": "all flags",
       "topMistake": "Other players' most common mistake",
       "showAll": "show all mistakes ({n})",
       "showFewer": "show fewer",

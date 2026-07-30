@@ -28,12 +28,6 @@ export const MISTAKE_MAX = 20;
  * resting rail stays a tight glance, not a wall of single clicks.
  */
 export const MISTAKE_COLLAPSED_CAP = 6;
-/**
- * The most tied-difficulty flags a single hardest/easiest fact will name
- * inline before collapsing the rest to a "+N" tail — so an all-tied puzzle
- * doesn't spell out a dozen countries on one line.
- */
-export const DIFFICULTY_FACT_MAX = 3;
 
 /**
  * @typedef {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> }} StatsInput
@@ -113,25 +107,24 @@ export function pickMarkerKind({ code, targetCodes, userFoundCodes, userWrongCod
 }
 
 /**
- * @typedef {{ pct: number, codes: string[], extra: number }} DifficultyFact
- *   `codes` names up to DIFFICULTY_FACT_MAX tied flags; `extra` is how many
- *   more share the same pct beyond those named (the "+N" tail).
- * @typedef {{ hardest: DifficultyFact, easiest: DifficultyFact }} DifficultyFacts
+ * @typedef {{ pct: number, codes: string[] }} DifficultyFact
+ *   ALL flags tied at `pct`, sorted alphabetically. No cap — every tied flag is
+ *   named (never hidden behind a "+N").
+ * @typedef {{ kind: 'spread', hardest: DifficultyFact, easiest: DifficultyFact } | { kind: 'uniform', all: DifficultyFact }} DifficultyFacts
  */
 
 /**
  * The hardest and easiest flags of the puzzle, by community find-rate, for the
- * two-fact community line ("najtrudniejsza · Grenada 0% · najłatwiejsza · USA
- * 71%"). Hardest = lowest find-%, easiest = highest. Ties share the fact: up to
- * DIFFICULTY_FACT_MAX flags are named on each side, with `extra` counting the
- * rest.
+ * community line ("najtrudniejsza · Grenada 0% · najłatwiejsza · USA 71%").
+ * Hardest = lowest find-%, easiest = highest, and EVERY flag tied at each
+ * extreme is named (no cap, no "+N" — if flags tie, show them all).
  *
- * `null` when there's nothing meaningful to show: no stats (no submissions /
- * empty targets), OR every flag ties on one find-rate — there is no hardest or
- * easiest when they're all equal, so naming one of each would be nonsense. In
- * both cases the caller renders no facts line; the per-tile %s still carry each
- * flag's own number. The line returns on its own once real plays spread the
- * find-rates out.
+ * When every flag lands on the same find-rate there's no hardest vs easiest, so
+ * it returns `kind: 'uniform'` with the whole set at that % — the caller renders
+ * a single "all flags · X%" line instead of a fake split.
+ *
+ * `null` only when there are no stats to rank by (no submissions / empty
+ * targets).
  *
  * @param {{ stats: StatsInput | null | undefined, targetCodes: string[] }} input
  * @returns {DifficultyFacts | null}
@@ -146,29 +139,24 @@ export function pickDifficultyFacts({ stats, targetCodes }) {
   }));
   const min = Math.min(...pcts.map((p) => p.pct));
   const max = Math.max(...pcts.map((p) => p.pct));
-  if (min === max) return null;
+  if (min === max) return { kind: 'uniform', all: factAt(pcts, min) };
   return {
+    kind: 'spread',
     hardest: factAt(pcts, min),
     easiest: factAt(pcts, max),
   };
 }
 
 /**
- * Collect every code at exactly `pct` into one difficulty fact: the codes
- * sorted alphabetically (stable across renders), the first DIFFICULTY_FACT_MAX
- * named, the remainder counted in `extra`.
+ * Every code at exactly `pct`, sorted alphabetically (stable across renders).
+ * No cap — all tied flags are named.
  *
  * @param {{ code: string, pct: number }[]} pcts
  * @param {number} pct
  * @returns {DifficultyFact}
  */
 function factAt(pcts, pct) {
-  const codes = pcts.filter((p) => p.pct === pct).map((p) => p.code).sort();
-  return {
-    pct,
-    codes: codes.slice(0, DIFFICULTY_FACT_MAX),
-    extra: Math.max(0, codes.length - DIFFICULTY_FACT_MAX),
-  };
+  return { pct, codes: pcts.filter((p) => p.pct === pct).map((p) => p.code).sort() };
 }
 
 /**
