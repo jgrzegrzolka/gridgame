@@ -9,6 +9,7 @@ import {
   buildPopulationRankNotes,
   buildMetricRankNotes,
   formatMetricShort,
+  formatMetricPill,
   buildSuperlativeTileMeta,
   metricFileFor,
 } from './superlativeRank.js';
@@ -136,6 +137,22 @@ test('formatMetricShort: pl swaps the decimal mark and the magnitude word', () =
   assert.equal(formatMetricShort(800, 'compact', 'pl'), '800');
 });
 
+test('formatMetricPill: keeps the compact letter in every language (fits the badge)', () => {
+  // en is identical to formatMetricShort — the compact letters are already there.
+  assert.equal(formatMetricPill(16_376_870, 'compact', 'en'), '16.4M');
+  assert.equal(formatMetricPill(579_500, 'compact', 'en'), '579.5K');
+  // pl keeps the LETTER (not "tys"/"mln"/"mld"/"bln"), only the decimal is a comma.
+  assert.equal(formatMetricPill(579_500, 'compact', 'pl'), '579,5K');
+  assert.equal(formatMetricPill(16_376_870, 'compact', 'pl'), '16,4M');
+  assert.equal(formatMetricPill(1_438_069_596, 'compact', 'pl'), '1,44B');
+  assert.equal(formatMetricPill(27_810_000_000_000, 'compact', 'pl'), '27,81T');
+  assert.equal(formatMetricPill(9_816, 'compact', 'pl'), '9,8K');
+  // sub-1000 compact, and the plain / decimal formats still localise as before.
+  assert.equal(formatMetricPill(800, 'compact', 'pl'), '800');
+  assert.equal(formatMetricPill(8849, 'plain', 'pl'), '8 849');
+  assert.equal(formatMetricPill(68.53, 'decimal1', 'pl'), '68,5');
+});
+
 test('buildMetricRankNotes: baked note keeps its wording and gains the rank', () => {
   const baked = {
     in: { en: 'Area: 2,973,190 km²', pl: 'Powierzchnia: 2 973 190 km²' },
@@ -168,9 +185,12 @@ test('buildSuperlativeTileMeta: rank is 1-based place in the answers array', () 
   assert.equal(meta.get('us')?.value, 336_762_000);
 });
 
-test('buildSuperlativeTileMeta: display is pre-formatted per language', () => {
+test('buildSuperlativeTileMeta: display is the compact pill figure per language', () => {
+  // The pill keeps the compact LETTER in Polish too ("1,44B", not "1,44 mld") —
+  // the spelled-out word is too wide for the badge and lives only in the zoom
+  // caption (buildMetricRankNotes). See formatMetricPill.
   const meta = buildSuperlativeTileMeta({ answers: ['in'] }, VALUES, { format: 'compact' });
-  assert.deepEqual(meta.get('in')?.display, { en: '1.44B', pl: '1,44 mld' });
+  assert.deepEqual(meta.get('in')?.display, { en: '1.44B', pl: '1,44B' });
 });
 
 test('buildSuperlativeTileMeta: missing metric value → null figure, rank kept', () => {
