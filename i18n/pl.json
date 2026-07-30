@@ -470,6 +470,22 @@
         "topMistake": "Najczęstszy błąd:"
       }
     },
+    "result": {
+      "found": "Znalezione",
+      "missed": "Pominięte",
+      "avg": "średnia graczy {avg}",
+      "verdictMultiplier": "▲ {k}× powyżej średniej",
+      "verdictAbove": "▲ powyżej średniej",
+      "verdictLevel": "na poziomie średniej",
+      "hardest": "najtrudniejsza",
+      "easiest": "najłatwiejsza",
+      "topMistake": "Najczęstszy błąd innych graczy",
+      "showAll": "pokaż wszystkie pomyłki ({n})",
+      "showFewer": "pokaż mniej",
+      "singlesTail": "+ {n} innych pomyłek pojedynczych graczy",
+      "mistakeLegend": "ten błąd zdarzył się też Tobie",
+      "allSame": "Każdą flagę odgadło {pct}% graczy"
+    },
     "share": {
       "aria": "Udostępnij wynik",
       "title": "Yet Another Quiz: codzienna łamigłówka flag #{n}, {score}/{total}",

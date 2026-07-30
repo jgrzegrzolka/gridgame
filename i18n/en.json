@@ -470,6 +470,22 @@
         "topMistake": "Most common mistake:"
       }
     },
+    "result": {
+      "found": "Found",
+      "missed": "Missed",
+      "avg": "players' average {avg}",
+      "verdictMultiplier": "▲ {k}× above average",
+      "verdictAbove": "▲ above average",
+      "verdictLevel": "on par with the average",
+      "hardest": "hardest",
+      "easiest": "easiest",
+      "topMistake": "Other players' most common mistake",
+      "showAll": "show all mistakes ({n})",
+      "showFewer": "show fewer",
+      "singlesTail": "+ {n} more one-off mistakes",
+      "mistakeLegend": "you made this mistake too",
+      "allSame": "{pct}% of players recognised every flag"
+    },
     "share": {
       "aria": "Share result",
       "title": "Yet Another Quiz: Daily Flag Puzzle #{n}, {score}/{total}",

@@ -529,13 +529,20 @@ export function renderResult(targets, foundCodes, categoryLabel) {
   const foundResultEl = /** @type {HTMLElement} */ (document.getElementById('find-result-found'));
   foundResultEl.innerHTML = '';
   for (const c of foundFlags) foundResultEl.appendChild(flagTile(c, true));
-  /** @type {HTMLElement} */ (document.getElementById('found-title')).hidden = foundFlags.length === 0;
+  // Count lives in the heading now ("Znalezione · 14"), so the section names
+  // its own size at a glance. renderResult owns the text (the elements carry
+  // no data-i18n) — re-set on every finish / revisit / langchange repaint.
+  const foundTitle = /** @type {HTMLElement} */ (document.getElementById('found-title'));
+  foundTitle.textContent = `${t('daily.result.found', 'Found')} · ${foundFlags.length}`;
+  foundTitle.hidden = foundFlags.length === 0;
 
   const missed = targets.filter((c) => !foundCodes.has(c.code));
   const missedEl = /** @type {HTMLElement} */ (document.getElementById('find-missed'));
   missedEl.innerHTML = '';
   for (const c of missed) missedEl.appendChild(flagTile(c, true));
-  /** @type {HTMLElement} */ (document.getElementById('missed-title')).hidden = missed.length === 0;
+  const missedTitle = /** @type {HTMLElement} */ (document.getElementById('missed-title'));
+  missedTitle.textContent = `${t('daily.result.missed', 'Missed')} · ${missed.length}`;
+  missedTitle.hidden = missed.length === 0;
 
   // Keep #game visible so the puzzle title strip (.find-header with the
   // category label + .daily-desc) sits above the result — the player

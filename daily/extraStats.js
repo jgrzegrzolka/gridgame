@@ -21,6 +21,19 @@
 
 export const MISTAKE_TARGET = 10;
 export const MISTAKE_MAX = 20;
+/**
+ * The collapsed "Most common mistake" rail shows only the genuinely-shared
+ * mistakes (count ≥ 2), capped at this many tiles. The one-off (×1) mistakes
+ * and any overflow sit behind the "pokaż wszystkie pomyłki" toggle so the
+ * resting rail stays a tight glance, not a wall of single clicks.
+ */
+export const MISTAKE_COLLAPSED_CAP = 6;
+/**
+ * The most tied-difficulty flags a single hardest/easiest fact will name
+ * inline before collapsing the rest to a "+N" tail — so an all-tied puzzle
+ * doesn't spell out a dozen countries on one line.
+ */
+export const DIFFICULTY_FACT_MAX = 3;
 
 /**
  * @typedef {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> }} StatsInput
@@ -97,6 +110,102 @@ export function pickMarkerKind({ code, targetCodes, userFoundCodes, userWrongCod
   if (targetCodes.has(code)) return 'missed';
   if (userWrongCodes && userWrongCodes.has(code)) return 'wrong';
   return null;
+}
+
+/**
+ * @typedef {{ pct: number, codes: string[], extra: number }} DifficultyFact
+ *   `codes` names up to DIFFICULTY_FACT_MAX tied flags; `extra` is how many
+ *   more share the same pct beyond those named (the "+N" tail).
+ * @typedef {{ allEqual: true, pct: number } | { allEqual: false, hardest: DifficultyFact, easiest: DifficultyFact }} DifficultyFacts
+ */
+
+/**
+ * The hardest and easiest flags of the puzzle, by community find-rate, for the
+ * two-fact community line ("najtrudniejsza · Grenada 0% · najłatwiejsza · USA
+ * 71%"). Hardest = lowest find-%, easiest = highest. Ties share the fact: up to
+ * DIFFICULTY_FACT_MAX flags are named on each side, with `extra` counting the
+ * rest.
+ *
+ * When every flag lands on the SAME find-% (e.g. all 100%) the two facts would
+ * be identical and the per-tile % strips already repeat the number, so the
+ * caller collapses to a single sentence — signalled by `allEqual: true` with
+ * the shared `pct`.
+ *
+ * `null` when there are no stats to rank by (no submissions, or an empty
+ * target list) — the caller renders no community facts at all.
+ *
+ * @param {{ stats: StatsInput | null | undefined, targetCodes: string[] }} input
+ * @returns {DifficultyFacts | null}
+ */
+export function pickDifficultyFacts({ stats, targetCodes }) {
+  if (!stats || !stats.totalAttempts) return null;
+  if (!Array.isArray(targetCodes) || targetCodes.length === 0) return null;
+  const { totalAttempts, perCodeFinds } = stats;
+  const pcts = targetCodes.map((code) => ({
+    code,
+    pct: Math.round(((perCodeFinds[code] || 0) / totalAttempts) * 100),
+  }));
+  const min = Math.min(...pcts.map((p) => p.pct));
+  const max = Math.max(...pcts.map((p) => p.pct));
+  if (min === max) return { allEqual: true, pct: min };
+  return {
+    allEqual: false,
+    hardest: factAt(pcts, min),
+    easiest: factAt(pcts, max),
+  };
+}
+
+/**
+ * Collect every code at exactly `pct` into one difficulty fact: the codes
+ * sorted alphabetically (stable across renders), the first DIFFICULTY_FACT_MAX
+ * named, the remainder counted in `extra`.
+ *
+ * @param {{ code: string, pct: number }[]} pcts
+ * @param {number} pct
+ * @returns {DifficultyFact}
+ */
+function factAt(pcts, pct) {
+  const codes = pcts.filter((p) => p.pct === pct).map((p) => p.code).sort();
+  return {
+    pct,
+    codes: codes.slice(0, DIFFICULTY_FACT_MAX),
+    extra: Math.max(0, codes.length - DIFFICULTY_FACT_MAX),
+  };
+}
+
+/**
+ * @typedef {{ collapsed: MistakePick[], all: MistakePick[], total: number, hidden: number }} MistakeRail
+ *   `collapsed` = the resting rail (count ≥ 2, capped). `all` = the full list
+ *   revealed by "pokaż wszystkie pomyłki". `total` = all.length (the toggle's
+ *   count). `hidden` = how many entries only appear when expanded (the tail's
+ *   count — overwhelmingly the ×1 one-off mistakes).
+ */
+
+/**
+ * Split the community's wrong-clicks into the collapsed rail vs. the full list.
+ * The resting rail names only shared mistakes (count ≥ 2, capped at
+ * MISTAKE_COLLAPSED_CAP); everything else — the long tail of one-off clicks —
+ * hides behind the expand toggle. `all` is capped at MISTAKE_MAX so a
+ * pathological puzzle (100 distractors clicked once each) can't blow out the
+ * expanded list either.
+ *
+ * @param {{ stats: StatsInput | null | undefined }} input
+ * @returns {MistakeRail}
+ */
+export function pickMistakeRail({ stats }) {
+  const perWrongCode = stats && stats.perWrongCode;
+  const sorted = perWrongCode
+    ? Object.entries(perWrongCode)
+        .map(([code, count]) => ({ code, count: /** @type {number} */ (count) }))
+        .filter((e) => e.count > 0)
+        .sort((a, b) => {
+          if (a.count !== b.count) return b.count - a.count;
+          return a.code < b.code ? -1 : 1;
+        })
+    : [];
+  const all = sorted.slice(0, MISTAKE_MAX);
+  const collapsed = all.filter((e) => e.count >= 2).slice(0, MISTAKE_COLLAPSED_CAP);
+  return { collapsed, all, total: all.length, hidden: all.length - collapsed.length };
 }
 
 /**

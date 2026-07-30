@@ -4,6 +4,8 @@ import {
   pickExtraStats,
   hasAnyExtraStats,
   pickMarkerKind,
+  pickDifficultyFacts,
+  pickMistakeRail,
 } from './extraStats.js';
 
 const T = ['fr', 'de', 'es', 'it', 'pl', 'pt', 'be', 'nl', 'gr']; // 9 targets
@@ -349,4 +351,107 @@ test('hasAnyExtraStats reflects union of sections', () => {
   assert.equal(hasAnyExtraStats({ ranking: [], topMistake: [] }), false);
   assert.equal(hasAnyExtraStats({ ranking: [{ code: 'fr', pct: 100 }], topMistake: [] }), true);
   assert.equal(hasAnyExtraStats({ ranking: [], topMistake: [{ code: 'ua', count: 3 }] }), true);
+});
+
+// ---- pickDifficultyFacts (community two-fact line) ----
+
+test('difficulty facts: null when no stats / no attempts / no targets', () => {
+  assert.equal(pickDifficultyFacts({ stats: null, targetCodes: T }), null);
+  assert.equal(pickDifficultyFacts({ stats: statsOf({ attempts: 0 }), targetCodes: T }), null);
+  assert.equal(pickDifficultyFacts({ stats: statsOf({ attempts: 5, finds: {} }), targetCodes: [] }), null);
+});
+
+test('difficulty facts: hardest = lowest pct, easiest = highest', () => {
+  const finds = { us: 71, gd: 0, fr: 40 };
+  const r = pickDifficultyFacts({
+    stats: statsOf({ attempts: 100, finds }),
+    targetCodes: ['us', 'gd', 'fr'],
+  });
+  assert.deepEqual(r, {
+    allEqual: false,
+    hardest: { pct: 0, codes: ['gd'], extra: 0 },
+    easiest: { pct: 71, codes: ['us'], extra: 0 },
+  });
+});
+
+test('difficulty facts: missing perCodeFinds code counts as 0%', () => {
+  const r = pickDifficultyFacts({
+    stats: statsOf({ attempts: 10, finds: { fr: 5 } }),
+    targetCodes: ['fr', 'zz'],
+  });
+  assert.equal(r.allEqual, false);
+  assert.deepEqual(r.hardest, { pct: 0, codes: ['zz'], extra: 0 });
+  assert.deepEqual(r.easiest, { pct: 50, codes: ['fr'], extra: 0 });
+});
+
+test('difficulty facts: ties share a fact — up to 3 named, rest counted', () => {
+  // 5 flags tie at the floor (0%), 1 at the top.
+  const finds = { us: 8 }; // 80%
+  const r = pickDifficultyFacts({
+    stats: statsOf({ attempts: 10, finds }),
+    targetCodes: ['us', 'ee', 'dd', 'cc', 'bb', 'aa'], // aa..ee all 0%
+  });
+  assert.equal(r.allEqual, false);
+  // hardest: 5 tied at 0 → alphabetical aa,bb,cc named, +2 extra
+  assert.deepEqual(r.hardest, { pct: 0, codes: ['aa', 'bb', 'cc'], extra: 2 });
+  assert.deepEqual(r.easiest, { pct: 80, codes: ['us'], extra: 0 });
+});
+
+test('difficulty facts: all equal (every flag same pct) → collapse signal', () => {
+  const finds = Object.fromEntries(T.map((c) => [c, 10]));
+  const r = pickDifficultyFacts({
+    stats: statsOf({ attempts: 10, finds }),
+    targetCodes: T,
+  });
+  assert.deepEqual(r, { allEqual: true, pct: 100 });
+});
+
+test('difficulty facts: all equal at a non-100 value too', () => {
+  const finds = Object.fromEntries(T.map((c) => [c, 5])); // 50% each
+  const r = pickDifficultyFacts({
+    stats: statsOf({ attempts: 10, finds }),
+    targetCodes: T,
+  });
+  assert.deepEqual(r, { allEqual: true, pct: 50 });
+});
+
+// ---- pickMistakeRail (collapsed vs full) ----
+
+test('mistake rail: empty when no perWrongCode', () => {
+  const r = pickMistakeRail({ stats: { totalAttempts: 10, perCodeFinds: {} } });
+  assert.deepEqual(r, { collapsed: [], all: [], total: 0, hidden: 0 });
+});
+
+test('mistake rail: collapsed keeps only count ≥ 2, capped at 6; tail is the rest', () => {
+  const wrong = { pl: 3, by: 2, fi: 2, it: 2, ch: 1, gb: 1, kz: 1, pt: 1, ro: 1, tr: 1 };
+  const r = pickMistakeRail({ stats: statsOf({ attempts: 20, wrong }) });
+  // 4 entries at ≥2 → all shown (under the cap of 6).
+  assert.deepEqual(r.collapsed.map((e) => e.code), ['pl', 'by', 'fi', 'it']);
+  assert.equal(r.total, 10);       // full list length
+  assert.equal(r.hidden, 6);       // 10 - 4 shown = 6 one-offs behind the toggle
+  assert.equal(r.all.length, 10);
+});
+
+test('mistake rail: more than 6 shared mistakes → collapsed caps at 6', () => {
+  const wrong = { aa: 9, bb: 8, cc: 7, dd: 6, ee: 5, ff: 4, gg: 3, hh: 2, ii: 1 };
+  const r = pickMistakeRail({ stats: statsOf({ attempts: 20, wrong }) });
+  assert.deepEqual(r.collapsed.map((e) => e.code), ['aa', 'bb', 'cc', 'dd', 'ee', 'ff']);
+  assert.equal(r.hidden, 3); // gg, hh (≥2 but past cap) + ii (the single)
+  assert.equal(r.total, 9);
+});
+
+test('mistake rail: all one-offs → nothing collapsed, all hidden', () => {
+  const wrong = { aa: 1, bb: 1, cc: 1 };
+  const r = pickMistakeRail({ stats: statsOf({ attempts: 5, wrong }) });
+  assert.deepEqual(r.collapsed, []);
+  assert.equal(r.hidden, 3);
+  assert.equal(r.total, 3);
+});
+
+test('mistake rail: full list capped at MISTAKE_MAX (20)', () => {
+  const wrong = {};
+  for (let i = 0; i < 30; i++) wrong[`t${String(i).padStart(2, '0')}`] = 1;
+  const r = pickMistakeRail({ stats: statsOf({ attempts: 30, wrong }) });
+  assert.equal(r.all.length, 20);
+  assert.equal(r.total, 20);
 });

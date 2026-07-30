@@ -129,25 +129,25 @@
       <p class="final-score" id="final-score-line">
         <span id="final-score-prefix" data-i18n="findFlag.youFound">You found</span><span id="final-score-fraction"> <span id="final-found">0</span> / <span id="final-total">0</span></span>
       </p>
-      <!-- Personal stats slot: score + streak + share. Paints
-           immediately when the result renders — no fetch needed.
-           Sits above Found so the player's numbers are the first
-           thing they see; the community block below Missed handles
-           the comparison context (average, rails, caption). -->
-      <section id="daily-personal-stats" class="daily-stats" hidden></section>
-      <h2 class="result-section-title" id="found-title" hidden data-i18n="findFlag.found">Found:</h2>
+      <!-- Score row: the big score + a verdict / average / streak stack +
+           the hearts (right-aligned), painted by paintScoreRow. Sits above
+           Found so the player's number is the first thing they see; the
+           hearts moved here out of the in-game row. Titles carry no
+           data-i18n — renderResult owns their text so it can append the
+           count ("Znalezione · 14"). -->
+      <div id="daily-personal-stats" class="daily-score-row" hidden></div>
+      <h2 class="result-section-title" id="found-title" hidden>Found</h2>
       <ul class="find-result-found" id="find-result-found"></ul>
-      <h2 class="result-section-title" id="missed-title" hidden data-i18n="findFlag.missed">Missed:</h2>
+      <h2 class="result-section-title" id="missed-title" hidden>Missed</h2>
       <ul class="find-missed" id="find-missed"></ul>
-      <!-- Community stats slot: average + loading dots. Below Missed
-           so it reads as "how others did" after the player sees their
-           own breakdown. -->
-      <section id="daily-stats" class="daily-stats" hidden></section>
-      <section id="daily-extra-stats" class="daily-extra-stats" hidden></section>
+      <!-- Community section: separated from the grids by whitespace only
+           (no hairline). Two-fact hardest/easiest line + the "most common
+           mistake" rail, painted by paintCommunity. Sits below Missed so it
+           reads as "how others did" after the player's own breakdown. -->
+      <section id="daily-stats" class="daily-community" hidden></section>
       <!-- Caption explaining the per-tile %s. Sits at the bottom of the
-           result panel (just above the action links) so the legend
-           appears beneath the flags it describes, after the player has
-           scanned both Most-recognised / Most-common-mistake rails. -->
+           result panel (just above the dock) so the legend appears beneath
+           the flags it describes. -->
       <p id="daily-caption" class="daily-stats-caption" hidden></p>
       <!-- Bottom dock (finished): Previous puzzles · Play again · Home.
            #play-again's href is set to the replay URL in page.js. -->
