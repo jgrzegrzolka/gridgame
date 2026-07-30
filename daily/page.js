@@ -210,20 +210,30 @@ function paintCommunity(stats, targets, all, userWrongCodes, { animate }) {
   }
 
   const facts = pickDifficultyFacts({ stats, targetCodes: targets.map((c) => c.code) });
-  container.appendChild(buildFactsLine(facts, all));
+  const factsLine = buildFactsLine(facts, all);
+  if (factsLine) container.appendChild(factsLine);
 
   const rail = pickMistakeRail({ stats });
   communityCtx = { rail, all, userWrongCodes };
   if (rail.collapsed.length > 0) container.appendChild(buildMistakeSection());
 
-  // The per-tile %s are hidden in the all-equal case (they'd all repeat one
-  // number), so the caption explaining them is dropped there too.
-  if (facts && facts.allEqual) {
+  // Nothing to show (uniform data with no shared mistakes) → hide the whole
+  // section and its top margin rather than leave an empty gap.
+  if (!container.firstChild) {
+    container.hidden = true;
     captionEl.hidden = true;
     captionEl.textContent = '';
-  } else {
+    return;
+  }
+
+  // The caption explains the per-tile %s, which only render alongside the
+  // hardest/easiest facts (the all-equal case hides both).
+  if (factsLine) {
     captionEl.textContent = statsLabels().caption;
     captionEl.hidden = false;
+  } else {
+    captionEl.hidden = true;
+    captionEl.textContent = '';
   }
 }
 
@@ -236,21 +246,15 @@ function paintCommunity(stats, targets, all, userWrongCodes, { animate }) {
  * @param {Country[]} all
  */
 function buildFactsLine(facts, all) {
+  // Nothing to show when there are no stats, or when every flag shares one
+  // find-rate (`allEqual` — no hardest/easiest exists). The `=== false` guard
+  // (not `!facts.allEqual`) narrows the discriminated union to the
+  // hardest/easiest variant — the codebase's DailyResolution pattern.
+  if (!facts || facts.allEqual !== false) return null;
   const wrap = document.createElement('div');
   wrap.className = 'daily-facts';
-  if (!facts) return wrap;
-  // `=== false` (not `!facts.allEqual`) so TS narrows the discriminated union
-  // to the hardest/easiest variant — the codebase's DailyResolution pattern.
-  if (facts.allEqual === false) {
-    wrap.appendChild(buildFact(t('daily.result.hardest', 'hardest'), facts.hardest, all));
-    wrap.appendChild(buildFact(t('daily.result.easiest', 'easiest'), facts.easiest, all));
-    return wrap;
-  }
-  const p = document.createElement('span');
-  p.className = 'daily-facts-allsame';
-  p.textContent = t('daily.result.allSame', '{pct}% of players recognised every flag')
-    .replace('{pct}', String(facts.pct));
-  wrap.appendChild(p);
+  wrap.appendChild(buildFact(t('daily.result.hardest', 'hardest'), facts.hardest, all));
+  wrap.appendChild(buildFact(t('daily.result.easiest', 'easiest'), facts.easiest, all));
   return wrap;
 }
 
@@ -345,13 +349,6 @@ function buildMistakeSection() {
       if (old) old.replaceWith(buildMistakeSection());
     });
     footer.appendChild(toggle);
-  }
-  if (!mistakesOpen && rail.hidden > 0) {
-    const tail = document.createElement('span');
-    tail.className = 'daily-mistake-tail';
-    tail.textContent = t('daily.result.singlesTail', '+ {n} more one-off mistakes')
-      .replace('{n}', String(rail.hidden));
-    footer.appendChild(tail);
   }
   const legend = document.createElement('span');
   legend.className = 'daily-mistake-legend';

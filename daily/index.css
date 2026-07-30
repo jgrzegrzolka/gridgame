@@ -153,13 +153,15 @@
   font-size: 13px;
   line-height: 1.3;
 }
-/* Verdict colour is set inline by the JS (correct-green or muted) so it can
- * follow the computed above/level state. */
-.daily-verdict { font-weight: var(--weight-bold); }
+/* Verdict + streak use the medium (600-ish) weight the mock calls for — a
+ * scoped exception to the two-weight scale, like the burger menu's 500: bold
+ * (700) read too heavy against the light score number. Colour is set inline by
+ * the JS (correct-green or muted) so it follows the above/level state. */
+.daily-verdict { font-weight: 600; }
 .daily-avg { color: var(--muted-color); }
 .daily-streak-line {
   color: var(--primary-color);
-  font-weight: var(--weight-bold);
+  font-weight: 600;
   display: inline-block;
 }
 .daily-verdict[hidden],
@@ -167,9 +169,11 @@
 .daily-streak-line[hidden] {
   display: none;
 }
-/* Hearts to the far right, vertically centred. Overrides the shared
- * `.daily-lives` bottom gap (that row carries 12px in-game). */
-.daily-score-hearts {
+/* Hearts to the far right of the score row, vertically centred. Scoped under
+ * .daily-score-row so it outweighs the shared `.daily-lives { margin }` rule
+ * (defined LATER in this file) — otherwise that rule cancels the auto-left and
+ * the hearts collapse back against the verdict stack instead of the edge. */
+.daily-score-row .daily-score-hearts {
   margin: 0 0 0 auto;
   align-items: center;
 }
