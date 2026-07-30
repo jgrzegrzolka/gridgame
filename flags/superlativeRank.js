@@ -150,6 +150,35 @@ export function formatMetricShort(v, format, lang = 'en') {
 }
 
 /**
+ * Compact figure for the corner value PILL on a small result tile. Unlike
+ * {@link formatMetricShort} — which spells the Polish magnitude out as a word
+ * ("tys" / "mln" / "mld" / "bln") for the readable zoom caption — the pill keeps
+ * the compact LETTER (K / M / B / T) in every language. A ~64px tile has no room
+ * for the wider word: Polish "579,5 tys" overflows the badge where "579,5K"
+ * fits. This also aligns the pill with the flagsdata metric lens, which already
+ * shows the same compact letters to every language via `formatValue`.
+ *
+ * Polish still localises what fits: the decimal mark becomes a comma, and a
+ * `plain` figure's thousands groups become spaces — only the magnitude *word*
+ * is dropped in favour of the letter.
+ *
+ * @param {number} v
+ * @param {string} [format]  the metric file's `format` field
+ * @param {string} [lang]
+ * @returns {string}
+ */
+export function formatMetricPill(v, format, lang = 'en') {
+  const s = formatValue(v, format);
+  if (lang !== 'pl') return s;
+  // Compact letter ("579.5K" / "1.44B"): keep the letter, comma decimal.
+  if (/[KMBT]$/.test(s)) return s.replace('.', ',');
+  // `plain` renders "8,849" — Polish groups thousands with spaces, no decimal.
+  if (s.includes(',')) return s.replace(/,/g, ' ');
+  // Bare small integer / decimal: comma decimal only.
+  return s.replace('.', ',');
+}
+
+/**
  * Build zoom captions for any non-population metric: the puzzle's own baked note
  * where there is one ("Area: 16,376,870 km²", hand-written per answer), a
  * formatted figure where there isn't (the "Most missed" distractors), and the
@@ -195,6 +224,11 @@ export function buildMetricRankNotes(countries, values, meta = {}, baked = undef
  * (shouldn't happen for a valid roster, but the tile then still shows its rank —
  * the number is the point and must never depend on the figure resolving).
  *
+ * `display` is formatted with {@link formatMetricPill} (compact letters in every
+ * language) rather than {@link formatMetricShort} (spelled-out Polish words):
+ * the pill is a ~64px badge with no room for "579,5 tys". The zoom caption,
+ * which has room, keeps the words via `buildMetricRankNotes`.
+ *
  * @param {{ answers?: string[] }} entry
  * @param {Record<string, number>} values
  * @param {{ format?: string }} [meta]  the metric file's header
@@ -211,7 +245,7 @@ export function buildSuperlativeTileMeta(entry, values, meta = {}) {
       rank: i + 1,
       value: has ? v : null,
       display: has
-        ? { en: formatMetricShort(v, meta.format, 'en'), pl: formatMetricShort(v, meta.format, 'pl') }
+        ? { en: formatMetricPill(v, meta.format, 'en'), pl: formatMetricPill(v, meta.format, 'pl') }
         : null,
     });
   });
