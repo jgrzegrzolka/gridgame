@@ -77,7 +77,6 @@ function statsLabels() {
   return {
     caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
     loading: t('daily.stats.loading', 'Loading stats'),
-    streakLine: t('daily.streak.line', 'Streak: {n}'),
   };
 }
 
@@ -99,28 +98,21 @@ function lang() {
  */
 let streakState = null;
 
-/** Has the entry animation played for the streak yet this page load?
- * The shake + pink-to-primary colour flash should fire exactly once —
- * subsequent repaints (stats arriving after streak, language switch,
- * revisit re-paints) all reuse the same final-state styling. */
-let streakAnimated = false;
-
-
-/** Threshold for showing the finish-screen streak line. Settled in
- * FEATURE.md: a single completion isn't a "streak", and surfacing
- * "Day streak: 1" the first time someone finishes is just clutter. */
+/** Threshold for including the streak in the share text. Settled in FEATURE.md:
+ * a single completion isn't a "streak", and surfacing "streak: 1" the first
+ * time someone finishes is just clutter. (The on-board streak line was removed
+ * to declutter the score row; the streak now only rides along in the share.) */
 const STREAK_MIN_TO_SHOW = 2;
 
 /**
  * Score-row state (the redesigned result board). `scoreRow` holds the
  * placeholder element refs + this render's found/total + whether it animates,
- * so the async community mean + streak can fill the verdict / average / streak
- * lines in place without restarting the count-up. `communityStats` caches the
- * last stats object so the same fill runs after a repaint. `mistakesOpen` +
- * `communityCtx` back the "show all mistakes" toggle. `streakEligible` is the
- * today-only gate (archive plays don't extend the streak).
+ * so the async community mean can fill the verdict / average lines in place
+ * without restarting the count-up. `communityStats` caches the last stats
+ * object so the same fill runs after a repaint. `mistakesOpen` + `communityCtx`
+ * back the "show all mistakes" toggle.
  *
- * @type {{ numEl: HTMLElement, verdictEl: HTMLElement, avgEl: HTMLElement, streakEl: HTMLElement, found: number, total: number, animate: boolean } | null}
+ * @type {{ numEl: HTMLElement, verdictEl: HTMLElement, avgEl: HTMLElement, found: number, total: number, animate: boolean } | null}
  */
 let scoreRow = null;
 /** @type {{ totalAttempts: number, mean: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> } | null} */
@@ -128,7 +120,6 @@ let communityStats = null;
 let mistakesOpen = false;
 /** @type {{ rail: import('./extraStats.js').MistakeRail, all: Country[], userWrongCodes: Set<string> } | null} */
 let communityCtx = null;
-let streakEligible = false;
 
 /**
  * Look up a country by 2-letter code in the loaded list. Used by the
@@ -431,10 +422,9 @@ function paintScoreRow(found, total, lives, { animate }) {
   const avgEl = document.createElement('span');
   avgEl.className = 'daily-avg';
   avgEl.hidden = true;
-  const streakEl = document.createElement('span');
-  streakEl.className = 'daily-streak-line';
-  streakEl.hidden = true;
-  stack.append(verdictEl, avgEl, streakEl);
+  // The streak line ("Seria: N") was removed from the result board to keep the
+  // score row uncluttered — the streak still travels in the share text.
+  stack.append(verdictEl, avgEl);
 
   // Hearts reuse the shared `.daily-lives` row (filled = left, hollow = spent,
   // last-life pulse) — the in-game row is hidden via CSS once finished.
@@ -444,11 +434,10 @@ function paintScoreRow(found, total, lives, { animate }) {
 
   container.append(scoreEl, stack, heartsEl);
 
-  scoreRow = { numEl, verdictEl, avgEl, streakEl, found, total, animate };
+  scoreRow = { numEl, verdictEl, avgEl, found, total, animate };
   runCountUp(numEl, found, animate);
   // Reflect any data that resolved before this (re)paint.
   updateScoreStats();
-  updateScoreStreak();
 }
 
 /**
@@ -549,29 +538,6 @@ function verdictText(v, l) {
 }
 
 /**
- * Fill (or hide) the streak line. Today-only (`streakEligible`) and gated at
- * `currentStreak ≥ 2`. On a fresh finish the first appearance shakes + flashes
- * (via `.daily-stats-streak-enter`); a revisit repaint is static.
- */
-function updateScoreStreak() {
-  if (!scoreRow) return;
-  const { streakEl, animate } = scoreRow;
-  if (!streakEligible || !streakState || streakState.currentStreak < STREAK_MIN_TO_SHOW) {
-    streakEl.hidden = true;
-    return;
-  }
-  streakEl.textContent = statsLabels().streakLine.replace('{n}', String(streakState.currentStreak));
-  streakEl.hidden = false;
-  if (animate && !streakAnimated) {
-    streakAnimated = true;
-    streakEl.classList.add('daily-stats-streak-enter');
-    streakEl.addEventListener('animationend', () => {
-      streakEl.classList.remove('daily-stats-streak-enter');
-    }, { once: true });
-  }
-}
-
-/**
  * Fetch stats for puzzle N and apply them across the result board (verdict,
  * average, per-tile %s, Missed sort, community section). The score row must
  * already be painted (by the caller) so the player sees their own number while
@@ -620,9 +586,9 @@ async function loadAndPaintStreak(deviceId, found, totalCount, opts = {}) {
     bypassCache: opts.bypassCache === true,
   });
   if (!streak) return;
+  // The streak line was removed from the board; this only refreshes the value
+  // the share text carries.
   streakState = streak;
-  // Fill just the streak line — the score number + community are independent.
-  updateScoreStreak();
 }
 
 /**
@@ -812,10 +778,9 @@ async function handleFinish(n, targets, all, info, isToday) {
   const newlyEarned = await refreshAchievementsAndDiff(deviceId);
   const fresh = getCachedAchievementsBaseline();
   if (fresh) {
+    // Keep the streak value fresh for the share text (the on-board streak line
+    // was removed to declutter the score row).
     streakState = fresh;
-    // Only fill the streak line when this is today's puzzle — surfacing it on
-    // an archive finish would falsely suggest the play extended the streak.
-    if (isToday) updateScoreStreak();
   }
   if (newlyEarned.length > 0) void celebrate(newlyEarned);
 }
@@ -897,8 +862,6 @@ export async function bootDaily() {
       // bumped it. Computed once at boot, threaded into the revisit
       // branch and handleFinish.
       const isToday = n === today;
-      // Today-only gate for the streak line (read by updateScoreStreak).
-      streakEligible = isToday;
       numEl.textContent = `${n}`;
       // Tab title carries #N so archived puzzles open in separate tabs
       // read distinctly. Override runs after bootI18n's data-i18n pass.
