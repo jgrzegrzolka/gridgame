@@ -890,6 +890,10 @@ export function startGame(n, category, targets, all, opts = {}) {
     finished = true;
     const found = foundCodes.size;
     const total = targetCodes.size;
+    // TEMP DIAGNOSTIC (replay-shows-result investigation): log every finish
+    // with a stack so we can see WHAT triggered it on a replay load. Remove
+    // once the intermittent bug is understood.
+    console.warn('[daily-diag] finish()', { found, total, search: location.search }, new Error('finish-trace').stack);
     // The run is over, so the unfinished-run record must go — otherwise
     // a reload after finishing would resume a game that already has a
     // score. Cleared before `saveScore` so that even if the save throws,

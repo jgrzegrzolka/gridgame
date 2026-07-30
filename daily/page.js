@@ -797,6 +797,10 @@ async function handleFinish(n, targets, all, info, isToday) {
  * either author tool can't crash live daily.
  */
 export async function bootDaily() {
+  // TEMP DIAGNOSTIC (replay-shows-result investigation): proves THIS page.js
+  // ran (vs a stale cached copy). If the result appears on a replay but this
+  // marker is absent from the console, the browser served an old page.js.
+  console.warn('[daily-diag] bootDaily build=fix-2026-07-30b', location.search);
   wireZoom();
   mountDevReset();
 
@@ -1003,6 +1007,8 @@ export async function bootDaily() {
         }
         stored = loadScores(window.localStorage)[n];
       }
+      // TEMP DIAGNOSTIC (replay-shows-result investigation).
+      console.warn('[daily-diag] revisit-gate', { isReplay, hasRecord: isCompleteRecord(stored), search: location.search });
       if (!isReplay && isCompleteRecord(stored)) {
         const foundCodes = new Set(stored.c);
         // The player's own wrong clicks, persisted alongside the found codes
