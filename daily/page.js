@@ -143,6 +143,9 @@ let scoreCurrent = 0;
  * it clears, a later repaint (e.g. tapping the average) renders static,
  * so the cascade doesn't replay. */
 let cascadeActive = false;
+/** Timestamp (ms) of the finish, so each header piece can be scheduled to
+ * fade in `targetMs` after the finish regardless of when its data lands. */
+let cascadeStart = 0;
 /** One-shot guard for the community section fade (it renders once when
  * stats land, so a simple once-flag is enough). */
 let communityFadedIn = false;
@@ -475,14 +478,24 @@ function paintScoreBlock(found, total) {
     countUpStarted = true;
     startCountUp(found);
   }
-  const labels = statsLabels();
+
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-personal-stats'));
   container.hidden = false;
-  container.innerHTML = '';
 
+  // Fresh finish, block already mounted → update IN PLACE. A later-landing
+  // streak (or stats) then only appends its own fact; it never rebuilds and
+  // re-flashes what has already faded in (the "średnia disappears and comes
+  // back" bug). Full rebuild is for the initial mount and the static
+  // revisit / language-switch paths.
+  if (freshFinish && container.querySelector('.daily-score-block')) {
+    syncScoreNum();
+    syncScoreFacts();
+    return;
+  }
+
+  container.innerHTML = '';
   const block = document.createElement('div');
   block.className = 'daily-score-block';
-
   const line = document.createElement('div');
   line.className = 'daily-score-line';
 
@@ -502,38 +515,76 @@ function paintScoreBlock(found, total) {
   value.appendChild(totalEl);
   line.appendChild(value);
 
-  // Facts: `· średnia: N` (tap → N graczy pill) then `· seria: N`
-  // (today only). Both muted, same size, colon-labelled. On a fresh
-  // finish each fades in once, as it arrives.
+  // Empty facts container; `syncScoreFacts` fills in the average / streak
+  // as they land (below, and on later async paints).
   const facts = document.createElement('div');
   facts.className = 'daily-score-facts';
-  if (communityStats && communityStats.totalAttempts > 0) {
-    const avg = buildAverageFact(labels, communityStats);
-    if (cascadeActive) avg.classList.add('daily-fade-avg');
-    facts.appendChild(avg);
-  }
-  if (resultIsToday && streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW) {
-    const streak = buildStreakFact(labels, streakState.currentStreak);
-    if (cascadeActive) streak.classList.add('daily-fade-seria');
-    // Explicit separator space: `.daily-score-streak` is inline-block, which
-    // strips its own leading whitespace — without this the streak butts
-    // straight against the average ("6,6· seria").
-    if (facts.childNodes.length > 0) facts.appendChild(document.createTextNode(' '));
-    facts.appendChild(streak);
-  }
   line.appendChild(facts);
   block.appendChild(line);
 
   // Share button (touch-only). Sits as the block's second child so the
   // space-between layout right-aligns it beside the score on mobile;
-  // desktop renders no button at all. Fades in once on a fresh finish.
+  // desktop renders no button at all. On a fresh finish it fades in LAST
+  // in the header cascade (score → średnia → seria → share).
   const shareBtn = createShareButton();
   if (shareBtn) {
-    if (cascadeActive) shareBtn.classList.add('daily-fade-share');
+    cascadeFade(shareBtn, 1500);
     block.appendChild(shareBtn);
   }
 
   container.appendChild(block);
+  syncScoreFacts();
+}
+
+/** Reflect the current count-up value onto the number element, if present. */
+function syncScoreNum() {
+  const numEl = document.querySelector('.daily-score-num');
+  if (numEl) numEl.textContent = String(scoreCurrent);
+}
+
+/**
+ * Ensure the average + streak facts are present, appending whichever has
+ * landed and isn't shown yet — without touching what's already there. On a
+ * fresh finish each fades in on the header cascade's clock (średnia 1.1s,
+ * seria 1.3s after the finish).
+ */
+function syncScoreFacts() {
+  const facts = /** @type {HTMLElement} */ (document.querySelector('.daily-score-facts'));
+  if (!facts) return;
+  const labels = statsLabels();
+  if (communityStats && communityStats.totalAttempts > 0 && !facts.querySelector('.daily-score-avg-wrap')) {
+    const avg = buildAverageFact(labels, communityStats);
+    cascadeFade(avg, 1100);
+    facts.appendChild(avg);
+  }
+  if (resultIsToday && streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW
+      && !facts.querySelector('.daily-score-streak')) {
+    const streak = buildStreakFact(labels, streakState.currentStreak);
+    cascadeFade(streak, 1300);
+    // Separator space — `.daily-score-streak` is inline-block, which strips
+    // its own leading whitespace, so without this the streak butts straight
+    // against the average ("6,6· seria").
+    if (facts.querySelector('.daily-score-avg-wrap')) facts.appendChild(document.createTextNode(' '));
+    facts.appendChild(streak);
+  }
+}
+
+/**
+ * Fade `el` in on the finish cascade's clock: it becomes visible `targetMs`
+ * after the finish, whenever the element was actually created (average /
+ * streak / share arrive on their own async cadence, so the delay is
+ * computed from the elapsed time, not baked into a class). Outside the
+ * cascade window — a revisit, or a late tap — it renders static.
+ * Reduced-motion is handled in CSS.
+ *
+ * @param {HTMLElement} el
+ * @param {number} targetMs
+ */
+function cascadeFade(el, targetMs) {
+  if (!cascadeActive) return;
+  const elapsed = Date.now() - cascadeStart;
+  el.style.animationDelay = `${Math.max(0, targetMs - elapsed)}ms`;
+  el.classList.add('daily-fade-in');
 }
 
 /**
@@ -556,19 +607,35 @@ function buildAverageFact(labels, stats) {
   avg.setAttribute('tabindex', '0');
   avg.title = labels.playersTooltip;
   avg.textContent = `· ${labels.average.replace('{average}', formatMean(stats.mean))}`;
-  const toggle = () => { playersPillOpen = !playersPillOpen; repaintScoreBlock(); };
+  const toggle = () => { playersPillOpen = !playersPillOpen; syncPlayersPill(); };
   avg.addEventListener('click', (e) => { e.preventDefault(); toggle(); });
   avg.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
   });
   wrap.appendChild(avg);
-  if (playersPillOpen) {
+  if (playersPillOpen) syncPlayersPill(wrap);
+  return wrap;
+}
+
+/**
+ * Add or remove the "N graczy" pill on the average, in place (no block
+ * rebuild), from `playersPillOpen`. Optionally scoped to a given wrap when
+ * called during the initial build.
+ *
+ * @param {HTMLElement} [wrap]
+ */
+function syncPlayersPill(wrap) {
+  const w = wrap || /** @type {HTMLElement | null} */ (document.querySelector('.daily-score-avg-wrap'));
+  if (!w) return;
+  const existing = w.querySelector('.daily-players-pill');
+  if (playersPillOpen && !existing && communityStats) {
     const pill = document.createElement('span');
     pill.className = 'daily-players-pill';
-    pill.textContent = labels.playerCount.replace('{count}', String(stats.totalAttempts));
-    wrap.appendChild(pill);
+    pill.textContent = statsLabels().playerCount.replace('{count}', String(communityStats.totalAttempts));
+    w.appendChild(pill);
+  } else if (!playersPillOpen && existing) {
+    existing.remove();
   }
-  return wrap;
 }
 
 /**
@@ -631,7 +698,7 @@ function wirePlayersPillDismiss() {
     const target = /** @type {HTMLElement | null} */ (e.target);
     if (target && target.closest && target.closest('[data-players-toggle]')) return;
     playersPillOpen = false;
-    repaintScoreBlock();
+    syncPlayersPill();
   }, true);
 }
 
@@ -874,6 +941,7 @@ async function handleFinish(n, targets, all, info, isToday) {
   // arrive; close it after the cascade completes so a later interaction
   // (tapping the average) repaints statically instead of replaying it.
   cascadeActive = true;
+  cascadeStart = Date.now();
   setTimeout(() => { cascadeActive = false; }, 2600);
   setShareCtx(n, targets, info.foundCodes);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
