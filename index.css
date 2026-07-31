@@ -103,6 +103,13 @@ body {
   inset: 0;
   animation: faceCalm 24s ease-in-out infinite;
 }
+/* One layer is the Jolly Roger — still an invented, no-country flag, so it
+ * keeps the row's "never a real country" rule while adding a bit of
+ * personality. Skull + crossbones in cream on the palette's near-black
+ * (reuses the deck's design; see flags/deckIcons.js JOLLY_ROGER). */
+.hero-stamp > i.stamp-jolly {
+  background: #241f22 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 24'%3E%3Cg stroke='%23f4efe6' stroke-width='2.4' stroke-linecap='round'%3E%3Cline x1='12' y1='13' x2='24' y2='19'/%3E%3Cline x1='24' y1='13' x2='12' y2='19'/%3E%3C/g%3E%3Cg fill='%23f4efe6'%3E%3Ccircle cx='11.4' cy='12.6' r='1.5'/%3E%3Ccircle cx='24.6' cy='12.6' r='1.5'/%3E%3Ccircle cx='11.4' cy='19.4' r='1.5'/%3E%3Ccircle cx='24.6' cy='19.4' r='1.5'/%3E%3C/g%3E%3Cellipse cx='18' cy='10.5' rx='5' ry='5.3' fill='%23f4efe6'/%3E%3Crect x='14.6' y='13.6' width='6.8' height='3.4' rx='1' fill='%23f4efe6'/%3E%3Ccircle cx='16' cy='10' r='1.4' fill='%23241f22'/%3E%3Ccircle cx='20' cy='10' r='1.4' fill='%23241f22'/%3E%3Crect x='17.3' y='11.6' width='1.4' height='2' fill='%23241f22'/%3E%3C/svg%3E") center / cover no-repeat;
+}
 @keyframes faceCalm {
   0%   { opacity: 1; }
   31%  { opacity: 1; }
