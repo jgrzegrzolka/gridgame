@@ -460,15 +460,20 @@
     "notFound": "Nie znaleziono zagadki.",
     "empty": "Brak zagadek.",
     "stats": {
-      "scoreOnly": "Twój wynik: {found}/{total}",
-      "averageOnly": "Średni wynik: {average}/{total}",
+      "average": "średnia: {average}",
       "playerCount": "{count} graczy",
-      "caption": "% pokazuje ilu innych graczy odgadło każdą flagę.",
-      "loading": "Ładowanie statystyk",
-      "extra": {
-        "ranking": "Najczęściej rozpoznane:",
-        "topMistake": "Najczęstszy błąd:"
-      }
+      "playersTooltip": "Ilu graczy rozwiązało dziś zagadkę",
+      "loading": "Ładowanie statystyk"
+    },
+    "result": {
+      "found": "Znalezione",
+      "missed": "Pominięte"
+    },
+    "mistake": {
+      "title": "Najczęstszy błąd innych graczy",
+      "showAll": "pokaż wszystkie pomyłki ({n})",
+      "showLess": "pokaż mniej",
+      "legend": "ten błąd zdarzył się też Tobie"
     },
     "share": {
       "aria": "Udostępnij wynik",
@@ -476,7 +481,13 @@
       "streakLine": "🔥 Seria {n} dni"
     },
     "streak": {
-      "line": "Seria: {n}"
+      "line": "seria: {n}"
+    },
+    "callout": {
+      "easiest": "najłatwiejsza",
+      "easiestPlural": "najłatwiejsze:",
+      "hardest": "najtrudniejsza",
+      "hardestPlural": "najtrudniejsze:"
     },
     "nextPuzzle": {
       "ghostLabel": "Następna zagadka"

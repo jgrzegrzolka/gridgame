@@ -4,7 +4,7 @@ import { buildAnswerPool } from './answerPool.js';
 import { todayN, dailyNFromUrl, isReplayFromUrl, resolveDailyPuzzle, manualToCategory, superlativeToCategory } from '../flags/daily.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
-import { loadScores, isCompleteRecord, migrateScores, livesFromRecord } from './scores.js';
+import { loadScores, isCompleteRecord, migrateScores } from './scores.js';
 import { loadProgress } from './progress.js';
 import { filterToCategory } from '../flags/findFlag.js';
 import {
@@ -27,7 +27,6 @@ import {
   setTileMeta,
   setCriteriaFilter,
   setCriteriaLead,
-  paintLives,
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.js';
@@ -38,7 +37,8 @@ import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
-import { pickExtraStats, hasAnyExtraStats, pickMarkerKind } from './extraStats.js';
+import { pickMistakes, splitMistakeRail, MISTAKE_COLLAPSE_CAP } from './extraStats.js';
+import { pickCallout } from './callout.js';
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
 import { fetchDailyMe } from './streakClient.js';
@@ -73,15 +73,33 @@ const SKIP_TURNSTILE = true;
  */
 function statsLabels() {
   return {
-    scoreOnly: t('daily.stats.scoreOnly', 'Your score: {found}/{total}'),
-    averageOnly: t('daily.stats.averageOnly', 'Average score: {average}/{total}'),
+    average: t('daily.stats.average', 'average: {average}'),
     playerCount: t('daily.stats.playerCount', '{count} players'),
-    caption: t('daily.stats.caption', '% shows how many other players found each flag.'),
+    playersTooltip: t('daily.stats.playersTooltip', "How many players solved today's puzzle"),
     loading: t('daily.stats.loading', 'Loading stats'),
-    extraRanking: t('daily.stats.extra.ranking', 'Most recognised:'),
-    extraTopMistake: t('daily.stats.extra.topMistake', 'Most common mistake:'),
-    streakLine: t('daily.streak.line', 'Streak: {n}'),
+    mistakeTitle: t('daily.mistake.title', "Other players' most common mistake"),
+    mistakeShowAll: t('daily.mistake.showAll', 'show all mistakes ({n})'),
+    mistakeShowLess: t('daily.mistake.showLess', 'show less'),
+    mistakeLegend: t('daily.mistake.legend', 'you made this mistake too'),
+    streakLine: t('daily.streak.line', 'streak: {n}'),
+    calloutEasiest: t('daily.callout.easiest', 'easiest'),
+    calloutEasiestPlural: t('daily.callout.easiestPlural', 'easiest:'),
+    calloutHardest: t('daily.callout.hardest', 'hardest'),
+    calloutHardestPlural: t('daily.callout.hardestPlural', 'hardest:'),
   };
+}
+
+/**
+ * Format the community mean for the score header. The number carries
+ * one decimal place (server rounds it there) and the separator follows
+ * the active locale — Polish shows `6,6`, English `6.6`. Whole means
+ * collapse to an integer (`3`, not `3,0`).
+ *
+ * @param {number} mean
+ */
+function formatMean(mean) {
+  const lang = document.documentElement.lang || 'en';
+  return mean.toLocaleString(lang, { maximumFractionDigits: 1 });
 }
 
 /**
@@ -97,17 +115,88 @@ function statsLabels() {
  */
 let streakState = null;
 
-/** Has the entry animation played for the streak yet this page load?
- * The shake + pink-to-primary colour flash should fire exactly once —
- * subsequent repaints (stats arriving after streak, language switch,
- * revisit re-paints) all reuse the same final-state styling. */
-let streakAnimated = false;
+/**
+ * Whether the result now on screen is a *fresh finish* (play just ended)
+ * vs a revisit / language re-paint. Only a fresh finish plays the
+ * count-up and the fade-ins; a revisit renders the final state at once.
+ * Set true in `handleFinish`, false on the revisit branch.
+ */
+let freshFinish = false;
 
+/** Whether the result on screen is today's puzzle. The streak (`seria`)
+ * segment shows on today's puzzle only — an archive revisit's streak
+ * would falsely read as if that replay bumped the counter. Set alongside
+ * `freshFinish` on both the finish and revisit paths. */
+let resultIsToday = false;
+
+/** Has the score count-up been kicked off this page load? Guards against
+ * the repaints (average, streak, pill) restarting it. */
+let countUpStarted = false;
+/** The currently-shown score number — animated 0 → found on a fresh
+ * finish, or the final value directly on a revisit. */
+let scoreCurrent = 0;
+
+/** True during the finish cascade window (~2.6s). While set, the score
+ * header's average / streak / share get their staggered delay-fade
+ * classes on each (re)paint, so they cascade in — score → średnia →
+ * seria → share — even as stats/streak land and rebuild the block. Once
+ * it clears, a later repaint (e.g. tapping the average) renders static,
+ * so the cascade doesn't replay. */
+let cascadeActive = false;
+/** One-shot guard for the community section fade (it renders once when
+ * stats land, so a simple once-flag is enough). */
+let communityFadedIn = false;
 
 /** Threshold for showing the finish-screen streak line. Settled in
  * FEATURE.md: a single completion isn't a "streak", and surfacing
  * "Day streak: 1" the first time someone finishes is just clutter. */
 const STREAK_MIN_TO_SHOW = 2;
+
+/** True when the viewer has asked the OS to reduce motion — the count-up
+ * jumps straight to the final value (CSS handles the fade/drop animations
+ * via its own media query). */
+function prefersReducedMotion() {
+  return typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * The player's own score, held module-scope so any of the async data
+ * sources that feed the header (community average, streak) can repaint
+ * the whole score block once they land without threading found/total
+ * back through their own call chains. `null` until the first paint.
+ *
+ * @type {{ found: number, total: number } | null}
+ */
+let scoreState = null;
+
+/**
+ * Last community stats in view (with `mean` + `totalAttempts`), or null
+ * when none exist yet / the fetch failed. Read by `paintScoreBlock` to
+ * render the inline `średnia: N` fact and the "N graczy" pill. Set by
+ * `paintCommunityStats`, which then repaints the score block.
+ *
+ * @type {{ totalAttempts: number, mean: number } | null}
+ */
+let communityStats = null;
+
+/** Whether the tap-to-reveal "N graczy" pill above `średnia` is open.
+ * Module-scope because `paintScoreBlock` rebuilds the block from
+ * scratch on every repaint — the open state has to outlive the DOM. */
+let playersPillOpen = false;
+
+/** Whether the mistake rail is expanded (showing every mistake, incl.
+ * the one-off single-player clicks) vs collapsed to the repeated ones.
+ * Reset to collapsed each time the rail is freshly rendered. */
+let mistakesExpanded = false;
+
+/**
+ * Enough to repaint just the mistake rail on a toggle without re-running
+ * the whole community render. Set by `renderExtraStats`.
+ *
+ * @type {{ mistakes: Array<{ code: string, count: number }>, all: Country[], userWrongCodes?: Set<string> } | null}
+ */
+let mistakeRailState = null;
 
 /**
  * Look up a country by 2-letter code in the loaded list. Used by the
@@ -124,24 +213,22 @@ function findCountry(all, code) {
 }
 
 /**
- * Build one flag tile for the extra-stats rail. Mirrors the result-page
+ * Build one flag tile for the mistake rail. Mirrors the result-page
  * tile structure (`.find-tile` + `.find-stats-pct` bottom badge) so the
- * three rail sections render with identical sizing, borders, hover
- * tooltips and percentage strip as the Znalezione/Pominięte grids above.
+ * rail renders with identical sizing, borders, hover tooltips and
+ * percentage strip as the Znalezione/Pominięte grids above.
  *
- * `markerKind` adds a small top-right corner dot — green when the player
- * found this flag, red when they missed it. null skips the dot.
+ * `isMine` adds a small red top-right corner dot when the player clicked
+ * this distractor themselves ("I made this mistake too").
  *
- * @param {{ code: string, pct?: number, count?: number }} item
+ * @param {{ code: string, count: number }} item
  * @param {Country | null} country
- * @param {'found' | 'missed' | 'wrong' | null} markerKind
+ * @param {boolean} isMine
  */
-function buildExtraTile(item, country, markerKind) {
+function buildExtraTile(item, country, isMine) {
   const li = document.createElement('li');
   li.className = 'find-tile';
-  if (markerKind === 'found') li.classList.add('is-user-found');
-  else if (markerKind === 'missed') li.classList.add('is-user-missed');
-  else if (markerKind === 'wrong') li.classList.add('is-user-wrong');
+  if (isMine) li.classList.add('is-user-wrong');
   li.dataset.code = item.code;
   li.dataset.name = country ? countryName(country) : item.code.toUpperCase();
   if (country) li.addEventListener('click', () => openZoom(country));
@@ -152,205 +239,430 @@ function buildExtraTile(item, country, markerKind) {
   li.appendChild(img);
   const badge = document.createElement('span');
   badge.className = 'find-stats-pct';
-  badge.textContent = item.pct !== undefined ? `${item.pct}%` : `×${item.count}`;
+  badge.textContent = `×${item.count}`;
   li.appendChild(badge);
   return li;
 }
 
 /**
- * Mount the "Mostly guessed / Most missed / Most common mistake" rail
- * under the Znalezione/Pominięte sections, matching their h2 + grid
- * visual pattern. Idempotent — clears the container first so a stats
- * refetch (post-finish, language switch) doesn't stack rows.
- *
- * Each row only renders when its picks list is non-empty; the whole
- * rail is skipped when all three are empty (no submissions yet, or a
- * legacy cached response without perWrongCode).
+ * Render the whole community section — the callout line describing the
+ * round's spread, then the "most common mistake" rail. Both derive from
+ * the same community `stats`, so keeping them in one call keeps them in
+ * sync across the finish / revisit / language-switch repaints.
  *
  * @param {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> } | null} stats
  * @param {Country[]} targets
  * @param {Country[]} all
- * @param {Set<string>} userFoundCodes
- * @param {Set<string>} [userWrongCodes] the player's own wrong clicks, so the
- *   "Most common mistake" row can mark the ones they made too.
+ * @param {Set<string>} [userWrongCodes]
  */
-function renderExtraStats(stats, targets, all, userFoundCodes, userWrongCodes) {
-  const container = /** @type {HTMLElement} */ (document.getElementById('daily-extra-stats'));
+function renderCommunity(stats, targets, all, userWrongCodes) {
+  renderCallout(pickCallout({ stats, targetCodes: targets.map((c) => c.code) }), all);
+  renderExtraStats(stats, all, userWrongCodes);
+  // On a fresh finish the community section fades in once as it lands.
+  if (freshFinish && !communityFadedIn) {
+    communityFadedIn = true;
+    for (const id of ['daily-callout', 'daily-extra-stats']) {
+      const el = /** @type {HTMLElement} */ (document.getElementById(id));
+      if (el && !el.hidden) el.classList.add('daily-fade-in');
+    }
+  }
+}
+
+/**
+ * Render the callout line into `#daily-callout`: `najłatwiejsza · USA
+ * 71% · najtrudniejsza · Grenada 0%`. Idempotent — clears + hides first,
+ * so a repaint never stacks. Layout per `callout.kind`:
+ *
+ *   - 'none'     → nothing (no community data).
+ *   - 'allEqual' → one fact: `najłatwiejsze:` + every flag + shared %.
+ *   - 'spread'   → easiest fact then hardest fact; a single-code end
+ *                  names the country, a tied end renders the flag row.
+ *
+ * @param {import('./callout.js').Callout} callout
+ * @param {Country[]} all
+ */
+function renderCallout(callout, all) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-callout'));
   container.innerHTML = '';
   container.hidden = true;
-
-  if (!stats) return;
-  const targetCodes = new Set(targets.map((c) => c.code));
-  const picks = pickExtraStats({ stats, targetCodes: targets.map((c) => c.code) });
-  if (!hasAnyExtraStats(picks)) return;
+  if (!callout || callout.kind === 'none') return;
 
   const labels = statsLabels();
-  appendExtraRow(container, labels.extraRanking, picks.ranking, all, targetCodes, userFoundCodes, userWrongCodes);
-  appendExtraRow(container, labels.extraTopMistake, picks.topMistake, all, targetCodes, userFoundCodes, userWrongCodes);
-
+  if (callout.kind === 'allEqual') {
+    container.appendChild(buildCalloutFact(true, callout.codes, callout.pct, all, labels));
+  } else {
+    container.appendChild(buildCalloutFact(true, callout.easiest.codes, callout.easiest.pct, all, labels));
+    container.appendChild(buildCalloutFact(false, callout.hardest.codes, callout.hardest.pct, all, labels));
+  }
   container.hidden = false;
 }
 
 /**
- * @param {HTMLElement} parent
- * @param {string} label
- * @param {Array<{ code: string, pct?: number, count?: number }>} items
+ * Build one end of the callout. A single code renders `[flag] label ·
+ * Name pct`; two or more render `label: [flag flag …] pct` (plural
+ * label, no name). The % is ink-bold; everything else is muted.
+ *
+ * @param {boolean} easiest
+ * @param {string[]} codes
+ * @param {number} pct
  * @param {Country[]} all
- * @param {Set<string>} targetCodes
- * @param {Set<string>} userFoundCodes
- * @param {Set<string>} [userWrongCodes]
+ * @param {ReturnType<typeof statsLabels>} labels
  */
-function appendExtraRow(parent, label, items, all, targetCodes, userFoundCodes, userWrongCodes) {
-  if (items.length === 0) return;
-  const title = document.createElement('h2');
-  title.className = 'result-section-title';
-  title.textContent = label;
-  parent.appendChild(title);
-  const ul = document.createElement('ul');
-  ul.className = 'find-result-found';
-  for (const item of items) {
-    const marker = pickMarkerKind({ code: item.code, targetCodes, userFoundCodes, userWrongCodes });
-    ul.appendChild(buildExtraTile(item, findCountry(all, item.code), marker));
+function buildCalloutFact(easiest, codes, pct, all, labels) {
+  const fact = document.createElement('span');
+  fact.className = 'daily-callout-fact';
+  const pctEl = document.createElement('b');
+  pctEl.className = 'daily-callout-pct';
+  pctEl.textContent = `${pct}%`;
+
+  if (codes.length === 1) {
+    const country = findCountry(all, codes[0]);
+    const name = country ? countryName(country) : codes[0].toUpperCase();
+    fact.appendChild(buildCalloutFlag(codes[0], country));
+    const label = document.createElement('span');
+    label.className = 'daily-callout-label';
+    label.textContent = `${easiest ? labels.calloutEasiest : labels.calloutHardest} · ${name}`;
+    fact.appendChild(label);
+    fact.appendChild(pctEl);
+  } else {
+    const label = document.createElement('span');
+    label.className = 'daily-callout-label';
+    label.textContent = easiest ? labels.calloutEasiestPlural : labels.calloutHardestPlural;
+    fact.appendChild(label);
+    const row = document.createElement('span');
+    row.className = 'daily-callout-flags';
+    for (const code of codes) row.appendChild(buildCalloutFlag(code, findCountry(all, code)));
+    fact.appendChild(row);
+    fact.appendChild(pctEl);
   }
-  parent.appendChild(ul);
+  return fact;
 }
 
 /**
- * Paint the **personal stats** slot (above Found): the player's score,
- * an optional streak segment when `currentStreak ≥ 2`, and an inline
- * share button on touch devices. Always renders the moment a result is
- * in view — no network fetch needed, so the score is visible instantly.
+ * A single callout flag thumbnail (26×20, 24×18 on mobile via CSS).
  *
- * Repainted on every change to module-scope state (streak resolves,
- * language switch) — share button, streak entry animation, and DOM
- * cleanup all rebuild from scratch via createShareButton and the
- * streakAnimated flag.
+ * @param {string} code
+ * @param {Country | null} country
+ */
+function buildCalloutFlag(code, country) {
+  const img = document.createElement('img');
+  img.className = 'daily-callout-flag';
+  img.src = `../flags/svg/${code}.svg`;
+  img.alt = country ? countryName(country) : code.toUpperCase();
+  img.loading = 'lazy';
+  return img;
+}
+
+/**
+ * Mount the "Najczęstszy błąd innych graczy" rail under the community
+ * callout. Collapsed by default: it shows only the *repeated* mistakes
+ * (clicked by ≥ 2 players), capped at `MISTAKE_COLLAPSE_CAP`, so a
+ * one-off click by a single player never reads as "a common mistake".
+ * A "pokaż wszystkie pomyłki (N)" toggle reveals the full list.
+ *
+ * The whole rail is skipped when there are no repeated mistakes (no
+ * submissions yet, all one-offs, or a legacy cached response without
+ * perWrongCode) — better nothing than a heading over an empty grid.
+ *
+ * @param {{ totalAttempts: number, perWrongCode?: Record<string, number> } | null} stats
+ * @param {Country[]} all
+ * @param {Set<string>} [userWrongCodes] the player's own wrong clicks, so the
+ *   rail can mark the distractors they clicked too.
+ */
+function renderExtraStats(stats, all, userWrongCodes) {
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-extra-stats'));
+  container.innerHTML = '';
+  container.hidden = true;
+  mistakesExpanded = false; // fresh render always starts collapsed
+  mistakeRailState = null;
+
+  if (!stats) return;
+  const mistakes = pickMistakes({ stats });
+  if (splitMistakeRail(mistakes, false).repeatedCount === 0) return;
+
+  mistakeRailState = { mistakes, all, userWrongCodes };
+  paintMistakeRail();
+  container.hidden = false;
+}
+
+/**
+ * (Re)paint the mistake rail from `mistakeRailState` + `mistakesExpanded`
+ * — heading, the tile grid, then a controls row (the expand/collapse
+ * toggle, the singles tail when collapsed, and the red-dot legend when
+ * any visible tile is the player's own mistake). Called on first render
+ * and again on every toggle, so only the rail redraws.
+ */
+function paintMistakeRail() {
+  if (!mistakeRailState) return;
+  const { mistakes, all, userWrongCodes } = mistakeRailState;
+  const container = /** @type {HTMLElement} */ (document.getElementById('daily-extra-stats'));
+  container.innerHTML = '';
+  const labels = statsLabels();
+  const split = splitMistakeRail(mistakes, mistakesExpanded);
+
+  const title = document.createElement('h2');
+  title.className = 'result-section-title';
+  title.textContent = labels.mistakeTitle;
+  container.appendChild(title);
+
+  const ul = document.createElement('ul');
+  ul.className = 'find-result-found';
+  let anyMine = false;
+  for (const item of split.tiles) {
+    const isMine = userWrongCodes ? userWrongCodes.has(item.code) : false;
+    anyMine = anyMine || isMine;
+    ul.appendChild(buildExtraTile(item, findCountry(all, item.code), isMine));
+  }
+  container.appendChild(ul);
+
+  // Controls: a toggle exists whenever there's more than the collapsed
+  // set (extra repeated beyond the cap, or any one-off singles).
+  const collapsedShown = Math.min(split.repeatedCount, MISTAKE_COLLAPSE_CAP);
+  const canExpand = split.totalCount > collapsedShown;
+  if (canExpand || anyMine) {
+    const controls = document.createElement('div');
+    controls.className = 'daily-mistake-controls';
+    if (canExpand) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'daily-mistake-toggle';
+      toggle.textContent = mistakesExpanded
+        ? labels.mistakeShowLess
+        : labels.mistakeShowAll.replace('{n}', String(split.totalCount));
+      toggle.addEventListener('click', () => {
+        mistakesExpanded = !mistakesExpanded;
+        paintMistakeRail();
+      });
+      controls.appendChild(toggle);
+    }
+    if (anyMine) {
+      const legend = document.createElement('span');
+      legend.className = 'daily-mistake-legend';
+      const dot = document.createElement('span');
+      dot.className = 'daily-mistake-legend-dot';
+      legend.appendChild(dot);
+      legend.appendChild(document.createTextNode(labels.mistakeLegend));
+      controls.appendChild(legend);
+    }
+    container.appendChild(controls);
+  }
+}
+
+/**
+ * Paint the **score block** at the top of the result (above Found): a
+ * single line — the player's score `14/22`, then the muted facts
+ * `· średnia: 6,6 · seria: 51`. The average is tappable and reveals a
+ * dark "N graczy" pill; the streak segment shows on today's puzzle only
+ * (`currentStreak ≥ 2`). On touch devices the share button rides along
+ * (Step 6 restyles / positions it). Always renders the instant a result
+ * is in view — the score needs no network — and repaints whenever any
+ * feeding state lands (community average, streak, language switch).
+ *
+ * Reads the module-scope `communityStats` / `streakState`; stores the
+ * score in `scoreState` so those async sources can repaint the block
+ * without threading found/total back through their own call chains.
  *
  * @param {number} found
  * @param {number} total
  */
-function paintPersonalStats(found, total) {
+function paintScoreBlock(found, total) {
+  scoreState = { found, total };
+  // On a fresh finish the number counts up (kicked off once); a revisit
+  // shows the final value at once.
+  if (!freshFinish) {
+    scoreCurrent = found;
+  } else if (!countUpStarted) {
+    countUpStarted = true;
+    startCountUp(found);
+  }
   const labels = statsLabels();
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-personal-stats'));
   container.hidden = false;
   container.innerHTML = '';
-  const h = document.createElement('p');
-  h.className = 'daily-stats-headline';
 
-  // Inline composition: score → (· streak when ≥ 2) → (· share icon
-  // when on touch). The headline runs as inline text (no flex) so the
-  // share button stays glued to its preceding text when a narrow
-  // viewport wraps the line — otherwise flex-wrap puts the button on
-  // its own row, which is uglier than a natural mid-text wrap.
-  //
-  // Streak is its own span (rather than concatenated into the score
-  // text) so the entry animation can target just the streak — first-
-  // time appearance shakes + flashes secondary-pink, then settles to
-  // inherit the headline's primary colour.
+  const block = document.createElement('div');
+  block.className = 'daily-score-block';
+
+  const line = document.createElement('div');
+  line.className = 'daily-score-line';
+
+  // Score: big value (the count-up's current tick) + muted /total. The
+  // value sits in an inline-block sized to the total's digit width so the
+  // count-up ticking 9 → 10 never nudges the /total beside it.
+  const value = document.createElement('div');
+  value.className = 'daily-score-value';
+  const num = document.createElement('span');
+  num.className = 'daily-score-num';
+  num.style.minWidth = `${String(total).length}ch`;
+  num.textContent = String(scoreCurrent);
+  value.appendChild(num);
+  const totalEl = document.createElement('span');
+  totalEl.className = 'daily-score-total';
+  totalEl.textContent = `/${total}`;
+  value.appendChild(totalEl);
+  line.appendChild(value);
+
+  // Facts: `· średnia: N` (tap → N graczy pill) then `· seria: N`
+  // (today only). Both muted, same size, colon-labelled. On a fresh
+  // finish each fades in once, as it arrives.
+  const facts = document.createElement('div');
+  facts.className = 'daily-score-facts';
+  if (communityStats && communityStats.totalAttempts > 0) {
+    const avg = buildAverageFact(labels, communityStats);
+    if (cascadeActive) avg.classList.add('daily-fade-avg');
+    facts.appendChild(avg);
+  }
+  if (resultIsToday && streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW) {
+    const streak = buildStreakFact(labels, streakState.currentStreak);
+    if (cascadeActive) streak.classList.add('daily-fade-seria');
+    // Explicit separator space: `.daily-score-streak` is inline-block, which
+    // strips its own leading whitespace — without this the streak butts
+    // straight against the average ("6,6· seria").
+    if (facts.childNodes.length > 0) facts.appendChild(document.createTextNode(' '));
+    facts.appendChild(streak);
+  }
+  line.appendChild(facts);
+  block.appendChild(line);
+
+  // Share button (touch-only). Sits as the block's second child so the
+  // space-between layout right-aligns it beside the score on mobile;
+  // desktop renders no button at all. Fades in once on a fresh finish.
   const shareBtn = createShareButton();
-  const showStreak = streakState && streakState.currentStreak >= STREAK_MIN_TO_SHOW;
-  const textEl = document.createElement('span');
-  textEl.textContent = labels.scoreOnly
-    .replace('{found}', String(found))
-    .replace('{total}', String(total));
-  h.appendChild(textEl);
-  if (showStreak) {
-    h.appendChild(document.createTextNode(' · '));
-    const streakSpan = document.createElement('span');
-    streakSpan.className = streakAnimated
-      ? 'daily-stats-streak'
-      : 'daily-stats-streak daily-stats-streak-enter';
-    streakSpan.textContent = labels.streakLine.replace('{n}', String(streakState.currentStreak));
-    if (!streakAnimated) {
-      streakAnimated = true;
-      // Drop the entry class after the animation completes so the
-      // span is back to a plain inline-block — keeps the DOM honest
-      // about its current visual state (no leftover animation hook).
-      streakSpan.addEventListener('animationend', () => {
-        streakSpan.classList.remove('daily-stats-streak-enter');
-      }, { once: true });
-    }
-    h.appendChild(streakSpan);
-  }
-  // No trailing space after the dot — the share-link button has 6px
-  // left padding (common.css .share-link) which gives the gap to the
-  // icon glyph. Adding a trailing space stacks on top of the padding
-  // and breaks the rhythm vs the "2 · " separator before this one.
   if (shareBtn) {
-    h.appendChild(document.createTextNode(' ·'));
-    h.appendChild(shareBtn);
+    if (cascadeActive) shareBtn.classList.add('daily-fade-share');
+    block.appendChild(shareBtn);
   }
-  container.appendChild(h);
+
+  container.appendChild(block);
 }
 
 /**
- * Paint the **community stats** slot (below Missed): the community
- * average + the caption explaining per-tile %s, or an animated
- * "Loading stats…" placeholder while the fetch pipeline runs.
+ * Build the `· średnia: N` fact — a tappable label that toggles a dark
+ * "N graczy" pill floated above it. The pill's open state lives in the
+ * module-scope `playersPillOpen` (the block rebuilds on every repaint,
+ * so the DOM can't hold it); a document-level dismiss listener wired in
+ * `bootDaily` closes it on an outside click.
  *
- * Hidden entirely (along with the caption) when no community data
- * exists and we're not loading — keeps the result panel from showing
- * an empty section on fetch failure or "be the first" puzzles. The
- * personal slot at the top still shows the score, so the player
- * always has their own number even when community is silent.
+ * @param {ReturnType<typeof statsLabels>} labels
+ * @param {{ totalAttempts: number, mean: number }} stats
+ */
+function buildAverageFact(labels, stats) {
+  const wrap = document.createElement('span');
+  wrap.className = 'daily-score-avg-wrap';
+  const avg = document.createElement('span');
+  avg.className = 'daily-score-avg';
+  avg.dataset.playersToggle = '1';
+  avg.setAttribute('role', 'button');
+  avg.setAttribute('tabindex', '0');
+  avg.title = labels.playersTooltip;
+  avg.textContent = `· ${labels.average.replace('{average}', formatMean(stats.mean))}`;
+  const toggle = () => { playersPillOpen = !playersPillOpen; repaintScoreBlock(); };
+  avg.addEventListener('click', (e) => { e.preventDefault(); toggle(); });
+  avg.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+  wrap.appendChild(avg);
+  if (playersPillOpen) {
+    const pill = document.createElement('span');
+    pill.className = 'daily-players-pill';
+    pill.textContent = labels.playerCount.replace('{count}', String(stats.totalAttempts));
+    wrap.appendChild(pill);
+  }
+  return wrap;
+}
+
+/**
+ * Build the `· seria: N` fact. Plain muted text; the caller adds the
+ * one-shot fade-in on a fresh finish (no shake — the locked design fades
+ * it in like the average).
+ *
+ * @param {ReturnType<typeof statsLabels>} labels
+ * @param {number} currentStreak
+ */
+function buildStreakFact(labels, currentStreak) {
+  const streakSpan = document.createElement('span');
+  streakSpan.className = 'daily-score-streak';
+  streakSpan.textContent = ` · ${labels.streakLine.replace('{n}', String(currentStreak))}`;
+  return streakSpan;
+}
+
+/**
+ * Kick off the score count-up 0 → target. The DOM already shows 0 before
+ * this fires (paintScoreBlock reads `scoreCurrent`), so the final value
+ * never flashes. Reduced-motion jumps straight to the target.
+ *
+ * @param {number} target
+ */
+function startCountUp(target) {
+  if (prefersReducedMotion()) {
+    scoreCurrent = target;
+    return;
+  }
+  scoreCurrent = 0;
+  // Start after the entrance slide settles, then tick ~60ms/step. Update
+  // ONLY the number element (re-found each tick, since an async repaint —
+  // average / streak landing — can replace it). A full repaintScoreBlock
+  // here would rebuild the average / streak / share on every tick and
+  // restart their fade-ins mid-flight.
+  setTimeout(() => {
+    const iv = setInterval(() => {
+      scoreCurrent = Math.min(scoreCurrent + 1, target);
+      const numEl = document.querySelector('.daily-score-num');
+      if (numEl) numEl.textContent = String(scoreCurrent);
+      if (scoreCurrent >= target) clearInterval(iv);
+    }, 60);
+  }, 450);
+}
+
+/** Repaint the score block from module-scope state, if it's on screen. */
+function repaintScoreBlock() {
+  if (scoreState) paintScoreBlock(scoreState.found, scoreState.total);
+}
+
+/**
+ * Close the "N graczy" pill on any click outside the `średnia` toggle.
+ * Wired once from `bootDaily`. Capture phase so it sees the click before
+ * the toggle's own handler; a click *on* the toggle is ignored here and
+ * left to that handler to flip the state.
+ */
+function wirePlayersPillDismiss() {
+  document.addEventListener('click', (e) => {
+    if (!playersPillOpen) return;
+    const target = /** @type {HTMLElement | null} */ (e.target);
+    if (target && target.closest && target.closest('[data-players-toggle]')) return;
+    playersPillOpen = false;
+    repaintScoreBlock();
+  }, true);
+}
+
+/**
+ * Record the community stats and surface the average in the score block.
+ * The average used to render its own line below Missed; it now lives
+ * inline in the top score block, so this stores `communityStats` and
+ * repaints the block. The bottom `#daily-stats` slot carries only the
+ * transient "Loading stats…" indicator now (once stats land the average
+ * has moved up and the slot is empty).
  *
  * @param {{ totalAttempts: number, mean: number, perCodeFinds: Record<string, number> } | null} stats
- * @param {number} total
+ * @param {number} total unused — kept so callers don't have to change;
+ *   the total comes from `scoreState` now.
  * @param {{ loading?: boolean }} [opts]
  */
 function paintCommunityStats(stats, total, opts = {}) {
   const labels = statsLabels();
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
   container.innerHTML = '';
-  const captionEl = /** @type {HTMLElement} */ (document.getElementById('daily-caption'));
 
   const hasAverage = stats && stats.totalAttempts > 0;
-  const showCommunity = hasAverage || opts.loading === true;
-  container.hidden = !showCommunity;
+  communityStats = hasAverage ? stats : null;
+  if (!hasAverage) playersPillOpen = false; // no average → no pill to keep open
+  if (scoreState) repaintScoreBlock();
 
-  if (!showCommunity) {
-    captionEl.textContent = '';
-    captionEl.hidden = true;
-    return;
-  }
-
-  if (hasAverage) {
-    const h = document.createElement('p');
-    h.className = 'daily-stats-headline';
-    // Only the score value ("6.4/8") carries the tooltip — not the whole
-    // line — so hovering the label text or the empty space past it does
-    // nothing. Split the template on the score token and wrap just that
-    // run in a `.hover-tip` span. Uses the shared bubble (common.css) so
-    // it matches the flag-tile hover labels; the `--cursor` variant
-    // floats it at the pointer, fed by the mousemove handler below.
-    const tipText = labels.playerCount.replace('{count}', String(stats.totalAttempts));
-    const parts = labels.averageOnly.split('{average}/{total}');
-    if (parts.length === 2) {
-      h.appendChild(document.createTextNode(parts[0]));
-      const score = document.createElement('span');
-      score.className = 'hover-tip hover-tip--cursor';
-      score.dataset.tip = tipText;
-      score.textContent = `${stats.mean}/${total}`;
-      score.addEventListener('mousemove', (e) => {
-        const r = score.getBoundingClientRect();
-        score.style.setProperty('--tip-x', `${e.clientX - r.left}px`);
-        score.style.setProperty('--tip-y', `${e.clientY - r.top}px`);
-      });
-      h.appendChild(score);
-      h.appendChild(document.createTextNode(parts[1]));
-    } else {
-      // Locale template without the expected "{average}/{total}" run:
-      // fall back to a plain line, no scoped tooltip.
-      h.textContent = labels.averageOnly
-        .replace('{average}', String(stats.mean))
-        .replace('{total}', String(total));
-    }
-    container.appendChild(h);
-  }
-  if (opts.loading) {
+  if (opts.loading === true) {
     // Three pulsing dots after the label — CSS animates them in a wave
     // so the player can tell something is happening across the long
     // mobile path (Turnstile execute → POST → stats GET).
+    container.hidden = false;
     const l = document.createElement('p');
     l.className = 'daily-stats-loading';
     l.textContent = labels.loading;
@@ -360,17 +672,8 @@ function paintCommunityStats(stats, total, opts = {}) {
     dots.innerHTML = '<span></span><span></span><span></span>';
     l.appendChild(dots);
     container.appendChild(l);
-  }
-  // Caption only when stats arrived AND we have per-tile overlays to
-  // explain. The score-only / loading states don't need it.
-  // Lives in #daily-caption (separate slot) so the legend appears
-  // beneath all the flags it describes, not stuck to the headline.
-  if (hasAverage) {
-    captionEl.textContent = labels.caption;
-    captionEl.hidden = false;
   } else {
-    captionEl.textContent = '';
-    captionEl.hidden = true;
+    container.hidden = true;
   }
 }
 
@@ -388,11 +691,10 @@ function paintCommunityStats(stats, total, opts = {}) {
  * @param {Country[]} targets
  * @param {number} found
  * @param {Country[]} all
- * @param {Set<string>} userFoundCodes
  * @param {Set<string>} userWrongCodes
  * @param {{ bypassCache?: boolean }} [opts]
  */
-async function loadAndPaintStats(n, targets, found, all, userFoundCodes, userWrongCodes, opts = {}) {
+async function loadAndPaintStats(n, targets, found, all, userWrongCodes, opts = {}) {
   const stats = await fetchStats(n, { bypassCache: opts.bypassCache === true });
   if (!stats) {
     // Fetch failed — hide the community slot (the personal slot at
@@ -404,7 +706,7 @@ async function loadAndPaintStats(n, targets, found, all, userFoundCodes, userWro
   paintCommunityStats(stats, targets.length);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
   applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
-  renderExtraStats(stats, targets, all, userFoundCodes, userWrongCodes);
+  renderCommunity(stats, targets, all, userWrongCodes);
 }
 
 /**
@@ -431,7 +733,7 @@ async function loadAndPaintStreak(deviceId, found, totalCount, opts = {}) {
   // Repaint just the personal slot — streak lives there and the
   // community slot is independent (its state was already painted by
   // loadAndPaintStats / handleFinish.onStats).
-  paintPersonalStats(found, totalCount);
+  paintScoreBlock(found, totalCount);
 }
 
 /**
@@ -563,6 +865,16 @@ function createShareButton() {
  *   archive replay would falsely suggest the replay just bumped it.
  */
 async function handleFinish(n, targets, all, info, isToday) {
+  // A natural finish plays the count-up + fade-in choreography; the
+  // score block, community section, and (renderResult's) grids all read
+  // this flag. Revisits leave it false and render the final state.
+  freshFinish = true;
+  resultIsToday = isToday;
+  // Open the cascade window: the header pieces fade in staggered as they
+  // arrive; close it after the cascade completes so a later interaction
+  // (tapping the average) repaints statically instead of replaying it.
+  cascadeActive = true;
+  setTimeout(() => { cascadeActive = false; }, 2600);
   setShareCtx(n, targets, info.foundCodes);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
@@ -593,7 +905,7 @@ async function handleFinish(n, targets, all, info, isToday) {
     submitResult,
     fetchStats,
     onLoading: () => {
-      paintPersonalStats(found, info.totalCount);
+      paintScoreBlock(found, info.totalCount);
       paintCommunityStats(null, info.totalCount, { loading: true });
     },
     onCleared: () => paintCommunityStats(null, info.totalCount),
@@ -601,7 +913,7 @@ async function handleFinish(n, targets, all, info, isToday) {
       paintCommunityStats(stats, targets.length);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-missed')), stats);
-      renderExtraStats(stats, targets, all, new Set(info.foundCodes), new Set(info.wrongCodes));
+      renderCommunity(stats, targets, all, new Set(info.wrongCodes));
     },
   });
 
@@ -620,7 +932,7 @@ async function handleFinish(n, targets, all, info, isToday) {
     // Only repaint the streak sub-line when this is today's puzzle —
     // surfacing it on an archive finish would falsely suggest the play
     // extended the streak counter.
-    if (isToday) paintPersonalStats(found, info.totalCount);
+    if (isToday) paintScoreBlock(found, info.totalCount);
   }
   if (newlyEarned.length > 0) void celebrate(newlyEarned);
 }
@@ -639,6 +951,7 @@ async function handleFinish(n, targets, all, info, isToday) {
 export async function bootDaily() {
   wireZoom();
   mountDevReset();
+  wirePlayersPillDismiss();
 
   // Feature W: resolve identity durably before anything reads local caches —
   // restoring the original deviceId + rebuilding `daily.scores` from Cosmos if
@@ -850,26 +1163,20 @@ export async function bootDaily() {
         // mistake" row simply stays unmarked). Powers the self-mistake dot.
         const wrongCodes = new Set(stored.w || []);
         const revisitDeviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
+        // Revisit renders the final state — no count-up, no fades (motion
+        // is for the finish moment). renderResult without `animate` leaves
+        // the panel class-free.
+        freshFinish = false;
+        resultIsToday = isToday;
         // Wait on the (best-effort) metric fetch so a revisit paints the rank +
         // population overlay on the first render rather than a beat later.
         await popReady;
         renderResult(result.targets, foundCodes, category.label);
-        // Redraw the heart row from the saved record. `startGame` never runs
-        // on this path, so without it the row sits empty for a run that had a
-        // real budget — and since every visit after finishing is a revisit,
-        // that is the state players see most of the time. Uncapped runs
-        // (played before the budget shipped) return null and draw nothing,
-        // rather than inventing a constraint they never faced.
-        const revisitLives = livesFromRecord(stored);
-        if (revisitLives) {
-          paintLives(
-            /** @type {HTMLElement} */ (document.getElementById('daily-lives')),
-            revisitLives.max,
-            revisitLives.left,
-          );
-        }
+        // Hearts are a play-time instrument (budget left) — the result
+        // screen never shows them (Part 4). No paintLives here; the
+        // `#game.is-finished .daily-lives` rule keeps the row hidden.
         setShareCtx(n, result.targets, foundCodes);
-        paintPersonalStats(foundCodes.size, result.targets.length);
+        paintScoreBlock(foundCodes.size, result.targets.length);
         paintCommunityStats(null, result.targets.length, { loading: true });
         // Community stats are gated on Cosmos, not this device's
         // localStorage: always GET, and let the response decide
@@ -877,7 +1184,7 @@ export async function bootDaily() {
         // section). This way puzzles you finished on a different
         // device — or before submit-tracking shipped — still show
         // stats if the server has them.
-        loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes, wrongCodes);
+        loadAndPaintStats(n, result.targets, foundCodes.size, all, wrongCodes);
         // Streak fires alongside stats. Cached (no bypass) — revisits
         // don't have a fresh submit to chase past the 60s cache window.
         // Today-only: archive revisits don't show the streak.
@@ -890,9 +1197,9 @@ export async function bootDaily() {
           paintDescription(result.entry.description, result.entry.additionalDescription);
           renderResult(result.targets, foundCodes, labelFor());
           setShareCtx(n, result.targets, foundCodes);
-          paintPersonalStats(foundCodes.size, result.targets.length);
+          paintScoreBlock(foundCodes.size, result.targets.length);
           paintCommunityStats(null, result.targets.length, { loading: true });
-          loadAndPaintStats(n, result.targets, foundCodes.size, all, foundCodes, wrongCodes);
+          loadAndPaintStats(n, result.targets, foundCodes.size, all, wrongCodes);
           if (isToday) {
             loadAndPaintStreak(revisitDeviceId, foundCodes.size, result.targets.length);
           }
