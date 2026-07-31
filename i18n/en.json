@@ -484,10 +484,8 @@
       "line": "streak: {n}"
     },
     "callout": {
-      "easiest": "easiest",
-      "easiestPlural": "easiest:",
-      "hardest": "hardest",
-      "hardestPlural": "hardest:"
+      "easiest": "easiest:",
+      "hardest": "hardest:"
     },
     "nextPuzzle": {
       "ghostLabel": "Next puzzle"
