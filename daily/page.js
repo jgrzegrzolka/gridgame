@@ -561,10 +561,8 @@ function syncScoreFacts() {
       && !facts.querySelector('.daily-score-streak')) {
     const streak = buildStreakFact(labels, streakState.currentStreak);
     cascadeFade(streak, 1300);
-    // Separator space — `.daily-score-streak` is inline-block, which strips
-    // its own leading whitespace, so without this the streak butts straight
-    // against the average ("6,6· seria").
-    if (facts.querySelector('.daily-score-avg-wrap')) facts.appendChild(document.createTextNode(' '));
+    // Appended in whatever order it lands; flex `order` + `gap` on
+    // `.daily-score-facts` put it after (and spaced from) the average.
     facts.appendChild(streak);
   }
 }
@@ -649,7 +647,7 @@ function syncPlayersPill(wrap) {
 function buildStreakFact(labels, currentStreak) {
   const streakSpan = document.createElement('span');
   streakSpan.className = 'daily-score-streak';
-  streakSpan.textContent = ` · ${labels.streakLine.replace('{n}', String(currentStreak))}`;
+  streakSpan.textContent = `· ${labels.streakLine.replace('{n}', String(currentStreak))}`;
   return streakSpan;
 }
 
