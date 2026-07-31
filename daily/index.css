@@ -93,31 +93,20 @@
 }
 /* Fade applied by page.js as each async piece lands. The score header
  * cascades in a fixed order — score (counts up) → średnia → seria →
- * share — via staggered delays (design 3a: 1.1s / 1.3s / 1.5s). The
- * elements start invisible (`both`), so the intermediate rebuilds while
- * stats/streak arrive never flicker; the delay runs from the last
- * rebuild, which on a fast connection is within a few hundred ms of the
- * finish, keeping the cascade tight. */
+ * share. page.js sets a per-element `animation-delay` inline so each one
+ * becomes visible at its target time measured from the finish (średnia
+ * 1.1s, seria 1.3s, share 1.5s), regardless of when its data arrived; the
+ * `both` fill keeps it invisible until then. Building the block once and
+ * appending facts (never rebuilding) is what lets these fades run to
+ * completion without re-flashing. */
 .daily-fade-in {
   animation: fade-up 0.5s ease both;
-}
-.daily-fade-avg {
-  animation: fade-up 0.5s ease 1.1s both;
-}
-.daily-fade-seria {
-  animation: fade-up 0.5s ease 1.3s both;
-}
-.daily-fade-share {
-  animation: fade-up 0.5s ease 1.5s both;
 }
 @media (prefers-reduced-motion: reduce) {
   #result.result-anim #find-result-found .find-tile,
   #result.result-anim #missed-title,
   #result.result-anim #find-missed,
-  .daily-fade-in,
-  .daily-fade-avg,
-  .daily-fade-seria,
-  .daily-fade-share {
+  .daily-fade-in {
     animation: none;
   }
 }
