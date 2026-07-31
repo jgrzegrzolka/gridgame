@@ -5,19 +5,20 @@
  *   1. onLoading()          — caller paints score + loading spinner
  *   2. ensureTurnstile()    — load/render the CF widget (idempotent)
  *   3. getTurnstileToken()  — execute the invisible challenge
- *   4. submitResult(...)    — POST to /api/v1/daily/result
- *   5. fetchStats(n, ...)   — GET fresh community stats
+ *   4. submitResult(...)    — POST to /api/v1/daily/result (best-effort)
+ *   5. fetchStats(fresh)    — GET fresh community stats; on failure, retry
+ *                             once against the cached aggregate
  *   6. onStats(stats)       — caller paints score + stats + tile overlays
  *
- * Every failure point (Turnstile throws, submit returns failed, stats
- * returns null) falls back to onCleared(), which the caller uses to
- * repaint score-only and clear the loading spinner. Without this, a
- * failed stats fetch would leave the player staring at an animated
- * "Loading…" line forever.
+ * Resilience: only a Turnstile failure (no token → the POST can't be
+ * trusted) short-circuits to onCleared(). A failed submit does NOT — on a
+ * replay the row already exists and community data stands, so we still try
+ * to show stats. And a failed FRESH stats fetch falls back to the CACHED
+ * aggregate before giving up. onCleared() (repaint score-only, clear the
+ * spinner) fires only when there's genuinely nothing to show.
  *
- * Pulled out of daily/page.js so the (3 failure points × clear spinner)
- * control-flow matrix is testable with fake deps. The page wrapper
- * supplies the real DOM/network bindings.
+ * Pulled out of daily/page.js so the control-flow matrix is testable with
+ * fake deps. The page wrapper supplies the real DOM/network bindings.
  */
 
 /**
@@ -77,19 +78,25 @@ export async function runFinishFlow({
     return;
   }
 
-  const r = await submitResult({
+  // Record the attempt, but DON'T gate the stats panel on its outcome. On
+  // a replay the row already exists (the server 409s the dup), and the
+  // community data stands whether or not this POST landed — so a flaked
+  // submit shouldn't leave the player at "score only".
+  await submitResult({
     store, n, foundCodes, wrongCodes, totalCount, durationMs, deviceId,
     turnstileToken: token,
   });
-  if (r.outcome !== 'ok') {
-    onCleared();
-    return;
-  }
 
-  // bypassCache: true forces the server to query Cosmos instead of
-  // returning a cached aggregate — without this the player wouldn't
-  // see their own just-submitted result reflected in the average.
-  const stats = await fetchStats(n, { bypassCache: true });
+  // Prefer the FRESH aggregate (`bypassCache` forces Cosmos, so the
+  // just-submitted row is reflected). But the fresh path always hits
+  // Cosmos and the server maps any Cosmos wobble to a 500; when it keeps
+  // failing even after fetchStats' own retries, fall back to the CACHED
+  // aggregate. A warm instance serves that from its 60s cache without
+  // touching Cosmos, so it rides out the wobble — and on a replay the
+  // cached row already includes this player. This is what turns the
+  // remaining "stats sometimes don't load on replay" cases into loads.
+  let stats = await fetchStats(n, { bypassCache: true });
+  if (!stats) stats = await fetchStats(n, { bypassCache: false });
   if (!stats) {
     onCleared();
     return;
