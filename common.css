@@ -1460,10 +1460,12 @@ body::before {
  * never hidden behind it. Only pages that actually carry a dock get the
  * padding (`:has`), and only in the pinned mobile posture — on desktop the
  * dock is an in-flow pill, so the reserve is dropped. --dock-height matches
- * the bar's rendered height (icon + label + paddings + hairline). */
+ * the bar's rendered height (icon + label + paddings + hairline); the extra
+ * 16px keeps the last line of content from sitting flush against the dock's
+ * top edge at max scroll. */
 :root { --dock-height: 66px; }
 body:has(nav.dock) {
-  padding-bottom: calc(var(--dock-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--dock-height) + 16px + env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 700px) {
   body:has(nav.dock) { padding-bottom: 0; }
