@@ -46,6 +46,9 @@ function harness(outcomes = {}) {
     },
     fetchStats: async (/** @type {number} */ n, /** @type {any} */ opts) => {
       fetchStatsCalls.push({ n, opts });
+      // A function lets a test return different values for the fresh vs the
+      // cached fetch (n, opts) => ...; otherwise a fixed value / happyStats.
+      if (typeof outcomes.statsResult === 'function') return outcomes.statsResult(n, opts);
       return outcomes.statsResult === undefined ? happyStats : outcomes.statsResult;
     },
     onLoading: () => events.push('loading'),
@@ -103,20 +106,35 @@ test('getTurnstileToken throws → loading → cleared, no submit, no fetch', as
   assert.equal(h.fetchStatsCalls.length, 0);
 });
 
-test('submitResult returns failed → loading → cleared, fetch NOT called', async () => {
+test('submit failed → still shows stats (replay row already exists; data stands)', async () => {
   const h = harness({ submitOutcome: { outcome: 'failed', reason: 'http_500' } });
   await runFinishFlow(h.args);
-  assert.deepEqual(h.events, ['loading', 'cleared']);
+  assert.deepEqual(h.events, ['loading', 'stats:4']);
   assert.equal(h.submitCalls.length, 1);
-  assert.equal(h.fetchStatsCalls.length, 0);
+  assert.equal(h.fetchStatsCalls.length, 1); // fresh fetch succeeded
 });
 
-test('fetchStats returns null → loading → cleared (submit succeeded, but stats fetch flaked)', async () => {
+test('fresh fetch fails → falls back to cached; cached succeeds → stats shown', async () => {
+  const h = harness({
+    statsResult: (_n, opts) => (opts.bypassCache
+      ? null
+      : { totalAttempts: 9, perCodeFinds: {}, mean: 5, topPct: 20 }),
+  });
+  await runFinishFlow(h.args);
+  assert.deepEqual(h.events, ['loading', 'stats:9']);
+  assert.equal(h.fetchStatsCalls.length, 2);
+  assert.equal(h.fetchStatsCalls[0].opts.bypassCache, true);  // fresh first
+  assert.equal(h.fetchStatsCalls[1].opts.bypassCache, false); // cached fallback
+});
+
+test('both fresh and cached stats fetches fail → loading → cleared', async () => {
   const h = harness({ statsResult: null });
   await runFinishFlow(h.args);
   assert.deepEqual(h.events, ['loading', 'cleared']);
   assert.equal(h.submitCalls.length, 1);
-  assert.equal(h.fetchStatsCalls.length, 1);
+  assert.equal(h.fetchStatsCalls.length, 2); // tried fresh, then cached
+  assert.equal(h.fetchStatsCalls[0].opts.bypassCache, true);
+  assert.equal(h.fetchStatsCalls[1].opts.bypassCache, false);
 });
 
 test('submit payload carries the result fields the server expects', async () => {
