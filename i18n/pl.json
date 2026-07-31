@@ -484,10 +484,8 @@
       "line": "seria: {n}"
     },
     "callout": {
-      "easiest": "najłatwiejsza",
-      "easiestPlural": "najłatwiejsze:",
-      "hardest": "najtrudniejsza",
-      "hardestPlural": "najtrudniejsze:"
+      "easiest": "najłatwiejsze:",
+      "hardest": "najtrudniejsze:"
     },
     "nextPuzzle": {
       "ghostLabel": "Następna zagadka"

@@ -82,10 +82,8 @@ function statsLabels() {
     mistakeShowLess: t('daily.mistake.showLess', 'show less'),
     mistakeLegend: t('daily.mistake.legend', 'you made this mistake too'),
     streakLine: t('daily.streak.line', 'streak: {n}'),
-    calloutEasiest: t('daily.callout.easiest', 'easiest'),
-    calloutEasiestPlural: t('daily.callout.easiestPlural', 'easiest:'),
-    calloutHardest: t('daily.callout.hardest', 'hardest'),
-    calloutHardestPlural: t('daily.callout.hardestPlural', 'hardest:'),
+    calloutEasiest: t('daily.callout.easiest', 'easiest:'),
+    calloutHardest: t('daily.callout.hardest', 'hardest:'),
   };
 }
 
@@ -278,8 +276,8 @@ function renderCommunity(stats, targets, all, userWrongCodes) {
  *
  *   - 'none'     → nothing (no community data).
  *   - 'allEqual' → one fact: `najłatwiejsze:` + every flag + shared %.
- *   - 'spread'   → easiest fact then hardest fact; a single-code end
- *                  names the country, a tied end renders the flag row.
+ *   - 'spread'   → easiest fact then hardest fact. Both use the same
+ *                  `label: [flag …] pct` shape (single flag or tie alike).
  *
  * @param {import('./callout.js').Callout} callout
  * @param {Country[]} all
@@ -301,9 +299,10 @@ function renderCallout(callout, all) {
 }
 
 /**
- * Build one end of the callout. A single code renders `[flag] label ·
- * Name pct`; two or more render `label: [flag flag …] pct` (plural
- * label, no name). The % is ink-bold; everything else is muted.
+ * Build one end of the callout — one consistent shape whether it's a
+ * single flag or a tie: `najłatwiejsze: [flag flag …] pct`. Label, then a
+ * flag row, then the ink-bold %. No country name (it's a flag game — the
+ * flag is the answer, and the grids above carry the hover names).
  *
  * @param {boolean} easiest
  * @param {string[]} codes
@@ -314,30 +313,22 @@ function renderCallout(callout, all) {
 function buildCalloutFact(easiest, codes, pct, all, labels) {
   const fact = document.createElement('span');
   fact.className = 'daily-callout-fact';
+
+  const label = document.createElement('span');
+  label.className = 'daily-callout-label';
+  label.textContent = easiest ? labels.calloutEasiest : labels.calloutHardest;
+  fact.appendChild(label);
+
+  const row = document.createElement('span');
+  row.className = 'daily-callout-flags';
+  for (const code of codes) row.appendChild(buildCalloutFlag(code, findCountry(all, code)));
+  fact.appendChild(row);
+
   const pctEl = document.createElement('b');
   pctEl.className = 'daily-callout-pct';
   pctEl.textContent = `${pct}%`;
+  fact.appendChild(pctEl);
 
-  if (codes.length === 1) {
-    const country = findCountry(all, codes[0]);
-    const name = country ? countryName(country) : codes[0].toUpperCase();
-    fact.appendChild(buildCalloutFlag(codes[0], country));
-    const label = document.createElement('span');
-    label.className = 'daily-callout-label';
-    label.textContent = `${easiest ? labels.calloutEasiest : labels.calloutHardest} · ${name}`;
-    fact.appendChild(label);
-    fact.appendChild(pctEl);
-  } else {
-    const label = document.createElement('span');
-    label.className = 'daily-callout-label';
-    label.textContent = easiest ? labels.calloutEasiestPlural : labels.calloutHardestPlural;
-    fact.appendChild(label);
-    const row = document.createElement('span');
-    row.className = 'daily-callout-flags';
-    for (const code of codes) row.appendChild(buildCalloutFlag(code, findCountry(all, code)));
-    fact.appendChild(row);
-    fact.appendChild(pctEl);
-  }
   return fact;
 }
 
