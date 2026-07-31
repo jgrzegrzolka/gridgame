@@ -255,8 +255,15 @@
   color: var(--muted-color);
 }
 /* Both facts (`średnia`, `seria`) share this one muted style — same
- * size, same colon-labelled shape. */
+ * size, same colon-labelled shape. A flex row with a pinned `order` so
+ * `średnia` always sits before `seria` no matter which async fetch (stats
+ * vs streak) lands first and gets appended first; `gap` supplies the space
+ * between them (each fact carries its own leading `·`). */
 .daily-score-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3em;
   font-size: 13px;
   color: var(--muted-color);
   min-width: 0;
@@ -265,6 +272,7 @@
 .daily-score-avg-wrap {
   position: relative;
   display: inline-block;
+  order: 1;
 }
 .daily-score-avg {
   cursor: pointer;
@@ -299,6 +307,7 @@
  * the streak in like the average, rather than the old cell-shake flash. */
 .daily-score-streak {
   display: inline-block;
+  order: 2;
 }
 /* Mobile posture (design 3b): a hair smaller score + facts, tighter gap. */
 @media (max-width: 700px) {
