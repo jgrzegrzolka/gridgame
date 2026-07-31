@@ -31,6 +31,9 @@ const fakeRes = (status, body) => ({
   json: async () => body,
 });
 
+// No-op sleep so retry tests don't actually wait.
+const noSleep = async () => {};
+
 test('always POSTs even when locally marked submitted (server handles dedup)', async () => {
   // Earlier implementation gated on hasSubmitted to avoid the round-trip,
   // but that gate created a footgun: legitimate re-sends (lost-token
@@ -95,13 +98,53 @@ test('4xx with no parseable body falls back to http_<status>', async () => {
   assert.deepEqual(r, { outcome: 'failed', reason: 'http_400' });
 });
 
-test('fetch throws (network failure) → reason: network_error', async () => {
+test('fetch throws (network failure) → retried, then reason: network_error', async () => {
   const store = fakeStore();
+  let calls = 0;
   const r = await submitResult({
-    ...baseArgs, store,
-    fetchImpl: async () => { throw new Error('connection refused'); },
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => { calls++; throw new Error('connection refused'); },
   });
   assert.deepEqual(r, { outcome: 'failed', reason: 'network_error' });
+  assert.equal(calls, 3); // initial + 2 retries
+});
+
+test('5xx is retried; a later 204 lands → ok (POST is idempotent server-side)', async () => {
+  const store = fakeStore();
+  let calls = 0;
+  const r = await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => { calls++; return calls < 3 ? fakeRes(500, {}) : fakeRes(204, null); },
+  });
+  assert.deepEqual(r, { outcome: 'ok' });
+  assert.equal(calls, 3);
+  assert.equal(store._map.get('gridgame.submittedPuzzles'), '[7]');
+});
+
+test('network error then 409 → ok (dup re-send after a dropped response)', async () => {
+  const store = fakeStore();
+  let calls = 0;
+  const r = await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => {
+      calls++;
+      if (calls < 2) throw new Error('reset');
+      return fakeRes(409, { error: 'already_submitted' });
+    },
+  });
+  assert.deepEqual(r, { outcome: 'ok' });
+  assert.equal(calls, 2);
+});
+
+test('4xx is deterministic — surfaced without retrying', async () => {
+  const store = fakeStore();
+  let calls = 0;
+  const r = await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => { calls++; return fakeRes(403, { error: 'turnstile_failed' }); },
+  });
+  assert.deepEqual(r, { outcome: 'failed', reason: 'turnstile_failed' });
+  assert.equal(calls, 1); // no retry on a client error
 });
 
 test('POSTs to /api/v1/daily/result with the right body', async () => {
@@ -161,10 +204,11 @@ test('wrongCodes defaults to [] when not supplied', async () => {
   assert.deepEqual(body.wrongCodes, []);
 });
 
-test('failure does NOT mark submitted (so a retry on the next visit is possible)', async () => {
+test('a persistent 5xx failure does NOT mark submitted (so a later visit can retry)', async () => {
   const store = fakeStore();
   await submitResult({
-    ...baseArgs, store, fetchImpl: async () => fakeRes(500, { error: 'server_error' }),
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => fakeRes(500, { error: 'server_error' }),
   });
   assert.equal(store._map.has('gridgame.submittedPuzzles'), false);
 });
