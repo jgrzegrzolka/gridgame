@@ -1,123 +1,72 @@
 /**
- * Pure picker logic for the two rail sections that sit below the
- * stats caption: a single ranking of every puzzle flag by find rate,
- * plus the most common wrong-clicks. No DOM, no network — `daily/page.js`
- * consumes the result and renders.
+ * Pure logic for the result screen's "most common mistake" rail — the
+ * distractor flags other players clicked by mistake on this puzzle. No
+ * DOM, no network — `daily/page.js` renders the shape these return.
  *
- * The ranking shows every target code with its community find pct,
- * sorted most-found → least-found (tie-break alphabetical). One row
- * instead of two ("Mostly guessed" + "Most missed") so the player can
- * read the difficulty gradient across the whole puzzle at a glance.
- * The green/red corner marker (set in page.js via pickMarkerKind) tells
- * them which flags they personally got vs. missed.
+ * (The old "Najczęściej rozpoznane" ranking of every target by find rate
+ * was removed — it duplicated the per-tile %s already on the grids.)
  *
- * The mistakes row aims for the TARGET top wrong-clicked flags but
- * grows past it whenever the count at position TARGET ties with the
- * next entries — otherwise a single shared count would arbitrarily
- * hide every tied flag except the alphabetically-first. The MAX cap
- * keeps a pathological all-tied puzzle (e.g. 30 distractors each
- * clicked once) from blowing out the rail.
+ * Two pieces:
+ *   - `pickMistakes` sorts every wrong-clicked flag by how many players
+ *     clicked it (desc, alphabetical tie-break for a stable render).
+ *   - `splitMistakeRail` decides what the collapsed vs expanded rail
+ *     shows: collapsed surfaces only the *repeated* mistakes (≥ 2
+ *     players), capped, so a one-off click by a single player doesn't
+ *     read as "a common mistake"; expanding reveals the full list.
  */
 
-export const MISTAKE_TARGET = 10;
-export const MISTAKE_MAX = 20;
+/** Max repeated-mistake tiles shown in the collapsed rail. */
+export const MISTAKE_COLLAPSE_CAP = 6;
 
 /**
- * @typedef {{ totalAttempts: number, perCodeFinds: Record<string, number>, perWrongCode?: Record<string, number> }} StatsInput
- * @typedef {{ code: string, pct: number }} CodePick
+ * @typedef {{ totalAttempts: number, perWrongCode?: Record<string, number> }} StatsInput
  * @typedef {{ code: string, count: number }} MistakePick
- * @typedef {{ ranking: CodePick[], topMistake: MistakePick[] }} ExtraPicks
  */
 
 /**
- * @param {{ stats: StatsInput | null | undefined, targetCodes: string[] }} input
- * @returns {ExtraPicks}
- */
-export function pickExtraStats({ stats, targetCodes }) {
-  if (!stats || !stats.totalAttempts) {
-    return { ranking: [], topMistake: [] };
-  }
-  return {
-    ranking: pickRanking({ stats, targetCodes }),
-    topMistake: pickTopMistake({ stats }),
-  };
-}
-
-/**
- * @param {ExtraPicks} picks
- */
-export function hasAnyExtraStats(picks) {
-  return picks.ranking.length > 0 || picks.topMistake.length > 0;
-}
-
-/**
- * Every target code with its community find pct, sorted descending
- * by pct (alphabetical tie-break for stability across renders).
+ * Every wrong-clicked flag, sorted most-clicked → least, alphabetical
+ * within a tie. Empty when there are no submissions or the (legacy
+ * cached) response carries no `perWrongCode`.
  *
- * @param {{ stats: StatsInput, targetCodes: string[] }} input
- * @returns {CodePick[]}
- */
-function pickRanking({ stats, targetCodes }) {
-  if (!Array.isArray(targetCodes) || targetCodes.length === 0) return [];
-  const { totalAttempts, perCodeFinds } = stats;
-  return targetCodes
-    .map((code) => ({
-      code,
-      pct: Math.round(((perCodeFinds[code] || 0) / totalAttempts) * 100),
-    }))
-    .sort((a, b) => {
-      if (a.pct !== b.pct) return b.pct - a.pct;
-      return a.code < b.code ? -1 : 1;
-    });
-}
-
-/**
- * Decide the per-tile corner marker for the extra-stats rail. The player's
- * own found / wrong sets are the source of truth for "what did I do here":
- *
- *   - 'found'  → code is in userFoundCodes (player got it right). Green dot.
- *   - 'missed' → code is in targetCodes but NOT in userFoundCodes (player
- *                saw it and didn't get it). Red dot.
- *   - 'wrong'  → code is a distractor the player clicked (in userWrongCodes).
- *                Only occurs on the topMistake row, whose tiles are all
- *                distractors. Marks "I made this mistake too."
- *   - null     → none of the above (a distractor the player did NOT click).
- *
- * The three markable states are naturally partitioned by row: the ranking row
- * holds only targets (found / missed), the topMistake row only distractors
- * (wrong / null), so a code never qualifies for two. `userWrongCodes` is
- * optional — when absent (old record with no persisted `w`, or an in-progress
- * caller) the topMistake row stays unmarked rather than guessing.
- *
- * @param {{ code: string, targetCodes: Set<string>, userFoundCodes: Set<string>, userWrongCodes?: Set<string> }} input
- * @returns {'found' | 'missed' | 'wrong' | null}
- */
-export function pickMarkerKind({ code, targetCodes, userFoundCodes, userWrongCodes }) {
-  if (userFoundCodes.has(code)) return 'found';
-  if (targetCodes.has(code)) return 'missed';
-  if (userWrongCodes && userWrongCodes.has(code)) return 'wrong';
-  return null;
-}
-
-/**
- * @param {{ stats: StatsInput }} input
+ * @param {{ stats: StatsInput | null | undefined }} input
  * @returns {MistakePick[]}
  */
-function pickTopMistake({ stats }) {
+export function pickMistakes({ stats }) {
+  if (!stats || !stats.totalAttempts) return [];
   const perWrongCode = stats.perWrongCode;
   if (!perWrongCode) return [];
-  const sorted = Object.entries(perWrongCode)
+  return Object.entries(perWrongCode)
     .map(([code, count]) => ({ code, count: /** @type {number} */ (count) }))
     .filter((e) => e.count > 0)
     .sort((a, b) => {
       if (a.count !== b.count) return b.count - a.count;
       return a.code < b.code ? -1 : 1;
     });
-  if (sorted.length <= MISTAKE_TARGET) return sorted.slice(0, MISTAKE_MAX);
-  const cutoffCount = sorted[MISTAKE_TARGET - 1].count;
-  let end = MISTAKE_TARGET;
-  while (end < sorted.length && end < MISTAKE_MAX && sorted[end].count === cutoffCount) {
-    end++;
-  }
-  return sorted.slice(0, end);
+}
+
+/**
+ * Split a sorted mistake list into the tiles to render plus the counts
+ * the rail's controls need.
+ *
+ *   - `tiles`         — collapsed: the repeated (≥ 2) mistakes, capped at
+ *                       `MISTAKE_COLLAPSE_CAP`; expanded: the whole list.
+ *   - `totalCount`    — every distinct mistake (drives "pokaż wszystkie
+ *                       pomyłki (N)").
+ *   - `repeatedCount` — how many were clicked by ≥ 2 players. Zero means
+ *                       no "common" mistake exists — the caller hides the
+ *                       whole rail rather than show an empty grid.
+ *   - `singlesCount`  — one-off (single-player) mistakes; drives the
+ *                       "+ N innych pomyłek pojedynczych graczy" tail.
+ *
+ * @param {MistakePick[]} mistakes sorted output of `pickMistakes`
+ * @param {boolean} expanded
+ */
+export function splitMistakeRail(mistakes, expanded) {
+  const repeated = mistakes.filter((m) => m.count >= 2);
+  return {
+    tiles: expanded ? mistakes : repeated.slice(0, MISTAKE_COLLAPSE_CAP),
+    totalCount: mistakes.length,
+    repeatedCount: repeated.length,
+    singlesCount: mistakes.length - repeated.length,
+  };
 }

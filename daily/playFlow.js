@@ -505,14 +505,22 @@ export function reasonMessage(reason) {
  * carries the current language's label. Revisits and soft language
  * switches pass a fresh string each call.
  *
+ * `opts.animate` plays the finish-moment choreography (panel slide-in +
+ * staggered found-tile drop, gated in CSS on `#result.result-anim`). Only
+ * the natural finish passes it; revisits and language switches render the
+ * final state directly — motion is for the finish moment only.
+ *
  * @param {Country[]} targets
  * @param {Set<string>} foundCodes
  * @param {string} categoryLabel
+ * @param {{ animate?: boolean }} [opts]
  */
-export function renderResult(targets, foundCodes, categoryLabel) {
+export function renderResult(targets, foundCodes, categoryLabel, opts = {}) {
+  const animate = opts.animate === true;
   const gameEl = /** @type {HTMLElement} */ (document.getElementById('game'));
   const resultEl = /** @type {HTMLElement} */ (document.getElementById('result'));
   const catEl = /** @type {HTMLElement} */ (document.getElementById('find-cat'));
+  resultEl.classList.toggle('result-anim', animate);
 
   const found = foundCodes.size;
   const total = targets.length;
@@ -528,14 +536,26 @@ export function renderResult(targets, foundCodes, categoryLabel) {
   const foundFlags = targets.filter((c) => foundCodes.has(c.code));
   const foundResultEl = /** @type {HTMLElement} */ (document.getElementById('find-result-found'));
   foundResultEl.innerHTML = '';
-  for (const c of foundFlags) foundResultEl.appendChild(flagTile(c, true));
-  /** @type {HTMLElement} */ (document.getElementById('found-title')).hidden = foundFlags.length === 0;
+  foundFlags.forEach((c, i) => {
+    const tile = flagTile(c, true);
+    // Stagger the drop-in; the CSS animation itself is gated on
+    // `#result.result-anim`, so this delay is inert on a revisit.
+    if (animate) tile.style.animationDelay = `${i * 45}ms`;
+    foundResultEl.appendChild(tile);
+  });
+  // Heading carries the count: "Znalezione · 14". Set in JS (not a static
+  // data-i18n string) so it re-localises via this same call on langchange.
+  const foundTitle = /** @type {HTMLElement} */ (document.getElementById('found-title'));
+  foundTitle.textContent = `${t('daily.result.found', 'Found')} · ${foundFlags.length}`;
+  foundTitle.hidden = foundFlags.length === 0;
 
   const missed = targets.filter((c) => !foundCodes.has(c.code));
   const missedEl = /** @type {HTMLElement} */ (document.getElementById('find-missed'));
   missedEl.innerHTML = '';
   for (const c of missed) missedEl.appendChild(flagTile(c, true));
-  /** @type {HTMLElement} */ (document.getElementById('missed-title')).hidden = missed.length === 0;
+  const missedTitle = /** @type {HTMLElement} */ (document.getElementById('missed-title'));
+  missedTitle.textContent = `${t('daily.result.missed', 'Missed')} · ${missed.length}`;
+  missedTitle.hidden = missed.length === 0;
 
   // Keep #game visible so the puzzle title strip (.find-header with the
   // category label + .daily-desc) sits above the result — the player
@@ -893,7 +913,7 @@ export function startGame(n, category, targets, all, opts = {}) {
     }
     const { tier, intensity } = pickCelebration({ found, total });
     runCelebration(tier, { intensity });
-    renderResult(targets, foundCodes, category.label);
+    renderResult(targets, foundCodes, category.label, { animate: true });
     if (onFinish) {
       onFinish({
         foundCodes: Array.from(foundCodes),

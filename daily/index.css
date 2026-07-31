@@ -64,6 +64,64 @@
   #find-found .find-tile { animation: none; }
 }
 
+/* Finish-moment choreography (design 3a). Gated on `#result.result-anim`,
+ * which renderResult adds only on a natural finish — a revisit renders
+ * the class-free panel, so every element is at its final state at once.
+ * The score count-up + the average / streak / community fades are driven
+ * from page.js (they arrive asynchronously); the staggered found-tile
+ * drop and the Pominięte fade live here.
+ *
+ * The panel slide itself is NOT redefined here: common.css already
+ * animates `#result` via a `top`-based `result-in` (deliberately not a
+ * transform, so `#result` never becomes the fixed bottom dock's
+ * containing block and float it mid-page). Redefining `@keyframes
+ * result-in` with a transform here would override that dock-safe one by
+ * load order — so these child animations only ever transform siblings /
+ * descendants of the dock, never `#result` itself. */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+/* Found tiles drop in, staggered — playFlow sets the per-tile delay. */
+#result.result-anim #find-result-found .find-tile {
+  animation: tile-drop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.1) both;
+}
+/* Pominięte heading + grid fade up, just after the found tiles land. */
+#result.result-anim #missed-title,
+#result.result-anim #find-missed {
+  animation: fade-up 0.5s ease 0.9s both;
+}
+/* Fade applied by page.js as each async piece lands. The score header
+ * cascades in a fixed order — score (counts up) → średnia → seria →
+ * share — via staggered delays (design 3a: 1.1s / 1.3s / 1.5s). The
+ * elements start invisible (`both`), so the intermediate rebuilds while
+ * stats/streak arrive never flicker; the delay runs from the last
+ * rebuild, which on a fast connection is within a few hundred ms of the
+ * finish, keeping the cascade tight. */
+.daily-fade-in {
+  animation: fade-up 0.5s ease both;
+}
+.daily-fade-avg {
+  animation: fade-up 0.5s ease 1.1s both;
+}
+.daily-fade-seria {
+  animation: fade-up 0.5s ease 1.3s both;
+}
+.daily-fade-share {
+  animation: fade-up 0.5s ease 1.5s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  #result.result-anim #find-result-found .find-tile,
+  #result.result-anim #missed-title,
+  #result.result-anim #find-missed,
+  .daily-fade-in,
+  .daily-fade-avg,
+  .daily-fade-seria,
+  .daily-fade-share {
+    animation: none;
+  }
+}
+
 /* A country already guessed wrong this round stays in the suggestion list
  * but muted + struck through, non-clickable, with an "already tried" note
  * pushed to the row end — the player sees they've been there without being
@@ -92,60 +150,66 @@
  *
  * Play-only children hidden here: the live count (redundant with the
  * result's "You found N/N" line), the typed-input wrap, the sovereign
- * note, the in-game found grid (replaced by #find-result-found), and
- * the play-only dock (Give up · Previous · Home) — the result section
- * carries its own finished-state dock. The class is added by
- * playFlow.js::renderResult. */
+ * note, the in-game found grid (replaced by #find-result-found), the
+ * hearts row (`.daily-lives` — a play-time budget instrument; the score
+ * tells the story once finished, Part 4), and the play-only dock (Give
+ * up · Previous · Home) — the result section carries its own finished-
+ * state dock. The class is added by playFlow.js::renderResult. */
 #game.is-finished .find-count,
 #game.is-finished .find-input-wrap,
 #game.is-finished .daily-desc,
 #game.is-finished .daily-note,
 #game.is-finished #find-found,
+#game.is-finished .daily-lives,
 #game.is-finished .dock {
   display: none;
 }
 
 /* The shared playFlow renders a big celebratory "You found all" /
  * "You found N/N" paragraph at the top of the result section. On the
- * daily page we replace that with the consolidated stats line below
- * (".daily-stats-headline" with the player's score AND the community
- * average). The playFlow paragraph still renders for findFlag's
- * standalone page; we hide it here and only here. */
+ * daily page the top score block replaces it; the playFlow paragraph
+ * still renders for findFlag's standalone page, so hide it here only. */
 #result > .final-score {
   display: none;
 }
-/* With .final-score hidden, the first .result-section-title (Found: in
- * the happy path) becomes the first visible element in the panel. The
- * shared 24px top margin was sized to sit above the final-score line —
- * here it just stacks on top of the body's page-top padding. Cancelling
- * it tightens the panel to the top chrome strip. */
+/* Found / Missed headings ("Znalezione · 14" / "Pominięte · 8"): 12px
+ * per the design (the shared base is 14px). The score block sits above
+ * now, so the first heading (Znalezione) takes a 32px top margin to
+ * separate it from the score; Missed keeps a slightly tighter gap. */
+#result > .result-section-title {
+  font-size: 12px;
+}
 #result > .result-section-title:first-of-type {
-  margin-top: 0;
+  margin-top: 32px;
+}
+/* All-missed round: `#found-title` is hidden and the found grid is empty,
+ * so `#missed-title` becomes the first visible heading. findFlag collapses
+ * its top margin to 0 there (it wants the panel flush to the chrome), but
+ * daily has the score block above — so keep the same 32px gap the found
+ * heading would have had, or the score→Pominięte spacing reads tighter
+ * than score→Znalezione. Outranks the findFlag rule via the `#result >`. */
+#result > .result-section-title[hidden] + .find-result-found:empty + .result-section-title {
+  margin-top: 32px;
 }
 
-/* Community stats: one-line headline (player's score, plus the
- * community average once stats arrive) + a caption explaining the
- * per-tile %s. The per-tile bottom-strip percentage that overlays
- * the flag tiles themselves is the per-flag breakdown — no separate
- * flag grid. Sits below the Missed list. */
+/* Bottom community slot: now only the transient "Loading stats…"
+ * indicator (the average moved up into the top score block). Sits below
+ * the Missed list. */
 .daily-stats {
   margin: 52px 0 0;
 }
-/* Personal stats sit at the top of #result (above Found:); spacing
+/* The score block sits at the top of #result (above Found:); spacing
  * differs from the community block in two ways:
  *
  *  - Negative top margin pulls the score up closer to the chrome.
  *    Body has `padding-top: var(--page-top)` (104px) reserved for the
  *    fixed chrome strip (which itself is var(--strip-height) = 70px,
- *    so a 34px band of page bg shows beneath the strip on scroll). With
- *    the lighter uppercase "FOUND:" the heading used to sit flush with
- *    the strip bottom and read as breathing room; the heavier "Your
- *    score" in the same slot reads as too far down. -24px pulls it
- *    back to the strip bottom edge.
+ *    so a 34px band of page bg shows beneath the strip on scroll).
+ *    -24px pulls the score line back to the strip bottom edge.
  *
  *  - 16px bottom margin matches the gap between the community block
  *    and its sibling extras rail (`.daily-extra-stats { margin-top:
- *    16px }`). Without it, the personal block would sit flush against
+ *    16px }`). Without it, the score block would sit flush against
  *    the "Found:" h2 (which itself has margin-top: 0 via the
  *    `:first-of-type` override below).
  */
@@ -161,59 +225,99 @@
 #game.is-finished ~ #result > #daily-personal-stats {
   margin-top: -12px;
 }
-.daily-stats-headline {
-  font-size: 16px;
+/* Score block: one line at the top of the result — the player's big
+ * score, then the muted facts (`· średnia: N · seria: N`). A flex row
+ * (space-between) so the touch-only share button rides at the far right
+ * beside the score; with no share button (desktop) the single child
+ * left-aligns. */
+.daily-score-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* Score + facts share a baseline so the small muted facts sit on the
+ * big number's baseline rather than its box. */
+.daily-score-line {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.daily-score-value {
+  font-size: 34px;
+  font-weight: var(--weight-light);
+  letter-spacing: -0.02em;
+  line-height: 1;
   color: var(--primary-color);
-  font-weight: var(--weight-bold);
-  margin: 0;
-  text-align: left;
-  /* Inline flow (not flex) so the share button stays glued to its
-   * preceding text when a narrow viewport wraps the line. Flex with
-   * flex-wrap: wrap split text and button into separate flex rows,
-   * orphaning the button below the wrapped score line. With inline
-   * flow the wrap happens between words and the button rides along
-   * at the end. vertical-align on the share-link handles the icon
-   * baseline so the glyph centres against the cap-height of the
-   * surrounding text instead of sitting on the baseline. */
+  font-variant-numeric: tabular-nums;
 }
-.daily-stats-headline .share-link {
-  vertical-align: middle;
+/* The value sits in an inline-block sized to the total's digit width
+ * (set inline in px-of-ch) so a count-up (Step 5) ticking 9 → 10 never
+ * nudges the `/total` beside it. */
+.daily-score-num {
+  display: inline-block;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
-/* Streak segment in the headline. inline-block so the entry
- * animation's transform applies cleanly (transforms on raw inline
- * elements don't render) and so the streak text stays as one unit
- * if the headline wraps. Plain state inherits the headline's
- * primary-colour family — the personal counter sits in the same
- * weight / size as the score it sits next to. */
-.daily-stats-streak {
+.daily-score-total {
+  font-size: 17px;
+  color: var(--muted-color);
+}
+/* Both facts (`średnia`, `seria`) share this one muted style — same
+ * size, same colon-labelled shape. */
+.daily-score-facts {
+  font-size: 13px;
+  color: var(--muted-color);
+  min-width: 0;
+}
+/* `średnia: N` is a tap target; the pill floats above it. */
+.daily-score-avg-wrap {
+  position: relative;
   display: inline-block;
 }
-/* First-appearance attention grab: cell-shake's existing motion
- * curve (common.css, ±4px) plus a quick secondary → primary colour
- * flash so the streak announces itself the first time the player
- * sees it, then settles into the calm primary colour. Reuses
- * cell-shake (per CLAUDE.md "same mechanism = same code") rather
- * than inventing a second shake keyframe. JS adds this class on the
- * first render where the streak appears and removes it on
- * animationend; subsequent repaints (stats arriving, language
- * switch) render the streak in its plain state. */
-.daily-stats-streak-enter {
-  animation: cell-shake 0.4s ease-in-out, daily-streak-colour 0.9s ease-out;
+.daily-score-avg {
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
-@keyframes daily-streak-colour {
-  0%, 60% { color: var(--secondary-color); }
-  100% { color: var(--primary-color); }
+.daily-score-avg:hover {
+  color: var(--primary-color);
 }
-@media (prefers-reduced-motion: reduce) {
-  .daily-stats-streak-enter { animation: none; }
+.daily-score-avg:focus-visible {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
 }
-.daily-stats-caption {
-  font-size: 12px;
-  color: var(--muted-color);
-  margin: 8px 0 0;
-  text-align: left;
+/* Tap-to-reveal "N graczy" pill, floated above the `średnia` label. */
+.daily-players-pill {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translateX(-50%);
+  background: var(--primary-color);
+  color: var(--surface-color);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
 }
-
+/* Streak segment. inline-block so the fade-in transform applies cleanly
+ * (transforms on raw inline elements don't render) and so the text stays
+ * as one unit if the line wraps. No shake — the locked design (3a) fades
+ * the streak in like the average, rather than the old cell-shake flash. */
+.daily-score-streak {
+  display: inline-block;
+}
+/* Mobile posture (design 3b): a hair smaller score + facts, tighter gap. */
+@media (max-width: 700px) {
+  .daily-score-value { font-size: 32px; }
+  .daily-score-total { font-size: 16px; }
+  .daily-score-facts { font-size: 12px; }
+  .daily-score-line { gap: 10px; }
+}
 /* "Loading stats" line — wraps the shared `.loading-dots` (common.css)
  * with daily's left-aligned italic muted styling. */
 .daily-stats-loading {
@@ -273,11 +377,69 @@
   border-bottom-left-radius: 4px;
 }
 
-/* Extra-stats rail sits below the score caption and renders smaller
+/* Callout line — the community section's opening summary of the round's
+ * spread (easiest / hardest flags). Whitespace-separated from the grids
+ * above (44px), no hairline. Desktop lays the two facts in a row; mobile
+ * stacks them (design 3b). */
+.daily-callout {
+  margin: 44px 0 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  font-size: 13px;
+  color: var(--muted-color);
+}
+/* The base `display: flex` above outweighs the UA `[hidden]` rule, so a
+ * bare `el.hidden = true` in page.js would leave the line on screen with
+ * stale content — spell out the hide. (Same trap flagParty pins via
+ * hiddenGuards.test.js.) */
+.daily-callout[hidden] {
+  display: none;
+}
+.daily-callout-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Row of tied-flag thumbnails inside one fact (tie / all-equal cases). */
+.daily-callout-flags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.daily-callout-flag {
+  width: 26px;
+  height: 20px;
+  flex: none;
+  display: block;
+  border: 1px solid var(--muted-soft-color);
+}
+/* The find-rate reads as the fact — ink, bold, tabular. */
+.daily-callout-pct {
+  font-weight: var(--weight-bold);
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 700px) {
+  .daily-callout {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 36px 0 16px;
+    font-size: 12px;
+  }
+  .daily-callout-flag {
+    width: 24px;
+    height: 18px;
+  }
+}
+
+/* Extra-stats rail sits below the callout line and renders smaller
  * than the main Znalezione/Pominięte grids — it's secondary signal,
- * not a third copy of the result. The generous top margin separates
- * it from the caption, and the smaller grid minmax pulls the tile
- * size down from 64px to ~48px so the visual weight matches its role. */
+ * not a third copy of the result. The smaller grid minmax pulls the
+ * tile size down from 64px to ~48px so the visual weight matches its
+ * role. */
 .daily-extra-stats {
   display: block;
   margin-top: 16px;
@@ -286,24 +448,71 @@
   grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
 }
 .daily-extra-stats .result-section-title {
-  font-size: 12px;
+  font-size: 11px;
   margin-top: 18px;
 }
 .daily-extra-stats .result-section-title:first-child {
   margin-top: 0;
 }
 
-/* Per-player corner marker on the extra-stats rail tiles. The rail
- * mixes "you got this" and "you missed this" flags across all three
- * rows — without this dot the player has to scroll back up to the
- * Znalezione/Pominięte grids to cross-reference each tile. On the
- * "Most common mistake" row the dot marks the distractors the player
- * clicked wrong themselves ("I made this mistake too"). Small coloured
- * circle in the top-right corner, drawn via the tile's ::before so we
- * don't need an extra DOM node. The 1px outline keeps the dot legible
- * on top of any flag colour. */
-.find-tile.is-user-found::before,
-.find-tile.is-user-missed::before,
+/* Controls under the mistake grid: the expand/collapse toggle, the
+ * singles tail (collapsed only), and the red-dot legend. One quiet
+ * 11px muted row, wrapping on narrow viewports. */
+.daily-mistake-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted-color);
+}
+/* A real <button> reset to read as an accent text link. */
+.daily-mistake-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-rose);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.daily-mistake-toggle:hover {
+  color: var(--primary-color);
+}
+.daily-mistake-toggle:focus-visible {
+  outline: 2px solid var(--accent-rose);
+  outline-offset: 2px;
+}
+.daily-mistake-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* Small red square keyed to the tile corner marker (same red + outline,
+ * a hair smaller). */
+.daily-mistake-legend-dot {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #000;
+  box-sizing: border-box;
+  background: var(--wrong-color);
+  flex: none;
+}
+@media (max-width: 700px) {
+  .daily-mistake-controls {
+    gap: 10px;
+  }
+}
+
+/* Per-player corner marker on the "Most common mistake" rail tiles.
+ * The dot marks the distractors the player clicked wrong themselves
+ * ("I made this mistake too"). Small red square in the top-right
+ * corner, drawn via the tile's ::before so we don't need an extra DOM
+ * node. The 1px outline keeps the dot legible on top of any flag
+ * colour. */
 .find-tile.is-user-wrong::before {
   content: '';
   position: absolute;
@@ -313,18 +522,9 @@
   height: 10px;
   border: 1px solid #000;
   box-sizing: border-box;
+  background: var(--wrong-color);
   pointer-events: none;
   z-index: 5;
-}
-.find-tile.is-user-found::before {
-  background: var(--correct-color);
-}
-/* Missed a target (ranking row) and clicked a wrong flag (mistake row)
- * are both "you got this flag wrong" — same red, disambiguated by which
- * row the tile sits in. */
-.find-tile.is-user-missed::before,
-.find-tile.is-user-wrong::before {
-  background: var(--wrong-color);
 }
 
 /* Turnstile widget container is invisible by design (size: 'invisible'
