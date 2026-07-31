@@ -380,7 +380,7 @@
  * above (44px), no hairline. Desktop lays the two facts in a row; mobile
  * stacks them (design 3b). */
 .daily-callout {
-  margin: 44px 0 20px;
+  margin: 44px 0 28px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -424,7 +424,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    margin: 36px 0 16px;
+    margin: 36px 0 22px;
     font-size: 12px;
   }
   .daily-callout-flag {
