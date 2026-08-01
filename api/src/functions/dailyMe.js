@@ -114,20 +114,78 @@ app.http('dailyMe', {
     // local:true rows are included — for the player's own streak, the
     // owner's localhost plays are their own plays, same as the daily
     // aggregator's policy. Cleanup uses the dev-reset toolbar.
-    let queryRes;
-    try {
-      queryRes = await queryDocs({
+    // ---- one wave, four reads ----
+    //
+    // All four reads below depend only on `deviceId`; not one of them consumes
+    // another's result. They used to run in THREE sequential awaits (dailies,
+    // then quiz, then profile+ttt in parallel), so the handler paid three
+    // round trips of Cosmos latency end to end. That made `dailyMe` the site's
+    // slowest meaningful endpoint (p50 ~1.7s, p95 ~3.5s against 200-700ms for
+    // everything else) while also being its most-called one — roughly one call
+    // per two page views — and it showed: 12 requests in a week returned 499,
+    // the client having given up and closed the connection mid-answer.
+    //
+    // Issuing them together makes the wait the slowest single read instead of
+    // the sum. The cost is that a request which is going to 500 on the dailies
+    // read now also spends the RU for three reads it will throw away; at this
+    // traffic that is noise, and the failure path is rare by construction.
+    //
+    // `allSettled`, not `all`: three of the four are SOFT dependencies that
+    // must degrade rather than fail the snapshot, and `all` would reject the
+    // whole wave on the first soft failure.
+    const [dailiesSettled, quizSettled, profileSettled, tttSettled] = await Promise.allSettled([
+      queryDocs({
         connString: conn,
         dbName: DB_NAME,
         containerName: CONTAINER_NAME,
         query: 'SELECT c.submittedAt, c.foundCodes, c.wrongCodes, c.totalCount FROM c WHERE c.deviceId = @did',
         parameters: [{ name: '@did', value: deviceId }],
         enableCrossPartition: true,
-      });
-    } catch (err) {
-      context.error('cosmos query threw', err);
+      }),
+      // Quiz aggregates: single-partition query against the player's
+      // `quizRecords` doc (id == pk == deviceId). At most one row; returns
+      // empty quiz counters if the player has never finished a round.
+      queryDocs({
+        connString: conn,
+        dbName: DB_NAME,
+        containerName: QUIZ_RECORDS_CONTAINER,
+        query: 'SELECT * FROM c WHERE c.id = @did',
+        parameters: [{ name: '@did', value: deviceId }],
+        partitionKey: deviceId,
+      }),
+      // Cross-game engagement signals: profile point-read. Pre-Phase-4 this
+      // also did a cross-partition scan of `engagementEvents`; Feature S
+      // Phase 4 moved that data into `profile.syncBlob.engagement` so a single
+      // point-read covers nickname, linkedAt and the engagement counters.
+      queryDocs({
+        connString: conn,
+        dbName: DB_NAME,
+        containerName: PROFILES_CONTAINER,
+        query: 'SELECT c.nickname, c.linkedAt, c.syncBlob FROM c WHERE c.id = @did',
+        parameters: [{ name: '@did', value: deviceId }],
+        partitionKey: deviceId,
+      }),
+      // Win/loss/draw counters from the player's `tttPairs` partition. One row
+      // per opponent; counters are summed in JS for `hasPlayedTtt` (any row
+      // exists), `hasWonTtt` (Σ wins ≥ 1), `hasLostTtt` (Σ losses ≥ 1).
+      // Single-partition query; result size is O(distinct opponents) — small.
+      queryDocs({
+        connString: conn,
+        dbName: DB_NAME,
+        containerName: TTT_PAIRS_CONTAINER,
+        query: 'SELECT c.m3x3 FROM c',
+        parameters: [],
+        partitionKey: deviceId,
+      }),
+    ]);
+
+    // The dailies read is the only HARD dependency: without it there is no
+    // streak and no mastery, which is most of what this endpoint is for.
+    if (dailiesSettled.status === 'rejected') {
+      context.error('cosmos query threw', dailiesSettled.reason);
       return { status: 500, jsonBody: { error: 'server_error' } };
     }
+    const queryRes = dailiesSettled.value;
     if (!queryRes.ok) {
       context.error('cosmos query failed', queryRes);
       return { status: 500, jsonBody: { error: 'server_error' } };
@@ -143,67 +201,35 @@ app.http('dailyMe', {
     const streak = computeStreak({ rows, latestId: today ?? undefined });
     const mastery = computeMastery(queryRes.docs);
 
-    // Quiz aggregates: single-partition query against the player's
-    // `quizRecords` doc (id == pk == deviceId). At most one row;
-    // returns empty quiz counters if the player has never finished a
-    // round. Treated as a soft dependency — a Cosmos blip on this
-    // query degrades to zero quiz counters rather than 500'ing the
-    // whole snapshot (the streak + mastery fields are still useful).
+    // Soft dependency: a Cosmos blip here degrades to zero quiz counters
+    // rather than 500'ing the whole snapshot — the streak and mastery fields
+    // are still worth returning.
     let quizDoc = null;
-    try {
-      const quizRes = await queryDocs({
-        connString: conn,
-        dbName: DB_NAME,
-        containerName: QUIZ_RECORDS_CONTAINER,
-        query: 'SELECT * FROM c WHERE c.id = @did',
-        parameters: [{ name: '@did', value: deviceId }],
-        partitionKey: deviceId,
-      });
-      if (quizRes.ok && quizRes.docs.length > 0) quizDoc = quizRes.docs[0];
-    } catch (err) {
-      context.warn('cosmos quizRecords read failed (soft-degraded to zero quiz counters)', err);
+    if (quizSettled.status === 'rejected') {
+      context.warn('cosmos quizRecords read failed (soft-degraded to zero quiz counters)', quizSettled.reason);
+    } else if (quizSettled.value.ok && quizSettled.value.docs.length > 0) {
+      quizDoc = quizSettled.value.docs[0];
     }
     const quiz = computeQuiz(quizDoc, SOV_POOL_SIZES);
 
-    // Cross-game engagement signals: profile point-read + TTT pair
-    // read, in parallel. Pre-Phase-4 this also did a cross-partition
-    // scan of `engagementEvents`; Feature S Phase 4 moved that data
-    // into `profile.syncBlob.engagement` so a single profile point-
-    // read covers nickname, linkedAt, and the engagement counters at
-    // once. Both reads are soft dependencies — a Cosmos blip degrades
-    // to "no signal" rather than 500'ing the whole snapshot.
+    // Also soft, and deliberately still treated as ONE unit: these two were a
+    // single `Promise.all`, so either one throwing degraded BOTH to "no
+    // signal". Keeping that grouping means this change is a latency change and
+    // nothing else — splitting them into independent failures would be a
+    // behaviour change smuggled in under a performance fix.
     let profileDoc = null;
     /** @type {Array<{ m3x3?: { wins?: number, losses?: number, draws?: number } }>} */
     let tttPairs = [];
-    try {
-      const [profileRes, tttRes] = await Promise.all([
-        queryDocs({
-          connString: conn,
-          dbName: DB_NAME,
-          containerName: PROFILES_CONTAINER,
-          query: 'SELECT c.nickname, c.linkedAt, c.syncBlob FROM c WHERE c.id = @did',
-          parameters: [{ name: '@did', value: deviceId }],
-          partitionKey: deviceId,
-        }),
-        // Fetch the win/loss/draw counters from the player's
-        // `tttPairs` partition. One row per opponent; counters are
-        // summed in JS for `hasPlayedTtt` (any row exists),
-        // `hasWonTtt` (Σ wins ≥ 1), `hasLostTtt` (Σ losses ≥ 1).
-        // Single-partition query; result size is O(distinct
-        // opponents) — small.
-        queryDocs({
-          connString: conn,
-          dbName: DB_NAME,
-          containerName: TTT_PAIRS_CONTAINER,
-          query: 'SELECT c.m3x3 FROM c',
-          parameters: [],
-          partitionKey: deviceId,
-        }),
-      ]);
-      if (profileRes.ok && profileRes.docs.length > 0) profileDoc = profileRes.docs[0];
-      if (tttRes.ok) tttPairs = tttRes.docs;
-    } catch (err) {
-      context.warn('cosmos engagement reads failed (soft-degraded to no signal)', err);
+    if (profileSettled.status === 'rejected' || tttSettled.status === 'rejected') {
+      context.warn(
+        'cosmos engagement reads failed (soft-degraded to no signal)',
+        profileSettled.status === 'rejected' ? profileSettled.reason : tttSettled.reason,
+      );
+    } else {
+      if (profileSettled.value.ok && profileSettled.value.docs.length > 0) {
+        profileDoc = profileSettled.value.docs[0];
+      }
+      if (tttSettled.value.ok) tttPairs = tttSettled.value.docs;
     }
 
     // Extract the engagement section from the syncBlob defensively —
