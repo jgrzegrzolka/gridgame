@@ -87,11 +87,18 @@
         <!-- The way back into a room this device is already in. Above create /
              join because when it is showing it is almost always what the player
              came here to do: they lost the page, not the game. Hidden whenever
-             there is no remembered room, which is the normal case. -->
-        <button type="button" class="lobby-btn resume-room start-cta" id="resume-room" hidden>
-          <span class="resume-lead" data-i18n="party.resumeLead">Back into your game</span>
-          <span class="resume-code" id="resume-code"></span>
-        </button>
+             there is no remembered room, which is the normal case.
+
+             One quiet line, not a second full-width pill: it states the room and
+             offers the way back in, wearing the same shape as the join row at
+             the foot of the column, so "you are already in one" and "join
+             another" read as the same kind of action. Only `Rejoin` is
+             clickable — the lead and the code are the sentence it acts on. -->
+        <p class="start-resume" id="resume-room" hidden>
+          <span class="start-resume-lead" data-i18n="party.resumeLead">You are in</span>
+          <span class="start-resume-code" id="resume-code"></span>
+          <button type="button" class="text-link start-resume-go" id="resume-go" data-i18n="party.rejoin">Rejoin</button>
+        </p>
         <button type="button" class="lobby-btn primary start-cta" id="create-room" data-i18n="party.createRoom">New online game</button>
         <!-- No `maxlength` on the field, deliberately: the browser applies it
              to a paste BEFORE any script runs, so pasting an invite link into

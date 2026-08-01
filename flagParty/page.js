@@ -494,7 +494,11 @@ export function bootFlagParty() {
   const holdBtn = /** @type {HTMLButtonElement} */ ($('hold-btn'));
   const holdBtnLabel = $('hold-btn-label');
   const holdWho = $('hold-who');
-  const resumeBtn = /** @type {HTMLButtonElement} */ ($('resume-room'));
+  // The resume line and the one clickable thing on it. Split because the line is
+  // a sentence ("You are in Q7S22 Rejoin") where only the last word acts — the
+  // element that shows and hides is not the element you press.
+  const resumeBtn = $('resume-room');
+  const resumeGo = /** @type {HTMLButtonElement} */ ($('resume-go'));
   const resumeCodeEl = $('resume-code');
   const pauseDialog = /** @type {HTMLDialogElement} */ ($('pause-dialog'));
   const pauseBodyEl = $('pause-body');
@@ -1480,7 +1484,7 @@ export function bootFlagParty() {
     resumeBtn.hidden = false;
   }
 
-  resumeBtn.addEventListener('click', () => {
+  resumeGo.addEventListener('click', () => {
     const entry = readActiveRoom(window.localStorage, 'party', Date.now(), isValidRoomCode);
     // Gone stale between paint and tap (a six-hour-old row, another tab that
     // rejected out of it). Repaint rather than connect to a room we no longer
