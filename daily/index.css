@@ -406,12 +406,15 @@
   flex-wrap: wrap;
   gap: 3px;
 }
+/* Tappable, same as every other flag on the result page — click opens the
+ * zoom dialog, so the cursor matches `.find-tile`'s zoom-in. */
 .daily-callout-flag {
   width: 26px;
   height: 20px;
   flex: none;
   display: block;
   border: 1px solid var(--muted-soft-color);
+  cursor: zoom-in;
 }
 /* The find-rate reads as the fact — ink, bold, tabular. */
 .daily-callout-pct {

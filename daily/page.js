@@ -335,6 +335,10 @@ function buildCalloutFact(easiest, codes, pct, all, labels) {
 /**
  * A single callout flag thumbnail (26×20, 24×18 on mobile via CSS).
  *
+ * Clicking it opens the same zoom dialog as every other flag on the
+ * result page (the found / missed grids and the mistake rail) — a flag
+ * is tappable wherever it appears.
+ *
  * @param {string} code
  * @param {Country | null} country
  */
@@ -344,6 +348,7 @@ function buildCalloutFlag(code, country) {
   img.src = `../flags/svg/${code}.svg`;
   img.alt = country ? countryName(country) : code.toUpperCase();
   img.loading = 'lazy';
+  if (country) img.addEventListener('click', () => openZoom(country));
   return img;
 }
 
