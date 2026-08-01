@@ -42,7 +42,7 @@ export function bootBacklogPlay() {
   const nParam = new URLSearchParams(window.location.search).get('n');
   const n = nParam !== null ? parseInt(nParam, 10) : NaN;
   if (!Number.isFinite(n)) {
-    showState(reasonMessage('not-found'));
+    showReason('not-found');
     return Promise.resolve();
   }
 

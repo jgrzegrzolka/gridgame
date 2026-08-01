@@ -68,15 +68,41 @@ let initialised = false;
  * bundle so we inject a `<script>` tag rather than `import()`-ing.
  * Async-loads so first paint isn't blocked.
  */
+/**
+ * Whether a page at this location may report to the production resource.
+ *
+ * Don't ship telemetry from dev: the local SWA emulator runs on localhost, and
+ * rows generated there shouldn't pollute prod telemetry — same idea as the
+ * `local: true` tagging on Cosmos rows.
+ *
+ * `file:` is its own clause and not an afterthought. A page opened straight off
+ * disk has an **empty** `location.host`, which the localhost pattern does not
+ * match, so every authoring page under `daily/backlog/` and `daily/ideas/`
+ * reported to the production resource whenever it was opened as a file. (That
+ * is how a live `ReferenceError` in those pages was spotted — a useful accident,
+ * and still the wrong default.) Testing the protocol rather than blocking `file:`
+ * specifically also covers `blob:` and anything else exotic.
+ *
+ * Known remaining gap, deliberately not closed here: serving the dev site over a
+ * LAN IP (`http://192.168.x.x:4280`, how you test from a phone) still counts as
+ * production. Closing that means deciding which private ranges are "dev", which
+ * is a bigger call than this fix.
+ *
+ * @param {{ protocol: string, host: string }} location
+ * @returns {boolean}
+ */
+export function shouldSendTelemetry(location) {
+  const protocol = location?.protocol ?? '';
+  if (protocol !== 'http:' && protocol !== 'https:') return false;
+  return !/^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(location?.host ?? '');
+}
+
 export function initAppInsights() {
   if (initialised) return;
   initialised = true;
   if (typeof document === 'undefined') return; // SSR / tests
 
-  // Don't ship telemetry from dev. The local SWA emulator runs on
-  // localhost; rows generated there shouldn't pollute prod telemetry.
-  // Same idea as `local: true` tagging on Cosmos rows.
-  if (/^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(window.location.host)) return;
+  if (!shouldSendTelemetry(window.location)) return;
 
   const script = document.createElement('script');
   script.src = CDN_URL;

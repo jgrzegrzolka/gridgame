@@ -46,7 +46,7 @@ app.http('profileDeletion', {
     });
     if (!ts.ok) {
       if (ts.reason === 'missing_secret') {
-        context.warn('TURNSTILE_SECRET not set — skipping verification (dev mode)');
+        context.log('TURNSTILE_SECRET not set: skipping verification (deliberate soft-disable, see CLAUDE.md)');
       } else {
         context.warn('turnstile verification failed', { reason: ts.reason });
         return { status: 403, jsonBody: { error: 'turnstile_failed' } };
