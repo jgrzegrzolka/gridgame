@@ -215,9 +215,10 @@ function findCountry(all, code) {
 
 /**
  * Build one flag tile for the mistake rail. Mirrors the result-page
- * tile structure (`.find-tile` + `.find-stats-pct` bottom badge) so the
- * rail renders with identical sizing, borders, hover tooltips and
- * percentage strip as the Znalezione/Pominięte grids above.
+ * tile structure (`.find-tile` + the `.find-stats-pct` bottom-right corner
+ * pill) so the rail renders with identical sizing, borders, hover tooltips
+ * and figure treatment as the Znalezione/Pominięte grids above — the ×N
+ * count wears the very same pill their find-rate does.
  *
  * `isMine` adds a small red top-right corner dot when the player clicked
  * this distractor themselves ("I made this mistake too").

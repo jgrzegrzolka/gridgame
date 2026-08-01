@@ -326,53 +326,59 @@
   font-style: italic;
 }
 
-/* Always-visible bottom-strip percentage on a found/missed flag tile.
- * Tile has position: relative (set in ../findFlag/index.css alongside
- * the hover-name tooltip), so this absolute box sits inside it. */
+/* Tile corner pills — ONE recipe, three corners (locked design 2a).
+ *
+ * Every figure a result tile carries is a small pill hugging a corner, and
+ * no full-width band survives on any grid. The find-rate used to be a
+ * centred strip across the whole bottom edge: together with the two top
+ * pills it covered about two thirds of the tile, and it landed exactly on
+ * the band where flags like Bangladesz, Korea and Malediwy keep their
+ * device. As a fourth corner it costs about a third, and the flag keeps an
+ * unbroken diagonal through its middle.
+ *
+ * The three share everything but which corner they hug and their fill, so
+ * they're one rule (CLAUDE.md "same mechanism = same code") — a pill that
+ * drifted in size or weight from its neighbours is the bug this prevents.
+ *
+ *   top-left     .find-tile-rank    #N in the puzzle, solid primary
+ *   top-right    .find-tile-metric  the metric figure
+ *   bottom-right .find-stats-pct    community find-rate, and the mistake
+ *                                   rail's ×N — one class, both grids
+ *
+ * The rail's "I made this mistake too" marker keeps the top-right corner
+ * (`.find-tile.is-user-wrong::before` below), so the two never collide.
+ * Tiles are position: relative (../findFlag/index.css), so these anchor to
+ * the tile. */
+.find-tile-rank,
+.find-tile-metric,
 .find-stats-pct {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.7);
-  color: var(--surface-color);
-  font-size: 11px;
-  font-weight: var(--weight-bold);
-  text-align: center;
-  padding: 2px 4px;
-  letter-spacing: 0.04em;
-  pointer-events: none;
-}
-
-/* Rank + value overlay for superlative result tiles, on every metric
- * (playFlow.js flagTile, only on the Found/Missed grids). Corner pills so
- * they never collide with the bottom .find-stats-pct find-rate strip: the
- * in-puzzle rank sits top-left, the compact metric figure top-right. The tile
- * is position: relative (../findFlag/index.css), so these anchor to it. */
-.find-tile-rank,
-.find-tile-metric {
-  position: absolute;
-  top: 0;
   z-index: 2;
   font-size: 10px;
   line-height: 1;
   padding: 2px 4px;
+  color: var(--surface-color);
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 .find-tile-rank {
+  top: 0;
   left: 0;
   background: var(--primary-color);
-  color: var(--surface-color);
-  font-weight: var(--weight-bold);
   border-bottom-right-radius: 4px;
 }
 .find-tile-metric {
+  top: 0;
   right: 0;
   background: rgba(0, 0, 0, 0.6);
-  color: var(--surface-color);
-  font-weight: var(--weight-bold);
   border-bottom-left-radius: 4px;
+}
+.find-stats-pct {
+  bottom: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border-top-left-radius: 4px;
 }
 
 /* Callout line — the community section's opening summary of the round's

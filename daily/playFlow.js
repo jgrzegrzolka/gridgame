@@ -370,9 +370,10 @@ export function wireZoom() {
  *
  * `showMeta` opts the tile into the rank + value overlay (`tileMeta`):
  * a rank badge in the top-left corner and a compact metric-value pill in the
- * top-right, leaving the bottom strip free for the community find-rate
- * (`.find-stats-pct`). Only the result grids pass `true` — the in-game found
- * grid never does, so a correct guess doesn't leak its rank mid-play.
+ * top-right, leaving the bottom-right corner free for the community
+ * find-rate (`.find-stats-pct`). Only the result grids pass `true` — the
+ * in-game found grid never does, so a correct guess doesn't leak its rank
+ * mid-play.
  *
  * @param {Country} c
  * @param {boolean} [showMeta]
