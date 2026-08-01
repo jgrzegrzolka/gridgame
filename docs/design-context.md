@@ -65,7 +65,7 @@ Key states:
   hearts row rebuilt from the saved record.
 - **Result** — score line, personal stats block (score · community average ·
   streak, plus a share button on touch devices), `Found` and `Missed` grids with
-  a per-flag community find-rate strip on each tile, a community callout line
+  a per-flag community find-rate in each tile's bottom-right corner, a callout line
   (easiest / hardest flag with %), and a "most common mistake" rail that is
   collapsed to repeated mistakes with a "show all (N)" toggle.
 - **Community stats pending** — a "Loading stats" line with animated dots; the
@@ -283,9 +283,10 @@ hover, plus two narrowly-scoped additions (`--accent-rose` for dock press,
 `--correct-color` / `--wrong-color` pair means only "this answer was right/wrong"
 and may not be borrowed for emphasis. Ad-hoc hex values are not allowed; the
 documented exceptions are the flag SVGs themselves, the home hero's invented
-stamps, the map's geographic fills, and the tile bottom strip's
-`rgba(0,0,0,0.7)`. Type runs on two weights (regular/bold) plus a light weight
-used only on the home hero headline and a medium used only in the burger menu.
+stamps, the map's geographic fills, and the translucent blacks that carry text
+over a flag image (the tile corner pills at `rgba(0,0,0,0.6)`, the wrong-tile
+name band at `0.7`). Type runs on two weights (regular/bold) plus a light weight
+on the home hero headline and the daily score, and a medium in the burger menu.
 
 **Light only.** `color-scheme: light` is pinned at `:root`; there is no dark
 theme, and native widgets are forced light so dark-OS users do not get a
@@ -307,8 +308,10 @@ have a reduced branch.
   viewport with no scrolling, since answers are timed.
 - Timed quiz screens need the timer in a fixed position that does not move as
   content changes.
-- Result-tile metadata has fixed slots: rank badge top-left, metric value
-  top-right, community find-rate strip along the bottom.
+- Result-tile metadata has fixed corner slots: rank badge top-left, metric value
+  top-right, community find-rate bottom-right. On the mistake rail the
+  bottom-right slot carries the `×N` count and the top-right one the "I made this
+  mistake too" marker, so a fourth figure has nowhere to go without a collision.
 
 **Accessibility: no formal target is documented anywhere in the repo.** What
 exists today: `focus-visible` rings on the chrome and button families,

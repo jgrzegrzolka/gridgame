@@ -47,9 +47,12 @@ body {
   padding: 48px 0 0;
 }
 
-/* Fixed copy (not the puzzle's description), so it never varies in length. The
- * one place on the site that uses the light display weight (--weight-light):
- * thin large type is the landing page's signature. Scales fluidly on phones. */
+/* Fixed copy (not the puzzle's description), so it never varies in length. One
+ * of the two places that use the light display weight (--weight-light) — the
+ * other is the daily result's 34px score (daily/index.css .daily-score-value).
+ * Both are large display type, which is the only size where 300 reads as
+ * designed rather than anaemic; thin large type is the landing page's
+ * signature. Scales fluidly on phones. */
 .hero-title {
   margin: 0;
   font-weight: var(--weight-light);
