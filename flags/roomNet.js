@@ -40,6 +40,34 @@ export function isValidRoomCode(code) {
   return ROOM_CODE_RE.test(code);
 }
 
+/**
+ * Turn whatever landed in a start screen's join field into a room code.
+ *
+ * The field is a bare underline with no boxes and no formatting help, so this
+ * is what keeps it honest: it upper-cases, drops anything that is not a letter
+ * or a digit (spaces, the dashes people add themselves), and stops at
+ * {@link ROOM_LEN}.
+ *
+ * The one non-obvious case is a pasted invite link. What a host actually sends
+ * a friend is a URL, not five characters, and `…/flagParty/?r=66BKE` stripped
+ * of its punctuation would be `HTTPSWWWYETANOTHERQUIZCOMFLAGP` — garbage that
+ * looks like a typo the paster did not make. So a value containing `/` or `=`
+ * is read as a link and only its trailing 5-character run is kept. A value with
+ * neither (someone typing) always takes the plain path, which is why "hello
+ * 66BKE" does not silently become a code.
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+export function normalizeRoomCodeInput(raw) {
+  const s = String(raw ?? '');
+  if (s.includes('/') || s.includes('=')) {
+    const tail = s.toUpperCase().match(/([A-Z0-9]{5})\s*$/);
+    if (tail) return tail[1];
+  }
+  return s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_LEN);
+}
+
 /** Production hostnames that should hit the deployed PartyKit. */
 const PROD_HOSTNAMES = new Set([
   'jgrzegrzolka.github.io',

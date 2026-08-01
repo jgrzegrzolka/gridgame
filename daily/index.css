@@ -474,25 +474,9 @@
   font-size: 11px;
   color: var(--muted-color);
 }
-/* A real <button> reset to read as an accent text link. */
-.daily-mistake-toggle {
-  appearance: none;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: var(--accent-rose);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.daily-mistake-toggle:hover {
-  color: var(--primary-color);
-}
-.daily-mistake-toggle:focus-visible {
-  outline: 2px solid var(--accent-rose);
-  outline-offset: 2px;
-}
+/* `.daily-mistake-toggle` (a <button> reset to read as an accent text link) is
+   styled in common.css now, sharing one rule with the start screens' join link
+   — the recipe started here and moved when the second consumer arrived. */
 .daily-mistake-legend {
   display: inline-flex;
   align-items: center;

@@ -28,6 +28,7 @@ All declared on `:root` in `common.css`. Order is the order they appear there.
 | `--hover-color` | `#f9f9f9` | Hover wash | Every casual "you can click this" hover: game rows, chrome, pills, chips, cells, buttons |
 | `--accent-rose` | `#9F6D82` | Interaction rose | Dock item hover/press, every `:focus-visible` ring, the primary CTA's border and ink |
 | `--border-strong-color` | `#e2e2e2` | Hover hairline | One step sharper than `--muted-soft-color`; the pressable button family's `:hover` border only |
+| `--control-line-color` | `#d0d0d0` | Bare-control line | The resting line of a control with no box of its own: the switch track and the start screens' underlined room-code field |
 
 `--link-color` is an alias resolving to `--primary-color`.
 
@@ -71,7 +72,7 @@ Present in the CSS today, not covered by a token or a documented exception:
 
 - Greys used as text or fill: `#666` (×3 — `.time`, `.result-links`, a daily
   caption), `#888` (×2 — the burger nickname row, an archive caption), `#333`
-  (×2), `#555`, `#444`, `#ddd`, `#d0d0d0` (the switch track).
+  (×2), `#555`, `#444`, `#ddd`.
 - `#fbeef3` (×3) — the paled-pink hover on `.pill.exclude` and two ideas-page rules.
 - `#fff3b0`, `#ffe066`, `#1d3557` — daily highlight fills.
 
@@ -274,13 +275,19 @@ One component, two postures at 700px.
   16px glyph is a CSS mask; `.copied` swaps the mask to a checkmark in
   `--correct-color` for 1.5s.
 - **Switch** (`.scope-toggle`): 13px label, 12px gap, a 32 × 18px track
-  (`#d0d0d0`, radius 9px, `--link-color` when checked) and a 16 × 16px surface
+  (`--control-line-color`, radius 9px, `--link-color` when checked) and a 16 × 16px surface
   thumb (radius 50%, shadow `0 1px 2px rgba(0,0,0,.25)`) sliding `1px → 15px`
   over `0.15s`. The real checkbox stays focusable at `opacity: 0`.
   `.is-disabled` mutes the label and drops the switch to `opacity: 0.5`.
-- **Join code:** monospace 18px, `letter-spacing: 4px`, centred, uppercase, 12px
-  padding, 1px `--muted-color` border, radius 6px, `--accent-rose` focus outline
-  inset 2px.
+- **Join code** (`.join-code`): a bare underline, no box. Monospace 15px
+  (16px on phones), `letter-spacing: 0.22em`, uppercase, 96px wide (110px on
+  phones), `border-bottom: 1px solid var(--control-line-color)` going
+  `--accent-rose` on focus and `--secondary-color` under `.join-form.is-error`.
+  The placeholder opts out of the uppercase and the tracking.
+- **Text link** (`.text-link`, `.daily-mistake-toggle`): a `<button>` reset to
+  `font: inherit` at `--weight-bold` in `--accent-rose`, hovering to
+  `--primary-color` over `0.15s`, `--accent-rose` focus ring at 2px offset.
+  `:disabled` is `opacity: 0.45` with no hover response.
 - **Text input** (`.find-input`): full width, padding `12px 14px`, 16px, 1px
   `--muted-soft-color` border, radius 6px; focus swaps the border to
   `--primary-color` and drops the outline; `.wrong` swaps it to
@@ -403,8 +410,21 @@ One component, two postures at 700px.
 
 ### Layout blocks
 
-- Start / lobby column: flex column, 16px gaps, `max-width: 360px`, centred.
-  `.start-sep` is a 13px muted label between two 1px rules at a 10px gap.
+- Start / lobby column (`.lobby`, `.party .pt-start`): `max-width: 360px`,
+  centred horizontally, left-aligned inside, and **top-anchored** 152px from the
+  viewport top (128px on phones) — never vertically centred, so the column does
+  not drift down as the monitor grows. On desktop the in-flow dock pill sits 64px
+  below it. Eyebrow is a 26 × 1px `--accent-rose` rule + an 11px bold `0.2em`
+  uppercase rose label at a 10px gap; headline is 34px `--weight-light` at
+  `1.15` / `-0.02em` (32px on Tic-Tac-Toe, 30px / 28px on phones). CTA
+  (`.start-cta`) is the full-width `.lobby-btn.primary` at 17px bold,
+  `18px 20px`, 44px above (38px on Tic-Tac-Toe); `.start-mode` pills are
+  full-width `.lobby-btn` at 15px, `14px 20px`, stacked at an 8px gap. The join
+  row (`.join-form`) sits 64px below (44px on Tic-Tac-Toe), baseline-aligned at a
+  14px gap: a 96px underlined `.join-code` (`--control-line-color`, rose on
+  focus, `--secondary-color` under `.is-error`) and a `.text-link` Join, inert
+  until the code is 5 characters. Phones grow the join row's targets to 44px and
+  its type to 16px (below that, iOS zooms the page on focus).
 - Home game list: surface card, radius 12px, 1px border; rows are 58px tall with
   16px side padding and a 13px gap, separated by 1px rules, hovering to
   `--hover-color` and pressing to `--home-rose-soft` with a `.985` spring.
