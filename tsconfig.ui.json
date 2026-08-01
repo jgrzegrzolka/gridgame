@@ -5,6 +5,6 @@
     "noImplicitAny": false,
     "strictNullChecks": false
   },
-  "include": ["**/page.js"],
+  "include": ["**/page.js", "**/play.js"],
   "exclude": ["node_modules"]
 }

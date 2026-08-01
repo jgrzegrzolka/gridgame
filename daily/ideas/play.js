@@ -107,7 +107,7 @@ export function bootIdeasPlay() {
   const kParam = new URLSearchParams(window.location.search).get('k');
   const k = kParam !== null ? parseInt(kParam, 10) : NaN;
   if (!Number.isFinite(k)) {
-    showState(reasonMessage('not-found'));
+    showReason('not-found');
     return Promise.resolve();
   }
 

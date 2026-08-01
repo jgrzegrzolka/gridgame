@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { enrichTelemetryItem, CORRELATION_EXCLUDED_DOMAINS } from './index.js';
+import { enrichTelemetryItem, CORRELATION_EXCLUDED_DOMAINS, shouldSendTelemetry } from './index.js';
 import { httpServerUrlFor, serverUrlFor } from '../flags/roomNet.js';
 
 test('enrichTelemetryItem stamps role, user.id tag, and customDimension on an empty envelope', () => {
@@ -76,4 +76,44 @@ test('every excluded entry is a bare hostname — the SDK matches on host, not U
     assert.ok(!d.includes('/'), `"${d}" looks like a URL; the SDK expects a hostname`);
     assert.ok(!d.includes(':'), `"${d}" carries a scheme or port; the SDK expects a bare hostname`);
   }
+});
+
+// ---- which environments may report to the production resource ----
+
+test('shouldSendTelemetry: production pages report', () => {
+  assert.equal(shouldSendTelemetry({ protocol: 'https:', host: 'www.yetanotherquiz.com' }), true);
+  assert.equal(shouldSendTelemetry({ protocol: 'https:', host: 'yetanotherquiz.com' }), true);
+});
+
+test('shouldSendTelemetry: localhost does not', () => {
+  for (const host of ['localhost:4280', 'localhost', '127.0.0.1:4280', '[::1]:4280']) {
+    assert.equal(shouldSendTelemetry({ protocol: 'http:', host }), false, host);
+  }
+});
+
+// The regression this was written for. A page opened straight off disk has an
+// EMPTY host, so the localhost pattern never matched it and the authoring pages
+// under daily/backlog/ and daily/ideas/ reported straight to production — which
+// is how a live ReferenceError in them showed up in prod telemetry.
+test('shouldSendTelemetry: a file:// page does not, despite its empty host', () => {
+  assert.equal(shouldSendTelemetry({ protocol: 'file:', host: '' }), false);
+});
+
+test('shouldSendTelemetry: any non-http(s) scheme is refused, not just file:', () => {
+  for (const protocol of ['blob:', 'about:', 'data:', 'chrome-extension:']) {
+    assert.equal(shouldSendTelemetry({ protocol, host: 'www.yetanotherquiz.com' }), false, protocol);
+  }
+});
+
+test('shouldSendTelemetry: a missing or malformed location is refused, never thrown on', () => {
+  // It runs during boot on every page; throwing here would take the page with it.
+  assert.equal(shouldSendTelemetry({}), false);
+  assert.equal(shouldSendTelemetry(/** @type {any} */ (null)), false);
+  assert.equal(shouldSendTelemetry(/** @type {any} */ (undefined)), false);
+});
+
+// A LAN-served dev site is knowingly still treated as production — see the
+// doc comment. Pinned so the gap is a decision on record, not a surprise.
+test('shouldSendTelemetry: a LAN-IP dev host still counts as production (known gap)', () => {
+  assert.equal(shouldSendTelemetry({ protocol: 'http:', host: '192.168.0.5:4280' }), true);
 });
