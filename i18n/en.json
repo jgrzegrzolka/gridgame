@@ -547,7 +547,8 @@
   },
   "party": {
     "title": "Yet Another Quiz: Flag Party",
-    "resumeLead": "Back into your game",
+    "resumeLead": "You are in",
+    "rejoin": "Rejoin",
     "eyebrow": "Flag Party",
     "headlineA": "Play together,",
     "headlineB": "everyone on their phone.",

@@ -547,7 +547,8 @@
   },
   "party": {
     "title": "Yet Another Quiz: Flagowa impreza",
-    "resumeLead": "Wróć do swojej gry",
+    "resumeLead": "Jesteś w pokoju",
+    "rejoin": "Wróć",
     "eyebrow": "Flag Party",
     "headlineA": "Gracie razem,",
     "headlineB": "każdy na swoim telefonie.",

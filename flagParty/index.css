@@ -88,27 +88,43 @@
   padding: 8px 12px;
   margin: 0 0 14px;
 }
-/* The way back into a room this device is already in. Reuses .lobby-btn's pill
-   (common.css) rather than inventing a second button shape, and only adds the
-   second line: the room code, which is the one thing the player has no other way
-   to find once the page is gone. Wears `.start-cta` too, so on the start screen
-   it is the same full-width slot as "New online game"; when it IS showing, the
-   create button tucks 10px under it instead of opening its own 44px gap. */
-.resume-room {
+/* The way back into a room this device is already in — one quiet line above the
+   CTA, deliberately built to the same recipe as the join row at the foot of the
+   column (baseline flex, 14px gap, a muted lead, the code in the join field's
+   mono, and a single rose text link). Returning to a room and joining one are
+   the same kind of action, so they get the same shape.
+
+   It used to be a full-width filled pill stacked directly above "New online
+   game": two competing blocks of identical weight, so neither read as the
+   page's answer. Stating the room in a sentence leaves exactly one filled
+   button on the screen.
+
+   The code is the one thing the player has no other way to find once the page
+   is gone, which is why the line names it rather than just offering a button.
+
+   Flag Party only — Tic-Tac-Toe has no remembered room — so this stays in the
+   feature stylesheet. If TTT ever grows one, promote it to common.css. */
+.start-resume {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  align-items: baseline;
+  gap: 14px;
+  margin: 40px 0 0;
+  font-size: 15px;
 }
-.resume-room:not([hidden]) ~ .start-cta { margin-top: 10px; }
+/* With the line showing, the block above the CTA is a row taller, so the two
+   gaps below it tighten a step (44 → 36, 64 → 56) and the column keeps its
+   rhythm instead of drifting down the screen. */
+.start-resume:not([hidden]) ~ .start-cta { margin-top: 36px; }
+.start-resume:not([hidden]) ~ .join-form { margin-top: 56px; }
 /* The `[hidden]` trap again — see .hold-read further down. Pinned by hiddenGuards.test.js. */
-.resume-room[hidden] { display: none; }
-.resume-lead { font-size: 14px; }
-.resume-code {
-  font-weight: var(--weight-bold);
-  font-size: 16px;
-  letter-spacing: 0.12em;
+.start-resume[hidden] { display: none; }
+.start-resume-lead { color: var(--muted-color); }
+.start-resume-code {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.22em;
+  color: var(--primary-color);
 }
+.start-resume-go { font-size: 15px; }
 
 /* The pause popup is `.help-dialog` from common.css, unchanged — card, border,
    radius, shadow and backdrop all come from there, exactly as the TTT rules
