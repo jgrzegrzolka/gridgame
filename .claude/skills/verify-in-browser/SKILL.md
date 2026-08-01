@@ -234,6 +234,36 @@ want to confirm a port flag works, read the script and the CLI docs, or say the
 command is unverified. Booting "just to check" re-occupies the ports you were
 asked to keep free — that is how this section got written.
 
+## A local pass does not cover cross-origin requests
+
+`initAppInsights` returns early on localhost, so the App Insights SDK never
+loads in dev — and neither do the headers it attaches. `enableCorsCorrelation`
+stamps `Request-Id` on cross-origin fetches, which promotes a simple GET to a
+**preflighted** one. PartyKit answers no OPTIONS and no
+`Access-Control-Allow-Headers`, so in production the browser refused the
+request entirely.
+
+That is how the room-liveness probe behind Flag Party's "Rejoin" line stayed
+broken through a full local verification pass: locally no header is added, the
+request is simple, and it works perfectly. The failing condition only exists
+where the instrumentation runs. (The WebSocket to the same host was never
+affected — WS does not preflight — so the games looked fine and hid it.)
+
+So when a change touches a request to any origin that is not the site itself
+— today that means only `gridgame-ttt.jgrzegrzolka.partykit.dev`:
+
+- **local green proves nothing.** Do not report it as verified.
+- Check it against the deployed site, or reason from the headers the SDK adds
+  rather than from what dev does.
+- `curl` the endpoint too. curl sends no `Request-Id`, so a curl that succeeds
+  while the browser fails is itself the diagnosis — that contrast is what found
+  this one.
+- Read the **console**, not just the DOM. The CORS refusal names the offending
+  header outright; the DOM only shows a missing element.
+
+New cross-origin hosts we do not own go in `CORRELATION_EXCLUDED_DOMAINS`
+(`analytics/index.js`).
+
 ## When the browser genuinely isn't the tool
 
 If the change has no runtime surface a browser can show — a pure source-level
