@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, shareText, makeColorSwatch, NICKNAME_STORAGE_KEY } from './common.js';
+import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, shareText, makeColorSwatch, wireJoinCodeField, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
 
 /**
@@ -572,4 +572,94 @@ test('makeColorSwatch builds a .pill-swatch span carrying the colour in data-val
 test('makeColorSwatch marks the dot aria-hidden (the adjacent label names the colour)', () => {
   const sw = makeColorSwatch('blue', fakeSwatchDoc());
   assert.equal(sw.getAttribute('aria-hidden'), 'true');
+});
+
+/**
+ * Minimal stand-in for the start screens' join row: an <input> that fires its
+ * `input` listeners on a scripted edit, plus the submit button whose `disabled`
+ * flag is the whole point of the wiring.
+ */
+function fakeJoinRow(initial = '') {
+  /** @type {(() => void)[]} */
+  const listeners = [];
+  const input = /** @type {any} */ ({
+    value: initial,
+    selectionStart: initial.length,
+    /** @param {string} type @param {() => void} fn */
+    addEventListener: (type, fn) => { if (type === 'input') listeners.push(fn); },
+    /** @param {number} a @param {number} b */
+    setSelectionRange: (a, b) => { input.selectionStart = a; input.selectionEnd = b; },
+  });
+  const btn = /** @type {any} */ ({ disabled: false });
+  /** Simulate a user edit: set the raw value, then fire `input`. */
+  const edit = (/** @type {string} */ raw, /** @type {number} */ caret = -1) => {
+    input.value = raw;
+    input.selectionStart = caret < 0 ? raw.length : caret;
+    for (const fn of listeners) fn();
+  };
+  return { input, btn, edit };
+}
+
+test('wireJoinCodeField: normalises the value as it is typed', () => {
+  const { input, btn, edit } = fakeJoinRow();
+  wireJoinCodeField(input, btn);
+  edit('66-bk');
+  assert.equal(input.value, '66BK');
+});
+
+test('wireJoinCodeField: a pasted invite link collapses to its room code', () => {
+  const { input, btn, edit } = fakeJoinRow();
+  wireJoinCodeField(input, btn);
+  edit('https://www.yetanotherquiz.com/flagParty/?r=66BKE');
+  assert.equal(input.value, '66BKE');
+  assert.equal(btn.disabled, false);
+});
+
+// The inert-until-valid contract. It is what lets the join link be a quiet
+// text link instead of a button whose only answer to a short code would be
+// "Code must be 5 characters" — and, because a disabled submit button does not
+// submit its form, it is also what gates Enter.
+test('wireJoinCodeField: the submit button stays disabled until the code is 5 characters', () => {
+  const { input, btn, edit } = fakeJoinRow();
+  wireJoinCodeField(input, btn);
+  assert.equal(btn.disabled, true, 'empty field starts inert');
+  edit('66BK');
+  assert.equal(btn.disabled, true, 'four characters is still inert');
+  edit('66BKE');
+  assert.equal(btn.disabled, false, 'five characters enables it');
+  edit('66BK');
+  assert.equal(btn.disabled, true, 'deleting back below five disables it again');
+});
+
+test('wireJoinCodeField: syncs once on wiring, so a prefilled field is not left inert', () => {
+  const { input, btn } = fakeJoinRow('66bke');
+  wireJoinCodeField(input, btn);
+  assert.equal(input.value, '66BKE');
+  assert.equal(btn.disabled, false);
+});
+
+// Editing mid-code must not fling the cursor to the end — the rewrite happens
+// on every keystroke, so without this a backspace in the middle would move the
+// caret away from where the user was working.
+test('wireJoinCodeField: keeps the caret where it was after a rewrite', () => {
+  const { input, btn, edit } = fakeJoinRow();
+  wireJoinCodeField(input, btn);
+  edit('66bke', 3);
+  assert.equal(input.value, '66BKE');
+  assert.equal(input.selectionStart, 3);
+});
+
+test('wireJoinCodeField: clamps the caret when normalisation shortens the value', () => {
+  const { input, btn, edit } = fakeJoinRow();
+  wireJoinCodeField(input, btn);
+  edit('6-6-b', 5);
+  assert.equal(input.value, '66B');
+  assert.equal(input.selectionStart, 3);
+});
+
+test('wireJoinCodeField: works without a submit button', () => {
+  const { input, edit } = fakeJoinRow();
+  wireJoinCodeField(input, null);
+  edit('66bke');
+  assert.equal(input.value, '66BKE');
 });

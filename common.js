@@ -7,6 +7,7 @@ import { migrateEngagement } from './flags/engagementMigration.js';
 import { ensureProfile } from './flags/autoProfile.js';
 import { primeAchievementsBaseline, refreshAchievementsAndDiff } from './flags/achievementsBaseline.js';
 import { celebrate } from './flags/achievementCelebrate.js';
+import { isValidRoomCode, normalizeRoomCodeInput } from './flags/roomNet.js';
 import { t } from './i18n.js';
 
 /**
@@ -256,6 +257,44 @@ export function buildAvatar(deviceId, doc = document) {
   a.className = 'avatar';
   a.innerHTML = avatarSvg(deviceId);
   return a;
+}
+
+/**
+ * Wire a start screen's join row — the underlined room-code field and its Join
+ * link. Both online games call this, so the field behaves identically on each
+ * (CLAUDE.md "same mechanism = same code"); the normalisation itself is pure
+ * and lives in `flags/roomNet.js` with its tests.
+ *
+ * Two behaviours:
+ *   - the value is normalised on every input, so what is on screen is always
+ *     exactly what will be sent (and a pasted invite link collapses to its
+ *     code as you paste it, rather than sitting there looking wrong);
+ *   - Join stays `disabled` until the code is a full 5 characters, which is
+ *     what makes the link inert rather than a button that answers with "Code
+ *     must be 5 characters". Enter is gated by the same flag, since a disabled
+ *     submit button does not submit its form.
+ *
+ * The caret is restored after a rewrite so editing mid-code (backspacing the
+ * third character of five) doesn't fling the cursor to the end.
+ *
+ * @param {HTMLInputElement} input
+ * @param {HTMLButtonElement | null} [submitBtn]
+ * @returns {() => void} the sync function, for callers that clear the field
+ */
+export function wireJoinCodeField(input, submitBtn) {
+  const sync = () => {
+    const next = normalizeRoomCodeInput(input.value);
+    if (next !== input.value) {
+      const caret = input.selectionStart ?? next.length;
+      input.value = next;
+      const at = Math.min(caret, next.length);
+      try { input.setSelectionRange(at, at); } catch (e) { /* not a text input */ }
+    }
+    if (submitBtn) submitBtn.disabled = !isValidRoomCode(next);
+  };
+  input.addEventListener('input', sync);
+  sync();
+  return sync;
 }
 
 /**

@@ -39,7 +39,7 @@ import { resolveRoundCount, validateGameLength, validateFirstPickMode, DEFAULT_F
 import { renderableQuestionIds, questionRenderAction, canRenderQuestion, canRenderHand } from './staleGuard.js';
 import { createSectionSwapper } from './sectionSwap.js';
 import { nextRadioId, paintRadioGroup, RADIO_KEYS } from './radioGroup.js';
-import { buildAvatar, shareUrl } from '../common.js';
+import { buildAvatar, shareUrl, wireJoinCodeField } from '../common.js';
 import { heartbeatAction, PING_INTERVAL_MS } from '../flags/heartbeat.js';
 
 /** @typedef {import('../flags/partyClient.js').PartyClientState} PartyClientState */
@@ -563,6 +563,9 @@ export function bootFlagParty() {
   const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
   const questionToSettingsBtn = /** @type {HTMLButtonElement} */ ($('question-to-settings'));
   const joinError = $('join-error');
+  const joinForm = /** @type {HTMLFormElement} */ ($('join-form'));
+  const joinCodeInput = /** @type {HTMLInputElement} */ ($('join-code'));
+  const joinGoBtn = /** @type {HTMLButtonElement} */ ($('join-go'));
   const shareBtn = /** @type {HTMLButtonElement} */ ($('share-btn'));
   // Invite icon is touch-only, same as Tic-Tac-Toe: on phones/tablets copying
   // the URL bar is fiddly and the native share sheet (WhatsApp etc.) is the
@@ -636,13 +639,21 @@ export function bootFlagParty() {
     lastJoinError = { key, fallback, params };
     paintJoinError();
     joinError.hidden = false;
+    // The field's underline turns pink with the message, so the error reads as
+    // being about this control rather than as a line that happens to sit near it.
+    joinForm.classList.add('is-error');
   }
   function paintJoinError() {
     if (!lastJoinError) return;
     const { key, fallback, params } = lastJoinError;
     joinError.textContent = params ? fmt(t(key, fallback), params) : t(key, fallback);
   }
-  function clearJoinError() { lastJoinError = null; joinError.hidden = true; joinError.textContent = ''; }
+  function clearJoinError() {
+    lastJoinError = null;
+    joinError.hidden = true;
+    joinError.textContent = '';
+    joinForm.classList.remove('is-error');
+  }
 
   /** The one screen-change primitive — every `showSection` call goes through it,
    *  so a screen change looks the same wherever it comes from. The sequencing
@@ -3004,10 +3015,19 @@ export function bootFlagParty() {
   // ---- wire controls ----
   $('create-room').addEventListener('click', () => enterRoom(generateCode(), 'create', { push: true }));
 
-  $('join-form').addEventListener('submit', (e) => {
+  // Normalises as you type and keeps Join inert below 5 characters. Shared with
+  // Tic-Tac-Toe's identical row — see wireJoinCodeField in common.js.
+  wireJoinCodeField(joinCodeInput, joinGoBtn);
+  // A new attempt clears the previous rejection, so the pink underline doesn't
+  // outlive the code that earned it.
+  joinCodeInput.addEventListener('input', () => { if (lastJoinError) clearJoinError(); });
+
+  joinForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const input = /** @type {HTMLInputElement} */ (document.getElementById('join-code'));
-    const code = input.value.trim().toUpperCase();
+    const code = joinCodeInput.value.trim().toUpperCase();
+    // Unreachable through the UI (the submit button is disabled until the code
+    // is valid, which also gates Enter) — kept as the guard for any other path
+    // into submit, and because the server should never be sent garbage.
     if (!isValidRoomCode(code)) {
       showJoinError('ttt.codeMustBe5', 'Code must be 5 characters');
       return;

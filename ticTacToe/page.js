@@ -25,7 +25,7 @@ import { trackEvent } from '../analytics/index.js';
 import { loadCountries, attachMetrics } from '../flags/group.js';
 import { METRIC_FILES } from '../flags/metrics/index.js';
 import { metricDataGap } from '../flags/metricTiers.js';
-import { shareUrl } from '../common.js';
+import { shareUrl, wireJoinCodeField } from '../common.js';
 import { t, countryName, withLocalizedAliases, autoRelocalize } from '../i18n.js';
 import { launchConfetti } from '../confetti.js';
 import { trapPicker, releasePicker } from './pickerLock.js';
@@ -131,6 +131,7 @@ function runOnline(countries) {
   const createBtn = document.getElementById('create-room');
   const joinForm = /** @type {HTMLFormElement} */ (document.getElementById('join-form'));
   const joinCodeEl = /** @type {HTMLInputElement} */ (document.getElementById('join-code'));
+  const joinGoBtn = /** @type {HTMLButtonElement} */ (document.getElementById('join-go'));
   const errorEl = document.getElementById('lobby-error');
   const roomCodeEl = document.getElementById('room-code');
   const shareBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('share-link'));
@@ -221,14 +222,27 @@ function runOnline(countries) {
   if (createBtn) {
     createBtn.addEventListener('click', () => enterRoom(generateCode(), 'create'));
   }
+  if (joinCodeEl) {
+    // Normalises as you type and keeps Join inert below 5 characters. Shared
+    // with Flag Party's identical row — see wireJoinCodeField in common.js.
+    wireJoinCodeField(joinCodeEl, joinGoBtn);
+    // A new attempt clears the previous rejection, so the pink underline
+    // doesn't outlive the code that earned it.
+    joinCodeEl.addEventListener('input', () => { if (lastErrorKey) clearError(); });
+  }
   if (joinForm) {
     joinForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const code = joinCodeEl.value.toUpperCase().trim();
+      // Unreachable through the UI (the submit button is disabled until the
+      // code is valid, which also gates Enter) — kept as the guard for any
+      // other path into submit, and because the server should never be sent
+      // garbage.
       if (!isValidRoomCode(code)) {
         showError('ttt.codeMustBe5', 'Code must be 5 characters');
         return;
       }
+      clearError();
       enterRoom(code, 'join');
     });
   }
@@ -248,7 +262,16 @@ function runOnline(countries) {
     if (!errorEl) return;
     lastErrorKey = { key, fallback, params };
     errorEl.hidden = false;
+    // The field's underline turns pink with the message, so the error reads as
+    // being about this control rather than a line that happens to sit near it.
+    if (joinForm) joinForm.classList.add('is-error');
     paintError();
+  }
+
+  function clearError() {
+    lastErrorKey = null;
+    if (errorEl) { errorEl.hidden = true; errorEl.textContent = ''; }
+    if (joinForm) joinForm.classList.remove('is-error');
   }
 
   function paintError() {

@@ -70,18 +70,34 @@
     <main class="party" id="party">
       <p class="party-status" id="party-status" hidden></p>
 
-      <!-- Start: create or join -->
+      <!-- Start: create or join. The column, its type scale and the join row
+           are all shared with Tic-Tac-Toe's `#lobby` via common.css — the two
+           start screens are one component and change together. -->
       <section class="pt-start" id="pt-start" hidden>
+        <p class="start-eyebrow">
+          <span class="start-rule" aria-hidden="true"></span>
+          <span data-i18n="party.eyebrow">Flag Party</span>
+        </p>
+        <!-- One line per span, not a <br>: data-i18n sets textContent, so a
+             tag inside a translated string would render as literal text. -->
+        <h1 class="start-headline">
+          <span data-i18n="party.headlineA">Play together,</span>
+          <span data-i18n="party.headlineB">everyone on their phone.</span>
+        </h1>
         <!-- The way back into a room this device is already in. Above create /
              join because when it is showing it is almost always what the player
              came here to do: they lost the page, not the game. Hidden whenever
              there is no remembered room, which is the normal case. -->
-        <button type="button" class="lobby-btn resume-room" id="resume-room" hidden>
+        <button type="button" class="lobby-btn resume-room start-cta" id="resume-room" hidden>
           <span class="resume-lead" data-i18n="party.resumeLead">Back into your game</span>
           <span class="resume-code" id="resume-code"></span>
         </button>
-        <button type="button" class="lobby-btn primary" id="create-room" data-i18n="party.createRoom">New online game</button>
-        <p class="start-sep" data-i18n="party.orJoin">or join a game</p>
+        <button type="button" class="lobby-btn primary start-cta" id="create-room" data-i18n="party.createRoom">New online game</button>
+        <!-- No `maxlength` on the field, deliberately: the browser applies it
+             to a paste BEFORE any script runs, so pasting an invite link into
+             a maxlength="5" box leaves "https" and normalisation never sees
+             the URL it was written for. wireJoinCodeField caps the value at 5
+             on every input instead, which the field can't get past either. -->
         <form class="join-form" id="join-form">
           <input
             type="text"
@@ -91,11 +107,12 @@
             autocomplete="off"
             autocapitalize="characters"
             spellcheck="false"
-            maxlength="5"
-            placeholder="ROOM CODE"
+            placeholder="code"
             data-i18n-attr="placeholder:party.codePlaceholder"
           />
-          <button type="submit" class="lobby-btn" data-i18n="party.join">Join</button>
+          <!-- Inert until the code is 5 characters — wireJoinCodeField owns
+               the disabled flag, which also gates Enter. -->
+          <button type="submit" class="text-link join-go" id="join-go" data-i18n="party.join" disabled>Join</button>
         </form>
         <p class="join-error" id="join-error" hidden></p>
         <nav class="dock" data-dock="home" data-home="../"></nav>

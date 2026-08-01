@@ -92,6 +92,17 @@
    * pill family's :hover border only. Not a general grey: reach for
    * --muted-soft-color for resting hairlines, this only for their hover firm-up. */
   --border-strong-color: #e2e2e2;
+  /* The resting line of a bare control — one that has no box to sit in and
+   * whose only edge IS this line. A deliberate eleventh token, same posture as
+   * the two above, and it removes an ad-hoc hex rather than adding one: this
+   * value was already hard-coded on `.scope-toggle-track`, and the start
+   * screens' underlined room-code field needs exactly the same grey. It sits
+   * between --border-strong-color (#e2e2e2, a hairline meant to recede) and
+   * --muted-color (#999, text): a line the eye must find unprompted has to
+   * carry more than a hairline, and reads as a smudge at #999. Scope is
+   * narrow — the toggle track and the underlined code field. Resting hairlines
+   * between things stay --muted-soft-color. */
+  --control-line-color: #d0d0d0;
   /* The site runs on essentially two font weights — a regular and a bold — so
    * type emphasis reads consistently everywhere and there's no drift into ad-hoc
    * 600 / 650. The one deliberate exception is the burger menu, which keeps a
@@ -101,12 +112,13 @@
    * `font-weight` still resolves through one of these three tokens — change a
    * value here to retune. (The former semibold values collapsed to bold: 600 /
    * 650 → bold.) */
-  /* A light display weight, used in exactly one place: the home hero headline
-   * ("Can you find all flags?"), where thin large type is the landing page's
-   * signature and reads as designed rather than as the default UI weight. Not
-   * for body text — at small sizes 300 renders anaemic. The two working weights
-   * remain regular / bold; this is the deliberate display-only exception the
-   * way --weight-medium is the burger-menu exception. */
+  /* A light display weight, for large landing type only: the home hero headline
+   * ("Can you find all flags?") and the two online start screens' headline
+   * (`.start-headline`), where thin large type is the landing voice and reads as
+   * designed rather than as the default UI weight. Not for body text — at small
+   * sizes 300 renders anaemic. The two working weights remain regular / bold;
+   * this is the deliberate display-only exception the way --weight-medium is the
+   * burger-menu exception. */
   --weight-light: 300;
   --weight-regular: 400;
   --weight-medium: 500;
@@ -669,7 +681,7 @@ body::before {
 .scope-toggle-track {
   position: absolute;
   inset: 0;
-  background: #d0d0d0;
+  background: var(--control-line-color);
   border-radius: 9px;
   transition: background-color 0.15s;
   pointer-events: none;
@@ -2045,6 +2057,48 @@ dialog#zoom p.zoom-note {
 .help-close {
   padding: 6px 14px;
 }
+
+/* ── Text link ────────────────────────────────────────────────────────────
+ * A real <button> reset to read as an accent text link: rose ink, bold,
+ * hovering to primary. No box, no border — for an action that belongs beside
+ * other text rather than in the pill hierarchy ("Show all 12", "Join").
+ *
+ * Lives here rather than in a feature stylesheet because it now has two
+ * consumers: daily's mistake-rail expander (which owned the recipe first) and
+ * the start screens' join link. `.daily-mistake-toggle` rides the same
+ * selector rather than re-declaring it — per CLAUDE.md, promote the rule and
+ * delete the source copy, don't leave two that will drift. `font: inherit`
+ * carries the caller's size, which is why daily's 11px rail and the join
+ * row's 15px both work off one rule. */
+.text-link,
+.daily-mistake-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--weight-bold);
+  color: var(--accent-rose);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.text-link:hover:not(:disabled),
+.daily-mistake-toggle:hover {
+  color: var(--primary-color);
+}
+.text-link:focus-visible,
+.daily-mistake-toggle:focus-visible {
+  outline: 2px solid var(--accent-rose);
+  outline-offset: 2px;
+}
+/* Inert, not gone — the label still says what the row is for, it just makes no
+ * promise it cannot keep. No hover response either (the :not(:disabled) above),
+ * because a colour change under the cursor reads as "press me". */
+.text-link:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 /* Square 32×32 icon buttons that share the full pill recipe (bg, border,
  * hover, press, fade-back) — only the geometry differs: fixed slot,
  * centered glyph. The "?" rules/help triggers, the flag-zoom's × close, the
@@ -2103,74 +2157,237 @@ dialog#zoom p.zoom-note {
   border-color: var(--cta-rose);
 }
 
-/* Start / lobby screen container — the create-or-join column shared by Flag
-   Party (`.pt-start`) and Tic-Tac-Toe (`.lobby`). One definition so both
-   render the identical column: same 16px rhythm between the primary pill, the
-   `or join` separator and the join-code box, capped at the same 360px width
-   and centred. (CLAUDE.md: same mechanism = same code.)
+/* Lobby pills get a slightly larger slot than the base pill and centre
+   themselves in their column, so every screen that uses them (both start
+   screens, the Flag Party lobby's "Start game", the rematch buttons) renders
+   the same content-width button from one recipe. The start screens' own CTA
+   and mode pills stretch instead — see `.start-cta` / `.start-mode` below. */
+.lobby-btn { padding: 12px 20px; font-size: 16px; align-self: center; }
+
+/* Start / lobby screen — the create-or-join column shared by Flag Party
+   (`.pt-start`) and Tic-Tac-Toe (`.lobby`). One definition so both render the
+   identical screen (CLAUDE.md: same mechanism = same code), which is also why
+   the two pages always change together.
+
+   Composition, top to bottom: an eyebrow (a 26px rose rule + the game's name),
+   one headline, the rose CTA, Tic-Tac-Toe's two local-mode pills, then a quiet
+   join row. It replaced a centred stack of pill / "or join a game" separator /
+   boxed ROOM CODE field — three elements at the same visual weight on a screen
+   that only ever asks one question, and a boxed field shouting for a code most
+   arrivals do not have.
+
+   The column is left-aligned now: eyebrow, headline, buttons and the code
+   field all start on one edge, which is what lets the hierarchy read. Nothing
+   here is centred except the pills' own labels.
+
    The `.party .pt-start` compound is deliberate — it must outweigh the generic
    `.party section` rule (gap 12 / width 100%) in flagParty/index.css. */
 .lobby,
 .party .pt-start {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  gap: 0;
   width: 100%;
   max-width: 360px;
-  margin-inline: auto;
+  /* Top-anchored at 152px from the viewport top, NOT vertically centred. body
+     already pads --page-top (104px) to clear the chrome strip, so the margin is
+     the remainder — written as a calc so the 152 stays legible and follows the
+     token if the strip ever changes. Anchoring is the point: a centred column
+     drifts down as the monitor gets taller, and the screen is short enough that
+     centring it just pushes one short paragraph into the middle of nowhere. */
+  margin: calc(152px - var(--page-top)) auto 0;
+  text-align: left;
+}
+@media (min-width: 700px) {
+  /* The dock is an in-flow pill on desktop (it stops being the pinned bar), so
+     it lands directly under the column — 64px below it, one step past the pill's
+     usual 32px, because the column above it ends in a deliberately quiet row and
+     needs the extra air to not read as a fourth item in the stack. Mobile keeps
+     the pinned bottom bar untouched. */
+  .lobby > .dock,
+  .party .pt-start > .dock { padding-top: 64px; }
+}
+@media (max-width: 430px) {
+  .lobby,
+  .party .pt-start { margin-top: calc(128px - var(--page-top)); }
 }
 
-/* Lobby pills get a slightly larger slot than the base pill and centre
-   themselves in their column, so Flag Party (stretch layout) and Tic-Tac-Toe
-   (centred layout) render the same content-width buttons from one recipe. */
-.lobby-btn { padding: 12px 20px; font-size: 16px; align-self: center; }
+/* Entrance: only the text moves, and only once. The CTA, the mode pills and
+   the join row are deliberately excluded — nothing clickable ever arrives in
+   motion, because a target that is still settling is a target you can miss. */
+@keyframes start-settle {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes start-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .start-eyebrow,
+  .start-headline { animation: start-settle 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .start-rule { animation: start-draw 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) 120ms both; }
+}
 
-.start-sep {
-  align-self: stretch;
+/* Eyebrow — the rule draws itself out from the label's left edge, so the whole
+   line reads as one gesture rather than a dash that happens to sit there. */
+.start-eyebrow {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--muted-color);
-  font-size: 13px;
-  margin: 4px 0;
-}
-.start-sep::before, .start-sep::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--muted-soft-color);
-}
-
-/* The join-code box, shared by both start screens (the monospace, wide-tracked
-   ROOM CODE input the site has always used). */
-.join-form { display: flex; gap: 8px; width: 100%; }
-.join-code {
-  flex: 1;
-  padding: 12px;
-  font: inherit;
-  font-size: 18px;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 4px;
-  text-align: center;
+  margin: 0;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  border: 1px solid var(--muted-color);
-  border-radius: 6px;
+  line-height: 1;
+  color: var(--accent-rose);
 }
-.join-code::placeholder { color: var(--muted-color); }
-.join-code:focus { outline: 2px solid var(--accent-rose); outline-offset: -2px; }
+.start-rule {
+  flex: none;
+  width: 26px;
+  height: 1px;
+  background: var(--accent-rose);
+  transform-origin: left;
+}
 
-/* Validation / reject error under the join form — shared by Flag Party
+/* Headline — the page's one sentence, in the landing-page display weight (the
+   same --weight-light the home hero uses). Each line is its own <span> because
+   `data-i18n` sets textContent, so a `<br>` inside a translated string would
+   render as literal text; block spans give the designed two-line break and
+   still wrap naturally when a translation runs long. */
+.start-headline {
+  margin: 18px 0 0;
+  font-size: 34px;
+  font-weight: var(--weight-light);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+  color: var(--primary-color);
+}
+.start-headline span { display: block; }
+
+/* The CTA and (Tic-Tac-Toe's) local-mode pills are the shared `.lobby-btn`
+   family — these classes only restate the start screen's geometry: full column
+   width, a taller slot, and the left-aligned column's stretch instead of the
+   pill's default self-centring. Radii stay the shared 8px / 6px on purpose;
+   the start screens do not get their own corner. */
+.start-cta {
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 44px;
+  padding: 18px 20px;
+  font-size: 17px;
+  font-weight: var(--weight-bold);
+}
+.start-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.start-mode {
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 14px 20px;
+  font-size: 15px;
+}
+/* Tic-Tac-Toe's screen carries two more choices, so its stack is taller and
+   every gap in it tightens a step: a smaller headline, less air above the CTA,
+   and a shorter run down to the join row. Scoped to `.lobby` (the existing
+   Tic-Tac-Toe container) rather than a new marker class — the base values above
+   are Flag Party's. */
+.lobby .start-headline { font-size: 32px; }
+.lobby .start-cta { margin-top: 38px; }
+
+/* Join row — one underlined field and a text link, in place of the boxed
+   ROOM CODE input and its Join pill. Joining is the minority path (most
+   arrivals are here to create a room), and this is what that looks like: still
+   the first thing you find if you came with a code, never the loudest thing on
+   screen if you did not. Baseline-aligned, so the link sits on the field's
+   baseline rather than floating beside a box. */
+.join-form {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  width: 100%;
+  min-height: 26px;
+  margin-top: 64px;
+}
+.lobby .join-form { margin-top: 44px; }
+.join-code {
+  flex: none;
+  width: 96px;
+  padding: 0 0 5px;
+  font: inherit;
+  font-size: 15px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  background: none;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--control-line-color);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+/* The rose underline IS the focus indicator, for pointer and keyboard alike.
+   No `:focus-visible` ring on top of it: a text input matches `:focus-visible`
+   on a plain mouse click too (the spec gives that to elements expecting
+   keyboard input), so a ring meant for tabbing actually draws a rose rectangle
+   round the field every single time anyone clicks it. Don't add one back. */
+.join-code:focus { border-bottom-color: var(--accent-rose); }
+/* The placeholder is the field's only label and reads as a quiet word
+   ("code"), not as a value — so it opts out of the uppercase + wide tracking
+   that the typed code wears. */
+.join-code::placeholder {
+  color: var(--muted-color);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.join-go { font-size: 15px; }
+
+/* Validation / reject error under the join row — shared by Flag Party
    (`.join-error`) and Tic-Tac-Toe (`.lobby-error`) so "Code must be 5
-   characters" and "Room not found…" read identically on both start screens:
-   pink (the site's validation accent), centred, sitting just below the
-   join-code box + Join button. (CLAUDE.md: same mechanism = same code.) */
+   characters" and "Room not found…" read identically on both start screens.
+   Pink (the site's validation accent), left-aligned with the rest of the
+   column. The field's underline takes the same pink via `.join-form.is-error`,
+   so the message is attached to the control rather than merely near it. */
 .join-error,
 .lobby-error {
   color: var(--secondary-color);
   font-size: 14px;
-  text-align: center;
-  margin: 4px 0 0;
+  text-align: left;
+  margin: 8px 0 0;
+}
+.join-form.is-error .join-code { border-bottom-color: var(--secondary-color); }
+
+/* Phones. Nothing here re-centres or reserves space: the column is anchored
+   near the top (128px, set with the base rule above) and short enough that the
+   ~291px keyboard never reaches it, so focusing the code field shifts nothing —
+   no scroll-into-view, no re-layout, the field stays exactly where the thumb
+   was aiming. That is the whole reason it is top-anchored rather than centred. */
+@media (max-width: 430px) {
+  .start-headline { margin-top: 16px; font-size: 30px; }
+  .lobby .start-headline { font-size: 28px; }
+  /* 44px touch targets on the join row: the field and the link both grow their
+     padding rather than their type, so the row still reads as quiet. Centre
+     rather than baseline alignment, since both boxes are now tall. */
+  .join-form {
+    align-items: center;
+    min-height: 44px;
+  }
+  /* 16px, not the 15px it wears on desktop. Below 16px iOS Safari zooms the
+     page in on focus — which is exactly the "focusing must shift nothing" rule
+     this screen is built around, and no amount of layout care survives the
+     browser scaling the viewport underneath it. The difference is invisible;
+     the zoom is not. */
+  .join-code { padding: 12px 0; font-size: 16px; }
+  .join-go { padding: 12px 8px; margin-left: -8px; }
 }
 
 /* Profile identicon — same tile the burger nickname menu uses (`avatarSvg`),

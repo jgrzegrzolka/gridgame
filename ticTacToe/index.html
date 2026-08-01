@@ -77,14 +77,34 @@
       </ul>
     </nav>
 
+    <!-- Start screen. The column, its type scale and the join row are all
+         shared with Flag Party's `.pt-start` via common.css — the two start
+         screens are one component and change together. Advanced mode stays in
+         the burger: it is a setting, not one of the four ways to start. -->
     <section id="lobby" class="lobby" hidden>
-      <button type="button" class="lobby-btn primary" id="create-room" data-i18n="ttt.createRoom">New online game</button>
+      <p class="start-eyebrow">
+        <span class="start-rule" aria-hidden="true"></span>
+        <span data-i18n="ttt.eyebrow">Tic-Tac-Toe</span>
+      </p>
+      <!-- One line per span, not a <br>: data-i18n sets textContent, so a
+           tag inside a translated string would render as literal text. -->
+      <h1 class="start-headline">
+        <span data-i18n="ttt.headlineA">Three in a row,</span>
+        <span data-i18n="ttt.headlineB">but every square is a flag.</span>
+      </h1>
+      <button type="button" class="lobby-btn primary start-cta" id="create-room" data-i18n="ttt.createRoom">New online game</button>
       <!-- The two local modes are page-primary choices, so they live in the
-           body as buttons (not the dock) — quiet secondary pills under the
-           online CTA, above the join separator. -->
-      <a class="lobby-btn" href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
-      <a class="lobby-btn" href="solo/" data-i18n="ttt.playSolo">Play solo</a>
-      <p class="start-sep" data-i18n="ttt.orJoin">or join a game</p>
+           body (not the dock) — a quiet pair directly under the online CTA,
+           clearly the same kind of thing as each other and not as it. -->
+      <div class="start-modes">
+        <a class="lobby-btn start-mode" href="offline/" data-i18n="ttt.playOffline">Play on the same device</a>
+        <a class="lobby-btn start-mode" href="solo/" data-i18n="ttt.playSolo">Play solo</a>
+      </div>
+      <!-- No `maxlength` on the field, deliberately: the browser applies it to
+           a paste BEFORE any script runs, so pasting an invite link into a
+           maxlength="5" box leaves "https" and normalisation never sees the
+           URL it was written for. wireJoinCodeField caps the value at 5 on
+           every input instead, which the field can't get past either. -->
       <form id="join-form" class="join-form">
         <input
           type="text"
@@ -94,11 +114,12 @@
           autocomplete="off"
           autocapitalize="characters"
           spellcheck="false"
-          maxlength="5"
-          placeholder="ROOM CODE"
+          placeholder="code"
           data-i18n-attr="placeholder:ttt.roomCodePlaceholder"
         />
-        <button type="submit" class="lobby-btn" data-i18n="ttt.join">Join</button>
+        <!-- Inert until the code is 5 characters — wireJoinCodeField owns
+             the disabled flag, which also gates Enter. -->
+        <button type="submit" class="text-link join-go" id="join-go" data-i18n="ttt.join" disabled>Join</button>
       </form>
       <p class="lobby-error" id="lobby-error" hidden></p>
       <nav class="dock" data-dock="home" data-home="../"></nav>

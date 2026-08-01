@@ -91,13 +91,16 @@
 /* The way back into a room this device is already in. Reuses .lobby-btn's pill
    (common.css) rather than inventing a second button shape, and only adds the
    second line: the room code, which is the one thing the player has no other way
-   to find once the page is gone. */
+   to find once the page is gone. Wears `.start-cta` too, so on the start screen
+   it is the same full-width slot as "New online game"; when it IS showing, the
+   create button tucks 10px under it instead of opening its own 44px gap. */
 .resume-room {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
 }
+.resume-room:not([hidden]) ~ .start-cta { margin-top: 10px; }
 /* The `[hidden]` trap again — see .hold-read further down. Pinned by hiddenGuards.test.js. */
 .resume-room[hidden] { display: none; }
 .resume-lead { font-size: 14px; }

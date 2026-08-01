@@ -5,6 +5,7 @@ import {
   ROOM_LEN,
   generateCode,
   isValidRoomCode,
+  normalizeRoomCodeInput,
   serverUrlFor,
   httpServerUrlFor,
 } from './roomNet.js';
@@ -40,6 +41,44 @@ test('isValidRoomCode: rejects wrong length and case', () => {
   assert.equal(isValidRoomCode('abcde'), false);
   assert.equal(isValidRoomCode(''), false);
   assert.equal(isValidRoomCode('ABCD!'), false);
+});
+
+// ---- Join-field normalisation ----
+
+test('normalizeRoomCodeInput: upper-cases and drops punctuation and spaces', () => {
+  assert.equal(normalizeRoomCodeInput('66bke'), '66BKE');
+  assert.equal(normalizeRoomCodeInput('66-bk e'), '66BKE');
+  assert.equal(normalizeRoomCodeInput('  ab cd  '), 'ABCD');
+});
+
+test('normalizeRoomCodeInput: caps at ROOM_LEN', () => {
+  assert.equal(normalizeRoomCodeInput('ABCDEFGH').length, ROOM_LEN);
+  assert.equal(normalizeRoomCodeInput('ABCDEFGH'), 'ABCDE');
+});
+
+test('normalizeRoomCodeInput: a pasted invite link yields its trailing code', () => {
+  assert.equal(normalizeRoomCodeInput('https://www.yetanotherquiz.com/flagParty/?r=66BKE'), '66BKE');
+  assert.equal(normalizeRoomCodeInput('https://www.yetanotherquiz.com/ticTacToe/?room=xy7z9'), 'XY7Z9');
+  assert.equal(normalizeRoomCodeInput('/flagParty/66BKE\n'), '66BKE');
+});
+
+// A link whose tail is NOT a 5-run falls back to stripping, which is the only
+// sane thing left — better a wrong-length code the user can see and fix than a
+// silently truncated one.
+test('normalizeRoomCodeInput: a link with no trailing 5-run falls back to stripping', () => {
+  assert.equal(normalizeRoomCodeInput('https://example.com/'), 'HTTPS');
+});
+
+// Typed input never takes the link path, so an ordinary sentence cannot
+// accidentally resolve to the code buried at its end.
+test('normalizeRoomCodeInput: plain text without / or = always takes the strip path', () => {
+  assert.equal(normalizeRoomCodeInput('code 66BKE'), 'CODE6');
+});
+
+test('normalizeRoomCodeInput: nullish and empty input yield an empty string', () => {
+  assert.equal(normalizeRoomCodeInput(''), '');
+  assert.equal(normalizeRoomCodeInput(/** @type {any} */ (null)), '');
+  assert.equal(normalizeRoomCodeInput(/** @type {any} */ (undefined)), '');
 });
 
 // ---- Server URL selection ----
