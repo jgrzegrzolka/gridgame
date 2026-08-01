@@ -33,6 +33,33 @@ const CONNECTION_STRING =
 
 const CDN_URL = 'https://js.monitor.azure.com/scripts/b/ai.3.gbl.min.js';
 
+/**
+ * Origins the SDK must NOT attach correlation headers to.
+ *
+ * `enableCorsCorrelation` stamps `Request-Id` / `traceparent` on every
+ * cross-origin fetch so a browser call can be joined to the server span it
+ * caused. That only pays off against a backend which is itself instrumented —
+ * and PartyKit is not ours to instrument. What it did instead was break the
+ * one cross-origin GET the site makes: the extra header turns a simple request
+ * into a preflighted one, PartyKit's `onRequest` answers no OPTIONS and sends
+ * no `Access-Control-Allow-Headers`, so the browser blocked the request with
+ *
+ *   Request header field request-id is not allowed by
+ *   Access-Control-Allow-Headers in preflight response
+ *
+ * That is the room-liveness probe behind Flag Party's "Rejoin" line, so the
+ * line could never appear in production. It looked fine in local dev for a
+ * reason that does not exist in production: App Insights is disabled on
+ * localhost (see `initAppInsights`), so no header was ever added there.
+ *
+ * The WebSocket to the same host was never affected — WS does not preflight —
+ * which is why the games themselves worked throughout.
+ *
+ * Keep this in sync with `PROD_HOSTNAMES` in `flags/roomNet.js`: anything we
+ * talk to cross-origin that we do not own belongs here.
+ */
+export const CORRELATION_EXCLUDED_DOMAINS = ['gridgame-ttt.jgrzegrzolka.partykit.dev'];
+
 let initialised = false;
 
 /**
@@ -66,6 +93,9 @@ export function initAppInsights() {
         disableFetchTracking: false,
         enableUnhandledPromiseRejectionTracking: true,
         enableCorsCorrelation: true,
+        // ...but never at PartyKit, where the header breaks the request
+        // outright. See CORRELATION_EXCLUDED_DOMAINS above.
+        correlationHeaderExcludedDomains: CORRELATION_EXCLUDED_DOMAINS,
         autoTrackPageVisitTime: true,
       },
     });
