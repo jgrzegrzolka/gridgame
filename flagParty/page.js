@@ -1,6 +1,6 @@
 import { t, countryName } from '../i18n.js';
 import { generateCode, isValidRoomCode, serverUrlFor, httpServerUrlFor } from '../flags/roomNet.js';
-import { probeRoomAlive } from '../flags/roomProbe.js';
+import { probeRoomStatus } from '../flags/roomProbe.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { getOrCreateDeviceId } from '../flags/identity.js';
 // Note the near-collision with this file's own `activeRoom` local, which is the
@@ -1457,27 +1457,34 @@ export function bootFlagParty() {
    *  the start screen, because the memory can change under us (a reject clears
    *  it; a Back out of a room leaves one behind).
    *
-   *  Hides the button by default and asks the server whether the room is still
+   *  Hides the line by default and asks the server whether the room is still
    *  worth walking back into (`flags/roomProbe.js`). A dead room silently
    *  forgets itself — offering the resume shortcut into a room whose players
    *  all gave up would land the returner alone with the old scoreboard, which
    *  reads as broken. The alive check itself lives on the server, which is the
-   *  only side that knows both the last-traffic time and who is present. */
+   *  only side that knows both the last-traffic time and who is present.
+   *
+   *  Hiding and forgetting are driven by DIFFERENT answers, which is the whole
+   *  reason the probe reports three states. Hiding is this paint's decision and
+   *  the next paint undoes it; forgetting erases the only record of the code and
+   *  nothing brings it back. So an `unknown` — a cold PartyKit start, a dropped
+   *  request, a body we do not recognise — hides and stops there. Only the
+   *  server actually saying the room is dead may erase it. Collapsing the two
+   *  destroyed the way back into live rooms whenever the network hiccuped. */
   async function paintResume() {
     const entry = readActiveRoom(window.localStorage, 'party', Date.now(), isValidRoomCode);
-    // Hide first. If a stale button was showing from a previous paint, we
-    // must not leave it up while the probe is in flight (the room may already
-    // be gone). The probe's own callback re-shows it only if the answer is
-    // alive.
+    // Hide first. If a stale line was showing from a previous paint, we must not
+    // leave it up while the probe is in flight (the room may already be gone).
+    // The probe's own callback re-shows it only if the answer is alive.
     resumeBtn.hidden = true;
     if (!entry) return;
     const seq = ++probeSeq;
-    const alive = await probeRoomAlive(PROBE_URL_BASE + entry.code, window.fetch.bind(window));
+    const status = await probeRoomStatus(PROBE_URL_BASE + entry.code, window.fetch.bind(window));
     // A later paint (or an entirely different session) already made this
     // decision moot; do not touch the DOM.
     if (seq !== probeSeq) return;
-    if (!alive) {
-      forgetActiveRoom(window.localStorage);
+    if (status !== 'alive') {
+      if (status === 'dead') forgetActiveRoom(window.localStorage);
       return;
     }
     resumeCodeEl.textContent = entry.code;
