@@ -1,9 +1,14 @@
 # Design system
 
-The values in use today, read out of `common.css` and the 13 feature
-stylesheets. Descriptive, not prescriptive: where two things disagree, both are
-recorded. Companion to `docs/design-context.md`, which names the screens and
-component groups this file gives values for.
+The values in use today, read out of the repo's 17 stylesheets. Descriptive, not
+prescriptive: where two things disagree, both are recorded. Companion to
+`docs/design-context.md`, which names the screens and component groups this file
+gives values for.
+
+Every count below is a declaration count over `git ls-files '*.css'` — one pass
+per file, so a rule is counted once. (The first version of this file counted some
+stylesheets twice and missed two nested ones; if you re-derive a number and it
+disagrees, trust your own pass and fix the line here.)
 
 ## 1. Colour
 
@@ -55,7 +60,8 @@ where it is defined:
 | `METRIC_HUES` (39 hex values, `flags/metricVisuals.js`) | Metric chips, panels, lens overlays, tinted criterion icons | One hue per world metric, injected inline as `--mc` |
 | 8 `.pill-swatch[data-value]` fills: `#c0392b` red, `#f2f2f2` white, `#2d5fa8` blue, `#3a8f4a` green, `#e6c92e` yellow, `#2b2b2b` black, `#e08a2e` orange, `#7d5bbe` violet | Colour filter pills and chips | Literal flag colours, which cannot come from brand tokens |
 | `#2a9d8f`, `#c65f9a`, `#2f6fd0`, `#241f22`, `#f4efe6` | Home hero stamps | The invented-flag palette; decorative, `aria-hidden` |
-| `rgba(0, 0, 0, 0.7)` | `.find-stats-pct`, the wrong-tile name band | Text band over a flag image |
+| `rgba(0, 0, 0, 0.7)` | The wrong-tile name band (`.flag-choice.wrong`, `.opt`) | Text band over a flag image |
+| `rgba(0, 0, 0, 0.6)` | `.find-tile-metric`, `.find-stats-pct` | The tile corner pills, over a flag image |
 | `rgba(28, 28, 28, 0.85)` | `.flag-tile::after` | The hover name-strip band |
 | `rgba(194, 137, 159, 0.2)` | `.cell.revealed img` | 20% `--secondary-color`, written out because alpha-on-a-var needed a detour |
 
@@ -95,44 +101,50 @@ Four tokens are declared; the system runs on two of them.
 
 | Token | Value | Declarations | Scope |
 |---|---|---|---|
-| `--weight-regular` | 400 | 44 | Body text, the final-score line, tile name bands |
-| `--weight-bold` | 700 | 106 | All emphasis: pills, chips, badges, titles, percentages |
+| `--weight-regular` | 400 | 28 | Body text, the final-score line, tile name bands |
+| `--weight-bold` | 700 | 57 | All emphasis: pills, chips, badges, titles, percentages |
 | `--weight-medium` | 500 | 3 | Burger menu links, the nickname value, dock item labels |
-| `--weight-light` | 300 | 3 | The home hero headline only |
+| `--weight-light` | 300 | 2 | `.hero-title` (home) and `.daily-score-value` (the 34px daily score) |
 
-Sixteen raw `font-weight: 600` declarations remain outside the tokens, in
-`findFlag/index.css` (×3, including `.find-cat` and `.result-section-title`),
-`flagsdata/index.css` (×2), `privacy/index.css` (×3), `profile/sync/index.css`
-(×3), and five others. Two raw `700`, four raw `400`, two raw `500` also exist.
+The light weight has exactly two users, both large display type — the only size
+at which 300 reads as designed rather than anaemic.
+
+Eleven raw `font-weight: 600` declarations remain outside the tokens, in exactly
+four files: `findFlag/index.css` (×3, including `.find-cat` and
+`.result-section-title`), `flagsdata/index.css` (×2), `privacy/index.css` (×3),
+`profile/sync/index.css` (×3). One raw `700` and two raw `400` are the two ends of
+`findFlag`'s `find-count-pulse` keyframes; two raw `500` sit in `flagsdata` and
+`profile/sync`.
 
 ### Size scale
 
-Every `font-size` in px across all stylesheets, by frequency:
+Every `font-size` in px, by declaration count:
 
 | Size | Count | Typical role |
 |---|---|---|
-| 10px | 11 | Tile rank / metric badges, the tile hover name-strip |
-| 11px | 43 | Dock item label, tier counts, achievement status, find-rate strip |
-| 12px | 69 | Pills, chips, hub labels, hover-tip bubble, the burger nickname row |
-| 13px | 49 | Scope-toggle label, achievement name, body copy in cards, wrong-tile name band |
-| 14px | 71 | The workhorse: menu links, buttons, action rows, counts, dialog body, leaderboard status |
-| 15px | 17 | Leaderboard name |
-| 16px | 36 | Inputs, zoom dialog country name, lobby buttons, square icon buttons |
-| 17px | 7 | Dialog `h2` |
-| 18px | 7 | Screen titles (`.find-cat`), room code |
-| 20px, 22px | 4 each | Flags-link glyph, larger headings |
-| 28px | 7 | `.final-score` |
-| 32px, 34px | 2 each | Party score displays |
-| 8px, 9px | 3, 4 | The achievement card's uppercase hat, micro-labels |
+| 8px, 9px | 2 each | The achievement card's uppercase hat, micro-labels |
+| 10px | 6 | The tile corner pills, the tile hover name-strip |
+| 11px | 25 | Dock item label, tier counts, achievement status |
+| 12px | 39 | Pills, chips, hub labels, hover-tip bubble, the burger nickname row |
+| 13px | 33 | Scope-toggle label, achievement name, body copy in cards, wrong-tile name band |
+| 14px | 48 | The workhorse: menu links, buttons, action rows, counts, dialog body, leaderboard status |
+| 15px | 9 | Leaderboard name |
+| 16px | 23 | Inputs, zoom dialog country name, lobby buttons, square icon buttons |
+| 17px | 4 | Dialog `h2` |
+| 18px | 5 | Screen titles (`.find-cat`), room code |
+| 19px, 20px | 1, 2 | One-off headings |
+| 22px | 4 | Flags-link glyph, larger headings |
+| 28px | 4 | `.final-score` |
+| 32px, 34px | 1 each | Party score display, the daily score |
 
 Outliers: `clamp(36px, 11.5vw, 44px)` on the home hero headline; two fractional
 sizes (`11.5px`, `12.5px`) in Flag Party.
 
 ### Line height
 
-`1.2` (18 uses) and `1` (13) for tight display and single-line labels; `1.4`
-(12) and `1.45`/`1.5` (3 / 7) for body copy; `1.55` (8) for prose blocks
-(privacy, story panels); `1.06` on the hero headline.
+`1.2` and `1` (10 each) for tight display and single-line labels; `1.4` (10) and
+`1.45`/`1.5` (2 / 4) for body copy; `1.55` (4) for prose blocks (privacy, story
+panels); `1.3` (2), `1.35`, `1.02`; `1.06` on the hero headline.
 
 ### Letter spacing
 
@@ -147,21 +159,21 @@ counts, percentages, ranks, the lang toggle.
 
 ### Step values
 
-Single-value `gap` / `padding` / `margin` declarations across all stylesheets:
+Single-value `gap` / `padding` / `margin` declarations:
 
 | Step | Count | | Step | Count |
 |---|---|---|---|---|
-| 2px | 28 | | 12px | 69 |
-| 3px | 28 | | 14px | 16 |
-| 4px | 41 | | 16px | 23 |
-| 6px | 74 | | 20px | 8 |
-| 8px | 92 | | 24px | 17 |
-| 10px | 42 | | 32px | 8 |
+| 2px | 15 | | 12px | 44 |
+| 3px | 17 | | 14px | 8 |
+| 4px | 26 | | 16px | 15 |
+| 6px | 40 | | 20px | 6 |
+| 8px | 51 | | 24px | 11 |
+| 10px | 24 | | 32px | 5 |
 
-Beyond 32px the values thin out and become one-off layout decisions: 40, 44, 48,
-52, 56, 64, 78, 84, 112. Odd steps (5, 7, 9, 11, 13, 18, 22, 26) exist but are
-rare (2–17 uses each). The practical scale is **2 / 4 / 6 / 8 / 12 / 16 / 24**,
-with 3 and 10 as common in-betweens.
+Beyond 32px the values thin out into one-off layout decisions: 34, 36, 40, 44,
+48, 52, 56, 64, 78, 84, 112 (1–4 uses each). Odd steps (1, 5, 7, 9, 11, 13, 18,
+22, 26, 28, 30) exist but are rare (1–9 uses each). The practical scale is
+**2 / 4 / 6 / 8 / 12 / 16 / 24**, with 3 and 10 as common in-betweens.
 
 ### Page constants
 
@@ -179,19 +191,19 @@ with 3 and 10 as common in-betweens.
 
 ### Radius scale
 
-`6px` (30 uses — chrome buttons, inputs, panels, the base pill recipe), `8px`
-(26 — cards, dialogs, icon buttons, the primary CTA), `999px` (24 — filter
-pills, chips, the desktop dock pill and its items), `4px` (20 — small marks,
-avatars, badges), `50%` (15 — dots, switch thumb), `3px` and `10px` (10 each),
-`12px` (8 — the home game list). `1px`, `2px`, `7px`, `9px`, `11px`, `14px`,
-`16px` appear once or twice.
+`6px` (19 uses — chrome buttons, inputs, panels, the base pill recipe), `8px`
+(17 — cards, dialogs, icon buttons, the primary CTA), `999px` (14 — filter
+pills, chips, the desktop dock pill and its items), `4px` (12 — small marks,
+avatars, badges, the tile corner pills), `50%` (10 — dots, switch thumb), `10px`
+(7), `3px` (6), `12px` (5 — the home game list), `2px` (4), `1px` (3). `5px`,
+`7px`, `9px`, `11px`, `14px`, `16px` appear once each.
 
 ### Breakpoints
 
-`max-width: 600px` (8 blocks), `max-width: 700px` (3), `max-width: 756px` (1),
+`max-width: 600px` (6 blocks), `max-width: 700px` (3), `max-width: 756px` (1),
 `max-width: 379px` (1), `min-width: 700px` (2 — the dock's posture switch),
-`min-width: 760px` (1). Plus `(hover: hover)` (3) and 22 `prefers-reduced-motion`
-blocks (12 `reduce`, 10 `no-preference`).
+`min-width: 760px` (1). Plus `(hover: hover)` (3) and 21 `prefers-reduced-motion`
+blocks (11 `reduce`, 10 `no-preference`).
 
 ## 4. Component groups
 
@@ -308,10 +320,19 @@ One component, two postures at 700px.
 - Hover name-strip: `.flag-tile::after` renders `attr(data-name)` as a
   `rgba(28,28,28,0.85)` band, surface ink, 10px, padding `2px 4px`, ellipsised,
   fading in over 80ms on `:hover` or `:focus-within`.
-- Tile overlays: rank badge top-left (10px bold, primary fill, surface ink,
-  `2px 4px`, bottom-right radius 4px), metric value top-right, community
-  find-rate strip along the bottom (`.find-stats-pct`, 11px bold,
-  `rgba(0,0,0,0.7)`, surface ink).
+- Tile corner pills (`daily/index.css`): one recipe, three corners — absolute,
+  `z-index: 2`, 10px, `line-height: 1`, padding `2px 4px`, surface ink, bold,
+  tabular, `pointer-events: none`. They differ only in corner, fill and which
+  radius is rounded: `.find-tile-rank` top-left on `--primary-color`
+  (bottom-right 4px), `.find-tile-metric` top-right on `rgba(0,0,0,0.6)`
+  (bottom-left 4px), `.find-stats-pct` bottom-right on `rgba(0,0,0,0.6)`
+  (top-left 4px). Measured on a live 65 × 49px tile they are 14px tall, inset 1px
+  from their corners, and cover 38% of it. `.find-stats-pct` carries the
+  community find-rate on the found/missed grids and the `×N` count on the
+  mistake rail — one class, both grids. No full-width band survives on any grid
+  (locked design 2a); the rail's `.is-user-wrong::before` marker holds the
+  remaining top-right corner as a 10 × 10px `--wrong-color` square with a 1px
+  black outline.
 - Entry animation: `find-tile-in` scales `0.6 → 1` with a fade over 320ms.
 - Zoom dialog: `min(80vw, 320px)`, 16px padding, radius 8px, 1px border, shadow
   `0 4px 24px rgba(0,0,0,.22)`. Opens by scaling X `0 → 1` over 350ms with a
