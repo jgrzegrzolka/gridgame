@@ -5,8 +5,8 @@
  * doesn't enumerate the known variants/modes (so we don't have to redeploy
  * the API every time a new variant ships in the client) — it just enforces
  * a tight shape + length cap so a malicious caller can't smuggle a 10KB key
- * into the doc. That deliberate blindness is why Feature V's `weird` /
- * `outlines` / `facts` decks record with no change here beyond this shape.
+ * into the doc. That deliberate blindness is why Feature V's decks shipped —
+ * and, later, why two of them could be removed — with no change here at all.
  *
  * TWO SHAPES ARE ACCEPTED, on purpose (Feature V Phase 1a):
  *   "<variant>:<mode>"           — current. The pool is always sovereign.
@@ -43,20 +43,18 @@ const CONFIG_KEY_MAX = 40;
  *
  *   timed — score is CORRECT answers, bounded by the clock. Higher wins.
  *   count — score is MISTAKES over a fixed number of questions, bounded by the
- *           pool. Lower wins. `all` runs until the pool is exhausted; `10q`
- *           stops at 10, which is how the Statistics deck (whose pool is never
- *           exhausted) gets an untimed mode at all.
+ *           pool. Lower wins. `all` runs until the pool is exhausted.
  *
- * `10q` was `20q` until the round was shortened, and the old name is NOT kept
- * here — unlike CONFIG_KEY_RE's legacy 3-part shape, which is kept precisely
- * because cached clients still emit it. The difference is who submits: the
- * client only POSTs for variants with a leaderboard (`countries`), and
- * `countries` has always offered `60s` / `all`. `20q` lived on the Statistics
- * deck alone, which submits nothing, so no client has ever sent it and there is
- * no stored row using it.
+ * `10q` (and `20q` before it was shortened) used to sit in COUNT_MODES, and
+ * neither is kept as a legacy token — unlike CONFIG_KEY_RE's legacy 3-part
+ * shape, which is kept precisely because cached clients still emit it. The
+ * difference is who submits: the client only POSTs for variants with a
+ * leaderboard (`countries`), and `countries` has always offered `60s` / `all`.
+ * Those modes lived on the Statistics deck alone, which submitted nothing, so
+ * no client ever sent one and no stored row uses them.
  */
 const TIMED_MODES = new Set(['60s']);
-const COUNT_MODES = new Set(['all', '10q']);
+const COUNT_MODES = new Set(['all']);
 
 /**
  * Derive `lowerWins` (the comparator direction) from a configKey's mode
@@ -65,8 +63,8 @@ const COUNT_MODES = new Set(['all', '10q']);
  * caller flip a competitor's ranking, so we re-derive from the configKey
  * the client already used to write.
  *
- *   '60s' (timed)          → false  // more correct wins
- *   'all' / '10q' (count)  → true   // fewer mistakes wins
+ *   '60s' (timed)  → false  // more correct wins
+ *   'all' (count)  → true   // fewer mistakes wins
  *
  * Returns `null` for any other mode token — defensive against a new mode
  * shipping client-side without this map being updated. The endpoint
@@ -122,9 +120,9 @@ const MAX_COUNT_MODE_SCORE = 250;
  *     through. Scales with the clock, so a round that ended early bounds
  *     lower, and a future timed mode with a different budget needs no change
  *     here.
- *   - `all` / `10q` (count): run for as long as they take, so time says
- *     nothing — a player mulling over 10 questions for ten minutes is playing
- *     normally. Bounded by the pool instead.
+ *   - `all` (count): runs for as long as it takes, so time says nothing — a
+ *     player mulling over the pool for an hour is playing normally. Bounded by
+ *     the pool instead.
  *
  * @param {string} configKey
  * @param {number} durationMs

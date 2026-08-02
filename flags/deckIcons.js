@@ -1,5 +1,5 @@
 /**
- * The four deck icons — one per question type the flag games can ask.
+ * The deck icons — one per question type the flag games can ask.
  *
  * Born in `flagParty/page.js` (as the setup panel's icon table, now `MODE_ICONS`),
  * promoted here when flagQuiz
@@ -10,11 +10,18 @@
  * WHAT IS SHARED IS THE ARTWORK, NOT THE SIZING. The two consumers need very
  * different boxes: Flag Party puts these in a 24×24 slot leading a row in a
  * vertical settings list; flagQuiz puts one inline in a 14px text row at
- * 24×18, and four more in a 130px popover. So the caller passes its own class
- * and owns the CSS. Baking sizing in here would just mean one of them fighting
- * it back off.
+ * 24×18, and the rest in a popover. So the caller passes its own class and owns
+ * the CSS. Baking sizing in here would just mean one of them fighting it back
+ * off.
  *
- * The set is deliberately a matched quartet:
+ * **This is a shared artwork catalog, not a picture of either menu.** The two
+ * consumers overlap but neither uses all of it: flagQuiz has two decks (`flags`,
+ * `weird`), Flag Party has four round types (those two plus `outlines` and
+ * `spot`). An id here needs at least one consumer, which is what retired the
+ * ascending-bar `facts` chart when flagQuiz's Statistics deck was removed —
+ * Flag Party draws its statistics rounds from `metricVisuals` instead, per
+ * metric, so nothing was left pointing at it.
+ *
  *   flags     — the invented generic flag (`glyphFlag.svg`): a Nordic cross
  *               offset to the hoist, flown by no country. This was France's
  *               tricolour until it wasn't: a real flag here quietly claims that
@@ -30,24 +37,17 @@
  *               intuitive alternative, Nepal's pennant, is actively wrong:
  *               Nepal is sovereign, so the one flag everyone would draw for
  *               "weird flags" lives in the OTHER deck.)
- *   outlines  — the real Italy contour asset, the same silhouette the round
- *               itself renders.
- *   facts     — an ascending stat-bar chart. Monochrome `currentColor`, unlike
- *               the flag artwork which carries its own colours by nature.
- *
- * Known rough edge, worth fixing at the call site rather than here: at small
- * sizes these don't read as a set. `flags` and `weird` are solid colour
- * rectangles; `outlines` and `facts` are thin marks on nothing. Two carry
- * visual weight and two don't. It never showed in Flag Party, where they sit
- * in a list with labels and room to breathe; it shows immediately when they're
- * four-across in a popover. The fix is a surface tile behind the contour and
- * the chart, which is a layout decision, so it belongs to the consumer.
+ *   outlines  — the real Italy contour asset, the same silhouette Flag Party's
+ *               map round itself renders.
+ *   spot      — a magnifier, for the round where you inspect the flags rather
+ *               than recall them. Monochrome `currentColor`, unlike the flag
+ *               artwork which carries its own colours by nature.
  */
 
-/** @typedef {'flags' | 'weird' | 'outlines' | 'facts'} DeckIconId */
+/** @typedef {'flags' | 'weird' | 'outlines' | 'spot'} DeckIconId */
 
 /** Every deck icon, in the canonical display order. */
-export const DECK_ICON_IDS = /** @type {const} */ (['flags', 'weird', 'outlines', 'facts']);
+export const DECK_ICON_IDS = /** @type {const} */ (['flags', 'weird', 'outlines', 'spot']);
 
 /**
  * Decks whose icon is an `<img>` pointing at a real asset (and therefore needs
@@ -73,18 +73,12 @@ const JOLLY_ROGER =
   '<rect x="15.3" y="11.6" width="1.4" height="2" fill="#241f22"/></svg>';
 
 /** Flag Party's "spot the flag" round: a magnifier, because that round is the one
- *  where you inspect the flags rather than recall them. `currentColor` like
- *  STAT_BARS, so it inherits wherever it is placed. */
+ *  where you inspect the flags rather than recall them. `currentColor` so it
+ *  inherits wherever it is placed. */
 const MAGNIFIER =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" ' +
   'stroke-linecap="round">' +
   '<circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.4" y1="15.4" x2="20.5" y2="20.5"/></svg>';
-
-const STAT_BARS =
-  '<svg viewBox="0 0 24 24" fill="currentColor">' +
-  '<rect x="3" y="13" width="4.4" height="8" rx="1"/>' +
-  '<rect x="9.8" y="8" width="4.4" height="13" rx="1"/>' +
-  '<rect x="16.6" y="4" width="4.4" height="17" rx="1"/></svg>';
 
 /**
  * Markup for one deck's icon.
@@ -103,7 +97,6 @@ export function deckIconHtml(deck, { base = '../', className = '' } = {}) {
   const asset = ASSET_ICONS[deck];
   if (asset) return `<img${cls} src="${base}${asset}" alt="" />`;
   if (deck === 'weird') return JOLLY_ROGER.replace('<svg ', `<svg${cls} `);
-  if (deck === 'facts') return STAT_BARS.replace('<svg ', `<svg${cls} `);
   if (deck === 'spot') return MAGNIFIER.replace('<svg ', `<svg${cls} `);
   return '';
 }

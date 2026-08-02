@@ -82,17 +82,24 @@ test('no className means no class attribute at all', () => {
 });
 
 test('the inline icons are self-contained (no asset request)', () => {
-  for (const id of ['weird', 'facts']) {
+  for (const id of ['weird', 'spot']) {
     const html = deckIconHtml(id);
     assert.match(html, /^<svg/, `${id} should be inline SVG`);
     assert.doesNotMatch(html, /src=/, `${id} should not fetch anything`);
   }
 });
 
-test('facts is monochrome so it inherits the surrounding colour', () => {
-  // Flag artwork carries its own colours by nature; the chart must not, or it
-  // can't sit in a muted text row and a primary-coloured list at once.
-  assert.match(deckIconHtml('facts'), /fill="currentColor"/);
+test('spot is monochrome so it inherits the surrounding colour', () => {
+  // Flag artwork carries its own colours by nature; a drawn mark must not, or
+  // it can't sit in a muted text row and a primary-coloured list at once.
+  assert.match(deckIconHtml('spot'), /stroke="currentColor"/);
+});
+
+// Retired with flagQuiz's Statistics deck (#TBD): Flag Party draws its
+// statistics rounds per metric from `metricVisuals`, so nothing was left
+// pointing at the generic chart and it became dead artwork.
+test('the ascending-bar chart is gone', () => {
+  assert.equal(deckIconHtml('facts'), '');
 });
 
 test('weird is the Jolly Roger, not a real country flag', () => {

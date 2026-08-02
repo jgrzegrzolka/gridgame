@@ -39,12 +39,8 @@ import {
   isQuizShowMap,
   setQuizShowMap,
   variantHasLeaderboard,
-  artKindFor,
-  artBaseFor,
-  askKindFor,
 } from './quiz.js';
 import { loadCountries } from './group.js';
-import { CONTOUR_CODES, CONTOUR_CODE_SET } from './contourPool.js';
 import {
   sovereignPool,
   nonSovereignPool,
@@ -131,7 +127,7 @@ test('pickQuestion throws if input is too small', () => {
   );
 });
 
-test('VARIANTS contains the expected 10 keys in display order, new decks last', () => {
+test('VARIANTS contains the expected 8 keys in display order, weird last', () => {
   assert.deepEqual(Object.keys(VARIANTS), [
     'countries',
     'europe',
@@ -141,8 +137,6 @@ test('VARIANTS contains the expected 10 keys in display order, new decks last', 
     'south-america',
     'oceania',
     'weird',
-    'outlines',
-    'facts',
   ]);
 });
 
@@ -324,11 +318,7 @@ test('createQuiz.addToCabinet — main queue served before cabinet', () => {
 });
 
 test('MODES key order is display order — chips and the mode toggle both render in it', () => {
-  // `10q` sits beside `all`, its fellow count mode. No deck offers both (it
-  // exists precisely because `all` can't work on Statistics), so their relative
-  // order never shows up on screen; grouping them keeps the timed/untimed split
-  // readable here.
-  assert.deepEqual(Object.keys(MODES), ['60s', 'all', '10q']);
+  assert.deepEqual(Object.keys(MODES), ['60s', 'all']);
 });
 
 test('MODES["60s"] is a 60-second budget with a 3-second-per-wrong penalty', () => {
@@ -397,28 +387,15 @@ test('formatBestScoreLabel: unknown mode falls back to "correct/target" — same
   assert.equal(formatBestScoreLabel('99', { score: 7 }, 50), '43/50');
 });
 
-test('formatBestScoreLabel: an endless deck in timed mode drops the denominator — 195 is a country count, not a question count', () => {
-  // The bug this pins: Statistics generates questions from metric x quartet, so
-  // its pool is the set of countries that can APPEAR, never a set you play
-  // through. Rendering "6/195" invited the reading "6 of 195 questions", which
-  // is a total that does not exist and can never be reached.
-  assert.equal(formatBestScoreLabel('60s', { score: 6 }, 195, 'facts'), '6');
-  assert.equal(formatBestScoreLabel('60s', { score: 0 }, 195, 'facts'), '0');
-});
-
-test('formatBestScoreLabel: a finite deck keeps its denominator in timed mode', () => {
-  // Same call, different deck: here the pool IS the question set, so "22 of the
-  // 195 flags" is an honest reading and the ceiling is worth showing.
-  assert.equal(formatBestScoreLabel('60s', { score: 22 }, 195, 'countries'), '22/195');
-  // Omitting the variant keeps the old two-argument behaviour.
+test('formatBestScoreLabel: every deck keeps its denominator — the pool IS the question set', () => {
+  // The variant-key argument this used to take existed for one deck: Statistics
+  // generated questions from metric x quartet, so its pool was the set of
+  // countries that could APPEAR, never a set you played through, and "6/195"
+  // invited the reading "6 of 195 questions" — a total that did not exist. Every
+  // remaining deck deals its questions FROM the pool, so the ceiling is honest
+  // and the label needs to know nothing about which deck it is.
   assert.equal(formatBestScoreLabel('60s', { score: 22 }, 195), '22/195');
-});
-
-test('formatBestScoreLabel: an endless deck KEEPS the denominator in count mode — 10 really is the round length', () => {
-  // The suppression is about the pool, not the deck. A 10-question round has a
-  // genuine, reachable total, so "8/10" reads correctly even on Statistics.
-  assert.equal(formatBestScoreLabel('10q', { score: 2 }, 10, 'facts'), '8/10');
-  assert.equal(formatBestScoreLabel('10q', { score: 0 }, 10, 'facts'), '10/10');
+  assert.equal(formatBestScoreLabel('60s', { score: 6 }, 54), '6/54');
 });
 
 // ---- mistakesAfterGiveUp ----
@@ -485,65 +462,18 @@ test('countModeProgressRatio: empty pool returns 100% — nothing left to do', (
   assert.equal(countModeProgressRatio(0, 0, 0), 1);
 });
 
-test('availableModes offers both 60s and all for any pool size — the timed mode never gates on pool size', () => {
-  assert.deepEqual(availableModes(50), ['60s', 'all']);
-  assert.deepEqual(availableModes(19), ['60s', 'all']);
-  assert.deepEqual(availableModes(4), ['60s', 'all']);
-  assert.deepEqual(availableModes(0), ['60s', 'all']);
-});
-
-test('availableModes: a variant restricts to its declared modes — Statistics swaps `all` for a fixed count', () => {
-  // The argument Phases 2 and 3 deferred. Statistics has nothing to exhaust, so
-  // `all` would never end; the variant declares its own pair and this is where
-  // it takes effect. `10q` is the endurance substitute: a round that ends
-  // because you answered 10, not because the pool ran out.
-  assert.deepEqual(availableModes(195, 'facts'), ['60s', '10q']);
-  // Pool size never gates it — the deck generates questions, it doesn't deal
-  // them from the pool, so 10 questions are always available.
-  assert.deepEqual(availableModes(0, 'facts'), ['60s', '10q']);
-});
-
-test('availableModes: `10q` stays off the flag decks — it is opt-in, not a third mode everywhere', () => {
-  // Without DEFAULT_MODES this is exactly what would regress: `10q` has
-  // count 10 <= every real pool, so an "absent means all of MODES" rule would
-  // silently grow a third chip on every row of the stats grid.
-  assert.deepEqual(availableModes(195, 'countries'), ['60s', 'all']);
-  assert.deepEqual(availableModes(54, 'weird'), ['60s', 'all']);
-  assert.deepEqual(availableModes(157, 'outlines'), ['60s', 'all']);
-});
-
-test('availableModes: an unknown variant gets the default pair rather than every mode', () => {
-  assert.deepEqual(availableModes(195, 'mars'), ['60s', 'all']);
-});
-
-test('MODES: 10q is a count mode of exactly 10, and targetFor honours it against any pool', () => {
-  assert.equal(MODES['10q'].kind, 'count');
-  assert.equal(targetFor('10q', { length: 195 }), 10);
-  // Statistics never deals from the pool, but the clamp is what every other
-  // count mode gets, and a 10q round on a hypothetical 6-flag deck should ask
-  // 6 rather than promise 10 it cannot deliver.
-  assert.equal(targetFor('10q', { length: 6 }), 6);
-});
-
-test('defaultModeFor / resolveMode thread the variant through to Statistics', () => {
-  assert.equal(defaultModeFor(195, 'facts'), '60s');
-  // `all` is not offered on Statistics, so a ?n=all deep-link falls back to 60s.
-  assert.equal(resolveMode('all', 195, 'facts'), '60s');
-  // ...but `10q` is offered, so that deep-link survives.
-  assert.equal(resolveMode('10q', 195, 'facts'), '10q');
-  assert.equal(resolveMode('60s', 195, 'facts'), '60s');
-  // Unchanged for a normal deck: the URL mode is honoured.
-  assert.equal(resolveMode('all', 195, 'countries'), 'all');
+test('availableModes is every mode, for every deck — nothing narrows it any more', () => {
+  // It used to take a pool size and a variant key. The pool size gated a
+  // fixed-count mode against the pool it dealt from, and the variant key routed
+  // to the Statistics deck's opt-in pair; both modes and that deck are gone, so
+  // there is nothing left to decide. If either argument comes back, so should
+  // the reason it exists.
+  assert.deepEqual(availableModes(), ['60s', 'all']);
+  assert.deepEqual(availableModes(), Object.keys(MODES));
 });
 
 test('defaultModeFor returns "60s" — the time-attack is the headline mode', () => {
-  assert.equal(defaultModeFor(50), '60s');
-  assert.equal(defaultModeFor(19), '60s');
-  assert.equal(defaultModeFor(0), '60s');
-});
-
-test('availableModes preserves MODES insertion order', () => {
-  assert.deepEqual(availableModes(100), ['60s', 'all']);
+  assert.equal(defaultModeFor(), '60s');
 });
 
 test('timedRemainingMs subtracts wall-clock burn from the budget', () => {
@@ -1125,47 +1055,36 @@ test('setQuizLastVariant silently drops an unknown variant key', () => {
 
 // ---- resolveMode ----
 
-test('resolveMode returns the URL mode when it names a mode available for the pool', () => {
-  // Home tile passes ?n=60s; the picker preserves this through to
+test('resolveMode returns the URL mode when it names a real mode', () => {
+  // Home tile passes ?n=60s; the burger preserves this through to
   // whichever variant the player clicks, so a first-timer entering
   // via the home tile still gets a 60s landing even on Europe etc.
-  assert.equal(resolveMode('60s', 200), '60s');
-  assert.equal(resolveMode('all', 200), 'all');
+  assert.equal(resolveMode('60s'), '60s');
+  assert.equal(resolveMode('all'), 'all');
 });
 
 test('resolveMode falls back to defaultModeFor when no URL mode is given', () => {
-  // Burger menu (deep-linked or unspecified ?n=) hits this path.
-  assert.equal(resolveMode(null, 200), defaultModeFor(200));
+  // Burger menu (deep-linked or unspecified ?n=) hits this path, as does the
+  // stats page, which has no round in progress to carry a mode from.
+  assert.equal(resolveMode(null), defaultModeFor());
 });
 
 test('resolveMode falls back to defaultModeFor when the URL mode is not a known mode', () => {
-  // A typo or a stale URL ("?n=blitz" from an external link, say)
-  // shouldn't crash or stick — fall back to the variant's default.
-  assert.equal(resolveMode('blitz', 200), defaultModeFor(200));
-});
-
-test('resolveMode returns null when the pool is too small for any mode', () => {
-  // No mode in MODES today fails this for a non-empty pool (60s is
-  // unconditionally available, 'all' has count=Infinity which means
-  // "every flag, however many"). The null branch is the contract for
-  // future MODES that might gate on pool size — e.g. a "n=20" count
-  // mode with count: 20 would return null here for poolSize < 20.
-  // Verifying the contract by stubbing availableModes is overkill;
-  // testing the wiring against the current MODES is enough.
-  assert.equal(resolveMode(null, 200), defaultModeFor(200));
-  // Tautological sanity check that the helper stays in lockstep
-  // with defaultModeFor for any pool size we actually use today.
-  assert.equal(resolveMode(null, 0), defaultModeFor(0));
+  // A typo or a stale URL shouldn't crash or stick — fall back to the default.
+  // `10q` is here on purpose: it was a real mode until the Statistics deck was
+  // removed, so a bookmark or a cached client can still send it.
+  assert.equal(resolveMode('blitz'), defaultModeFor());
+  assert.equal(resolveMode('10q'), defaultModeFor());
 });
 
 test('resolveMode is idempotent — passing back the resolved mode returns the same mode', () => {
   // Catches a regression where the helper might accidentally treat
   // its own output as "unknown" and fall back to default. Important
-  // because the picker computes a mode per tile and the resulting
-  // page load re-runs resolveMode in page.js's startGame branch
-  // against the same URL — round-trip stability matters.
-  const once = resolveMode('60s', 200);
-  assert.equal(resolveMode(once, 200), once);
+  // because the menu computes a mode per link and the resulting
+  // page load re-runs resolveMode against the same URL — round-trip
+  // stability matters.
+  const once = resolveMode('60s');
+  assert.equal(resolveMode(once), once);
 });
 
 // ---- isQuizShowMap / setQuizShowMap ----
@@ -1224,66 +1143,8 @@ test('variantHasLeaderboard is true only for the All-countries variant', () => {
   assert.equal(variantHasLeaderboard('atlantis'), false);
 });
 
-// Feature V Phase 3. The first variant whose RENDERER differs: Outlines asks
-// the same question ("which of these is Italy?") but the choices are contour
-// silhouettes, not flags. That's a different asset directory, so the variant
-// has to declare what it's made of rather than every call site guessing.
-test('VARIANTS carries an art kind, defaulting to flags', () => {
-  assert.equal(artKindFor('countries'), 'flag');
-  assert.equal(artKindFor('europe'), 'flag');
-  assert.equal(artKindFor('weird'), 'flag', 'weird is a different POOL, not different art');
-  assert.equal(artKindFor('outlines'), 'contour');
-});
-
-test('artKindFor falls back to flag for an unknown variant', () => {
-  // A stale ?v= must render something rather than 404 on a bogus directory.
-  assert.equal(artKindFor('mars'), 'flag');
-});
-
-test('Facts deals flags, not a new art kind — only its PROMPT differs', () => {
-  // The trap the FEATURE.md entry warns about: Facts feels like a new kind of
-  // round, but the tiles are four flags exactly like flag-pick. art stays 'flag';
-  // what's new is the prompt.
-  assert.equal(artKindFor('facts'), 'flag');
-});
-
-test('askKindFor: every deck names a country except Facts, which asks a superlative', () => {
-  assert.equal(askKindFor('countries'), 'country');
-  assert.equal(askKindFor('weird'), 'country');
-  assert.equal(askKindFor('outlines'), 'country', 'outlines still asks "which is Italy?", just with a contour');
-  assert.equal(askKindFor('facts'), 'superlative');
-});
-
-test('askKindFor falls back to country for an unknown variant', () => {
-  assert.equal(askKindFor('mars'), 'country');
-});
-
-test('artBaseFor maps the kind to its asset directory', () => {
-  assert.equal(artBaseFor('countries'), '../flags/svg/');
-  assert.equal(artBaseFor('outlines'), '../flags/contours/');
-});
-
-test('poolFor("outlines") is exactly the contour pool', () => {
-  const pool = poolFor('outlines', countries);
-  assert.deepEqual(pool.map((c) => c.code).sort(), [...CONTOUR_CODES].sort());
-  assert.equal(pool.length, 157);
-});
-
-// The contract that keeps the deck playable: every code it can deal must have
-// an asset on disk, or a round renders a broken image. contourPool.js is
-// generated from the assets, so this pins the join rather than trusting it.
-test('every outlines answer has a contour asset, and is sovereign', () => {
-  for (const c of poolFor('outlines', countries)) {
-    assert.ok(CONTOUR_CODE_SET.has(c.code), `${c.code} has no contour`);
-    assert.ok(isSovereignFlag(c), `${c.code} is not sovereign — outlines is a sovereign deck`);
-  }
-});
-
-test('outlines is a strict subset of the countries deck', () => {
-  const sovereign = new Set(poolFor('countries', countries).map((c) => c.code));
-  for (const c of poolFor('outlines', countries)) {
-    assert.ok(sovereign.has(c.code), `${c.code} is in outlines but not in countries`);
-  }
-  assert.ok(poolFor('outlines', countries).length < sovereign.size,
-    'outlines must be narrower than countries — 38 sovereigns have no contour');
-});
+// Every deck now asks one question ("which of these is Italy?") over one kind
+// of art (a flag from `flags/svg/`), so the `art` / `ask` declarations that let
+// a variant answer otherwise went with the two decks that used them, and the
+// tests pinning them with it. If a deck ever needs to differ again, both come
+// back together rather than each call site guessing.

@@ -21,6 +21,33 @@ Working document for in-progress work that spans multiple sessions. A fresh agen
 
 ## Now
 
+### Feature X: flagQuiz — remove the Outlines and Statistics decks
+
+**Status:** shipped in one PR. Jan, opening it: *"in 60s quiz we have 4 modes: flags, weird, outlines and statistics. no one is playing outlines and statistics. let's remove it. it would simplify both code and ui."*
+
+**Why this is a bigger deletion than two entries in a table.** Both decks were the *reason* several general-looking mechanisms existed, and each one had exactly one real consumer:
+
+| mechanism | existed for | fate |
+|---|---|---|
+| `VARIANTS[].art` + `artKindFor` / `artBaseFor` | Outlines dealing contours from a second directory | gone; tiles are always `flags/svg/` |
+| `VARIANTS[].ask` + `askKindFor` | the Statistics prompt being a criterion, not a country name | gone; the prompt is always a country |
+| `VARIANTS[].endless` + `isEndlessVariant` | Statistics having no question set to exhaust | gone |
+| `VARIANTS[].modes` + `DEFAULT_MODES` + the `10q` mode | Statistics having no `all` to offer | gone; every deck offers every mode |
+| `flags/factsQuiz.js` (+ 237 lines of test) | the Statistics question source | deleted |
+
+The knock-on is where the simplification actually lands. `availableModes(poolSize, variantKey)` could no longer return anything but both modes, so **both arguments went**, and with them `defaultModeFor`'s and `resolveMode`'s. That deleted `menu.js`'s `modeForLink` outright — the burger's whole per-link mode calculation, plus the country list it needed, so `buildQuizMenu` lost its `all` parameter at both call sites. `page.js` lost its async start path (Statistics was the one deck that had to fetch metric JSONs before a round could begin), four imports, and the `null`-mode guards that only Statistics could trip.
+
+**What deliberately stayed.**
+
+- **`flags/contours/` and `contourPool.js`.** Flag Party's map round renders the same silhouettes; Outlines was the second consumer, not the owner. Same for the `outlines` deck icon.
+- **The play-screen deck indicator.** Two decks still need a switcher, and Flags vs Weird flags render *identically* — four flag tiles either way — so the icon is the only thing on screen that says which pool you are in. Jan chose to keep the icon + popover over collapsing it to a direct toggle.
+- **`DECK_ICON_IDS`, restated.** It briefly matched `DECKS` exactly, and `decks.test.js` asserted it both ways. That invariant was wrong the moment a flagQuiz deck went away — holding it would have meant deleting a *Flag Party* icon to satisfy a *flagQuiz* removal. It is now documented as a shared artwork catalog (flagQuiz draws 2, Flag Party draws 4), and only the ascending-bar `facts` chart was retired, because nothing anywhere pointed at it.
+- **Everyone's personal bests.** `flagquiz.best.outlines.*` / `.facts.*` simply become unreachable dead bytes in localStorage, the same way Feature V's `.all`-suffixed keys did. No migration, no data touched.
+
+**The API needed one line.** `api/src/lib/quizRecordKey.js` is deliberately variant-blind — that is what let three decks ship and two be removed with no API change — but it *does* enumerate modes, so `10q` left `COUNT_MODES`. Zero risk: only `countries` has a leaderboard and only leaderboard variants submit, so no client ever sent a `10q` key and no stored row uses one. The shape gate still accepts `countries:10q`; it now fails at the mode lookup as a loud `unknown_mode` instead.
+
+**Verification.** `npm run validate` green (3582 tests + both tsconfigs). Three drift guards fired as designed and were updated rather than suppressed: `decks.test.js` (the icon/deck bijection above), `mapConfig.test.js` (the uncropped-world set), and `quiz.test.js`'s VARIANTS key list.
+
 ### Feature U: Simplify tic-tac-toe — remove 9×9, make the flag board the default
 
 **Status:** Phase 1 shipped (#924). Phase 2 shipped (#925 code removal, #926 follow-up + the Cosmos strip, which has been **run and verified**). **Phase 3 shipped (#928)** — the "No statistics" toggle on the offline + solo boards. **Phase 4 shipped (#931)** — the toggle went online as a room setting. **Phase 5 (this PR) flips the default**: the flag board is what everyone now gets, and country data became opt-in "Advanced mode". Jan's framing: nobody plays 9×9, it's hard and slow, and it taxes every metric we add; the 3×3 board is too hard for some players because the category pool is 86% country-statistics.
@@ -176,6 +203,8 @@ Easy mode *relaxes* the generator (fewer exclusiveGroup collisions once the metr
 ---
 
 ### Feature V: flagQuiz — three new decks (weird flags, outlines, facts), and delete the scope toggle
+
+> **Superseded in part by Feature X (2026-08-02):** Outlines and Statistics were removed — nobody played either — along with the per-variant `art` / `ask` / `endless` / `modes` machinery they were the only consumers of. `weird` and the scope-toggle deletion stand. Everything below describes the state as shipped in July; read Feature X for what is actually on the page now.
 
 **Status:** designed 2026-07-16 over six mockup rounds with Jan; UI re-cut and prototyped 2026-07-17. Parked in Backlog the same morning, then **promoted to `## Now` 2026-07-17** when Jan said *"ok, you know what. lets start building."* **Phase 1 complete** (1a + 1b + 1c, plus the deck's world map). **Phase 2 shipped** (2a icons, 2b indicator + reactive burger). **Phase 3 shipped** (Outlines). **Phase 4a shipped** (the pure core split out of `superlative.js` so a browser can load it). **Phase 4b-i shipped** (the metric catalog — the *rules* split out, 4a's missing half). **Phase 4b-ii shipped** — the Facts deck. **Feature V is complete.**
 

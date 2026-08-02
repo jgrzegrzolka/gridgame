@@ -99,11 +99,12 @@ Key states:
   instead of starting an unwinnable game.
 
 ### `/flagQuiz/` — 60s Quiz
-Purpose: rapid multiple-choice. Four decks (`flags`, `weird`, `outlines`,
-`facts`) × three modes (`60s` timed with a 4 s wrong-answer penalty, `10q`,
-`all`).
-Layout: a timer line carrying the deck indicator and mode, the prompt (country
-name, or a map contour for the Outlines deck), and a grid of answer choices.
+Purpose: rapid multiple-choice. Two decks (`flags` — the world plus six
+continent scopes — and `weird`, the non-sovereign pool) × two modes (`60s` timed
+with a 4 s wrong-answer penalty, and `all`). Every deck offers every mode.
+Layout: a timer line carrying the deck indicator and mode, the prompt (a country
+name), and a grid of four flag choices. The two decks render identically, which
+is the whole reason the deck indicator is on that line.
 Key states: loading question · correct pick · wrong pick (the wrong tile gets a
 country-name band so the player learns what they hit) · timer expiry · give up ·
 result (final score, time, personal best, and today's leaderboard). The

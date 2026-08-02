@@ -409,8 +409,7 @@
     "play": "Zagraj",
     "mode": {
       "60s": "60s",
-      "all": "wszystkie",
-      "10q": "10 pytań"
+      "all": "wszystkie"
     },
     "leaderboard": {
       "title": "Top 10: 7 dni",
@@ -784,9 +783,7 @@
     "north-america": "Ameryka Północna",
     "south-america": "Ameryka Południowa",
     "oceania": "Oceania",
-    "weird": "Dziwne flagi",
-    "outlines": "Kształty",
-    "facts": "Statystyki"
+    "weird": "Dziwne flagi"
   },
   "color": {
     "red": "czerwony",
@@ -1825,8 +1822,6 @@
   },
   "deck": {
     "flags": "Flagi",
-    "weird": "Dziwne",
-    "outlines": "Kształty",
-    "facts": "Statystyki"
+    "weird": "Dziwne"
   }
 }

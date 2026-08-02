@@ -77,8 +77,8 @@ test('only the whole-world decks are uncropped', () => {
     .filter(([, cfg]) => !cfg.crop)
     .map(([key]) => key)
     .sort();
-  // countries / facts / outlines / weird are all global pools — there's no
-  // meaningful bbox to crop to. Every continent deck must crop, or it renders
-  // the whole world for a regional round.
-  assert.deepEqual(uncropped, ['countries', 'facts', 'outlines', 'weird']);
+  // countries and weird are both global pools — there's no meaningful bbox to
+  // crop to. Every continent deck must crop, or it renders the whole world for
+  // a regional round.
+  assert.deepEqual(uncropped, ['countries', 'weird']);
 });

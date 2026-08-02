@@ -36,11 +36,11 @@ test('all 8 variants × 2 modes produce distinct keys', () => {
 
 // The server gate (api/src/lib/quizRecordKey.js) must accept everything this
 // builder emits. Phase 1a widened it to take both shapes; this pins that the
-// client's half of that contract is the 2-part one, and that the decks Phases
-// 3 and 4 add need no further server change.
+// client's half of that contract is the 2-part one, and that adding or removing
+// a deck needs no server change — the gate checks shape, never variant names.
 test('every emitted key matches the server shape gate', () => {
   const RE = /^[a-z0-9-]{1,20}:[a-z0-9-]{1,10}(:(sov|all))?$/;
-  for (const v of ['countries', 'north-america', 'weird', 'outlines', 'facts']) {
+  for (const v of ['countries', 'north-america', 'south-america', 'weird']) {
     for (const m of ['60s', 'all']) {
       const k = quizRecordConfigKey(v, m);
       assert.match(k, RE, `server would reject ${k}`);

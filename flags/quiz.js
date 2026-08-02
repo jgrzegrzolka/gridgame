@@ -1,5 +1,4 @@
 import { isSovereignFlag, isNonSovereignFlag } from './flagPools.js';
-import { CONTOUR_CODE_SET } from './contourPool.js';
 
 const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
 const QUIZ_SHOW_MAP_KEY = 'gridgame.flagquiz.showMap';
@@ -92,23 +91,6 @@ export function setQuizLastVariant(store, key) {
  * @typedef {Object} Variant
  * @property {string} label
  * @property {(c: Country) => boolean} filter
- * @property {'flag' | 'contour'} [art] What the choice tiles are made of.
- *   Absent means 'flag' — true of every deck but Outlines, so the default
- *   keeps the common case quiet. Read via `artKindFor` / `artBaseFor`, never
- *   directly, so the fallback lives in one place.
- * @property {string[]} [modes] Which of `MODES` this variant offers. Absent
- *   means `DEFAULT_MODES` (60s + all), which is every deck but Statistics.
- *   Declared here rather than decided at each call site, for the same reason
- *   `art` is: five places ask the question and they must not disagree. Read via
- *   `availableModes`.
- * @property {boolean} [endless] The pool is the set of countries that can
- *   appear, not a question set you play through. Absent means false. Only
- *   Statistics sets it — it generates each question from a metric and a fresh
- *   quartet. Read via `isEndlessVariant`, never directly.
- * @property {'country' | 'superlative'} [ask] What the prompt says. Absent means
- *   'country' — the deck names a country and you pick its flag. Facts asks a
- *   superlative instead ("Most forest cover?"), which is the first prompt on
- *   this page that isn't a country name. Read via `askKindFor`.
  */
 
 /**
@@ -314,98 +296,7 @@ export const VARIANTS = {
     label: 'Weird flags',
     filter: isNonSovereignFlag,
   },
-  // Feature V Phase 3. The same question as every other deck — "which of
-  // these is Italy?" — but the choices are contour silhouettes, so this is
-  // the first variant whose ART differs from the flags everything else
-  // deals. `art` is what the renderer reads to pick an asset directory.
-  //
-  // World-only, and that isn't a simplification: contour coverage is
-  // microstate-shaped. 157 of 195 sovereigns have one; the 38 without are
-  // every microstate and island nation plus Russia. Per continent that's
-  // Oceania 3/14 — a dead deck — and North America 14/23 with the whole
-  // Caribbean missing. A world pool of 157 has none of those problems.
-  outlines: {
-    label: 'Outlines',
-    filter: (c) => isSovereignFlag(c) && CONTOUR_CODE_SET.has(c.code),
-    art: 'contour',
-  },
-  // Feature V Phase 4b. The superlative deck: "Most forest cover?" over four
-  // flags, the same question Flag Party's world-facts rounds ask, from the same
-  // catalog and the same round factory.
-  //
-  // `art` stays 'flag' — the choices ARE four flags. What's new is `ask`: the
-  // prompt is a criterion, not a country name.
-  //
-  // **No `all` mode, and this is the one deck where that's forced rather than
-  // chosen.** Every other deck has a finite pool you can play through, so `all`
-  // means something. Statistics has nothing to exhaust: each question draws a
-  // fresh metric and a fresh quartet, so an endurance run would never end. This
-  // is the rule Phases 2 and 3 deferred to here, and `modes` is where it lands.
-  //
-  // `10q` is the replacement rather than a second timed mode: the thing `all`
-  // offered was a round with no clock, and a fixed question count delivers that
-  // without needing a pool to run dry. `endless: true` is the same fact stated
-  // for the two readers that can't infer it from `modes` — see
-  // `isEndlessVariant`.
-  //
-  // **The pool is sovereign, and that is load-bearing, not a default.** Four
-  // metrics carry a real 0 for uninhabited territories (population, density,
-  // gdp, gdpPerCapita — Bouvet, Clipperton, Heard & McDonald, Antarctica, …).
-  // They are deliberately NOT zero-filtered, because a 0 there is true. Widen
-  // this pool and "Least populous?" can correctly answer Bouvet Island, which is
-  // an unanswerable question wearing a correct answer. Flag Party avoids it by
-  // dealing `poolId: 'sovereign'`; this is the same choice, made explicitly.
-  facts: {
-    label: 'Statistics',
-    filter: isSovereignFlag,
-    modes: ['60s', '10q'],
-    endless: true,
-    ask: 'superlative',
-  },
 };
-
-/**
- * What a variant's prompt asks: 'country' (name a country, pick its flag) or
- * 'superlative' (name a criterion, pick the country at the extreme).
- *
- * Unknown variants fall back to 'country', so a stale `?v=` renders the ordinary
- * question rather than reaching for a metric it has no round for.
- *
- * @param {string} variantKey
- * @returns {string}
- */
-export function askKindFor(variantKey) {
-  const v = VARIANTS[variantKey];
-  return (v && v.ask) ? v.ask : 'country';
-}
-
-/**
- * What a variant's choice tiles are made of: 'flag' (every deck but one) or
- * 'contour'.
- *
- * Declared on the variant rather than derived at each call site, because two
- * places need it (the tile renderer and its prefetch) and a third will when
- * Facts lands. Unknown variants fall back to 'flag' so a stale `?v=` renders
- * something rather than 404ing on a directory that doesn't exist.
- *
- * @param {string} variantKey
- * @returns {string}
- */
-export function artKindFor(variantKey) {
-  const v = VARIANTS[variantKey];
-  return (v && v.art) ? v.art : 'flag';
-}
-
-/**
- * The asset directory for a variant's choice tiles, relative to a page one
- * level under the root (which is every game page).
- *
- * @param {string} variantKey
- * @returns {string}
- */
-export function artBaseFor(variantKey) {
-  return artKindFor(variantKey) === 'contour' ? '../flags/contours/' : '../flags/svg/';
-}
 
 /**
  * Which variants get a global leaderboard (and the Cosmos writes that feed
@@ -449,32 +340,16 @@ export function poolFor(variantKey, countries) {
  * `all` is the original endurance mode: play through every flag in the
  * pool. Score is the percentage correct.
  *
- * `10q` is endurance for a deck whose pool is not a question set. It ends
- * after a fixed 10 questions rather than when the pool runs dry, which is what
- * makes an untimed round possible on Statistics at all (see `endless` on
- * `VARIANTS.facts`). Scored like `all` — one shot per question, so the stored
- * score is a mistake count.
+ * Both apply to every variant. The per-variant `modes` opt-in existed only for
+ * the Statistics deck, whose pool was never a question set and so had no `all`
+ * to offer; with that deck gone the table is flat again.
  *
  * @type {Record<string, Mode>}
  */
 export const MODES = {
   '60s': { kind: 'timed', budgetMs: 60_000, penaltyMs: 4_000 },
   all: { kind: 'count', count: Infinity },
-  '10q': { kind: 'count', count: 10 },
 };
-
-/**
- * What a variant offers when it declares no `modes` of its own: the original
- * pair, which is every flag deck.
- *
- * This is why `10q` doesn't appear site-wide the moment it joins `MODES`.
- * "Absent means all of MODES" was fine while MODES held exactly the two modes
- * every deck wanted; the first opt-in mode breaks that, because `10q`'s count
- * clears every real pool size and would grow a third chip on every stats row.
- * Opt-in is also the honest default: a new mode is a per-deck design decision,
- * not something a deck inherits by existing.
- */
-const DEFAULT_MODES = ['60s', 'all'];
 
 /**
  * @param {string} modeKey
@@ -540,25 +415,13 @@ export function shouldShowBestTime(modeKey, best) {
  *     era (where wrongCount could exceed the pool size) from rendering
  *     as negative.
  *
- * On an endless deck a timed score has no denominator: `target` is the country
- * pool, and rendering "6/195" reads as "6 of 195 questions" — a total that
- * doesn't exist and can't be reached. The bare score is the whole truth there,
- * and matches what the result screen already shows. Count modes still carry
- * their denominator on those decks, because a 20-question round genuinely has
- * 20 questions in it.
- *
  * @param {string} modeKey
  * @param {{ score: number }} best
  * @param {number} target
- * @param {string} [variantKey] omit where no variant is in play; a deck that
- *   can't be identified is treated as finite, the pre-existing behaviour.
  * @returns {string}
  */
-export function formatBestScoreLabel(modeKey, best, target, variantKey) {
-  if (isTimedMode(modeKey)) {
-    if (isEndlessVariant(variantKey)) return `${best.score}`;
-    return `${best.score}/${target}`;
-  }
+export function formatBestScoreLabel(modeKey, best, target) {
+  if (isTimedMode(modeKey)) return `${best.score}/${target}`;
   return `${Math.max(0, target - best.score)}/${target}`;
 }
 
@@ -604,92 +467,42 @@ export function mistakesAfterGiveUp({ modeKey, target, answeredCount, wrongCount
 }
 
 /**
- * The modes a variant offers, in MODES order.
+ * The modes any variant can be played in, in MODES order.
  *
- * `variantKey` is what Phases 2 and 3 kept deferring: until Facts, every deck
- * had a finite pool, so "can I play through it?" was answerable from the pool
- * size alone and the argument would have been dead weight. Facts is the one deck
- * with nothing to exhaust — each question draws a fresh metric and quartet — so
- * `all` would never end, and the rule needs to know *which* deck it's asked
- * about. The variant declares it (`VARIANTS.facts.modes`) rather than this
- * function knowing deck names, so the next such deck is a data change.
+ * Every deck offers both, so this is `MODES` restated as a list. It used to
+ * take a pool size and a variant key, and both arguments are gone for the same
+ * reason: neither could change the answer. The pool-size gate only ever
+ * rejected a fixed-count mode too big for its pool, and `all`'s count is
+ * Infinity; the variant key only ever routed to the Statistics deck's opt-in
+ * `modes`. With that deck removed there is nothing left to decide, and a
+ * function that takes inputs it cannot act on reads as though it might.
  *
- * An unknown variant gets `DEFAULT_MODES`: a stale `?v=` is already going to
- * fall back elsewhere, and the default pair is what it would have rendered
- * before any opt-in mode existed.
- *
- * @param {number} poolSize
- * @param {string} [variantKey] omit only where no variant is in play; every real
- *   call site has one.
  * @returns {string[]}
  */
-export function availableModes(poolSize, variantKey) {
-  const variant = variantKey === undefined ? undefined : VARIANTS[variantKey];
-  const offered = (variant && variant.modes) || DEFAULT_MODES;
-  return Object.keys(MODES).filter((m) => {
-    if (!offered.includes(m)) return false;
-    const def = MODES[m];
-    if (def.kind === 'timed') return true;
-    if (def.count === Infinity) return true;
-    // A fixed-count mode needs enough questions to fill the round. An endless
-    // deck generates them rather than dealing them, so its pool size says
-    // nothing about how many questions it can produce — the gate would reject
-    // a round it can serve perfectly well.
-    return isEndlessVariant(variantKey) || def.count <= poolSize;
-  });
+export function availableModes() {
+  return Object.keys(MODES);
 }
 
 /**
- * Does this variant's pool stand in for its question set?
- *
- * False for every flag deck: the pool IS the questions, so "how many are
- * there" has an answer and a round can exhaust it. True for Statistics, which
- * draws a metric and a fresh quartet per question — the pool is only the set of
- * countries eligible to APPEAR, and no amount of play uses it up.
- *
- * Two things read this, and both were bugs before it existed: `availableModes`
- * (a count mode must not be gated on a pool it doesn't deal from) and
- * `formatBestScoreLabel` (a timed score has no denominator to render).
- *
- * @param {string} [variantKey]
- * @returns {boolean}
+ * @returns {string} the headline mode a round starts in when nothing says
+ *   otherwise — the time-attack, first in MODES.
  */
-export function isEndlessVariant(variantKey) {
-  const variant = variantKey === undefined ? undefined : VARIANTS[variantKey];
-  return Boolean(variant && variant.endless);
+export function defaultModeFor() {
+  return availableModes()[0];
 }
 
 /**
- * @param {number} poolSize
- * @param {string} [variantKey]
- * @returns {string | null}
- */
-export function defaultModeFor(poolSize, variantKey) {
-  return availableModes(poolSize, variantKey)[0] ?? null;
-}
-
-/**
- * Resolve which mode to play given an optional URL hint and a pool
- * size. Returns the URL hint when it names a mode that's actually
- * available for the variant's pool — otherwise falls back to the
- * variant's default. Returns null when the pool is too small for any
- * mode at all (matching defaultModeFor's "no viable mode" signal).
- *
- * Used in two places that previously duplicated the expression:
- * `flagQuiz/page.js` (deciding the mode for the about-to-start game)
- * and `flagQuiz/menu.js`'s first-visit picker (building the href on
- * each tile). De-duplicating the rule keeps both call sites
- * trivially in sync — e.g. the picker preserving `?n=60s` from the
- * home tile when the pool supports it.
+ * Resolve which mode to play given an optional URL hint: the hint when it names
+ * a real mode, otherwise the default. Shared by `flagQuiz/page.js` (the
+ * about-to-start round) and `flagQuiz/menu.js` (the href on each menu link) so
+ * a stale or hand-typed `?n=` lands the same way on both.
  *
  * @param {string | null} urlMode
- * @param {number} poolSize
- * @param {string} [variantKey]
- * @returns {string | null}
+ * @returns {string}
  */
-export function resolveMode(urlMode, poolSize, variantKey) {
-  if (urlMode && availableModes(poolSize, variantKey).includes(urlMode)) return urlMode;
-  return defaultModeFor(poolSize, variantKey);
+export function resolveMode(urlMode) {
+  if (urlMode && availableModes().includes(urlMode)) return urlMode;
+  return defaultModeFor();
 }
 
 /**

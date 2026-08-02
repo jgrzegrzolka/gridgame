@@ -4,11 +4,16 @@ import { VARIANTS } from './quiz.js';
  * Decks — the top level of flagQuiz's navigation, above variants.
  *
  * A **deck** is a kind of question. A **variant** is a pool you can ask it of.
- * The distinction only became load-bearing with Feature V: before it, every
- * variant asked the same question ("which flag is X?") over a slice of the
- * world, so one flat list said everything. Now `weird` asks the same question
- * over a different KIND of pool, and Phases 3 and 4 add decks that ask
- * genuinely different questions (a contour, a statistic).
+ * The distinction became load-bearing with Feature V: before it, every variant
+ * asked the same question ("which flag is X?") over a slice of the world, so
+ * one flat list said everything. `weird` asks the same question over a
+ * different KIND of pool, which is what the two levels buy.
+ *
+ * Feature V also shipped two decks that asked genuinely different questions —
+ * Outlines (pick a contour) and Statistics (pick the country at a metric's
+ * extreme). Nobody played either, so both were removed and the machinery they
+ * needed went with them: per-variant art, prompt kinds, endless pools, and the
+ * `10q` mode. Two decks left, both asking "which flag is X?".
  *
  * The play screen shows the current deck as one quiet icon; the burger shows
  * the decks as pills, and below them the current deck's variants — but only
@@ -17,9 +22,9 @@ import { VARIANTS } from './quiz.js';
  * **That "only when there's a choice" rule is derived, not declared.** A deck
  * with one variant has nothing to pick, so no list renders. `flags` has seven
  * (the world plus six continents) so it lists them; `weird` has one so it
- * doesn't. Phases 3 and 4 are world-only and get the same silence for free.
- * Writing it as `if (deck === 'flags')` would have been a rule that needs
- * maintaining every time a deck lands — this way there's nothing to update.
+ * doesn't. Writing it as `if (deck === 'flags')` would have been a rule that
+ * needs maintaining every time a deck lands — this way there's nothing to
+ * update.
  *
  * Ordering here is display order, in both the pills and the indicator popover.
  */
@@ -29,8 +34,7 @@ import { VARIANTS } from './quiz.js';
 /**
  * Deck → the variants it can be played over, in display order.
  *
- * Only the decks that actually exist are listed. Outlines (Phase 3) and Facts
- * (Phase 4) join by adding an entry here plus their `VARIANTS` key; the pills,
+ * A new deck joins by adding an entry here plus its `VARIANTS` key; the pills,
  * the popover and the burger all read this, so nothing else needs touching.
  *
  * @type {Deck[]}
@@ -45,24 +49,6 @@ export const DECKS = [
     id: 'weird',
     label: 'Weird',
     variants: ['weird'],
-  },
-  // World-only: contour coverage is microstate-shaped (Oceania is 3/14), so
-  // there's no continent slice worth offering. One variant means
-  // `deckHasScopes` is false and the burger renders no scope list — derived,
-  // not declared, so this entry is the whole change.
-  {
-    id: 'outlines',
-    label: 'Shapes',
-    variants: ['outlines'],
-  },
-  // World-only for the same reason Outlines is, but arrived at from the other
-  // side: "Europe: most populous" would work, "Europe: most coffee" is all
-  // zeros. A per-continent Facts deck is its own sparse matrix, and world-only
-  // deletes it. One variant, so no scope list — same silence as the two above.
-  {
-    id: 'facts',
-    label: 'Facts',
-    variants: ['facts'],
   },
 ];
 
@@ -97,10 +83,10 @@ export function variantsForDeck(deckId) {
  * Where tapping a deck takes you: its first variant.
  *
  * Tapping a deck starts playing it immediately rather than waiting for a
- * scope. Weird / Outlines / Facts have no scope to wait for, so waiting would
- * be a dead end for three decks out of four; the cost is that Flags also
- * starts immediately (at "All countries") and reaching Europe means reopening
- * the burger. Consistency over the one tap.
+ * scope. Weird has no scope to wait for, so waiting would be a dead end for
+ * half the decks; the cost is that Flags also starts immediately (at "All
+ * countries") and reaching Europe means reopening the burger. Consistency over
+ * the one tap.
  *
  * @param {string} deckId
  * @returns {string | null}

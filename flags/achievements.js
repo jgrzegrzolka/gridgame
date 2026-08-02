@@ -619,11 +619,11 @@ export const QUIZ_ACHIEVEMENTS = [
     name: 'Cartographer',
     description: 'Tried every 60s quiz variant — all 6 continents (plus All Countries).',
     hint: 'Finish a 60s round in every continent and in All Countries.',
-    // Names, not a count — see hasTouched60s. Scoped to QUIZ_60S_VARIANTS so
-    // decks that aren't slices of the world (weird / outlines / facts) can
-    // neither satisfy this badge nor, by being added, make it harder. Nobody
-    // loses a badge to this change: before `weird` existed the only way to
-    // reach 7 was to touch exactly these 7.
+    // Names, not a count — see hasTouched60s. Scoped to QUIZ_60S_VARIANTS so a
+    // deck that isn't a slice of the world (`weird`) can neither satisfy this
+    // badge nor, by being added, make it harder. Nobody loses a badge to this:
+    // before `weird` existed the only way to reach 7 was to touch exactly
+    // these 7.
     predicate: (s) => QUIZ_60S_VARIANTS.every((v) => hasTouched60s(s, v)),
   },
   // ---- Volume tier — total 60s attempts ever (every finish, PB or

@@ -31,17 +31,21 @@ test('every variant belongs to exactly one deck', () => {
   assert.equal(decksCoverVariants(), true);
 });
 
-test('every deck has an icon, and every icon has a deck', () => {
+test('every deck has an icon', () => {
   for (const d of DECKS) {
     assert.ok(/** @type {readonly string[]} */ (DECK_ICON_IDS).includes(d.id), `deck "${d.id}" has no icon`);
   }
-  // Feature V is complete, so the two lists finally match exactly. `facts` was
-  // the last icon without a deck — it shipped in flagParty before flagQuiz had
-  // the deck — and this test carried that exception until Phase 4b-ii landed it.
-  // No exceptions left: an icon with no deck is now drift, not a work in
-  // progress, and so is a deck with no icon.
-  const pending = DECK_ICON_IDS.filter((id) => !DECKS.some((d) => d.id === id));
-  assert.deepEqual([...pending], [], 'every icon should now have a deck');
+});
+
+// The converse is NOT pinned, and that is the point. `DECK_ICON_IDS` is a
+// shared artwork catalog: flagQuiz draws two of them (its decks), Flag Party
+// draws four (its round types). It briefly matched DECKS exactly, back when
+// flagQuiz had a deck per icon, and asserting that again would mean deleting a
+// Flag Party icon the next time a flagQuiz deck is removed — which is exactly
+// the wrong pressure. Each consumer pins what IT needs.
+test('the icons flagQuiz does not use belong to Flag Party, not to nothing', () => {
+  const unused = DECK_ICON_IDS.filter((id) => !DECKS.some((d) => d.id === id));
+  assert.deepEqual([...unused], ['outlines', 'spot'], 'an icon with no consumer at all is dead artwork');
 });
 
 test('deckOf maps each variant to its deck', () => {
