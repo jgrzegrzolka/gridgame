@@ -105,7 +105,7 @@ Mirror Feature DF. In `flags/engine.js`: a `<key>(op, n)` category factory (bake
 
 ### 5. Flag Party round (moderate; the round factory is already generalized)
 
-A new metric is a **sibling round**, not a rewrite: `createSuperlativeQuestion(metric, questionId, opts)` (`flags/partyQuestions/superlativeCore.js`) takes a `createMetric(...)` instance and every round goes through it.
+A new metric is a **sibling round**, not a rewrite: `createSuperlativeQuestion(metric, questionId, opts)` (`flags/partyQuestions/superlative.js`) takes a `createMetric(...)` instance and every round goes through it.
 
 **Start with `flags/partyQuestions/superlativeCatalog.js`** — since Feature V Phase 4b-i that's the table driving the whole surface, and it's where the three per-metric decisions live that the data can't tell you:
 
