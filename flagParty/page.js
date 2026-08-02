@@ -12,6 +12,7 @@ import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal, revealOrder } from '../flags/partyClient.js';
 import { showBotSeat } from './botSeat.js';
+import { setupSummaryParts, canStartGame } from './lobbySetup.js';
 import { pauseCardStep } from './pauseCard.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS } from '../flags/partyTiming.js';
@@ -517,6 +518,12 @@ export function bootFlagParty() {
   const roundCardName = $('roundcard-name');
   const roundCardPick = $('roundcard-pick');
   const lobbySetupEl = $('lobby-setup');
+  // The setup card's collapsed header: the button that opens it, and the two
+  // slots its one-line summary paints into.
+  const setupHead = /** @type {HTMLButtonElement} */ ($('setup-head'));
+  const setupBody = $('setup-body');
+  const setupSumIc = $('setup-sum-ic');
+  const setupSum = $('setup-sum');
   const botSeat = $('bot-seat');
   const botLevelBtns = /** @type {HTMLButtonElement[]} */ (
     [...botSeat.querySelectorAll('.bot-lv')]);
@@ -893,6 +900,81 @@ export function bootFlagParty() {
     draftPicksToggle.disabled = !state.isHost;
     draftPicksToggle.checked = on;
     draftLengthHint.textContent = lengthHintText();
+    // The closed card has to say the same thing this control does, so it repaints
+    // on the same beat rather than on its own.
+    syncSetupSummary();
+  }
+
+  /**
+   * Is the setup card open? Deliberately NOT persisted across visits: a host who
+   * opened it once to change the length would then find it open on every future
+   * lobby, which defeats the point of a card that collapses. It resets to closed
+   * with the page, and closed is what the lobby is designed around.
+   */
+  let setupOpen = false;
+
+  /** How long the panel takes to open — must match the `grid-template-rows`
+   *  transition on `.setup-body` in index.css. It only gates when the overflow
+   *  clip is released, so being a few ms out is harmless; being much SHORTER
+   *  than the animation is not, since the panel would stop clipping while it is
+   *  still growing. */
+  const SETUP_SETTLE_MS = 280;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let setupSettleTimer;
+
+  /**
+   * Open or close the setup card. Four things move together and all four are
+   * load-bearing: the class drives the animation, `aria-expanded` is what a
+   * screen reader reads off the header button, `inert` is what actually takes
+   * the collapsed controls out of the tab order (the panel is still laid out as
+   * a 0fr grid row, so without it a keyboard user tabs into segments they cannot
+   * see and changes the game blind), and `is-settled` releases the panel's
+   * overflow clip once it has finished growing so the two switches' hover tips
+   * can be drawn outside the card.
+   *
+   * The settle is deliberately asymmetric: released on a delay when opening,
+   * revoked immediately when closing, so the clip is always back in place before
+   * the panel starts to shrink.
+   */
+  function setSetupOpen(open) {
+    setupOpen = open;
+    lobbySetupEl.classList.toggle('is-open', open);
+    setupHead.setAttribute('aria-expanded', String(open));
+    if (open) setupBody.removeAttribute('inert');
+    else setupBody.setAttribute('inert', '');
+    clearTimeout(setupSettleTimer);
+    if (!open) { lobbySetupEl.classList.remove('is-settled'); return; }
+    setupSettleTimer = setTimeout(() => lobbySetupEl.classList.add('is-settled'), SETUP_SETTLE_MS);
+  }
+
+  /**
+   * Paint the collapsed card's one-line summary: what we play first, how big the
+   * game is, how many rounds that comes to. For anyone who never opens the card
+   * this line IS the setup, so it repaints from the same room state on the same
+   * beat as the controls it stands in for — every caller of `syncDraftLength` /
+   * `syncDraftFirstPick` gets it for free.
+   *
+   * The mode icon is `modeIconHtml`, the identical artwork the segment below
+   * carries, so the picture in the closed card and the picture in the open one
+   * can never disagree.
+   */
+  function syncSetupSummary() {
+    const firstPick = currentFirstPick();
+    setupSumIc.innerHTML = modeIconHtml(firstPick);
+    setupSum.textContent = '';
+    const parts = setupSummaryParts({
+      mode: modeShortLabel(firstPick),
+      length: currentLength(),
+      picks: currentPicks(),
+      rounds: effectiveRounds(),
+    });
+    parts.forEach((part, i) => {
+      if (i > 0) setupSum.appendChild(el('span', 'sum-sep', ' · '));
+      const text = part.args
+        ? fmt(t(part.key, part.fallback), part.args)
+        : t(part.key, part.fallback);
+      setupSum.appendChild(el('span', part.muted ? 'sum-muted' : '', text));
+    });
   }
 
   /**
@@ -909,6 +991,7 @@ export function bootFlagParty() {
     draftFirstPickVeilLabel.classList.toggle('is-disabled', !state.isHost);
     draftFirstPickVeil.disabled = !state.isHost;
     draftFirstPickVeil.checked = currentFirstPickVeil();
+    syncSetupSummary();
   }
 
   /**
@@ -2022,10 +2105,11 @@ export function bootFlagParty() {
       isHost: state.isHost, inLobby, seatCount: state.roster.length,
     });
     startBtn.hidden = !hostSetup;
-    // The host can start as soon as they're seated — a room of one is allowed
-    // (play alone), and more players can join before the tap. The guard only
-    // greys out the impossible empty-roster case.
-    startBtn.disabled = state.roster.filter((r) => r.present).length < 1;
+    // Two seats, not one. The rule and the reasoning live in `canStartGame` —
+    // in short, every scoring bucket this game has is a comparison against other
+    // seats, so a room of one pays out against nobody. A bot counts, and the seat
+    // that adds one sits directly above this button.
+    startBtn.disabled = !canStartGame({ seatCount: seatCount() });
     waitEl.hidden = !(!state.isHost && inLobby);
     // The whole setup card shows to everyone in the lobby, not just the host — the
     // length decides how long they are staying and the first round is what they
@@ -3090,6 +3174,10 @@ export function bootFlagParty() {
     if (next) setFirstPick(next, true);
   });
   draftFirstPickVeil.addEventListener('change', () => setFirstPickVeil(draftFirstPickVeil.checked));
+  // The setup card opens and closes for EVERYONE, host and guest alike. It is not
+  // a permission — a guest who wants to read the veil switch or the exact length
+  // can, they simply cannot move anything once it is open.
+  setupHead.addEventListener('click', () => setSetupOpen(!setupOpen));
   // Bots: the host taps a difficulty and that IS the add — one gesture, no
   // separate confirm. The server mints the seat and broadcasts the roster, which
   // repaints the list, so the new bot lands directly above the seat that was just

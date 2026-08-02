@@ -172,124 +172,154 @@
         </div>
         <!-- Host game setup, grouped in one bordered card so the two choices read
              as a single panel rather than two look-alike segmented strips with a
-             line of text wedged between them. No card heading: the two field labels
-             name the controls, and a lobby that already carries a room code, a
-             player list and a start button does not need a fourth thing shouting.
-             The whole card shows to guests too (disabled) and hides off the lobby
-             via `#lobby-setup`; the two inner fields keep their own ids because the
-             radiogroup paint / keyboard logic is scoped to them. -->
+             line of text wedged between them. The whole card shows to guests too
+             (disabled) and hides off the lobby via `#lobby-setup`; the two inner
+             fields keep their own ids because the radiogroup paint / keyboard
+             logic is scoped to them.
+
+             The card COLLAPSES, and opens closed. Expanded it is four controls
+             tall — two segmented strips and two switches — which pushed the seat
+             list and the start button down the screen every time, for settings
+             most hosts change once and then never look at again. Closed, it is
+             one line that states the whole game ("Spot · Short · 5 rounds"), so
+             the lobby's three jobs — who is here, what we are playing, start —
+             each get one row. That line is the card's only heading: the fields
+             name themselves once they are on screen (see `.dl-fieldhead`), and a
+             lobby that already carries a room code, a player list and a start
+             button does not need a fourth thing shouting.
+
+             The header is a real <button> with aria-expanded / aria-controls, and
+             the panel carries `inert` while closed — a 0fr grid row hides it from
+             the eye but not from the tab order, so without that a keyboard user
+             would land in an invisible card and change the length blind. -->
         <div class="lobby-setup" id="lobby-setup" hidden>
-          <!-- First round on top. Round 1 used to always be Flags, decided by
-               nobody; the host chooses it now, and it IS their first draft pick, so
-               the rotation skips them a cycle. A `radiogroup`, not a row of
-               `aria-pressed` toggles: exactly one applies, and the group wants
-               arrow-key roving on one tab stop. The JS owns `tabindex` and
-               `aria-checked`, and paints each segment its mode's own artwork. -->
-          <div class="draft-length" id="draft-first-pick">
-            <div class="dl-fieldhead">
-              <span class="dl-group-label" data-i18n="party.firstPickLabel">First round</span>
-              <!-- The veil is one on/off switch on the field's header row (every
-                   opening mode is veilable, so one toggle, not a per-button chip).
-                   The site's shared switch — `.scope-toggle` + a real hidden
-                   checkbox — the same control the tic-tac-toe burger and TTT-online
-                   board use, so an on/off toggle reads identically everywhere. Shown
-                   to guests read-only (`.is-disabled`), like the radiogroups: the
-                   opening is told, not withheld. The hover-tip spells out "starts
-                   covered, clears on the clock". -->
-              <label class="scope-toggle veil-toggle hover-tip" id="draft-first-pick-veil-label"
-                     data-i18n-attr="data-tip:party.veilFirstPickHint"
-                     data-tip="Veil the first round: the tiles start hidden and clear as the clock runs">
-                <span class="scope-toggle-text" data-i18n="party.veilFirstPick">Covered start</span>
-                <span class="scope-toggle-switch">
-                  <input type="checkbox" id="draft-first-pick-veil" />
-                  <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
-                </span>
-              </label>
+          <button type="button" class="setup-head" id="setup-head" aria-expanded="false" aria-controls="setup-body">
+            <!-- The first round's own artwork, in the same 20px `.dl-ic` slot the
+                 radiogroup below uses — one icon component, so the summary and the
+                 control it summarises can never draw the mode differently. -->
+            <span class="dl-ic" id="setup-sum-ic" aria-hidden="true"></span>
+            <span class="setup-sum" id="setup-sum"></span>
+            <span class="setup-chev" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"></path></svg>
+            </span>
+          </button>
+          <div class="setup-body" id="setup-body" inert>
+            <div class="setup-body-clip">
+              <div class="setup-fields">
+                <!-- First round on top. Round 1 used to always be Flags, decided by
+                     nobody; the host chooses it now, and it IS their first draft pick, so
+                     the rotation skips them a cycle. A `radiogroup`, not a row of
+                     `aria-pressed` toggles: exactly one applies, and the group wants
+                     arrow-key roving on one tab stop. The JS owns `tabindex` and
+                     `aria-checked`, and paints each segment its mode's own artwork. -->
+                <div class="draft-length" id="draft-first-pick">
+                  <div class="dl-fieldhead">
+                    <span class="dl-group-label" data-i18n="party.firstPickLabel">First round</span>
+                    <!-- The veil is one on/off switch on the field's header row (every
+                         opening mode is veilable, so one toggle, not a per-button chip).
+                         The site's shared switch — `.scope-toggle` + a real hidden
+                         checkbox — the same control the tic-tac-toe burger and TTT-online
+                         board use, so an on/off toggle reads identically everywhere. Shown
+                         to guests read-only (`.is-disabled`), like the radiogroups: the
+                         opening is told, not withheld. The hover-tip spells out "starts
+                         covered, clears on the clock". -->
+                    <label class="scope-toggle veil-toggle hover-tip" id="draft-first-pick-veil-label"
+                           data-i18n-attr="data-tip:party.veilFirstPickHint"
+                           data-tip="Veil the first round: the tiles start hidden and clear as the clock runs">
+                      <span class="scope-toggle-text" data-i18n="party.veilFirstPick">Covered start</span>
+                      <span class="scope-toggle-switch">
+                        <input type="checkbox" id="draft-first-pick-veil" />
+                        <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
+                      </span>
+                    </label>
+                  </div>
+                  <span class="dl-step" role="radiogroup" id="draft-first-pick-group"
+                        data-i18n-attr="aria-label:party.firstPickLabel" aria-label="First round">
+                    <button type="button" class="dl-pick" role="radio" data-first-pick="flags-all" aria-checked="true" tabindex="0">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.modeShort.flagsAll">Flags</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-first-pick="flags-weird" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.modeShort.flagsWeird">Weird</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-first-pick="spot-flag" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.modeShort.spotFlag">Spot</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-first-pick="map-outlines" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.modeShort.mapOutlines">Maps</span>
+                    </button>
+                  </span>
+                </div>
+                <!-- Length below the first round. Two sizing modes share this field: the
+                     default length table (Short / Medium / Long), or "even picks" (1 / 2 /
+                     3) where the game grows so every player picks the same number of
+                     rounds. The "Even picks" switch on the header mirrors the first-round
+                     row's veil switch, so both header rows read as label + switch. The
+                     segments swap by mode; the rounds summary sits under them. -->
+                <div class="draft-length" id="draft-length">
+                  <div class="dl-fieldhead">
+                    <!-- The label names whichever mode is active. Both spans stay
+                         translated by i18n; the JS only toggles which is shown. -->
+                    <span class="dl-group-label">
+                      <span id="draft-length-label" data-i18n="party.gameLength">Game length</span>
+                      <span id="draft-picks-label" data-i18n="party.everyonePicks" hidden>Everyone picks</span>
+                    </span>
+                    <label class="scope-toggle veil-toggle hover-tip" id="draft-picks-toggle-label"
+                           data-i18n-attr="data-tip:party.evenPicksHint"
+                           data-tip="Even picks: the game grows so every player picks the same number of rounds">
+                      <span class="scope-toggle-text" data-i18n="party.evenPicks">Even picks</span>
+                      <span class="scope-toggle-switch">
+                        <input type="checkbox" id="draft-picks-toggle" />
+                        <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
+                      </span>
+                    </label>
+                  </div>
+                  <span class="dl-step" role="radiogroup" id="draft-length-group"
+                        data-i18n-attr="aria-label:party.gameLength" aria-label="Game length">
+                    <button type="button" class="dl-pick" role="radio" data-length="short" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.lengthShort">Short</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-length="medium" aria-checked="true" tabindex="0">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.lengthMedium">Medium</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-length="long" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab" data-i18n="party.lengthLong">Long</span>
+                    </button>
+                  </span>
+                  <!-- The even-picks segments: 1 / 2 / 3 rounds per player. Hidden until
+                       the switch is on. Numerals need no translation; the icon is N pips. -->
+                  <span class="dl-step" role="radiogroup" id="draft-picks-group" hidden
+                        data-i18n-attr="aria-label:party.everyonePicks" aria-label="Everyone picks">
+                    <button type="button" class="dl-pick" role="radio" data-picks="1" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab">1</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-picks="2" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab">2</span>
+                    </button>
+                    <button type="button" class="dl-pick" role="radio" data-picks="3" aria-checked="false" tabindex="-1">
+                      <span class="dl-ic" aria-hidden="true"></span>
+                      <span class="dl-lab">3</span>
+                    </button>
+                  </span>
+                  <span class="dl-hint" id="draft-length-hint"></span>
+                </div>
+              </div>
             </div>
-            <span class="dl-step" role="radiogroup" id="draft-first-pick-group"
-                  data-i18n-attr="aria-label:party.firstPickLabel" aria-label="First round">
-              <button type="button" class="dl-pick" role="radio" data-first-pick="flags-all" aria-checked="true" tabindex="0">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.modeShort.flagsAll">Flags</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-first-pick="flags-weird" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.modeShort.flagsWeird">Weird</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-first-pick="spot-flag" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.modeShort.spotFlag">Spot</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-first-pick="map-outlines" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.modeShort.mapOutlines">Maps</span>
-              </button>
-            </span>
-          </div>
-          <!-- Length below the first round. Two sizing modes share this field: the
-               default length table (Short / Medium / Long), or "even picks" (1 / 2 /
-               3) where the game grows so every player picks the same number of
-               rounds. The "Even picks" switch on the header mirrors the first-round
-               row's veil switch, so both header rows read as label + switch. The
-               segments swap by mode; the rounds summary sits under them. -->
-          <div class="draft-length" id="draft-length">
-            <div class="dl-fieldhead">
-              <!-- The label names whichever mode is active. Both spans stay
-                   translated by i18n; the JS only toggles which is shown. -->
-              <span class="dl-group-label">
-                <span id="draft-length-label" data-i18n="party.gameLength">Game length</span>
-                <span id="draft-picks-label" data-i18n="party.everyonePicks" hidden>Everyone picks</span>
-              </span>
-              <label class="scope-toggle veil-toggle hover-tip" id="draft-picks-toggle-label"
-                     data-i18n-attr="data-tip:party.evenPicksHint"
-                     data-tip="Even picks: the game grows so every player picks the same number of rounds">
-                <span class="scope-toggle-text" data-i18n="party.evenPicks">Even picks</span>
-                <span class="scope-toggle-switch">
-                  <input type="checkbox" id="draft-picks-toggle" />
-                  <span class="scope-toggle-track" aria-hidden="true"><span class="scope-toggle-thumb"></span></span>
-                </span>
-              </label>
-            </div>
-            <span class="dl-step" role="radiogroup" id="draft-length-group"
-                  data-i18n-attr="aria-label:party.gameLength" aria-label="Game length">
-              <button type="button" class="dl-pick" role="radio" data-length="short" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.lengthShort">Short</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-length="medium" aria-checked="true" tabindex="0">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.lengthMedium">Medium</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-length="long" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab" data-i18n="party.lengthLong">Long</span>
-              </button>
-            </span>
-            <!-- The even-picks segments: 1 / 2 / 3 rounds per player. Hidden until
-                 the switch is on. Numerals need no translation; the icon is N pips. -->
-            <span class="dl-step" role="radiogroup" id="draft-picks-group" hidden
-                  data-i18n-attr="aria-label:party.everyonePicks" aria-label="Everyone picks">
-              <button type="button" class="dl-pick" role="radio" data-picks="1" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab">1</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-picks="2" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab">2</span>
-              </button>
-              <button type="button" class="dl-pick" role="radio" data-picks="3" aria-checked="false" tabindex="-1">
-                <span class="dl-ic" aria-hidden="true"></span>
-                <span class="dl-lab">3</span>
-              </button>
-            </span>
-            <span class="dl-hint" id="draft-length-hint"></span>
           </div>
         </div>
         <p class="lobby-wait" id="lobby-wait" data-i18n="party.waitingHost" hidden>Waiting for the host to start…</p>
         <!-- Start game is the host's page-primary action, so it's a real
              primary button below the settings card (not a dock item). The
              dock carries only Home. -->
-        <button type="button" class="lobby-btn primary party-start-btn" id="start-game" data-i18n="party.startGame" hidden>Start game</button>
+        <button type="button" class="lobby-btn primary party-start-btn" id="start-game" data-i18n="party.startGame" hidden>Play</button>
         <nav class="dock" data-dock="home" data-home="../"></nav>
       </section>
 

@@ -308,6 +308,13 @@
 .chip-remove:hover { color: var(--primary-color); }
 .chip-remove:focus-visible { outline: 2px solid var(--accent-rose); outline-offset: 2px; border-radius: 4px; }
 .lobby-wait { text-align: center; color: var(--muted-color); font-size: 14px; }
+/* Start sits at the trailing edge, not centred like the shared `.lobby-btn`. The
+   lobby is now a left-aligned column of rows — room code, seats, the one-line
+   setup summary — and a centred pill under all of it read as belonging to
+   nothing. At the right it lands where a stack of rows ends, and it is the only
+   override this button needs: fill, ink, radius and the disabled fade all still
+   come from `.lobby-btn.primary`. */
+.party-start-btn { align-self: flex-end; }
 
 /* Question: prompt + flags */
 .question-pill {
@@ -940,19 +947,124 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 /* The host's game-setup card: the two setup fields (first round + length) grouped
    in one bordered panel so they read as one thing, not two look-alike segmented
    strips. No heading — each field's own label names it (see `.dl-fieldhead`). */
+/* The card itself carries no padding any more — the header and the fields each
+   own theirs, so the collapsed card is exactly one header row tall with no
+   leftover band under it. */
+/* No `overflow: hidden` on the card, deliberately — see `.setup-body-clip`. The
+   two switches inside carry `.hover-tip` bubbles that are meant to escape the
+   card, and a clip here silently eats them. */
 .lobby-setup {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   border: 1px solid var(--muted-soft-color);
   border-radius: 14px;
   background: var(--surface-color);
-  padding: 14px;
 }
 /* `.lobby-setup` sets `display: flex`, which outweighs the UA `[hidden]` rule, so
    the card would still show when `hidden`. Spell out the hide (same trap as
    `.pick-hand[hidden]` below). */
 .lobby-setup[hidden] { display: none; }
+
+/* ---- the card's header: the whole game on one line ----
+   Closed, this row IS the setup — mode artwork, the summary sentence, chevron.
+   Open, the summary steps aside (it would only repeat the controls now on
+   screen) and the chevron is all that is left, which is also the affordance for
+   closing it again. */
+.setup-head {
+  appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+/* No hover fill on this row, deliberately. It is a full-width band across the
+   card, so the usual `--hover-color` wash paints a grey stripe over the card's
+   own surface and reads as a second, darker panel sitting on top of it rather
+   than as "you can press this". The chevron darkening below is the whole hover
+   cue, which is what the design calls for. */
+.setup-head:focus-visible { outline: 2px solid var(--accent-rose); outline-offset: -2px; }
+/* The mode icon is the shared `.dl-ic` (20px, secondary-tinted) — `flex: none` is
+   the only thing this slot adds, because `.dl-ic` is a block sized for a column
+   segment and would otherwise be squeezed by a long summary beside it. */
+.setup-head .dl-ic { flex: none; }
+/* One line, ellipsised rather than wrapped: the header's height is what the
+   collapsed card costs, and a two-line summary on a narrow phone would quietly
+   make the closed state as tall as the thing it replaced. The parts are ordered
+   most-to-least important, so what an ellipsis eats is the rounds count — which
+   is derived arithmetic, not a choice. */
+.setup-sum {
+  font-size: 13px;
+  color: var(--primary-color);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The separators and the derived rounds count recede, so the line reads as two
+   settings with a footnote rather than three equal facts. */
+.setup-sum .sum-sep, .setup-sum .sum-muted { color: var(--muted-color); }
+.setup-chev {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-color);
+}
+.setup-head:hover .setup-chev { color: var(--primary-color); }
+.lobby-setup.is-open .setup-chev { transform: rotate(180deg); }
+/* The summary fades and slides a touch out of the way when the card opens, and
+   comes back only after the panel has finished closing — hence the delay, which
+   is on the RESTING rule and cancelled by the open one. Without it the sentence
+   reappears over a panel that is still visibly folding away. */
+.lobby-setup.is-open .setup-head .dl-ic,
+.lobby-setup.is-open .setup-sum { opacity: 0; transform: translateX(-6px); }
+
+/* The panel. `grid-template-rows: 0fr -> 1fr` is what animates a height nobody
+   measured — the inner clip is the grid item, and it needs `min-height: 0` or the
+   row refuses to shrink below its content. `inert` (set from page.js alongside
+   `.is-open`) is what takes the collapsed controls out of the tab order; this
+   only hides them from the eye. */
+.setup-body { display: grid; grid-template-rows: 0fr; }
+.lobby-setup.is-open .setup-body { grid-template-rows: 1fr; }
+.setup-body-clip { overflow: hidden; min-height: 0; opacity: 0; }
+.lobby-setup.is-open .setup-body-clip { opacity: 1; }
+/* The clip is only needed WHILE the panel is growing or shrinking — it is what
+   stops the contents spilling out of a row that is shorter than they are. Once
+   the card has settled open the row is exactly content height, so the clip has
+   nothing left to do and becomes purely harmful: both field switches carry a
+   `.hover-tip` bubble that is drawn outside the panel (above the label, and
+   wider than the card), and `overflow: hidden` ate them — the "Covered start"
+   tip entirely, since it is the top row and its bubble sits above the panel's
+   own edge, and the "Even picks" one mid-sentence at the right edge.
+
+   `is-settled` is added by page.js once the open transition has finished and
+   removed the instant a close begins, so the clip is back in place before
+   anything moves. It cannot be done in CSS alone: `overflow` is not an
+   animatable property, so releasing it on `.is-open` would drop the clip at the
+   START of the open and let the whole panel spill while it grows. */
+.lobby-setup.is-settled .setup-body-clip { overflow: visible; }
+/* 2px above, not 14: the header's own bottom padding already sits over this, and
+   a full pad there put an obvious gap between the header and the first field. */
+.setup-fields { display: flex; flex-direction: column; gap: 14px; padding: 2px 14px 14px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .setup-body { transition: grid-template-rows 0.28s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .setup-body-clip { transition: opacity 0.2s ease; }
+  .setup-chev { transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1), color 0.15s ease; }
+  .setup-head .dl-ic,
+  .setup-sum {
+    transition: opacity 0.18s ease 160ms, transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1) 160ms;
+  }
+  .lobby-setup.is-open .setup-head .dl-ic,
+  .lobby-setup.is-open .setup-sum { transition-delay: 0ms; }
+}
 /* Each field's header line: label on the left, its companion on the right — the
    veil switch for the first round, the rounds summary for the length. The two
    rows share this shape so the card reads as one tidy panel. */
