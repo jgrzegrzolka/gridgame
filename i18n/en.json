@@ -575,7 +575,7 @@
     "pausedHostHint": "{host} can choose to play on without them.",
     "playOnAnyway": "Play on without waiting",
     "waitingHost": "Waiting for the host to start…",
-    "startGame": "Start game",
+    "startGame": "Play",
     "mode": {
       "flagsAll": "Flags: countries",
       "flagsWeird": "Weird flags",
@@ -681,6 +681,7 @@
     "behind": "{n} behind",
     "gameLength": "Game length",
     "everyonePicks": "Everyone picks",
+    "everyonePicksN": "Everyone picks {n}",
     "evenPicks": "Even picks",
     "evenPicksHint": "Even picks: the game grows so every player picks the same number of rounds",
     "firstPickLabel": "First round",

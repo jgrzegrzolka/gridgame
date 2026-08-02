@@ -575,7 +575,7 @@
     "pausedHostHint": "{host} może zdecydować, żeby grać dalej bez czekania.",
     "playOnAnyway": "Graj dalej bez czekania",
     "waitingHost": "Czekanie, aż gospodarz rozpocznie…",
-    "startGame": "Rozpocznij grę",
+    "startGame": "Graj",
     "mode": {
       "flagsAll": "Flagi: kraje",
       "flagsWeird": "Dziwne flagi",
@@ -681,6 +681,7 @@
     "behind": "strata {n}",
     "gameLength": "Długość gry",
     "everyonePicks": "Każdy wybiera",
+    "everyonePicksN": "Każdy wybiera {n}",
     "evenPicks": "Po równo",
     "evenPicksHint": "Po równo: gra rośnie, aby każdy gracz wybrał tyle samo rund",
     "firstPickLabel": "Pierwsza runda",
