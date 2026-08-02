@@ -96,8 +96,10 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode, validat
  *   room enters a `picking` phase at each round boundary; when false it's the
  *   ordinary setlist show. Stored so it survives an eviction and rides welcome.
  * @property {number} targetRounds  the draft's total round count, fixed at start
- *   from the seat count (`roundCountFor`). The game ends after this many rounds;
- *   `totalQuestions` is `targetRounds * ROUND_QUESTIONS`. 0 in a non-draft game.
+ *   from the chosen length (`roundCountFor`, a flat 4/7/10) or from
+ *   `seats * picksPerPlayer` in even-picks mode. The game ends after this many
+ *   rounds; `totalQuestions` is `targetRounds * ROUND_QUESTIONS`. 0 in a
+ *   non-draft game.
  * @property {string[]} pickedBy  playerIds that have already picked a round, in
  *   pick order — the no-repeat set the draft's picker selection reads.
  * @property {string | null} picker  during `picking`, the seat whose turn it is to

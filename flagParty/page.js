@@ -763,9 +763,10 @@ export function bootFlagParty() {
   // The host chooses a LENGTH and the picks fall out, not the other way round.
   // Picks-per-player was legible but it was not a length: `seats x picks + 2`
   // meant one setting bought a 7-minute game at two seats and a 45-minute one at
-  // ten, and the answer moved under the host every time somebody joined. Now the
-  // round count comes off a table (`roundCountFor`) and only the pick share
-  // moves. Persisted per device; the server re-validates whatever we send.
+  // ten, and the answer moved under the host every time somebody joined. The
+  // round count is now a flat 4 / 7 / 10 (`roundCountFor`) that the seat count
+  // cannot touch at all, so the hint below stops changing as people arrive.
+  // Persisted per device; the server re-validates whatever we send.
   //
   // The ROOM is authoritative once connected: the length is shared state, so a
   // guest renders the host's choice read-only rather than a stale local one, and
@@ -888,8 +889,8 @@ export function bootFlagParty() {
     return state.roster.filter((r) => r.present).length;
   }
 
-  /** Rounds a start would actually deal, given the seats present right now and the
-   *  active sizing mode (length table, or seats × N when even-picks is on). */
+  /** Rounds a start would actually deal. Fixed per length; only even-picks mode
+   *  reads the seat count (seats × N), which is why this still takes one. */
   function effectiveRounds() {
     return resolveRoundCount(seatCount(), currentLength(), currentPicks());
   }

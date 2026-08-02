@@ -19,9 +19,11 @@
  * picks names a per-player count ("Everyone picks 2") — because those are the
  * two different things the host actually chose.
  *
- * The rounds part is `muted: true`: it is arithmetic derived from the other
- * two, not a third choice, and painting it in the caption grey is what stops
- * the line reading as three equal settings.
+ * The rounds part is `muted: true`: it is derived from the sizing choice, not a
+ * third choice of its own, and painting it in the caption grey is what stops the
+ * line reading as three equal settings. It stays even though a length now names a
+ * fixed count — "Short" does not say 4 on its own, and in even-picks mode the
+ * number is genuinely computed (seats × N).
  *
  * @param {object} o
  * @param {{ key: string | undefined, fallback: string | undefined }} o.mode
