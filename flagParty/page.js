@@ -13,6 +13,8 @@ import { loadCountries } from '../flags/group.js';
 import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal, revealOrder } from '../flags/partyClient.js';
 import { showBotSeat } from './botSeat.js';
 import { setupSummaryParts, canStartGame } from './lobbySetup.js';
+import { dockSpecFor } from './dockSpec.js';
+import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS } from '../flags/partyTiming.js';
@@ -571,8 +573,18 @@ export function bootFlagParty() {
   const pickHand = $('pick-hand');
   const pickWatch = $('pick-watch');
   const pickBoard = $('pick-board');
-  const playAgainBtn = /** @type {HTMLButtonElement} */ ($('play-again'));
-  const questionToSettingsBtn = /** @type {HTMLButtonElement} */ ($('question-to-settings'));
+  // The page's single dock. Its CONTENTS are rebuilt by `mountDock` on every
+  // screen change, so the two items the page drives — Play again, Back to
+  // settings — must be looked up live. Caching either at boot would hold an
+  // element that stops being in the document at the first phase change: its
+  // click listener would be dead and `hidden` would be set on a detached node.
+  // Pinned by dockSpec.test.js.
+  const partyDock = $('party-dock');
+  const dockItem = (/** @type {string} */ id) =>
+    /** @type {HTMLElement | null} */ (partyDock.querySelector(`#${id}`));
+  /** The spec currently mounted, so an unchanged screen doesn't rebuild the bar
+   *  under the user's finger (a remount would drop a press mid-tap). */
+  let mountedDockSpec = partyDock.dataset.dock ?? null;
   const joinError = $('join-error');
   const joinForm = /** @type {HTMLFormElement} */ ($('join-form'));
   const joinCodeInput = /** @type {HTMLInputElement} */ ($('join-code'));
@@ -694,7 +706,28 @@ export function bootFlagParty() {
     // logical fact about where the show is, and delaying it by the out phase
     // would let a re-render rebuild the ledger during the fade.
     if (which !== 'break') { breakBuilt = false; breakLedgerPending = null; }
+    syncDock(which);
     swapper.to(which);
+  }
+
+  /**
+   * Point the page's one dock at whatever this screen wants (`dockSpec.js`).
+   *
+   * Applied on the REQUEST, not when the swap finishes: the dock is outside the
+   * animation now, so it has no reason to wait for it, and changing it up front
+   * means the bar never shows the previous screen's actions over the new one.
+   *
+   * Remounts only on a real change — rebuilding an identical bar would destroy
+   * and recreate the button under a finger that is already on it.
+   *
+   * @param {string | null} which
+   */
+  function syncDock(which) {
+    const spec = dockSpecFor(which);
+    partyDock.hidden = spec === null;
+    if (spec === null || spec === mountedDockSpec) return;
+    setDock(spec, partyDock);
+    mountedDockSpec = spec;
   }
 
   /** @returns {boolean} whether the socket was open enough to actually send.
@@ -2127,7 +2160,10 @@ export function bootFlagParty() {
     // Only the host can abort a game back to the settings screen (it resets the
     // whole room); guests just have Home. The adjacent `·` hides itself via CSS
     // when this button is hidden, so there's nothing else to toggle.
-    questionToSettingsBtn.hidden = !state.isHost;
+    // Looked up live: the dock is rebuilt on every screen change, so this is a
+    // different element each time the question screen comes round.
+    const backItem = dockItem('question-to-settings');
+    if (backItem) backItem.hidden = !state.isHost;
     // The pill used to carry "Round 1/6 · Question 1/30". Both are gone. The
     // question total was the most alarming number on the screen and the least
     // useful — it says the show is long, not where you are — and the round
@@ -3049,8 +3085,10 @@ export function bootFlagParty() {
     // Only the host can restart, so "Play again" shows for the host alone;
     // everyone else sees just "Home". (The dock has no separators, and hidden
     // items drop out with the remaining ones re-centring — so hiding Play
-    // again leaves Home centred on its own.)
-    playAgainBtn.hidden = !state.isHost;
+    // again leaves Home centred on its own.) Live lookup, same as the question
+    // screen's Back to settings — the dock is rebuilt per screen.
+    const againItem = dockItem('play-again');
+    if (againItem) againItem.hidden = !state.isHost;
   }
 
   function prefersReducedMotion() {
@@ -3208,8 +3246,16 @@ export function bootFlagParty() {
     // it, and has to stop needing one before the client drops it.
     send({ type: 'start', length: currentLength() });
   });
-  playAgainBtn.addEventListener('click', () => send({ type: 'playAgain' }));
-  questionToSettingsBtn.addEventListener('click', () => send({ type: 'backToLobby' }));
+  // Delegated on the dock itself, not bound to the buttons: `mountDock` replaces
+  // the dock's children on every screen change, so a listener attached to an
+  // item would go down with the element the first time the phase moved. The dock
+  // element itself is the one thing that survives, so it carries the handler.
+  partyDock.addEventListener('click', (e) => {
+    const target = /** @type {HTMLElement | null} */ (e.target);
+    if (!target) return;
+    if (target.closest('#play-again')) send({ type: 'playAgain' });
+    else if (target.closest('#question-to-settings')) send({ type: 'backToLobby' });
+  });
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
   // clipboard fallback), so the invite icon behaves identically across the two
