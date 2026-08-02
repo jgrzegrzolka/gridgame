@@ -71,11 +71,11 @@ async function playBlock(srv, conn) {
   }
 }
 
-test('draft start: opens a Flags round, sizes the game from the seat count', async () => {
+test('draft start: opens a Flags round, sizes the game from the length', async () => {
   const { srv, conn } = await startSoloDraft();
   assert.equal(srv.room.draft, true);
-  assert.equal(srv.room.targetRounds, roundCountFor(1)); // solo reads the 2-seat column
-  assert.equal(srv.room.totalQuestions, roundCountFor(1) * ROUND_QUESTIONS);
+  assert.equal(srv.room.targetRounds, roundCountFor()); // the default length, seat-independent
+  assert.equal(srv.room.totalQuestions, roundCountFor() * ROUND_QUESTIONS);
   const q = conn.last('question');
   assert.equal(q.questionId, 'flagPick', 'round 1 is Flags');
   assert.equal(q.answer, undefined, 'the answer never rides the broadcast');
@@ -123,9 +123,9 @@ test('draft start: the host length choice sets the round count', async () => {
   await srv.onConnect(a, ctxFor('alice', 'create', 'Alice'));
   await srv.onConnect(b, ctxFor('bob', 'join', 'Bob'));
   await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), a);
-  // Two seats, long: the table's 2-seat column.
-  assert.equal(srv.room.targetRounds, 11);
-  assert.equal(srv.room.totalQuestions, 11 * ROUND_QUESTIONS);
+  // Long is 10 rounds for everyone — two seats or twenty.
+  assert.equal(srv.room.targetRounds, 10);
+  assert.equal(srv.room.totalQuestions, 10 * ROUND_QUESTIONS);
 });
 
 test('draft start: a length outside the offered set falls back to medium', async () => {
@@ -137,7 +137,7 @@ test('draft start: a length outside the offered set falls back to medium', async
     await srv.onStart();
     await srv.onConnect(conn, ctxFor('alice'));
     await srv.onMessage(JSON.stringify({ type: 'start', length }), conn);
-    assert.equal(srv.room.targetRounds, roundCountFor(1, 'medium'), `length=${length}`);
+    assert.equal(srv.room.targetRounds, roundCountFor('medium'), `length=${length}`);
   }
 });
 
@@ -155,7 +155,7 @@ test('setLength: the host sets it and everyone is told, before anything starts',
 
   // ...and the game it starts is the one everybody was looking at.
   await srv.onMessage(JSON.stringify({ type: 'start' }), a);
-  assert.equal(srv.room.targetRounds, roundCountFor(2, 'long'));
+  assert.equal(srv.room.targetRounds, roundCountFor('long'));
 });
 
 test('setLength: a guest cannot change what the room is playing', async () => {
@@ -179,7 +179,7 @@ test('deploy skew: a client too old to send setLength still gets the length it p
   await srv.onStart();
   await srv.onConnect(conn, ctxFor('alice'));
   await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), conn);
-  assert.equal(srv.room.targetRounds, roundCountFor(1, 'long'));
+  assert.equal(srv.room.targetRounds, roundCountFor('long'));
 });
 
 test('deploy skew: once a client has claimed the room, the room wins', async () => {
@@ -192,7 +192,7 @@ test('deploy skew: once a client has claimed the room, the room wins', async () 
   await srv.onConnect(conn, ctxFor('alice'));
   await srv.onMessage(JSON.stringify({ type: 'setLength', length: 'short' }), conn);
   await srv.onMessage(JSON.stringify({ type: 'start', length: 'long' }), conn);
-  assert.equal(srv.room.targetRounds, roundCountFor(1, 'short'), 'the room, not the message');
+  assert.equal(srv.room.targetRounds, roundCountFor('short'), 'the room, not the message');
 });
 
 test('draft start: tricky mode is forced off even if a stale client sends it', async () => {
@@ -380,7 +380,18 @@ const finalRoundStart = (srv) => (srv.room.targetRounds - 1) * ROUND_QUESTIONS;
  *  property of the length table, and these tests are about the closing pick's
  *  rules, not that number. Every rotation pick takes `flags-all`, which is exempt
  *  from the no-repeat rule and so is always legal however many the length asks. */
-async function playToFinalPick(winner = 'alice') {
+/**
+ * Play a duo game up to the pick for its final round.
+ *
+ * `winner` does double duty: it decides the scores AND, through them, the pick
+ * order — the loser picks first — so which seat holds the FINAL pick depends on
+ * the round count's parity. The departure tests below all need **Bob** to hold
+ * it, because Alice is the host and has to survive to send `resume`. That is
+ * asserted here as a postcondition rather than left for three tests to rediscover
+ * the next time a length changes: `short` went 5 rounds to 4 in the fixed-length
+ * change and silently handed the last pick to Alice.
+ */
+async function playToFinalPick(winner = 'bob') {
   const { srv, a, b } = await startDuoDraft();
   const conns = [['alice', a], ['bob', b]];
   const atFinalPick = () => srv.room.phase === 'picking' && srv.room.plan.length === srv.room.targetRounds - 1;
@@ -390,6 +401,9 @@ async function playToFinalPick(winner = 'alice') {
     await srv.onMessage(JSON.stringify({ type: 'pick', modeId: 'flags-all' }), srv.room.picker === 'alice' ? a : b);
   }
   assert.ok(atFinalPick(), 'the game reached the pick for its final round');
+  assert.equal(srv.room.picker, 'bob',
+    'these scenarios need the non-host holding the final pick — if this fails, the round '
+    + 'count parity moved and the winner argument needs flipping, not the assertions below');
   return { srv, a, b, conns };
 }
 

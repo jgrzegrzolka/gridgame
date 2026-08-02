@@ -41,67 +41,64 @@ const board = (...ids) => ids.map((playerId) => ({ playerId }));
 
 // ---- roundCountFor ----
 
-test('roundCountFor: the agreed table, cell for cell', () => {
-  // Length is now the INPUT and picks are derived, which is the whole point of
-  // the table: the host chooses how long the game runs and the seat count no
-  // longer changes the answer by 4x.
-  const EXPECTED = {
-    short:  { 2: 5,  3: 4,  4: 5,  5: 6,  6: 7  },
-    medium: { 2: 7,  3: 7,  4: 9,  5: 11, 6: 13 },
-    long:   { 2: 11, 3: 13, 4: 13, 5: 16, 6: 19 },
-  };
-  for (const length of GAME_LENGTHS) {
-    for (const [seats, rounds] of Object.entries(EXPECTED[length])) {
-      assert.equal(roundCountFor(Number(seats), length), rounds, `${length} @ ${seats}`);
-    }
-  }
+test('roundCountFor: the agreed counts', () => {
+  assert.equal(roundCountFor('short'), 4);
+  assert.equal(roundCountFor('medium'), 7);
+  assert.equal(roundCountFor('long'), 10);
 });
 
-test('roundCountFor: seven or more seats reuse the six-seat column', () => {
-  // The table stops growing at 6 so a big room cannot force a 45-minute game.
+// THE property the whole change exists for. This was a 15-cell table keyed by
+// (length, seats), so the round count moved under the host every time somebody
+// joined — and a six-seat `long` ran 19 rounds against 11 at two seats, which is
+// 24 minutes against 14. A name now means a duration.
+test('roundCountFor: the seat count cannot change the answer', () => {
   for (const length of GAME_LENGTHS) {
-    const atSix = roundCountFor(6, length);
-    for (const seats of [7, 8, 12, 20, 500]) {
-      assert.equal(roundCountFor(seats, length), atSix, `${length} @ ${seats}`);
+    const expected = roundCountFor(length);
+    // Passing a seat count is now an arity error (tsc rejects it outright, which
+    // is why the call goes through an `any` cast) AND a runtime no-op. A stale
+    // caller still threading one through must not silently get a different game.
+    const loose = /** @type {(...args: any[]) => number} */ (/** @type {unknown} */ (roundCountFor));
+    for (const stray of [1, 2, 6, 20, 500]) {
+      assert.equal(loose(length, stray), expected, `${length} + stray seat arg ${stray}`);
     }
   }
 });
 
 test('roundCountFor: length is ordered — longer is never shorter', () => {
-  for (const seats of [2, 3, 4, 5, 6, 9, 20]) {
-    assert.ok(roundCountFor(seats, 'short') < roundCountFor(seats, 'medium'), `short<medium @${seats}`);
-    assert.ok(roundCountFor(seats, 'medium') < roundCountFor(seats, 'long'), `medium<long @${seats}`);
-  }
+  assert.ok(roundCountFor('short') < roundCountFor('medium'), 'short < medium');
+  assert.ok(roundCountFor('medium') < roundCountFor('long'), 'medium < long');
 });
 
 test('roundCountFor: defaults to medium', () => {
-  assert.equal(roundCountFor(4), roundCountFor(4, DEFAULT_GAME_LENGTH));
-  assert.equal(roundCountFor(4), 9);
+  assert.equal(roundCountFor(), roundCountFor(DEFAULT_GAME_LENGTH));
+  assert.equal(roundCountFor(), 7);
 });
 
 test('roundCountFor: a bad length falls back rather than throwing', () => {
-  for (const bad of ['huge', '', null, undefined, 3, {}]) {
-    assert.equal(roundCountFor(4, /** @type {any} */ (bad)), roundCountFor(4, DEFAULT_GAME_LENGTH), String(bad));
+  // A seat count is exactly what a stale client might still send first, and `4`
+  // is a plausible one — it must read as "not a length" and give medium, not
+  // throw and not index into anything.
+  for (const bad of ['huge', '', null, undefined, 3, 4, {}]) {
+    assert.equal(roundCountFor(/** @type {any} */ (bad)), roundCountFor(DEFAULT_GAME_LENGTH), String(bad));
   }
 });
 
-test('roundCountFor: junk seat count coerces to the smallest column', () => {
-  // Unreachable in play (`canStart` needs a seat); this is the input guard.
-  for (const junk of [0, 1, -5, NaN]) {
-    assert.equal(roundCountFor(/** @type {any} */ (junk), 'medium'), roundCountFor(2, 'medium'), String(junk));
-  }
+test('roundCountFor: a big room never runs away', () => {
+  // Used to need a MAX_DRAFT_ROUNDS clamp, then a table that stopped growing at
+  // 6 seats. A flat constant bounds itself: 10 rounds is the longest game any
+  // room can start by length, whoever is in it.
+  for (const length of GAME_LENGTHS) assert.ok(roundCountFor(length) <= 10, length);
 });
 
-test('roundCountFor: a big room never runs away — the table itself is the ceiling', () => {
-  // 7+ seats read the 6-seat column rather than growing without bound, so the
-  // longest game any room can start is the table's max (19, long @ 6). This used to
-  // be enforced by a `MAX_DRAFT_ROUNDS` clamp; the table now bounds itself, so the
-  // clamp is gone and this pins that the bound still holds by construction.
-  for (const length of GAME_LENGTHS) {
-    for (const seats of [2, 3, 4, 5, 6, 8, 20, 500]) {
-      assert.ok(roundCountFor(seats, length) <= 19, `${length} @ ${seats}`);
-    }
-  }
+// The trade Jan accepted when the counts were fixed: at `short` with 5+ seats
+// there are fewer rounds than players, so some seats never pick. Pinned rather
+// than left implicit, because it is a real consequence and the fix for anyone who
+// wants it is the other control (even picks), not a floor here.
+test('roundCountFor: short at a big table has fewer rounds than seats, on purpose', () => {
+  assert.ok(roundCountFor('short') < 5, 'short must stay short even at a full room');
+  assert.equal(resolveRoundCount(8, 'short', null), 4, 'eight seats, four picks');
+  // ...and even-picks is where "everyone gets a turn" actually lives.
+  assert.equal(resolveRoundCount(8, 'short', 1), 8, 'even-picks 1 gives all eight a pick');
 });
 
 // ---- validateGameLength ----
@@ -148,16 +145,22 @@ test('resolveRoundCount: even picks is deliberately uncapped at a big room', () 
   assert.equal(resolveRoundCount(13, 'short', 1), 13);
 });
 
-test('resolveRoundCount: a null/invalid picksPerPlayer falls back to the length table', () => {
+test('resolveRoundCount: a null/invalid picksPerPlayer falls back to the length count', () => {
   for (const picks of [null, undefined, 0, 4, 'short']) {
     assert.equal(
       resolveRoundCount(6, 'short', /** @type {any} */ (picks)),
-      roundCountFor(6, 'short'),
+      roundCountFor('short'),
       String(picks),
     );
   }
   // And the length still matters when picks is off.
-  assert.equal(resolveRoundCount(4, 'long', null), roundCountFor(4, 'long'));
+  assert.equal(resolveRoundCount(4, 'long', null), roundCountFor('long'));
+  // On the length path the seat count is ignored outright — the two modes now
+  // differ in exactly that, and it is what makes the lobby count stop moving
+  // when somebody joins mid-setup.
+  for (const seats of [1, 2, 7, 40]) {
+    assert.equal(resolveRoundCount(seats, 'medium', null), 7, `seats=${seats}`);
+  }
 });
 
 test('resolveRoundCount: a junk seat count coerces to a solo room in even-picks mode', () => {

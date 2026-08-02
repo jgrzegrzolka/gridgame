@@ -41,36 +41,36 @@ export const REPEATABLE_MODE_IDS = ['flags-all', 'flags-weird', 'spot-flag'];
 /** The three game lengths the host chooses from, shortest first. */
 export const GAME_LENGTHS = /** @type {const} */ (['short', 'medium', 'long']);
 
-/** What a fresh host gets. Medium is the middle of the table and the length that
- *  divides evenly across the most seat counts. */
+/** What a fresh host gets: the middle length. */
 export const DEFAULT_GAME_LENGTH = 'medium';
 
 /**
- * Rounds per (length, seats). **A table, not a formula**, hand-picked so a named
- * length means roughly the same wall-clock at every table size — near
- * 10 / 20 / 30 minutes for short / medium / long — rather than whatever a
- * `seats x picks` arithmetic fell on (which meant 7 minutes at two players and 45
- * at ten, the answer moving under the host every time somebody joined). Pinned
- * cell-for-cell by `partyDraft.test.js`.
+ * Rounds per length. **A flat constant — the seat count does not enter into it.**
+ * One round is 5 questions plus its intro, break and pick beat, so these land near
+ * 5 / 9 / 13 minutes whatever the table size, and a name means a duration.
  *
- * The counts sit on the old `seats * k + 1` lattice for historical reasons only —
- * it no longer buys the even "you each pick k" split, because the closing round is
- * now an ordinary rotation pick rather than a separate act sitting outside the
- * count. The exact per-seat pick distribution is deliberately not surfaced anymore
- * (the lobby shows only the round count).
+ * This used to be a 15-cell table keyed by (length, seats), sized on a
+ * `seats * k + 1` lattice. Two things killed it. The lattice's `+1` was the
+ * **Decider**, a closing round that sat outside the pick rotation — with it gone
+ * (2026-07-28) the extra round stopped buying an even "you each pick k" split and
+ * just handed one seat a spare pick. And the table did not actually deliver the
+ * steady wall-clock it was built for: a six-seat `long` ran 19 rounds against 11
+ * at two seats, roughly 24 minutes against 14. Fixing the counts is what makes
+ * the promise true.
  *
- * **Seven or more seats reuse the six-seat column.** Growing past that is what
- * made a big room unable to play a short game at all: the old floor was
- * `seats + 1` rounds, so twenty players could not have anything under 21 rounds.
- * The cost is that past six seats the rotation no longer reaches everyone —
- * {@link pickerFor} hands picks to the lowest-ranked seats first, so the seats
- * that miss out are the ones ahead.
+ * **Nothing here guarantees everyone gets a pick, and that is the trade.** At
+ * `short` with five or more seats there are fewer rounds than players, so some
+ * seats never pick — and since {@link pickerFor} feeds the weakest first, the ones
+ * skipped are the players in the lead. That is what "short" means at a big table.
+ * The guarantee lives in the other control: even-picks sizing (1/2/3) runs
+ * `seats * N` rounds so every seat picks exactly N. Length owns the clock,
+ * even-picks owns the fairness; neither has to do both.
  */
-/** @type {Record<GameLength, Record<number, number>>} */
+/** @type {Record<GameLength, number>} */
 const LENGTH_ROUNDS = {
-  short:  { 2: 5,  3: 4,  4: 5,  5: 6,  6: 7  },
-  medium: { 2: 7,  3: 7,  4: 9,  5: 11, 6: 13 },
-  long:   { 2: 11, 3: 13, 4: 13, 5: 16, 6: 19 },
+  short: 4,
+  medium: 7,
+  long: 10,
 };
 
 /** How many cards a picker chooses from. Wide enough to give real choice across
@@ -78,24 +78,22 @@ const LENGTH_ROUNDS = {
 export const HAND_SIZE = 10;
 
 /**
- * How many rounds a draft runs, from {@link LENGTH_ROUNDS}.
+ * How many rounds a length runs, from {@link LENGTH_ROUNDS}.
  *
  * **Round 1 is the host's own first pick** — chosen in the lobby, which is how the
  * cold-start hole is closed (no scores yet means no last place means no rotation
  * picker, so the host picks first by fiat). Every round after it, including the
  * last, is an ordinary rotation pick.
  *
- * Seat counts below 2 read the 2-seat column (a solo host testing the flow) and
- * 7+ read the 6-seat column.
+ * Takes no seat count: the answer no longer depends on one, which is the whole
+ * point. It used to, and the count moving under the host every time somebody
+ * joined was the complaint that started this.
  *
- * @param {number} playerCount
  * @param {string} [length]  one of {@link GAME_LENGTHS}
  * @returns {number}
  */
-export function roundCountFor(playerCount, length = DEFAULT_GAME_LENGTH) {
-  const seats = Number.isFinite(playerCount) ? Math.floor(playerCount) : 0;
-  const column = Math.min(6, Math.max(2, seats));
-  return LENGTH_ROUNDS[validateGameLength(length)][column];
+export function roundCountFor(length = DEFAULT_GAME_LENGTH) {
+  return LENGTH_ROUNDS[validateGameLength(length)];
 }
 
 /**
@@ -144,13 +142,12 @@ export function validatePicksPerPlayer(value) {
  *   the guarantee only holds if the total is exactly `n * k`, and clamping it would
  *   make "everyone picks k" quietly false at a big room; the lobby shows the
  *   resulting round count so the host sees the size before starting.
- * - **length** — `picksPerPlayer` is null (or invalid): the wall-clock table,
- *   {@link roundCountFor}.
+ * - **length** — `picksPerPlayer` is null (or invalid): the fixed wall-clock
+ *   count, {@link roundCountFor}. `playerCount` is ignored on this path.
  *
- * Seat counts below 1 read as a solo host (1 seat), matching {@link roundCountFor}'s
- * own floor.
+ * Seat counts below 1 read as a solo host (1 seat) in even-picks mode.
  *
- * @param {number} playerCount
+ * @param {number} playerCount  only consulted in even-picks mode
  * @param {string} [length]  one of {@link GAME_LENGTHS}
  * @param {unknown} [picksPerPlayer]  1/2/3 for even picks, null/anything else for length
  * @returns {number}
@@ -161,7 +158,7 @@ export function resolveRoundCount(playerCount, length = DEFAULT_GAME_LENGTH, pic
     const seats = Number.isFinite(playerCount) ? Math.max(1, Math.floor(playerCount)) : 1;
     return seats * picks;
   }
-  return roundCountFor(playerCount, length);
+  return roundCountFor(length);
 }
 
 /**

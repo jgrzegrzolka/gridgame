@@ -16,9 +16,10 @@ before `git checkout -b`. Don't auto-merge — Jan merges each PR himself.
   standings break follows. Every round scores the same. (There was once a distinguished closing
   round, the **Decider**; it was removed — see the Decider entry below.)
 - **Game** — a sequence of rounds. The host chooses a **length** (Short / Medium / Long) and
-  `roundCountFor` reads the round total off a table keyed by length and seat count. One round is
-  fixed: the opening Flags round (dealt, never picked); every round after it, the last included, is
-  an ordinary rotation pick.
+  `roundCountFor` returns a flat **4 / 7 / 10** — the seat count does not enter into it. One round
+  is fixed: the opening Flags round (dealt, never picked); every round after it, the last included,
+  is an ordinary rotation pick. The host can instead choose **even picks** (1/2/3), which overrides
+  the length and runs `seats × N` rounds so every seat picks exactly N.
 
 **Weird flags, not "others" (2026-07-18).** The non-sovereign picture mode is `flags-weird`
 (`party.mode.flagsWeird`), labelled "Weird flags" / "Dziwne flagi" to match `variant.weird` and
@@ -220,6 +221,28 @@ round count (`party.lengthRounds`), and `pickShareFor` / `lengthEachPicks*` / `l
 gone. Round counts (`LENGTH_ROUNDS`) are unchanged; the even "you each pick k" division no longer
 holds (nothing surfaces it). Backward-compatible on the wire and in storage — a stale client or an
 old snapshot reads the absent `decider` as false and behaves ordinarily.
+
+**Fixed game lengths (2026-08-02).** `LENGTH_ROUNDS` is now a flat `{ short: 4, medium: 7, long: 10 }`
+and `roundCountFor(length)` no longer takes a seat count at all. What it replaced was a 15-cell table
+keyed by (length, seats), sized on a `seats × k + 1` lattice, and two things had already hollowed it
+out. The lattice's `+1` was the **Decider** — once that became an ordinary rotation pick (see the
+entry above) the spare round stopped buying an even "you each pick k" split and just handed one seat
+an extra pick, which `pickerFor` gave to whoever was losing. And the table never delivered the steady
+wall-clock it was built for: six-seat `long` ran 19 rounds against 11 at two seats, roughly 24 minutes
+against 14. Fixing the counts is what makes a name mean a duration (~5 / 9 / 13 min at any size), and
+it stops the lobby's round count moving when somebody joins mid-setup.
+
+Jan's framing, which is the whole argument: *"since we already have a mode where every player picks
+1/2/3, for this short mode we can simplify."* **Length owns the clock; even-picks owns the fairness.**
+Neither has to do both, and the pick algorithm he described — everyone picks the same number of times,
+weakest first — is what `pickerFor` already did.
+
+**The accepted trade: at `short` with 5+ seats there are fewer rounds than players, so some seats never
+pick** (8 seats × short = 4 rounds, so four of them). Since picks flow to the weakest first, the ones
+skipped are the players in the lead. That is what "short" means at a big table; anyone who wants a
+turn for everybody uses even-picks 1. Deliberately NOT floored at `max(fixed, seats)` — that would put
+seat-dependence straight back and collapse short and medium to the same length at a full room.
+Pinned by `partyDraft.test.js`, including the never-pick consequence itself.
 
 **Even-picks sizing (2026-07-28).** The follow-up the Decider entry planned. The lobby's Game-length
 field gains an "Even picks" switch (mirroring the first-round veil switch). Off: the length table
@@ -1770,6 +1793,11 @@ under the host every time somebody joined.
 *is* the old formula — so "even picks" and "a length that means the same thing at every table
 size" cannot both be had. Length won: it is what the host is trying to control, and it is what
 ruins a party game when it is wrong.
+
+> **Superseded 2026-08-02 — see "Fixed game lengths" above.** The seat-keyed table is gone;
+> `roundCountFor(length)` is a flat 4 / 7 / 10. The trade stated below was resolved the other way
+> in the end: even-picks sizing (added 2026-07-28) took over the "picks divide evenly" job, which
+> freed length to be purely a duration. `validateGameLength` and the wire format are unchanged.
 
 **What shipped.** `roundCountFor(seats, length)` reads a hand-picked table (`LENGTH_ROUNDS` in
 `flags/partyDraft.js`), 7+ seats reuse the 6-seat column, and `validateGameLength` replaces
