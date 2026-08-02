@@ -122,7 +122,6 @@
           <button type="submit" class="text-link join-go" id="join-go" data-i18n="party.join" disabled>Join</button>
         </form>
         <p class="join-error" id="join-error" hidden></p>
-        <nav class="dock" data-dock="home" data-home="../"></nav>
       </section>
 
       <!-- Lobby -->
@@ -320,7 +319,6 @@
              primary button below the settings card (not a dock item). The
              dock carries only Home. -->
         <button type="button" class="lobby-btn primary party-start-btn" id="start-game" data-i18n="party.startGame" hidden>Play</button>
-        <nav class="dock" data-dock="home" data-home="../"></nav>
       </section>
 
       <!-- Question (question + reveal share this) -->
@@ -356,7 +354,6 @@
           <p class="hold-who" id="hold-who" aria-live="polite"></p>
         </div>
         <div class="question-foot" id="question-foot"></div>
-        <nav class="dock" data-dock="backToSettings home" data-home="../"></nav>
       </section>
 
       <!-- Round title card: a short beat announcing the next round (2..N) before
@@ -411,8 +408,23 @@
       <section class="pt-final" id="pt-final" hidden>
         <p class="party-sub" id="final-sub"></p>
         <div class="final-board" id="final-board"></div>
-        <nav class="dock" data-dock="playAgainParty home" data-home="../"></nav>
       </section>
+
+      <!-- ONE dock for the whole show, a SIBLING of the sections rather than a
+           child of any of them. That placement is the fix, not a tidy-up.
+           Each screen used to carry its own copy inside its `<section>`, and the
+           screen-swap animation puts a `transform` on that section — which makes
+           it the containing block for `position: fixed` descendants. So on
+           phones, for the ~190ms the swap class was on, the bar's `bottom: 0`
+           resolved against the section instead of the viewport and it rendered
+           roughly 400px up the screen before snapping down. Desktop never showed
+           it, because there the dock is in-flow and a containing block is moot.
+
+           The rule to keep: a position-fixed element must not sit inside
+           anything that can be transformed. Which items show is `dockSpec.js`,
+           applied by `showSection`; `data-dock` here is only the first paint,
+           so the bar is stable from the very first frame. -->
+      <nav class="dock" id="party-dock" data-dock="home" data-home="../"></nav>
     </main>
 
     <!-- The room is holding for a player who dropped. A modal rather than
