@@ -1,36 +1,7 @@
-import { VARIANTS, defaultModeFor, availableModes } from '../flags/quiz.js';
+import { VARIANTS, resolveMode } from '../flags/quiz.js';
 import { DECKS, deckOf, variantsForDeck, deckHasScopes, defaultVariantForDeck } from '../flags/decks.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { t } from '../i18n.js';
-
-/** @typedef {import('../flags/group.js').Country} Country */
-
-/** @param {Country[]} all @param {string} key */
-function poolOf(all, key) {
-  const v = VARIANTS[key];
-  return v ? all.filter(v.filter) : [];
-}
-
-/**
- * The mode a menu link should point at: the one you're playing, when the
- * target pool allows it, else that pool's default.
- *
- * Every link used to hardcode `defaultModeFor(...)`, which is always '60s'.
- * So a player mid-endurance who tapped Asia was silently dropped back into a
- * 60-second sprint, with nothing to explain why. Falling back matters too:
- * not every deck offers every mode (Facts, in Phase 4, can't be endured —
- * there's nothing to exhaust), so a blind carry-over would dead-end.
- *
- * @param {Country[]} all
- * @param {string} key            target variant
- * @param {string | null} current the mode being played, or null (stats page)
- * @returns {string | null}
- */
-function modeForLink(all, key, current) {
-  const size = poolOf(all, key).length;
-  if (current && availableModes(size, key).includes(current)) return current;
-  return defaultModeFor(size, key);
-}
 
 /**
  * Build the burger-menu contents for the flagQuiz feature.
@@ -47,7 +18,8 @@ function modeForLink(all, key, current) {
  *     with aria-current="page".
  *   - `currentMode`: the mode being played, carried onto every link so
  *     switching deck or continent doesn't silently drop you out of it.
- *     Null on stats, where there's no round in progress.
+ *     Null on stats, where there's no round in progress — those links
+ *     take the default mode.
  *   - `statsCurrent`: true on the stats page. Marks the "Your stats"
  *     link with aria-current="page".
  *
@@ -57,17 +29,20 @@ function modeForLink(all, key, current) {
  *
  * The "Include territories & other flags" toggle used to be built here.
  * Feature V replaced it with the `weird` deck, which needs no wiring at
- * all: it's an ordinary `VARIANTS` entry, so the loop below renders it as
- * a link like every other deck. Phase 2 replaces this list with the pill
- * switcher + a scope list that only appears under `flags`.
+ * all: it's an ordinary `VARIANTS` entry, so the loops below render it as
+ * a pill like every other deck.
  *
  * @param {HTMLUListElement} menuEl
- * @param {Country[]} all
  * @param {{ relativeBase: string, currentVariantKey: string | null, currentMode?: string | null, statsCurrent: boolean }} opts
  */
-export function buildQuizMenu(menuEl, all, opts) {
+export function buildQuizMenu(menuEl, opts) {
   const { relativeBase, currentVariantKey, currentMode = null, statsCurrent } = opts;
   const activeDeck = currentVariantKey ? deckOf(currentVariantKey) : null;
+  // One mode for every link on the menu. It used to be computed per link,
+  // because the Statistics deck didn't offer `all` and a blind carry-over
+  // would have dead-ended there; every remaining deck offers every mode, so
+  // the mode you're playing simply travels with you.
+  const mode = resolveMode(currentMode);
 
   // ---- 1. deck pills ---- (no caption: the pills are self-evidently the deck
   // switcher, and each carries its own icon + name)
@@ -81,8 +56,6 @@ export function buildQuizMenu(menuEl, all, opts) {
     // Tapping the LIT pill must not throw away your continent, so the active
     // deck links at the variant you're on rather than its default.
     const to = deck.id === activeDeck && currentVariantKey ? currentVariantKey : fallback;
-    const mode = modeForLink(all, to, currentMode);
-    if (mode === null) continue;
     const a = document.createElement('a');
     a.className = 'pill deck-pill';
     if (deck.id === activeDeck) a.classList.add('active');
@@ -98,9 +71,9 @@ export function buildQuizMenu(menuEl, all, opts) {
   menuEl.appendChild(deckLi);
 
   // ---- 2. the current deck's scopes, only when there IS a choice ----
-  // Under a single-variant deck the continents are absent, not disabled:
-  // there is genuinely nothing to pick. Derived from the deck's own shape,
-  // so Phases 3/4 (world-only) inherit it without a rule to remember.
+  // Under a single-variant deck (`weird`) the continents are absent, not
+  // disabled: there is genuinely nothing to pick. Derived from the deck's own
+  // shape, so a future world-only deck inherits it with no rule to remember.
   if (activeDeck && deckHasScopes(activeDeck)) {
     // No caption: the continent links speak for themselves. The first rendered
     // scope carries the menu-divider (which the caption's <li> used to own), so
@@ -109,8 +82,6 @@ export function buildQuizMenu(menuEl, all, opts) {
     for (const key of variantsForDeck(activeDeck)) {
       const variant = VARIANTS[key];
       if (!variant) continue;
-      const mode = modeForLink(all, key, currentMode);
-      if (mode === null) continue;
       const li = document.createElement('li');
       if (firstScope) {
         li.className = 'menu-divider';

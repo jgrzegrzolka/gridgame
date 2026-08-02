@@ -27,8 +27,8 @@ test('still accepts every legacy 3-part combo (cached clients keep sending these
 // "<variant>:<mode>". Both shapes must be accepted at once — a browser with
 // cached JS keeps POSTing the 3-part shape long after the deploy, and those
 // writes have to keep landing.
-test('accepts the 2-part shape, including the three new decks', () => {
-  for (const k of ['countries:60s', 'countries:all', 'europe:60s', 'weird:60s', 'outlines:60s', 'facts:60s']) {
+test('accepts the 2-part shape for every deck', () => {
+  for (const k of ['countries:60s', 'countries:all', 'europe:60s', 'south-america:all', 'weird:60s']) {
     assert.match(k, CONFIG_KEY_RE, `should accept ${k}`);
     assert.ok(k.length <= CONFIG_KEY_MAX, `${k} exceeds cap`);
   }
@@ -85,40 +85,29 @@ test('lowerWinsFromConfigKey: 2-part keys derive from the same mode segment', ()
   assert.equal(lowerWinsFromConfigKey('countries:60s'), false);
   assert.equal(lowerWinsFromConfigKey('countries:all'), true);
   assert.equal(lowerWinsFromConfigKey('weird:60s'), false);
-  assert.equal(lowerWinsFromConfigKey('facts:60s'), false);
 });
 
 test('lowerWinsFromConfigKey: unknown mode → null in the 2-part shape too', () => {
   assert.equal(lowerWinsFromConfigKey('countries:newmode'), null);
 });
 
-// The Statistics deck's fixed-count mode. This module enumerates MODES even
-// though it deliberately doesn't enumerate variants, so a client-side mode that
-// never lands here has its submissions rejected as `unknown_mode` — which is
-// the guard working, but it means shipping a mode is a two-repo change.
-test('lowerWinsFromConfigKey: 10q is a count mode → true (fewer mistakes wins)', () => {
-  assert.equal(lowerWinsFromConfigKey('facts:10q'), true);
-});
-
-test('maxScoreForConfigKey: 10q is bounded by the pool, not the clock — an untimed round can run as long as it likes', () => {
-  assert.equal(maxScoreForConfigKey('facts:10q', 30_000), MAX_COUNT_MODE_SCORE);
-  // Duration must not shrink the bound the way it does for 60s: a player who
-  // takes ten minutes over 10 questions is playing normally, not cheating.
-  assert.equal(maxScoreForConfigKey('facts:10q', 600_000), MAX_COUNT_MODE_SCORE);
-});
-
-test('CONFIG_KEY_RE accepts the 10q mode segment', () => {
-  assert.ok(CONFIG_KEY_RE.test('facts:10q'));
-});
-
-// `20q` is 10q's former name, and it is deliberately NOT carried as a legacy
-// alias. Only leaderboard variants submit, that is `countries` alone, and
-// `countries` has always offered `60s` / `all` — `20q` lived on Statistics,
-// which submits nothing. So no client ever sent it and no stored row uses it;
-// an alias here would be dead surface pretending to protect real data.
-test('lowerWinsFromConfigKey: the retired 20q name is not a known mode', () => {
-  assert.equal(lowerWinsFromConfigKey('facts:20q'), null);
-  assert.equal(maxScoreForConfigKey('facts:20q', 30_000), null);
+// `10q` (and `20q`, its former name) were the Statistics deck's fixed-count
+// mode, and neither is carried as a legacy alias now that the deck is gone.
+// Only leaderboard variants submit, that is `countries` alone, and `countries`
+// has always offered `60s` / `all` — those modes lived on Statistics, which
+// submitted nothing. So no client ever sent one and no stored row uses one; an
+// alias here would be dead surface pretending to protect real data.
+//
+// The shape gate still accepts them, and that split is deliberate: this module
+// enumerates MODES but NOT variants, so a well-formed key with a retired mode
+// is rejected at the mode lookup (loudly, as `unknown_mode`) rather than at the
+// regex.
+test('the retired fixed-count modes are not known modes', () => {
+  for (const key of ['countries:10q', 'countries:20q']) {
+    assert.ok(CONFIG_KEY_RE.test(key), `${key} is still a well-formed key`);
+    assert.equal(lowerWinsFromConfigKey(key), null);
+    assert.equal(maxScoreForConfigKey(key, 30_000), null);
+  }
 });
 
 test('lowerWinsFromConfigKey: malformed key → null', () => {
@@ -152,8 +141,9 @@ test('maxScoreForConfigKey: every real score on record still fits', () => {
 test('maxScoreForConfigKey: all-mode is pool-derived (mistakes <= target)', () => {
   // Endurance runs for hours, so a time bound is meaningless. `page.js` keeps
   // mistakes <= target, and target <= the largest pool (countries, 195).
-  assert.equal(maxScoreForConfigKey('countries:all', 3_600_000), 250);
-  assert.equal(maxScoreForConfigKey('countries:all', 1_000), 250);
+  assert.equal(maxScoreForConfigKey('countries:all', 3_600_000), MAX_COUNT_MODE_SCORE);
+  assert.equal(maxScoreForConfigKey('countries:all', 1_000), MAX_COUNT_MODE_SCORE);
+  assert.equal(MAX_COUNT_MODE_SCORE, 250);
 });
 
 test('maxScoreForConfigKey: legacy 3-part keys bound identically', () => {

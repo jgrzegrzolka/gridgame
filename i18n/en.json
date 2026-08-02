@@ -409,8 +409,7 @@
     "play": "Play",
     "mode": {
       "60s": "60s",
-      "all": "all",
-      "10q": "10 questions"
+      "all": "all"
     },
     "leaderboard": {
       "title": "Top 10: 7 days",
@@ -784,9 +783,7 @@
     "north-america": "North America",
     "south-america": "South America",
     "oceania": "Oceania",
-    "weird": "Weird flags",
-    "outlines": "Outlines",
-    "facts": "Statistics"
+    "weird": "Weird flags"
   },
   "color": {
     "red": "red",
@@ -1825,8 +1822,6 @@
   },
   "deck": {
     "flags": "Flags",
-    "weird": "Weird",
-    "outlines": "Shapes",
-    "facts": "Statistics"
+    "weird": "Weird"
   }
 }

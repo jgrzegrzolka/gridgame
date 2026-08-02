@@ -184,13 +184,11 @@ body {
  * affordance on purpose: the burger is the discoverable path to every deck,
  * so this is a shortcut and nobody who misses it is stuck.
  *
- * It earns its place on a narrow but real job. Outlines and Facts are
- * self-evident from the screen (you're looking at a contour, or a stat
- * question). Flags and Weird flags render IDENTICALLY — four flag tiles
- * either way — and nothing else on screen says whether you're in the
- * 195-flag country pool or the 54-flag territory one. That one
- * disambiguation is most of why this exists, which is exactly why it should
- * stay quiet.
+ * It earns its place on a narrow but real job: Flags and Weird flags render
+ * IDENTICALLY — four flag tiles either way — and nothing else on screen says
+ * whether you're in the 195-flag country pool or the 54-flag territory one.
+ * That one disambiguation is the whole reason this exists, which is exactly
+ * why it should stay quiet.
  *
  * Mechanism is common.css's `.color-count-side` / `.color-count-options`
  * (consumer: colorCountPicker.js) — same dropdown, not a new one. */
@@ -270,11 +268,10 @@ body {
 .deck-opt[aria-current="true"] {
   background: var(--selected-color);
 }
-/* The four icons don't read as a set on their own: the flag artwork is a
-   solid colour rectangle, while the contour and the chart are thin marks on
-   nothing. It never showed in Flag Party's roomy labelled list; four across a
-   130px popover it does. A shared surface tile gives all four the same
-   footprint so they read as one row of options. */
+/* A shared box, so however each icon's artwork is made the options keep the
+   same footprint and read as one row. Both remaining decks are flag artwork,
+   which already matches; the rule stays because the box is what makes that
+   true rather than a coincidence of the current pair. */
 .deck-opt .deck-opt-art {
   width: 24px;
   height: 18px;
@@ -336,28 +333,6 @@ body {
    * choices gap reads as the same beat as the choices-to-map gap. */
   margin: 0 0 24px;
   text-align: center;
-}
-/* Facts deck: the prompt is a superlative criterion ("Most forest cover?") led
- * by the metric's icon, tinted with the metric's hue. Mirrors flagParty's
- * `.prompt.superlative` (the in-round criterion line) so the two surfaces read
- * identically; the icon + hue themselves come from the shared `metricVisuals`
- * (`metricIconSpan` + `--mc` set inline from `METRIC_HUES`), the single source
- * both features key off. `--mc` is the per-metric hue, a sanctioned palette
- * exception documented there, not one of the eight tokens. */
-.country-name.superlative {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.country-name.superlative .facts-prompt-ic {
-  display: inline-flex;
-  color: var(--mc);
-}
-.country-name.superlative .facts-prompt-ic svg {
-  width: 22px;
-  height: 22px;
 }
 /* The game + result panels take the body's content width up to 720px. This is
  * the room the map grows INTO: by default the map opens at the answer-grid

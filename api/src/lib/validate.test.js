@@ -247,7 +247,7 @@ test('validateQuizRecord: malformed configKey → invalid_configKey', () => {
 // pass the gate at once — cached clients keep POSTing the 3-part form.
 test('validateQuizRecord: accepts both configKey shapes', () => {
   const b = validQuizBody();
-  for (const k of ['countries:60s', 'weird:60s', 'facts:60s', 'countries:60s:sov', 'countries:60s:all']) {
+  for (const k of ['countries:60s', 'weird:60s', 'oceania:all', 'countries:60s:sov', 'countries:60s:all']) {
     b.configKey = k;
     assert.equal(validateQuizRecord(b).ok, true, `expected ${k} accepted`);
   }
