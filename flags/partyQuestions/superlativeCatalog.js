@@ -24,15 +24,17 @@
  * when one copy forgets that coastline has landlocked zeros, you just start
  * dealing unanswerable questions. One table, three consumers:
  *
- *   - `superlative.js` (server) — builds its 32 questions from this + its imports.
+ *   - `superlative.js` (server) — builds its questions from this + its imports.
  *   - `flagParty/page.js` (browser) — the in-question prompt's criterion label.
- *   - flagQuiz's Facts deck (browser) — both.
  *
  * Like `flags/metrics/index.js`, this file **names** metrics and never imports
  * their JSON. Keep it that way: it is on the browser's import path, and
  * `import x from './x.json' with { type: 'json' }` ships a blank page to real
- * users. `superlativeCore.test.js` walks the import graph and fails if any JSON
- * import appears.
+ * users. **This file is now the only browser-safe half** — `superlativeCore.js`
+ * was the other one until its lone browser consumer (flagQuiz's Facts deck) was
+ * deleted and it folded back into `superlative.js`. The repo-wide JSON-import
+ * guard in `tooling/` walks every `page.js`, so this file is covered through
+ * `flagParty/page.js` and needs no guard of its own.
  *
  * `key` is the `flags/metrics/index.js` metric key; `questionId` is the
  * `flags/partyPlan.js` PARTY_MODES questionId. Both are pinned against their

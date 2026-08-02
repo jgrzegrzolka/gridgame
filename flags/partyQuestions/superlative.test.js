@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import population from '../metrics/population.json' with { type: 'json' };
-import { id, generate, isCorrect } from './superlative.js';
+import { id, generate, isCorrect, createSuperlativeQuestion } from './superlative.js';
 import * as superlative from './superlative.js';
 import { SUPERLATIVE_METRICS } from './superlativeCatalog.js';
 import { METRIC_FILES } from '../metrics/index.js';
@@ -57,7 +57,14 @@ test('every catalog metric is built, and every built question is in the catalog'
 // dangling left this file green except for honey's own legacy per-metric test —
 // exactly the test a dev deletes when retiring a metric.
 test('every *Question export is a live question the catalog claims', () => {
-  const roundExports = exportedEntries().filter(([name]) => name.endsWith('Question'));
+  // `createSuperlativeQuestion` ends in "Question" by accident of naming — it is
+  // the factory the rounds are built BY, not a round. It has to be named out, and
+  // it is asserted separately so the exclusion can't quietly cover for it going
+  // undefined the way a dangling per-metric export would.
+  assert.equal(typeof superlative.createSuperlativeQuestion, 'function',
+    'the question factory must stay exported — superlative.test.js builds synthetic metrics with it');
+  const roundExports = exportedEntries()
+    .filter(([name]) => name.endsWith('Question') && name !== 'createSuperlativeQuestion');
   for (const [name, question] of roundExports) {
     assert.ok(question,
       `export "${name}" is undefined — its catalog entry is gone but the export was left behind. `
@@ -1297,4 +1304,102 @@ test('medals: zeroFiltered keeps medal-free countries out of every round', async
       }
     }
   }
+});
+
+// ---- the question factory, against synthetic metrics ------------------------
+//
+// These moved here from `superlativeCore.test.js` when the core was folded back
+// into this module (nobody played the flagQuiz deck that needed it in a browser).
+// They exercise the draw / gap / ranking rules against powers-of-ten metrics
+// rather than real data, so a failure names the rule that broke instead of
+// whichever country happened to move in a values file.
+//
+// The test that did NOT survive the fold was the JSON-import guard: it existed to
+// prove `superlativeCore.js` stayed browser-loadable, and nothing loads it from a
+// browser any more. `superlativeCatalog.js` is the browser-safe half now, and the
+// repo-wide guard in `tooling/` (which walks every `page.js`) already covers it.
+
+/** @param {Record<string, number>} values */
+function fakeMetric(values) {
+  return {
+    has: (/** @type {string} */ c) => c in values,
+    valueOf: (/** @type {string} */ c) => values[c],
+  };
+}
+
+test('a question generates a quartet with a clear extreme', () => {
+  // Powers of ten, so the gap rule is trivially satisfied.
+  /** @type {Record<string, number>} */
+  const values = { a: 1, b: 10, c: 100, d: 1000, e: 10000, f: 100000 };
+  const pool = Object.keys(values).map((code) => ({ code }));
+  const question = createSuperlativeQuestion(fakeMetric(values), 'test-question');
+  const q = question.generate(pool, new Set(), () => 0.5);
+  assert.equal(q.options.length, 4);
+  assert.ok(['most', 'least'].includes(q.prompt));
+  assert.ok(q.options.includes(q.answer));
+  // the answer really is the extreme among the four it offered
+  const vals = q.options.map((/** @type {string} */ c) => values[c]);
+  const want = q.prompt === 'most' ? Math.max(...vals) : Math.min(...vals);
+  assert.equal(values[q.answer], want);
+});
+
+test('direction can be locked to one extreme', () => {
+  /** @type {Record<string, number>} */
+  const values = { a: 1, b: 10, c: 100, d: 1000, e: 10000 };
+  const pool = Object.keys(values).map((code) => ({ code }));
+  const question = createSuperlativeQuestion(fakeMetric(values), 'r', { direction: 'most' });
+  for (let i = 0; i < 8; i++) {
+    assert.equal(question.generate(pool, new Set(), Math.random).prompt, 'most');
+  }
+});
+
+test('isCorrect only accepts the answer', () => {
+  /** @type {Record<string, number>} */
+  const values = { a: 1, b: 10, c: 100, d: 1000 };
+  const question = createSuperlativeQuestion(fakeMetric(values), 'r');
+  const q = question.generate(Object.keys(values).map((code) => ({ code })), new Set(), () => 0.5);
+  assert.equal(question.isCorrect(q, q.answer), true);
+  // `.find` is string|undefined to the checker; the question always has a
+  // non-answer option, so assert that rather than casting the doubt away.
+  const other = q.options.find((/** @type {string} */ o) => o !== q.answer);
+  assert.ok(other, 'a quartet must contain a non-answer option');
+  assert.equal(question.isCorrect(q, other), false);
+});
+
+/** @type {Record<string, number>} */
+const METRIC_VALUES = { a: 1000, b: 500, c: 250, d: 100 };
+const fourPool = Object.keys(METRIC_VALUES).map((code) => ({ code }));
+const fourMetric = fakeMetric(METRIC_VALUES);
+
+test('ranking: index 0 is the answer, in both directions', () => {
+  // The scorer treats rank uniformly (0 = answer, 1 = runner-up, ...), so this
+  // has to hold whether the question asked for the most or the least. A 'least'
+  // question ranks ascending; getting that backwards would pay the WORST option
+  // the runner-up's points.
+  for (const direction of /** @type {Array<'most' | 'least'>} */ (['most', 'least'])) {
+    const q = createSuperlativeQuestion(fourMetric, 'x', { direction })
+      .generate(fourPool, new Set(), () => 0.5);
+    assert.equal(q.ranking[0], q.answer, direction + ': ranking[0] must be the answer');
+    assert.equal(q.ranking.length, 4);
+    assert.deepEqual([...q.ranking].sort(), [...q.options].sort(), direction + ': same four codes');
+  }
+});
+
+test('ranking: ordered by value in the question direction', () => {
+  const most = createSuperlativeQuestion(fourMetric, 'x', { direction: 'most' })
+    .generate(fourPool, new Set(), () => 0.5);
+  assert.deepEqual(most.ranking, ['a', 'b', 'c', 'd']);
+  const least = createSuperlativeQuestion(fourMetric, 'x', { direction: 'least' })
+    .generate(fourPool, new Set(), () => 0.5);
+  assert.deepEqual(least.ranking, ['d', 'c', 'b', 'a']);
+});
+
+test('values: every option carries its raw metric value', () => {
+  // The reveal chart draws its bars from these, so a missing one would render a
+  // zero-width bar against a country that is genuinely large.
+  const q = createSuperlativeQuestion(fourMetric, 'x').generate(fourPool, new Set(), () => 0.5);
+  for (const code of q.options) {
+    assert.equal(typeof q.values[code], 'number', code + ' must have a value');
+  }
+  assert.equal(Object.keys(q.values).length, 4);
 });
