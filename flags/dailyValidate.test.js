@@ -18,10 +18,10 @@ function validSuperlative(overrides = {}) {
     direction: 'most',
     topN: 3,
     answers: ['in', 'cn', 'us'],
-    title: { en: '3 most populous countries', pl: '3 najludniejsze kraje' },
+    title: { en: '3 most populous countries', pl: '3 najbardziej zaludnione kraje' },
     description: {
       en: 'Find the three most populous countries.',
-      pl: 'Znajdź trzy najludniejsze kraje.',
+      pl: 'Znajdź trzy najbardziej zaludnione kraje.',
     },
     ...overrides,
   };
@@ -161,5 +161,43 @@ test('en + pl description still required (rule 7 applies to superlatives)', () =
   assert.throws(
     () => run(validSuperlative({ description: { en: 'only english' } })),
     /description\.pl missing/,
+  );
+});
+
+// ---- banned Polish phrasing ----
+// "najludniejszy" is grammatically correct but nobody says it. Jan flagged it
+// twice; the catalog kept reproducing it because nothing stopped it. Enforced
+// at the validator so push.mjs refuses the upload, not just the test suite.
+
+test('Polish title using "najludniejszy" is rejected', () => {
+  assert.throws(
+    () => run(validSuperlative({ title: { en: '3 most populous', pl: '3 najludniejsze kraje' } })),
+    /banned Polish phrasing/,
+  );
+});
+
+test('Polish description using "najludniejszych" is rejected', () => {
+  assert.throws(
+    () =>
+      run(
+        validSuperlative({
+          description: { en: 'Find them.', pl: 'Znajdź trzy najludniejszych krajów.' },
+        }),
+      ),
+    /banned Polish phrasing/,
+  );
+});
+
+test('the accepted replacement phrasing passes', () => {
+  assert.doesNotThrow(() =>
+    run(
+      validSuperlative({
+        title: { en: '3 most populous countries', pl: '3 najbardziej zaludnione kraje' },
+        description: {
+          en: 'Find the three most populous countries.',
+          pl: 'Znajdź trzy najbardziej zaludnione kraje.',
+        },
+      }),
+    ),
   );
 });

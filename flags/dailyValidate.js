@@ -9,6 +9,7 @@
  *   Rule 3 — every answer code is a sovereign country
  *   Rule 4 — sequential `n` AND contiguous Warsaw dates (Feature R)
  *   Rule 7 — en + pl description present
+ *   (+) banned Polish phrasing (see BANNED_PL) in any pl string
  *   (+) display-only `criteria` on manual/superlative must parse (not drift-checked)
  *
  * The other hard rules (2, 5, 6, 14, 15) are author-time concerns
@@ -47,6 +48,7 @@ export function validateCatalog({ puzzles }) {
   checkAnswerShape(puzzles);
   checkSovereignCodes(puzzles);
   checkDescriptions(puzzles);
+  checkBannedPhrasing(puzzles);
   checkSuperlativeShape(puzzles);
   checkDisplayCriteria(puzzles);
   checkDriftFree(puzzles);
@@ -214,6 +216,57 @@ function checkDescriptions(entries) {
       }
       if (typeof ad.pl !== 'string' || ad.pl.length === 0) {
         throw new Error(`puzzles #${entry.n}: additionalDescription.pl missing or empty`);
+      }
+    }
+  }
+}
+
+/**
+ * Polish wording the catalog must never ship, with the replacement to use.
+ * "najludniejszy" is a real superlative of "ludny" and grammatically correct,
+ * but it is not how people speak — Jan rejected it twice and the catalog
+ * reproduced it seven times anyway, because nothing enforced it. Anything
+ * added here is checked against every Polish string in an entry.
+ */
+const BANNED_PL = [
+  { re: /najludniejsz/i, use: '"najbardziej zaludnion..."' },
+];
+
+/**
+ * Every Polish string on an entry must avoid BANNED_PL. Lives in the shared
+ * validator rather than the test suite alone so `authoring/push.mjs` refuses
+ * the upload — a phrasing rule only the tests know about is a phrasing rule
+ * the next authoring session skips.
+ *
+ * @param {any[]} entries
+ */
+function checkBannedPhrasing(entries) {
+  for (const entry of entries) {
+    const fields = [
+      ['title', entry.title],
+      ['description', entry.description],
+      ['additionalDescription', entry.additionalDescription],
+    ];
+    for (const [name, value] of fields) {
+      const pl = value && value.pl;
+      if (typeof pl !== 'string') continue;
+      for (const { re, use } of BANNED_PL) {
+        if (re.test(pl)) {
+          throw new Error(
+            `puzzles #${entry.n}: ${name}.pl uses banned Polish phrasing (${re.source}) — use ${use} instead: ${pl}`,
+          );
+        }
+      }
+    }
+    for (const note of Object.values(entry.notes || {})) {
+      const pl = note && note.pl;
+      if (typeof pl !== 'string') continue;
+      for (const { re, use } of BANNED_PL) {
+        if (re.test(pl)) {
+          throw new Error(
+            `puzzles #${entry.n}: notes.pl uses banned Polish phrasing (${re.source}) — use ${use} instead: ${pl}`,
+          );
+        }
       }
     }
   }

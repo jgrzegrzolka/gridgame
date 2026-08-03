@@ -244,7 +244,7 @@ test('renderArchiveSquare: superlative entry renders its title as criteria label
     topN: 5,
     filter: 'color:white',
     answers: ['ru', 'gb', 'fr', 'it', 'es'],
-    title: { en: '5 most populous white flags of Europe', pl: '5 najludniejszych białych flag Europy' },
+    title: { en: '5 most populous white flags of Europe', pl: '5 najbardziej zaludnionych białych flag Europy' },
   });
   const li = renderArchiveSquare(entry, { href: './play.html?n=80', ariaPrefix: 'Backlog' }, /** @type {any} */ (doc));
   const link = li._children[0];
