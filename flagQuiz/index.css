@@ -25,105 +25,113 @@ body {
   transition: transform 300ms ease;
   z-index: 30;
 }
-.stats {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  max-width: 720px;
+
+/* ── Your stats: pool coverage ─────────────────────────────────────
+ * `/flagQuiz/stats/`. One row per pool, one measure per row, sorted so the
+ * bottom of the list is what to practise. The whole row is the tap target
+ * and starts that pool in 60s — which is why there is no per-row "Play" and
+ * no mode legend to read.
+ *
+ * This replaced eight rows of two chips, where each chip showed a score in
+ * its own units (60s counted flags found, "all" counted mistakes) behind an
+ * icon you had to decode. Sixteen incomparable cells; see statsView.js. */
+.pool-head,
+.pool-list {
+  width: min(90vw, 480px);
+  margin-inline: auto;
 }
-.stats-row {
+.pool-head {
+  padding-top: 24px;
+}
+.pool-list {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 4px;
-  border-bottom: 1px solid var(--muted-soft-color);
+  flex-direction: column;
+  padding-top: 16px;
 }
-.stats-row:last-child {
-  border-bottom: none;
-}
-.stats-label {
-  flex: 1;
-  font-size: 17px;
-  font-weight: var(--weight-regular);
+.pool-row {
+  display: block;
+  padding: 11px 0;
   color: var(--primary-color);
-}
-.stats-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.stats-chip {
-  display: flex;
-  /* center keeps the 24px icon vertically aligned with the score and
-     time text. baseline would land the icon's bottom on the text line
-     and push it visibly higher than the score. */
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 6px;
-  background: var(--surface-color);
   text-decoration: none;
-  color: inherit;
-  min-width: 140px;
+}
+.pool-row:hover {
+  color: var(--accent-rose);
+}
+.pool-row-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.pool-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pool-score {
+  font-size: 15px;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  /* Colour is set inline per row via scoreColor(ratio) — the same tint the
+     result screen gives the same number. */
+}
+/* The bar restates the score as a length, which is what makes the rows
+   comparable at a glance rather than by reading eight fractions. */
+.pool-bar {
+  display: block;
+  margin-top: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--selected-color);
+  overflow: hidden;
+}
+.pool-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+/* The other mode, present only where it was played. Muted and small: it is
+   context for the headline, not a second thing to compare. */
+.pool-sub {
+  display: block;
+  padding-top: 7px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--muted-color);
   font-variant-numeric: tabular-nums;
 }
-.stats-chip:hover {
-  background: var(--hover-color);
-}
-/* Icon-only mode badge inside each chip — see modeChip() for why the
-   text label was replaced (PL "wszystkie" overflowed at phone width).
-   Fixed 16px slot keeps the chip's flex layout stable when one chip
-   has a score and the other shows the CTA. */
-.stats-chip-mode {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: var(--primary-color);
-  flex: 0 0 24px;
-}
-.stats-chip-mode svg {
-  display: block;
-}
-.stats-chip-score {
-  font-weight: var(--weight-bold);
-  font-size: 16px;
-}
-.stats-chip-time {
-  font-size: 12px;
+/* Never played in either mode: the name alone, quietened. It stays tappable
+   at full size — a dimmed row is an invitation, not a disabled control. */
+.pool-row.is-untouched .pool-name {
   color: var(--muted-color);
-  margin-left: auto;
-}
-.stats-chip-cta {
-  margin-left: auto;
-  color: var(--link-color);
-  font-weight: var(--weight-regular);
-  font-size: 14px;
-}
-.stats-chip-unplayed {
-  background: var(--page-bg-color);
-  border-style: dashed;
 }
 
-@media (max-width: 600px) {
-  .stats-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding: 14px 0;
-  }
-  .stats-chips {
-    justify-content: stretch;
-  }
-  .stats-chip {
-    flex: 1;
-    min-width: 0;
-  }
+/* The world, above the list. Bigger because it is the whole map rather than
+   one slice of it, and separated because ranking a total against its own
+   parts would be a category error. */
+.pool-row-lead {
+  padding: 0;
 }
+.pool-row-lead .pool-name {
+  font-size: 16px;
+}
+.pool-row-lead .pool-score {
+  font-size: 40px;
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.pool-row-lead .pool-bar {
+  margin-top: 14px;
+  height: 4px;
+}
+.pool-row-lead .pool-sub {
+  padding-top: 9px;
+}
+
 /* ── Play head ─────────────────────────────────────────────────────
  * What you're playing (left) against how you're doing (right), on one row.
  * Anchored `relative` because the settings tray hangs off its bottom edge.
