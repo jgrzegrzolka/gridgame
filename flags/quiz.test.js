@@ -528,6 +528,31 @@ test('timedBudgetUsedMs on a pool-exhaust under budget adds penalty time onto th
   assert.ok(clean < messy, 'cleaner round must record a lower budget-used value');
 });
 
+test('timedBudgetUsedMs spends the whole budget on a give-up', () => {
+  // A sub-budget time is the site's signal that the pool fell before the
+  // clock. A quit satisfies neither meaning: banking 0:08 made a forfeit beat
+  // a full-length round of the same score in nextBest's tiebreaker, and made
+  // the result screen offer "record 5/195 in 0:08" as if the pool had been
+  // swept. Forfeiting the rest of the clock is what giving up IS.
+  assert.equal(
+    timedBudgetUsedMs({
+      budgetMs: 60_000, penaltyMs: 4_000, elapsedMs: 8_000, wrongCount: 0, gaveUp: true,
+    }),
+    60_000,
+  );
+  // shouldShowBestTime is the consumer that reads the signal — pin the pair,
+  // since the point of the change is what it makes that function say.
+  assert.equal(shouldShowBestTime('60s', { time: 60_000 }), false);
+});
+
+test('timedBudgetUsedMs is unchanged when the round was played out', () => {
+  // gaveUp absent or false must behave exactly as before — the flag is
+  // additive, not a new default.
+  const played = { budgetMs: 60_000, penaltyMs: 4_000, elapsedMs: 25_000, wrongCount: 1 };
+  assert.equal(timedBudgetUsedMs(played), 29_000);
+  assert.equal(timedBudgetUsedMs({ ...played, gaveUp: false }), 29_000);
+});
+
 test('timedBudgetUsedMs caps at the budget on time-out — over-running penalties do not inflate the recorded time', () => {
   assert.equal(
     timedBudgetUsedMs({ budgetMs: 60_000, penaltyMs: 3_000, elapsedMs: 60_000, wrongCount: 5 }),
