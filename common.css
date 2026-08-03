@@ -123,7 +123,15 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-bold: 700;
-  --page-top: 104px;
+  /* Where page content starts: the chrome strip (70px) plus one 24px gutter,
+   * the same unit body uses horizontally — so the breathing room above the
+   * first row matches the breathing room beside it.
+   *
+   * It was 104px, a 34px band, which read as a dead gap between the wordmark
+   * and the content on a phone. The home page had already reached its own
+   * verdict on that and opted out at 84px; this brings the busier pages most
+   * of the way there while keeping more air than the home's hero needs. */
+  --page-top: 94px;
   /* Height of the fixed chrome strip (body::before) — the visible top
    * bar. Kept smaller than --page-top so a thin band of page background
    * shows between the strip's bottom edge and the first content row
@@ -2185,9 +2193,11 @@ dialog#zoom p.zoom-note {
   width: 100%;
   max-width: 360px;
   /* Top-anchored at 152px from the viewport top, NOT vertically centred. body
-     already pads --page-top (104px) to clear the chrome strip, so the margin is
-     the remainder — written as a calc so the 152 stays legible and follows the
-     token if the strip ever changes. Anchoring is the point: a centred column
+     already pads --page-top to clear the chrome strip, so the margin is the
+     remainder — written as a calc so the 152 stays legible and holds even when
+     the token moves (it went 104 → 94 without shifting these two screens by a
+     pixel, which is the property this shape buys). Anchoring is the point: a
+     centred column
      drifts down as the monitor gets taller, and the screen is short enough that
      centring it just pushes one short paragraph into the middle of nowhere. */
   margin: calc(152px - var(--page-top)) auto 0;
