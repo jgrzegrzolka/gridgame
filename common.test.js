@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { disableBurgerIfEmpty, wireBurgerDismiss, mountNicknameMenuItem, mountPrivacyMenuItem, shareUrl, shareText, makeColorSwatch, wireJoinCodeField, NICKNAME_STORAGE_KEY } from './common.js';
 import { defaultNickname } from './flags/nickname.js';
+
+const HERE_DIR = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Fake burger element that tracks both the native `disabled` property and the
@@ -662,4 +667,31 @@ test('wireJoinCodeField: works without a submit button', () => {
   wireJoinCodeField(input, null);
   edit('66bke');
   assert.equal(input.value, '66BKE');
+});
+
+// ── The shared finish-board fade ─────────────────────────────────────
+// `.fade-up-in` is pointed at whatever each finish screen wants staged, so
+// it cannot be allowed to care how that element is positioned.
+
+const commonCss = readFileSync(join(HERE_DIR, 'common.css'), 'utf-8');
+const fadeUpKeyframes = commonCss.match(/@keyframes fade-up\s*\{[^}]*\{[^}]*\}[^}]*\{[^}]*\}[^}]*\}/)?.[0] ?? '';
+
+test('fade-up rises with `translate`, never with `transform`', () => {
+  // A production bug: `transform: none` in the `to` frame plus
+  // `animation-fill-mode: both` keeps overriding the element's OWN transform
+  // after the animation ends. The flag quiz's finish map centres itself with
+  // `left: 50%` + `translateX(-50%)`, so it snapped half its width to the
+  // right and stayed there. `translate` composes with `transform` instead of
+  // replacing it.
+  assert.ok(fadeUpKeyframes.length > 0, 'could not find the fade-up keyframes');
+  assert.match(fadeUpKeyframes, /translate:\s*0 10px/);
+  assert.doesNotMatch(fadeUpKeyframes, /transform:/);
+});
+
+test('the finish map is still centred by a transform — the pairing this protects', () => {
+  // Half of why the rule above exists lives in another file. If this centring
+  // ever stops being a transform, the rule above is free to relax; while it
+  // IS one, any transform in fade-up breaks the map.
+  const mapCss = readFileSync(join(HERE_DIR, 'flags', 'flagMap.css'), 'utf-8');
+  assert.match(mapCss, /#flag-map-section\s*\{[\s\S]*?transform:\s*translateX\(-50%\)/);
 });
