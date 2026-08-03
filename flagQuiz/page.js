@@ -7,7 +7,6 @@ import {
   timedRemainingMs,
   timedBudgetUsedMs,
   lowerScoreWins,
-  accuracyRatio,
   formatTime,
   recordResult,
   scoreColor,
@@ -20,7 +19,6 @@ import {
   getQuizLastMode,
   setQuizLastMode,
   pickCelebration,
-  shouldShowBestTime,
   mistakesAfterGiveUp,
   countModeProgressRatio,
   variantHasLeaderboard,
@@ -38,6 +36,7 @@ import {
   roundQuery,
   resolveRoundConfig,
 } from './roundSettings.js';
+import { quizResultView } from './resultView.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { QUIZ_MAP_CONFIG } from './mapConfig.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
@@ -132,10 +131,9 @@ export async function bootFlagQuiz() {
   const choicesEl = document.getElementById('choices');
   const resultEl = document.getElementById('result');
   const finalScoreLineEl = document.getElementById('final-score-line');
-  const finalScoreLabelEl = document.getElementById('final-score-label');
   const finalScoreEl = document.getElementById('final-score');
-  const timeEl = document.getElementById('time');
-  const bestEl = document.getElementById('best');
+  const resultClearedEl = document.getElementById('result-cleared');
+  const resultRecordEl = document.getElementById('result-record');
   const leaderboardEl = document.getElementById('daily-leaderboard');
   const leaderboardTitleEl = document.getElementById('leaderboard-title');
   const leaderboardBodyEl = document.getElementById('leaderboard-body');
@@ -992,37 +990,38 @@ export async function bootFlagQuiz() {
      */
     function paintResultLabels() {
       if (!resultLabelData) return;
-      const { timed: t_, isNew, best, elapsed, budgetUsed, gaveUp: rgaveUp } = resultLabelData;
-      finalScoreLabelEl.textContent = t('quiz.finalScore', 'Final score:');
-      if (t_) {
-        // Show "Time" only when the pool exhausted under budget — for a
-        // time-out the value is always the budget itself, which the mode
-        // label already tells the player. shouldShowBestTime is the
-        // shared gate; flagQuiz/stats uses the same function. Also
-        // suppressed on give-up: the elapsed time before quitting isn't
-        // a meaningful result.
-        timeEl.textContent = !rgaveUp && shouldShowBestTime(mode, { time: budgetUsed })
-          ? `${t('game.time', 'Time')}: ${formatTime(budgetUsed)}`
-          : '';
-        bestEl.textContent = shouldShowBestTime(mode, best)
-          ? `${t('quiz.yourBestScore', 'Your best score')}: ${best.score} ${t('game.in', 'in')} ${formatTime(best.time)}`
-          : `${t('quiz.yourBestScore', 'Your best score')}: ${best.score}`;
-      } else {
-        // Same give-up suppression in count mode — the elapsed time of a
-        // give-up round (often < 2s) is misleading next to the score.
-        timeEl.textContent = rgaveUp
-          ? ''
-          : `${t('game.time', 'Time')}: ${formatTime(elapsed)}`;
-        const bestCorrect = Math.max(0, target - best.score);
-        bestEl.textContent =
-          `${t('quiz.yourBestScore', 'Your best score')}: ${bestCorrect}/${target} ${t('game.in', 'in')} ${formatTime(best.time)}`;
-      }
+      const { isNew, best, elapsed, budgetUsed, gaveUp: rgaveUp } = resultLabelData;
+      // What goes big, what colour it is, and what the quiet line says — all
+      // decided in resultView.js, which is where the "which round earns the
+      // clean-sweep screen" rule is tested. This function only paints.
+      const view = quizResultView({
+        modeKey: mode,
+        answeredCount, wrongCount, target,
+        budgetUsed, elapsedMs: elapsed, gaveUp: rgaveUp, best,
+      });
+
+      resultClearedEl.hidden = !view.clearedAll;
+      resultClearedEl.querySelector('#result-cleared-label').textContent =
+        t('quiz.clearedAll', 'Cleared every flag');
+
+      finalScoreEl.textContent = view.headline;
+      finalScoreLineEl.style.color = scoreColor(view.colorRatio);
+
+      // "44 / 44 · record 0:53.467" on a clean sweep; "record 51" otherwise.
+      const record = [
+        t('quiz.record', 'record'),
+        view.recordScore,
+        view.recordTime && view.recordScore ? t('game.in', 'in') : null,
+        view.recordTime,
+      ].filter(Boolean).join(' ');
+      resultRecordEl.textContent = view.detail ? `${view.detail} · ${record}` : record;
+
       if (isNew) {
-        bestEl.appendChild(document.createTextNode(' '));
+        resultRecordEl.appendChild(document.createTextNode(' '));
         const badge = document.createElement('span');
         badge.className = 'new-badge';
         badge.textContent = t('game.newRecord', 'new record!');
-        bestEl.appendChild(badge);
+        resultRecordEl.appendChild(badge);
       }
     }
 
@@ -1103,14 +1102,11 @@ export async function bootFlagQuiz() {
       const hasLeaderboard = variantHasLeaderboard(key);
 
       if (timed) {
-        // Score = flags answered correctly. There's no "out of target"
-        // ratio to colour by, so tint by accuracy (correct vs total picks):
-        // a clean sweep is green, a 50/50 round is amber, all-wrong is red.
-        const totalPicks = answeredCount + wrongCount;
-        const ratio = totalPicks === 0 ? 0 : answeredCount / totalPicks;
-        finalScoreEl.textContent = String(answeredCount);
-        finalScoreLineEl.style.color = scoreColor(ratio);
-
+        // The headline and its colour are painted by `paintResultLabels`
+        // below, off the view model — they used to be set here as well, which
+        // meant a soft language switch re-derived them from one place and the
+        // finish from another.
+        //
         // Record "budget consumed", not wall clock — bounds at the
         // budget for time-outs, lower only when the pool exhausts under
         // budget. nextBest's lower-time tiebreaker then rewards
@@ -1118,7 +1114,7 @@ export async function bootFlagQuiz() {
         // the round that burned more penalties. See timedBudgetUsedMs
         // docstring and tests for the contract.
         const budgetUsed = timedBudgetUsedMs({
-          budgetMs, penaltyMs, elapsedMs: elapsed, wrongCount,
+          budgetMs, penaltyMs, elapsedMs: elapsed, wrongCount, gaveUp,
         });
 
         const { best, isNew } = recordResult(
@@ -1189,10 +1185,8 @@ export async function bootFlagQuiz() {
         // We still store wrongCount as best.score (lower-wins) for
         // backward-compat with nextBest's tiebreaker, but the display is
         // "correct/target" so the player reads it the same way as a
-        // timed-mode score. Colour tint stays accuracy-based.
-        finalScoreEl.textContent = `${answeredCount}/${target}`;
-        finalScoreLineEl.style.color = scoreColor(accuracyRatio(wrongCount, target));
-
+        // timed-mode score — see resultView.js, which owns that translation
+        // along with the headline and its colour.
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: wrongCount, time: elapsed }, lowerScoreWins,
         );
@@ -1353,8 +1347,11 @@ export async function bootFlagQuiz() {
         leaderboardEl.hidden = true;
         leaderboardBodyEl.innerHTML = '';
         finalScoreLineEl.style.color = '';
-        timeEl.textContent = '';
-        bestEl.textContent = '';
+        resultRecordEl.textContent = '';
+        // The clean-sweep eyebrow is the one bit of the result panel that is
+        // hidden rather than emptied, so it needs its own reset — a sweep
+        // followed by an ordinary round would otherwise keep congratulating.
+        resultClearedEl.hidden = true;
         const shareBtn = document.getElementById('result-share');
         if (shareBtn) shareBtn.remove();
 

@@ -404,8 +404,6 @@
     "title": "Yet Another Quiz: Country Flag Quiz",
     "statsTitle": "Yet Another Quiz: Flag Quiz Stats",
     "loading": "Loading…",
-    "finalScore": "Final score:",
-    "yourBestScore": "Your best score",
     "play": "Play",
     "mode": {
       "60s": "60s",
@@ -428,7 +426,9 @@
       "aria": "Round settings",
       "whichFlags": "Which flags",
       "howLong": "How long"
-    }
+    },
+    "record": "record",
+    "clearedAll": "Cleared every flag"
   },
   "findFlag": {
     "title": "Yet Another Quiz: Make a Custom Flag Puzzle",

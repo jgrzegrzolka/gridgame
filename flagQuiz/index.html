@@ -129,11 +129,15 @@
       <nav class="dock" data-dock="playAgainInline giveUp home" data-home="../"></nav>
     </div>
     <section id="result" hidden>
-      <p class="final-score" id="final-score-line">
-        <span id="final-score-label" data-i18n="quiz.finalScore">Final score:</span> <span id="final-score">0</span>
+      <!-- Shown only when the pool fell before the clock did: the one round
+           where the score can no longer tell two results apart, so the clock
+           becomes the headline and the score drops to the line below. -->
+      <p class="result-cleared" id="result-cleared" hidden>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+        <span id="result-cleared-label" data-i18n="quiz.clearedAll">Cleared every flag</span>
       </p>
-      <p class="time" id="time"></p>
-      <p class="best" id="best"></p>
+      <p class="final-score result-headline" id="final-score-line"><span id="final-score">0</span></p>
+      <p class="result-record" id="result-record"></p>
       <section id="daily-leaderboard" class="leaderboard" hidden>
         <h2 class="leaderboard-title" id="leaderboard-title" data-i18n="quiz.leaderboard.title">Today's leaderboard</h2>
         <div id="leaderboard-body"></div>

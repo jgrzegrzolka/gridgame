@@ -588,10 +588,20 @@ export function timedRemainingMs({ budgetMs, penaltyMs, elapsedMs, wrongCount })
  * always wins the tiebreaker. Symmetric with `timedRemainingMs`:
  * `budgetUsed + remaining === budgetMs`.
  *
- * @param {{ budgetMs: number, penaltyMs: number, elapsedMs: number, wrongCount: number }} state
+ * **Giving up spends the whole budget.** A sub-budget time is the site's
+ * signal that the pool fell before the clock did — `shouldShowBestTime` reads
+ * it that way, and `nextBest` breaks score ties on it. A quit after eight
+ * seconds satisfied neither meaning yet banked 0:08, which made a forfeit
+ * beat a full-length round of the same score in the tiebreaker and made the
+ * result screen offer "record 5/195 in 0:08" as though the player had swept
+ * the pool. Forfeiting the rest of the clock is exactly what giving up is, so
+ * that is what gets recorded.
+ *
+ * @param {{ budgetMs: number, penaltyMs: number, elapsedMs: number, wrongCount: number, gaveUp?: boolean }} state
  * @returns {number}
  */
 export function timedBudgetUsedMs(state) {
+  if (state.gaveUp) return state.budgetMs;
   return state.budgetMs - timedRemainingMs(state);
 }
 

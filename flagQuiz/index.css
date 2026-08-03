@@ -533,6 +533,68 @@ body.is-tray-open #play-time {
   animation: ring-wrong 1.1s ease-out infinite;
 }
 
+/* ── Result headline ───────────────────────────────────────────────
+ * One number, big enough to be the whole answer to "how did I do".
+ *
+ * It overrides the shared `.final-score` (28px, used by daily and the three
+ * tic-tac-toe screens) rather than changing it, because those screens put a
+ * labelled sentence there and this one puts a single figure. The label is
+ * gone: "Final score: 38" spends two thirds of the line restating what a
+ * 76px number in the middle of a result screen already is.
+ *
+ * Colour is set inline by page.js via `scoreColor(ratio)` — accuracy on an
+ * ordinary round, full green on a clean sweep. */
+.result-headline {
+  font-size: 76px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+/* The clean-sweep screen leads with a time, which is a much longer string
+   than a score — 76px would wrap it on a narrow phone.
+
+   `:not([hidden])` is load-bearing. The eyebrow is always in the DOM and only
+   toggles `hidden`, so a bare `.result-cleared ~ .result-headline` matched on
+   every result screen and shrank the ordinary score to 54px too. */
+.result-cleared:not([hidden]) ~ .result-headline {
+  font-size: 54px;
+  letter-spacing: -0.03em;
+}
+/* The eyebrow above it: small, green, and only present on the one round that
+   earns it, so it never becomes furniture. */
+.result-cleared {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--correct-color);
+}
+.result-cleared[hidden] {
+  display: none;
+}
+.result-cleared svg {
+  display: block;
+}
+/* The quiet line under the headline: what you have to beat, plus — on a clean
+   sweep — the score the headline gave up its place to. Primary rather than
+   muted: it is a fact about your own play, not a caption. */
+.result-record {
+  margin: 14px 0 20px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+.result-record:empty {
+  display: none;
+}
+
 /* Touch-only share icon sits at the end of the final-score line
  * ("Final score: 23 [icon]"). Flex layout when the button is present
  * keeps text + 20px icon vertically centered against the 28px score

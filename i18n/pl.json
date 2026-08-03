@@ -404,8 +404,6 @@
     "title": "Yet Another Quiz: Quiz flag państw",
     "statsTitle": "Yet Another Quiz: Statystyki quizu flag",
     "loading": "Ładowanie…",
-    "finalScore": "Wynik końcowy:",
-    "yourBestScore": "Twój najlepszy wynik",
     "play": "Zagraj",
     "mode": {
       "60s": "60s",
@@ -428,7 +426,9 @@
       "aria": "Ustawienia rundy",
       "whichFlags": "Które flagi",
       "howLong": "Jak długo"
-    }
+    },
+    "record": "rekord",
+    "clearedAll": "Wszystkie flagi zdobyte"
   },
   "findFlag": {
     "title": "Yet Another Quiz: Stwórz własną łamigłówkę flag",

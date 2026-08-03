@@ -23,6 +23,8 @@
     "ticTacToe/onlineClient.test.js",
     "flagQuiz/roundSettings.js",
     "flagQuiz/roundSettings.test.js",
+    "flagQuiz/resultView.js",
+    "flagQuiz/resultView.test.js",
     "flagQuiz/statsView.js",
     "flagQuiz/statsView.test.js",
     "common.js",

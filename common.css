@@ -1279,21 +1279,11 @@ body::before {
   font-weight: var(--weight-regular);
   margin: 0 0 12px;
 }
-.time {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 8px;
-  font-variant-numeric: tabular-nums;
-}
-.best {
-  font-size: 14px;
-  color: var(--muted-color);
-  margin: 0 0 20px;
-  font-variant-numeric: tabular-nums;
-}
-.best:empty {
-  display: none;
-}
+/* `.time` and `.best` lived here with one consumer between them (flagQuiz's
+   result screen), and `.time` carried an ad-hoc `#666` besides. Both went with
+   that screen's rebuild — the record line that replaced them is
+   `.result-record` in flagQuiz/index.css, where a single-consumer rule
+   belongs. */
 /* Result-screen sibling of `.actions-row` — same sticky-to-bottom
  * treatment so a result panel that overflows the viewport still keeps
  * its action links (Play again / Previous puzzles / Home) visible. The
@@ -1482,7 +1472,12 @@ body:has(nav.dock) {
 @media (min-width: 700px) {
   body:has(nav.dock) { padding-bottom: 0; }
 }
-.best .new-badge {
+/* The "new record!" badge. Selector is the badge alone rather than
+   `.best .new-badge`: `.best` was flagQuiz's own class and went with its
+   result rebuild, and scoping a one-consumer rule to its parent only made the
+   parent harder to rename. The keyframes stay here because
+   `new-record-bounce` is the site's shared "you beat your own best" beat. */
+.new-badge {
   display: inline-block;
   color: var(--correct-color);
   font-weight: var(--weight-regular);
