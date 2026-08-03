@@ -43,8 +43,8 @@ personal best):
 | `--correct-color` | `#2a9d4a` | Correct answer tiles, the copied checkmark, the new-record badge, the correct-guess count pulse |
 | `--wrong-color` | `#c0392b` | Wrong answer tiles, the wrong-cell wash, failed leaderboard status, missed map fills |
 
-Both feed the `pulse-correct` / `pulse-wrong` keyframes through `color-mix`, so
-ring and border cannot drift.
+Both feed the `ring-correct` / `ring-wrong` keyframes through `color-mix`, so
+the solid ring and the halo growing out of it cannot drift.
 
 ### Documented exceptions
 
@@ -348,12 +348,17 @@ One component, two postures at 700px.
   note is 14px muted at line-height 1.4.
 - Lightbox: a bare full-viewport dialog, image capped at `92vw / 92vh`, shadow
   `0 8px 40px rgba(0,0,0,.5)`, backdrop `rgba(0,0,0,0.85)`, `cursor: zoom-out`.
-- Answer tiles (`.flag-choice`, `.opt`): 5px padding, 2px transparent border that
-  colours only on hover/correct/wrong, surface fill, `100ms` border and shadow
-  transitions. Hover lifts with `0 2px 6px rgba(0,0,0,.15)`. `.correct` borders
-  `--correct-color` and pulses `pulse-correct 1.1s` infinite; `.wrong` borders
-  `--wrong-color` and shows a name band inset 5px
-  (`rgba(0,0,0,0.7)`, 13px, padding `3px 4px`).
+- Answer tiles (`.flag-choice`, `.opt`): 7px padding, no border, surface fill.
+  **One edge carries every state, and it is the flag's own** — a 1px
+  `--primary-color` ring at rest, becoming 2px `--correct-color` +
+  `ring-correct 1.1s` infinite when right, 2px `--wrong-color` +
+  `ring-wrong 1.1s` when wrong, and 2px `--secondary-color` for Flag Party's
+  locked-in `.opt.sel` (which also tints the tile `--selected-color`).
+  Transition `120ms cubic-bezier(.23,1,.32,1)`. **No hover and no pressed
+  state:** the ring lands in the same frame as the tap, both would move the
+  tile while the player reads it, and hover does not exist on a phone. The
+  wrong tile's name band insets 7px (`rgba(0,0,0,0.7)`, 13px, padding
+  `3px 4px`).
 - Board cells: `.cell.winning` is `inset 0 0 0 3px #f4c842`; `.cell.shake` runs
   `cell-shake 0.4s` with a `::before` inset 10px carrying 20% `--wrong-color` and
   a 2px inset ring; `.cell.shake-win` reuses the same keyframes ×3 without the

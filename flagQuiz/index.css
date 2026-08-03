@@ -464,47 +464,34 @@ body.is-tray-open #play-time {
   margin-inline: auto;
 }
 .flag-choice {
-  /* Same tile recipe as Flag Party's `.opt`: a soft rounded surface whose
-     border is transparent at rest and only colours on hover / correct / wrong,
-     with the flag itself padded in and rounded (see `.flag-choice img`). Keeps
-     the two flag-picking games visually identical. */
-  padding: 5px;
-  border: 2px solid transparent;
+  /* Same tile recipe as Flag Party's `.opt`: a plain surface with the flag
+     padded in, and ONE edge — the flag's own — carrying every state. Keeps the
+     two flag-picking games visually identical.
+
+     The 7px padding replaces `padding: 5px` + a 2px transparent border that
+     the verdict used to colour. The flag lands in exactly the same place; what
+     went is a second ring 5px outside the first, with a band of white between
+     them, which is what made the old correct/wrong cue read as two edges
+     disagreeing about where the tile ends. */
+  padding: 7px;
+  border: 0;
   background: var(--surface-color);
   cursor: pointer;
-  /* Anchor for the wrong-tile country-name overlay below. */
+  /* Anchor for the wrong-tile country-name overlay (common.css). */
   position: relative;
-  transition: border-color 100ms, box-shadow 100ms;
-}
-/* The wrongly-clicked flag's country-name strip is the shared `.flag-choice.wrong
-   [data-name]::after` rule in common.css (Flag Party's `.opt` reuses it). */
-.flag-choice:hover:not(:disabled) {
-  /* Soft lift on hover — reads "tappable" without borrowing the pink that
-     `.flag-choice.wrong` uses for a wrong pick. The pink ring this replaced
-     looked like an error cue (same hue as the wrong-answer pulse). Matches
-     Flag Party's tile hover (same mechanism = same code). */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 .flag-choice:disabled {
   cursor: default;
 }
-.flag-choice.correct {
-  border-color: var(--correct-color);
-  animation: pulse-correct 1.1s ease-out infinite;
-}
-.flag-choice.wrong {
-  /* Red, paired with `.correct`'s green above. This reverses an earlier
-   * decision (wrong used to be brand secondary, to match the TTT shake and the
-   * give-up reveal) — the problem was that the site then said "wrong" two ways:
-   * pink here and in flagParty, red on the daily result dots and the map's
-   * country fills. Pink also had to keep meaning "selected / locked in /
-   * winning scoreline" elsewhere, so it could not carry "wrong" unambiguously.
-   * One semantic pair now, defined in common.css. */
-  border-color: var(--wrong-color);
-  animation: pulse-wrong 1.1s ease-out infinite;
-}
-/* `@keyframes pulse-correct` / `pulse-wrong` live in common.css now — Flag
-   Party's reveal shares the same cue (CLAUDE.md "same mechanism = same code"). */
+/* No hover state, and no pressed state — deliberately.
+ *
+ * The answer is a reaction to the touch: the ring lands in the same frame as
+ * the tap and says more than either could. Both would get in its way, moving
+ * the tile at the exact moment the player is trying to read the result. Hover
+ * additionally does not exist on a phone, which is most of the players, and
+ * it was decorating a grid of four huge tiles where nobody is unsure what
+ * they are aiming at. Press stays where the effect isn't immediate — the
+ * dock, buttons, chips. Not here. */
 .flag-choice img {
   /* Matches Flag Party's `.flag`: the 4:3 SVG canvas shown whole (`contain`,
      no crop), sharp-cornered, with a 1px primary-black ring (thinnest that
@@ -516,7 +503,26 @@ body.is-tray-open #play-time {
   aspect-ratio: 4 / 3;
   object-fit: contain;
   box-shadow: 0 0 0 1px var(--primary-color);
-  transition: box-shadow 100ms;
+  transition: box-shadow 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+/* The verdict is the SAME edge, recoloured and thickened — not a second ring
+   somewhere else on the tile. Keyframes in common.css carry the solid layer
+   too (an animation replaces box-shadow while it runs), so the declaration
+   here is what shows if animations are off. */
+.flag-choice.correct img {
+  box-shadow: 0 0 0 2px var(--correct-color);
+  animation: ring-correct 1.1s ease-out infinite;
+}
+.flag-choice.wrong img {
+  /* Red, paired with `.correct`'s green above. This reverses an earlier
+   * decision (wrong used to be brand secondary, to match the TTT shake and the
+   * give-up reveal) — the problem was that the site then said "wrong" two ways:
+   * pink here and in flagParty, red on the daily result dots and the map's
+   * country fills. Pink also had to keep meaning "selected / locked in /
+   * winning scoreline" elsewhere, so it could not carry "wrong" unambiguously.
+   * One semantic pair now, defined in common.css. */
+  box-shadow: 0 0 0 2px var(--wrong-color);
+  animation: ring-wrong 1.1s ease-out infinite;
 }
 
 /* Touch-only share icon sits at the end of the final-score line

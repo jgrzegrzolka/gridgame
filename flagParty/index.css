@@ -588,31 +588,49 @@
   margin: 0; min-height: 1lh;
   font-size: 12px; color: var(--muted-color);
 }
+/* One edge, on the media, carries every state this tile has — selected,
+   correct, wrong. The 7px padding replaces `padding: 5px` + a 2px transparent
+   border that those states used to colour: the flag lands in exactly the same
+   place, but the cue no longer sits 5px outside the flag's own frame with a
+   band of white between two edges. Same recipe as flagQuiz's `.flag-choice`
+   (CLAUDE.md "same mechanism = same code"). */
 .opt {
   position: relative;
-  padding: 5px;
-  border: 2px solid transparent;
+  padding: 7px;
+  border: 0;
   background: var(--surface-color);
   cursor: pointer;
   font: inherit;
-  transition: box-shadow 100ms;
 }
 button.opt { -webkit-appearance: none; appearance: none; }
-/* Question phase: your locked-in tap gets the pink ring + surface tint. */
-.opt.sel { border-color: var(--secondary-color); background: var(--selected-color); }
-/* Reveal: the correct flag gets flagQuiz's green pulse, your own wrong pick
-   gets its pink pulse — the shared good/bad cue (keyframes in common.css), so
-   "right / wrong" reads the same across both flag-picking games. */
-.opt.correct { border-color: var(--correct-color); animation: pulse-correct 1.1s ease-out infinite; }
-.opt.wrong { border-color: var(--wrong-color); animation: pulse-wrong 1.1s ease-out infinite; }
+/* Question phase: your locked-in tap gets the pink ring + surface tint. The
+   ring moved onto the media with the verdicts — leaving `.sel` on the tile's
+   outer border would have left this game with two competing ring systems,
+   one of them the exact thing the verdict change was removing. The surface
+   tint stays on the tile, since it is the tile that is selected. */
+.opt.sel { background: var(--selected-color); }
+.opt.sel .flag,
+.opt.sel .contour { box-shadow: 0 0 0 2px var(--secondary-color); }
+/* Reveal: the correct flag gets flagQuiz's green ring, your own wrong pick its
+   red one — the shared good/bad cue (keyframes in common.css), so "right /
+   wrong" reads the same across both flag-picking games. Applied to `.contour`
+   too: a silhouette carries no resting frame (see `.contour`), but it still
+   has to be able to say it was the right answer. */
+.opt.correct .flag,
+.opt.correct .contour {
+  box-shadow: 0 0 0 2px var(--correct-color);
+  animation: ring-correct 1.1s ease-out infinite;
+}
+.opt.wrong .flag,
+.opt.wrong .contour {
+  box-shadow: 0 0 0 2px var(--wrong-color);
+  animation: ring-wrong 1.1s ease-out infinite;
+}
 .opt.dim { opacity: 0.42; }
-/* Hover affordance is for the question phase only — reveal tiles are <div>s, so
-   scoping to button.opt keeps the cursor (parked on the tile you just tapped)
-   from repainting the correct tile. The cue is a soft lift on the whole tile:
-   it reads "tappable" without borrowing the pink that `.opt.sel` / `.opt.wrong`
-   use for a locked-in or wrong pick (the old pink ring looked like an error
-   cue). Matches flagQuiz's `.flag-choice` hover (same mechanism = same code). */
-button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); }
+/* No hover state, and no pressed state — matching flagQuiz. The ring lands in
+   the same frame as the tap and says more than either could; both would move
+   the tile at the moment the player is reading the result, and hover does not
+   exist on a phone anyway. */
 
 .flag {
   display: block;
@@ -626,9 +644,11 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   /* 1px primary-black ring (thinnest that survives standard-DPI rounding) so
      white-heavy flags don't bleed into the surface tile. Outset, NOT inset: an
      inset shadow on an <img> is painted behind the (opaque) image and never
-     shows. Kept in sync with flagQuiz's `.flag-choice img` — same mechanism. */
+     shows. Kept in sync with flagQuiz's `.flag-choice img` — same mechanism,
+     including the transition, since this is now the edge that carries every
+     state change and both games have to make it at the same speed. */
   box-shadow: 0 0 0 1px var(--primary-color);
-  transition: box-shadow 100ms;
+  transition: box-shadow 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 /* Map question: the contour silhouette. Same tile footprint as `.flag` (4:3 /
    contain) so grid rows stay level across question types, but no inset frame — a
@@ -639,6 +659,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: contain;
+  /* No resting box-shadow — see above — but it still carries the selected /
+     correct / wrong ring, so it needs the same transition as `.flag` or the
+     outlines round would snap where the flags round eases. */
+  transition: box-shadow 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 /* Tricky mode (host toggle): each question tile is veiled — grey + blurred, with
    feathered panels covering it — and clears over the countdown. Driven by
@@ -693,7 +717,10 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 }
 #flags-grid.names-shown .opt.named[data-name]::after { opacity: 1; }
 
-.picks { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 3px; }
+/* 8px, not 6px: these offsets resolve against the tile's padding box, and the
+   tile traded a 2px transparent border for 2px more padding — so everything
+   pinned to the flag's edge moved in by the same 2px to stay put on screen. */
+.picks { position: absolute; bottom: 8px; left: 8px; display: flex; gap: 3px; }
 .picks .avatar { width: 20px; height: 20px; font-size: 8px; box-shadow: 0 0 0 2px var(--surface-color); }
 /* Past five pickers the row stops naming faces and counts them (`+11`). The cap
    itself is JS (`flags/pickAvatars.js`) — this is only what the marker looks
@@ -716,21 +743,21 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 /* When your wrong tile carries the country-name strip (bottom), lift its pick
    avatars clear of it so both stay readable — party-only, flagQuiz has no
    avatars on a tile. */
-.opt.wrong[data-name] .picks { bottom: 30px; }
+.opt.wrong[data-name] .picks { bottom: 32px; }
 /* The superlative pop-strip lifts avatars the same way (all four reveal tiles
    carry it, so any tile with picks needs the clearance). */
-.opt.pop .picks { bottom: 30px; }
+.opt.pop .picks { bottom: 32px; }
 
 /* Superlative reveal: country + population banded across the bottom of every
    tile, so the four values read as a ranking. Same rgba(0,0,0,.7)-over-SVG band
    as the wrong-pick name strip in common.css (the documented per-tile-strip
-   palette exception), inset 5px to sit on the flag — but here on all four tiles
+   palette exception), inset 7px to sit on the flag — but here on all four tiles
    and carrying a name + value, which is superlative-only. */
 .opt-pop {
   position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
+  left: 7px;
+  right: 7px;
+  bottom: 7px;
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -1384,7 +1411,7 @@ button.opt:not(.dim):not([disabled]):hover { box-shadow: 0 2px 6px rgba(0, 0, 0,
 /* Winner's living "breathe": a gentle scale + a pink glow that swells and
    recedes. rgb of --secondary-color (#C2899F) — alpha-on-a-CSS-var needs a
    color-mix() / JS detour, so the channels are hardcoded and only alpha varies
-   (same documented pattern as pulse-wrong in common.css). */
+   (the same detour ring-wrong in common.css documents, and now avoids). */
 @keyframes champion-breathe {
   0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(194, 137, 159, 0); }
   50%      { transform: scale(1.03); box-shadow: 0 0 14px 1px rgba(194, 137, 159, 0.5); }
