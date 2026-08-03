@@ -595,14 +595,12 @@ body.is-tray-open #play-time {
   display: none;
 }
 
-/* Touch-only share icon sits at the end of the final-score line
- * ("Final score: 23 [icon]"). Flex layout when the button is present
- * keeps text + 20px icon vertically centered against the 28px score
- * (vertical-align: middle alone resolves below the baseline at this
- * type size). gap: 0.3em restores the whitespace that flex would
- * otherwise collapse between the label and score spans, and
- * justify-content: center preserves the page-centered look. Mirrors
- * the daily-stats-headline pattern. */
+/* Touch-only share icon sits at the end of the headline ("23 [icon]").
+ * Flex layout when the button is present keeps the 20px icon vertically
+ * centred against the score (vertical-align: middle alone resolves below the
+ * baseline at this type size). gap: 0.3em restores the whitespace flex would
+ * otherwise collapse, and justify-content: center preserves the page-centred
+ * look. Mirrors the daily-stats-headline pattern. */
 #final-score-line:has(.share-link) {
   display: flex;
   align-items: center;
@@ -611,8 +609,8 @@ body.is-tray-open #play-time {
   flex-wrap: wrap;
 }
 
-/* Today's leaderboard panel — shown inside #result, below the existing
- * "Final score / Your best" lines. Tabular-nums on the score and time
+/* Today's leaderboard panel — shown inside #result, below the headline and
+ * its record line. Tabular-nums on the score and time
  * columns so rows align. The is-self row gets a subtle accent so the
  * player spots themselves without hunting; the trailing "…You" row
  * shares the same accent because it's the same player. */

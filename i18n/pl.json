@@ -58,8 +58,6 @@
     "wideScreen": "Pełna szerokość",
     "fullscreen": "Pełny ekran",
     "sync": "Synchronizuj urządzenia",
-    "deck": "Talia",
-    "partOfWorld": "Część świata",
     "coffee": "Postaw mi kawę"
   },
   "nickname": {
@@ -393,7 +391,6 @@
   "game": {
     "giveUp": "Poddaję się",
     "playAgain": "Zagraj jeszcze raz",
-    "time": "Czas",
     "in": "w",
     "newRecord": "nowy rekord!",
     "failedToLoad": "Nie udało się załadować:",
@@ -404,7 +401,6 @@
     "title": "Yet Another Quiz: Quiz flag państw",
     "statsTitle": "Yet Another Quiz: Statystyki quizu flag",
     "loading": "Ładowanie…",
-    "play": "Zagraj",
     "mode": {
       "60s": "60s",
       "all": "bez zegara"

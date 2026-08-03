@@ -115,10 +115,15 @@ pill still up top, so the next round can be set up from there). The leaderboard
 itself has loading, empty ("Be the first!"), and populated states.
 
 ### `/flagQuiz/stats/` — Personal records
-Purpose: a grid of chips, one per deck × mode, showing the best score and time.
-States: a filled chip (score tinted by performance), an untouched slot (faded,
-showing "Play" as a call to action), and a hard failure state that replaces the
-page body with "Failed to load: …".
+Purpose: how much of each pool you have covered, so the bottom of the list is
+what to practise. One row per pool, carrying one measure — the 60s record — as
+number, bar and sort key; the world sits above the list because the other seven
+pools are slices of it. The whole row is the tap target and starts that pool in
+60s, so there is no per-row "Play" and no mode legend.
+States (per row): both modes played (number, bar, and a quiet "no clock" line);
+60s only (no quiet line); no-clock only (no bar — the bar measures the 60s
+record); never played (name alone, faded, still tappable). Plus a hard failure
+state that replaces the page body with "Failed to load: …".
 
 ### `/flagParty/` — Flag Party
 Purpose: a multi-round quiz show for several people in one room, each on their
