@@ -21,6 +21,8 @@
     "flagParty/botSeat.test.js",
     "ticTacToe/onlineClient.js",
     "ticTacToe/onlineClient.test.js",
+    "flagQuiz/roundSettings.js",
+    "flagQuiz/roundSettings.test.js",
     "common.js",
     "common.test.js",
     "confetti.js",

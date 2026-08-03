@@ -319,7 +319,7 @@ test('createQuiz.addToCabinet — main queue served before cabinet', () => {
   assert.notEqual(next.answer, first.answer, 'cabinet waits for the main queue to drain');
 });
 
-test('MODES key order is display order — chips and the mode toggle both render in it', () => {
+test('MODES key order is display order — the settings tray renders its chips in it', () => {
   assert.deepEqual(Object.keys(MODES), ['60s', 'all']);
 });
 

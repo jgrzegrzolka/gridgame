@@ -202,7 +202,7 @@ const KNOWN_QUESTION_IDS = renderableQuestionIds(SUPERLATIVE_METRICS.map((m) => 
 const KNOWN_CARD_IDS = new Set(Object.keys(MODE_LABELS));
 
 /** Little pictures leading each draft hand card, distinct enough to tell apart at
- *  a glance. The artwork is shared with flagQuiz's deck indicator via
+ *  a glance. The artwork is shared with flagQuiz's round-settings pill via
  *  `flags/deckIcons.js` — promoted there when that second consumer arrived
  *  (Feature V). Sizing is the card's: `.pick-card-ic img` in index.css. These
  *  classes carry no rules of their own — they used to size the retired setup
