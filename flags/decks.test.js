@@ -4,8 +4,6 @@ import assert from 'node:assert/strict';
 import {
   DECKS,
   deckOf,
-  variantsForDeck,
-  defaultVariantForDeck,
   allDeckVariants,
   decksCoverVariants,
 } from './decks.js';
@@ -61,29 +59,18 @@ test('deckOf falls back to flags for an unknown variant', () => {
   assert.equal(deckOf(''), 'flags');
 });
 
-test('variantsForDeck returns display order, and a copy', () => {
-  assert.deepEqual(variantsForDeck('flags'), [
-    'countries', 'europe', 'asia', 'africa', 'north-america', 'south-america', 'oceania',
-  ]);
-  assert.deepEqual(variantsForDeck('weird'), ['weird']);
-  assert.deepEqual(variantsForDeck('nope'), []);
-  // Mutating the result must not corrupt the table for the next caller.
-  variantsForDeck('flags').push('hacked');
-  assert.equal(variantsForDeck('flags').length, 7);
-});
-
-test('defaultVariantForDeck is the deck first variant', () => {
-  assert.equal(defaultVariantForDeck('flags'), 'countries');
-  assert.equal(defaultVariantForDeck('weird'), 'weird');
-  assert.equal(defaultVariantForDeck('nope'), null);
-});
-
-test('tapping a deck always lands on a real, playable variant', () => {
+test('every listed variant is real, and round-trips back to its own deck', () => {
+  // Was two tests over `defaultVariantForDeck`, which went with the burger's
+  // deck-tap. The invariant it protected is worth more than the accessor was,
+  // so it now runs over every variant rather than just each deck's first: a
+  // pool chip in the settings tray is built from these ids, and one that isn't
+  // a real VARIANTS key renders a chip that throws when tapped.
   for (const d of DECKS) {
-    const v = defaultVariantForDeck(d.id);
-    assert.ok(v, `${d.id}: no default variant`);
-    assert.ok(VARIANTS[v], `${d.id}: default variant "${v}" is not a real variant`);
-    assert.equal(deckOf(v), d.id, `${d.id}: its default variant round-trips to another deck`);
+    assert.ok(d.variants.length > 0, `${d.id}: no variants`);
+    for (const v of d.variants) {
+      assert.ok(VARIANTS[v], `${d.id}: "${v}" is not a real variant`);
+      assert.equal(deckOf(v), d.id, `${d.id}: "${v}" round-trips to another deck`);
+    }
   }
 });
 

@@ -15,18 +15,18 @@ import { VARIANTS } from './quiz.js';
  * needed went with them: per-variant art, prompt kinds, endless pools, and the
  * `10q` mode. Two decks left, both asking "which flag is X?".
  *
- * The play screen shows the current deck as one quiet icon; the burger shows
- * the decks as pills, and below them the current deck's variants — but only
- * when there is a choice to make.
+ * **The player never sees this level.** The round-settings tray flattens decks
+ * and variants into one row of pools (`flagQuiz/roundSettings.js`), because
+ * from the player's side "Weird flags" is just one more thing you could be
+ * quizzed on, and a two-level picker for eight leaves was ceremony. What the
+ * distinction still buys is everything around the picking: which icon the
+ * settings pill wears (Flags and Weird flags render identically once a round
+ * starts, so the icon is the only thing saying which pool you are in), and
+ * `DEFAULT_DECK` as the baseline for deciding which pools are a different KIND
+ * of question and so worth marking out.
  *
- * **That "only when there's a choice" rule is derived, not declared.** A deck
- * with one variant has nothing to pick, so no list renders. `flags` has seven
- * (the world plus six continents) so it lists them; `weird` has one so it
- * doesn't. Writing it as `if (deck === 'flags')` would have been a rule that
- * needs maintaining every time a deck lands — this way there's nothing to
- * update.
- *
- * Ordering here is display order, in both the pills and the indicator popover.
+ * Ordering here is display order — of the pool chips, and of anything else
+ * that walks the decks.
  */
 
 /** @typedef {{ id: string, label: string, variants: string[] }} Deck */
@@ -34,8 +34,8 @@ import { VARIANTS } from './quiz.js';
 /**
  * Deck → the variants it can be played over, in display order.
  *
- * A new deck joins by adding an entry here plus its `VARIANTS` key; the pills,
- * the popover and the burger all read this, so nothing else needs touching.
+ * A new deck joins by adding an entry here plus its `VARIANTS` key; the
+ * settings tray's pool chips read this, so nothing else needs touching.
  *
  * @type {Deck[]}
  */
@@ -74,34 +74,6 @@ export const DEFAULT_DECK = 'flags';
 export function deckOf(variantKey) {
   const deck = DECKS.find((d) => d.variants.includes(variantKey));
   return deck ? deck.id : DEFAULT_DECK;
-}
-
-/**
- * The variants of a deck, in display order. Empty for an unknown deck.
- *
- * @param {string} deckId
- * @returns {string[]}
- */
-export function variantsForDeck(deckId) {
-  const deck = DECKS.find((d) => d.id === deckId);
-  return deck ? [...deck.variants] : [];
-}
-
-/**
- * Where tapping a deck takes you: its first variant.
- *
- * Tapping a deck starts playing it immediately rather than waiting for a
- * scope. Weird has no scope to wait for, so waiting would be a dead end for
- * half the decks; the cost is that Flags also starts immediately (at "All
- * countries") and reaching Europe means reopening the burger. Consistency over
- * the one tap.
- *
- * @param {string} deckId
- * @returns {string | null}
- */
-export function defaultVariantForDeck(deckId) {
-  const deck = DECKS.find((d) => d.id === deckId);
-  return deck && deck.variants.length > 0 ? deck.variants[0] : null;
 }
 
 /**

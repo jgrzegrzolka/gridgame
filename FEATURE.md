@@ -451,6 +451,36 @@ The always-on profile row (`profileEnsure`, fired once per device on first real 
 
 ---
 
+### Feature Y: flagQuiz — the 60s design canvas
+
+**Source:** the `Yetanotherquiz 60s Flow Current.dc.html` canvas in Jan's Claude Design project *Quiz app design directions* (`a71f201e-783e-46b8-8b4c-81ecb5bf3c2a`), read via the DesignSync MCP. Nine panels: 4a-4d + 4g (play + result), 4e/4f (tile states), 5a/5b/5c (stats). 4e and 5a are reproductions of the then-current production state, not asks. Jan asked for the whole canvas, delivered as one PR per panel group so he can steer between them.
+
+**Step 1 — play row rebuild (4a, 4b, 4c). Shipped, PR #1135.**
+
+- [x] Round-settings pill replaces four separate paths to the same two questions (burger deck pills, burger continent list, play-row deck popover, play-row `60s | all` links).
+- [x] Tray with "Which flags" / "How long" chips; a chip restarts in place and the tray stays open.
+- [x] Opening the tray **pauses** the round rather than ending it — the whole point, since every old path navigated and threw the round away.
+- [x] `startGame` made restartable: `teardown()` does what a page load used to (rAF, queued advance, map, give-up listener, result panel, map re-parent).
+- [x] Live score / miss counters on the play row.
+- [x] `showMap` per mode (off in 60s, on without a clock); legacy single key still honoured until the chip is touched.
+- [x] Mode remembered like the variant; the two axes resolve independently so `?v=europe` stops resetting the clock.
+- [x] `replaceState` keeps the address bar on the round being played (the share button copies `location.href`).
+- [x] `all` renamed "no clock" / "bez zegara".
+- [x] Pill moved outside `#game` so it survives to the result screen — with the burger trimmed there is no other way to set up the next round.
+
+**Step 2 — tile states (4f). Next.** One border channel on the flag itself, no hover shadow, no press state. **The canvas flags this as cross-game**: the pulse and the tile recipe are shared with Flag Party's `.opt`, so both games change together. Panel 4f's rationale: the answer ring lands in the same frame as the tap and says more than hover ever did; hover doesn't exist on phones (most players); and the old two-ring construction (outer border + the flag's own frame) left a white gap the pulse started from.
+
+**Step 3 — result screens (4d, 4g).** 4d is largely already true after step 1. 4g is the real work: clearing the whole pool inside the budget makes the *time* the hero instead of the score. The rule is already in the code (`shouldShowBestTime` shows a 60s time only when the pool fell before the budget; `nextBest` breaks ties on time) — what's missing is the screen that leads with it. No leaderboard on that screen: a full pool is cleared on a continent, and `variantHasLeaderboard` gives one only to the world.
+
+**Step 4 — stats rebuild (5b, 5c).** `flagQuiz/stats/` re-read as pool coverage: one row per pool, best-first, a bar, a quiet "no clock" sub-line only where that mode was played, dimmed rows for unplayed pools. One measure per row (the 60s record) so numbers, bars and ordering are comparable without explanation. The whole row is the tap target and starts that pool in 60s, which is why the canvas drops the per-row "Play" CTA and the mode legend.
+
+#### Progress log
+
+- **2026-08-03 (2)** — Post-merge review pass. Stale prose fixed where the pill invalidated it: `flags/decks.js` module docstring (the burger no longer lists decks/scopes — the tray flattens them), `flags/deckIcons.js` (consumer is the pill + chips, with their real 22×16 / 16×12 boxes), `docs/design-context.md`'s flagQuiz layout + states, `flagParty/page.js`'s shared-artwork note, and the `verify-flag-map-ui` skill's flagQuiz URL — that one mattered: it pointed at a `60s` round, where the map now starts **collapsed**, so the recipe would have handed the next agent a chip instead of a map. Dead code removed: `variantsForDeck` + `defaultVariantForDeck` (the flattened tray killed their last callers; their round-trip invariant was folded into a stronger test over *every* variant) and `countScore` (already dead before this feature). **`flagQuiz/roundSettings.js` added to `tsconfig.json`** — it was in neither config, so the new module shipped untypechecked; strict mode immediately found `resolveRoundConfig` able to return `undefined`. Worth knowing: `tsconfig.json` is an explicit allowlist, so **every new pure module has to be added by hand** or it is silently unchecked.
+- **2026-08-03 (1)** — Canvas imported and read. Step 1 built, verified in a browser at 414×896 (pause freezes the clock, chip restarts in place, per-mode map default, teardown returns a clean play screen from the result screen, PL repaints), shipped as PR #1135 and merged.
+
+---
+
 ## Backlog
 
 Items here are not blocking current work but deserve durable memory — the next-time-this-comes-up question, the deferred fix that would otherwise vanish into PR archeology. Agents reading FEATURE.md to find their next task should **not** pick from this section; Jan promotes a backlog item to `## Now` when he decides to actually ship it.

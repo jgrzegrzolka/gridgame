@@ -11,7 +11,10 @@ import {
 import { VARIANTS, MODES, defaultModeFor } from '../flags/quiz.js';
 import { allDeckVariants } from '../flags/decks.js';
 
-/** Identity `t` — returns the fallback, so the tests read the English labels. */
+/**
+ * Identity `t` — returns the fallback, so the tests read the English labels.
+ * @type {(key: string, fallback: string) => string}
+ */
 const t = (_key, fallback) => fallback;
 
 // ---- poolOptions ----
@@ -103,6 +106,7 @@ test('roundPillModel falls back to the raw key for an unknown variant', () => {
 });
 
 test('roundPillModel takes its words from t, not from the English labels', () => {
+  /** @type {(key: string, fallback: string) => string} */
   const pl = (key) => (key === 'variant.europe' ? 'Europa' : 'bez zegara');
   assert.equal(
     roundPillModel({ variantKey: 'europe', modeKey: 'all', t: pl }).label,

@@ -43,7 +43,7 @@ Two pages render the same `mountFlagMap` output. **For microstate ring positions
 | Surface | URL | Best for |
 | --- | --- | --- |
 | `flagsdata/` | `http://127.0.0.1:4280/flagsdata/` | Inspecting microstate rings, dense clusters, any "are these two rings distinct" question. Click a Continent pill + a Colour pill to highlight a subset. |
-| `flagQuiz/` | `http://127.0.0.1:4280/flagQuiz/?v=countries&n=20` | Verifying play-mode behaviour, the play-time `markCountry` paints, `.is-finished` review state. |
+| `flagQuiz/` | `http://127.0.0.1:4280/flagQuiz/?v=countries&n=all` | Verifying in-round behaviour, the play-time `markCountry` paints, `.is-finished` review state. Use `n=all` — the map starts collapsed in `60s` now, so a `60s` URL gives you the chip, not a map. |
 
 **Always use `http://127.0.0.1:4280`, never `http://localhost:4280`.** The SWA dev server sends `Cache-Control: public, max-age=31536000, immutable` on every static file. After an edit, `localhost:4280` will keep serving the cached old `flagMap.js` to Playwright for a year. Switching origin to `127.0.0.1:4280` is a different cache namespace and gets you the fresh file. (`browser_close` does NOT clear this — the disk cache survives the close.)
 

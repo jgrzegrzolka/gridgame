@@ -846,10 +846,6 @@ export async function bootFlagQuiz() {
       timerRaf = requestAnimationFrame(tickTimer);
     }
 
-    function countScore() {
-      return Math.max(0, target - wrongCount);
-    }
-
     /**
      * Paint the prompt line for a question: the country to find. Split out so
      * the language-switch refresh re-paints it the same way.

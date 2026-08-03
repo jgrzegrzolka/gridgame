@@ -102,13 +102,17 @@ Key states:
 Purpose: rapid multiple-choice. Two decks (`flags` — the world plus six
 continent scopes — and `weird`, the non-sovereign pool) × two modes (`60s` timed
 with a 4 s wrong-answer penalty, and `all`). Every deck offers every mode.
-Layout: a timer line carrying the deck indicator and mode, the prompt (a country
-name), and a grid of four flag choices. The two decks render identically, which
-is the whole reason the deck indicator is on that line.
+Layout: a play head — the round-settings pill on the left (deck icon, "All
+countries · 60s", chevron), live score / clock-or-misses on the right — then the
+prompt (a country name) and a grid of four flag choices. The pill is the single
+place both settings are changed, and it wears the deck's icon because the two
+decks render identically once a round starts.
 Key states: loading question · correct pick · wrong pick (the wrong tile gets a
-country-name band so the player learns what they hit) · timer expiry · give up ·
-result (final score, time, personal best, and today's leaderboard). The
-leaderboard itself has loading, empty ("Be the first!"), and populated states.
+country-name band so the player learns what they hit) · settings tray open (the
+round pauses: clock stops, board dims, picks ignored) · timer expiry · give up ·
+result (final score, time, personal best, and today's leaderboard — with the
+pill still up top, so the next round can be set up from there). The leaderboard
+itself has loading, empty ("Be the first!"), and populated states.
 
 ### `/flagQuiz/stats/` — Personal records
 Purpose: a grid of chips, one per deck × mode, showing the best score and time.

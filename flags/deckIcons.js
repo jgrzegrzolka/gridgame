@@ -2,17 +2,16 @@
  * The deck icons — one per question type the flag games can ask.
  *
  * Born in `flagParty/page.js` (as the setup panel's icon table, now `MODE_ICONS`),
- * promoted here when flagQuiz
- * became the second consumer (Feature V: the play-screen deck indicator + its
- * picker popover). Per the repo's "promote on the second consumer" rule, this
- * is that moment; before it, sharing would have locked the wrong shape.
+ * promoted here when flagQuiz became the second consumer (Feature V). Per the
+ * repo's "promote on the second consumer" rule, this is that moment; before it,
+ * sharing would have locked the wrong shape.
  *
  * WHAT IS SHARED IS THE ARTWORK, NOT THE SIZING. The two consumers need very
  * different boxes: Flag Party puts these in a 24×24 slot leading a row in a
- * vertical settings list; flagQuiz puts one inline in a 14px text row at
- * 24×18, and the rest in a popover. So the caller passes its own class and owns
- * the CSS. Baking sizing in here would just mean one of them fighting it back
- * off.
+ * vertical settings list; flagQuiz puts one in the round-settings pill at
+ * 22×16 and a smaller one on the tray's pool chips at 16×12. So the caller
+ * passes its own class and owns the CSS. Baking sizing in here would just mean
+ * one of them fighting it back off.
  *
  * **This is a shared artwork catalog, not a picture of either menu.** The two
  * consumers overlap but neither uses all of it: flagQuiz has two decks (`flags`,

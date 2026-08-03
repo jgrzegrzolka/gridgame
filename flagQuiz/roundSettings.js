@@ -118,14 +118,31 @@ export function roundQuery(variantKey, modeKey) {
 export function resolveRoundConfig({
   urlVariant, urlMode, savedVariant, savedMode, defaultVariant, defaultMode,
 }) {
-  const knownVariant = (k) => !!k && Object.prototype.hasOwnProperty.call(VARIANTS, k);
-  const knownMode = (k) => !!k && Object.prototype.hasOwnProperty.call(MODES, k);
+  /**
+   * First source that names something the table actually knows, wins;
+   * `fallback` if none of them do.
+   *
+   * The "knows" part is load-bearing, not defensive dressing: `10q` was a
+   * real mode until the Statistics deck went, and a bookmark or a cached
+   * client can still send it. An unknown value has to fall THROUGH to the
+   * next source rather than being taken and passed on — `targetFor` throws
+   * on a mode it doesn't recognise.
+   *
+   * `fallback` is returned unvalidated on purpose. It is the caller's own
+   * default, not something a URL or a stale localStorage entry can reach, so
+   * validating it would only turn a caller's bug into a silent `undefined`
+   * that surfaces somewhere far less obvious.
+   *
+   * @param {Record<string, unknown>} table
+   * @param {(string | null)[]} sources
+   * @param {string} fallback
+   * @returns {string}
+   */
+  const firstKnown = (table, sources, fallback) => sources.find(
+    (k) => !!k && Object.prototype.hasOwnProperty.call(table, k),
+  ) ?? fallback;
   return {
-    variantKey: knownVariant(urlVariant) ? urlVariant
-      : knownVariant(savedVariant) ? savedVariant
-        : defaultVariant,
-    modeKey: knownMode(urlMode) ? urlMode
-      : knownMode(savedMode) ? savedMode
-        : defaultMode,
+    variantKey: firstKnown(VARIANTS, [urlVariant, savedVariant], defaultVariant),
+    modeKey: firstKnown(MODES, [urlMode, savedMode], defaultMode),
   };
 }
