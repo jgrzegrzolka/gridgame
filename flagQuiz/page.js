@@ -285,11 +285,44 @@ export async function bootFlagQuiz() {
   }
 
   /**
+   * A chip tap: apply, close, restart — one gesture.
+   *
+   * Both arguments are read when the chip is CLICKED, not when it was
+   * painted: a pool chip passes the live mode and a mode chip passes the
+   * live pool. `renderTray` does repaint on every launch, so the chips are
+   * never actually stale — reading live is what stops that paint order from
+   * becoming load-bearing, where the first tap after a restart would write
+   * back the configuration the tray was painted with and nothing would
+   * appear to happen.
+   *
+   * Closing BEFORE launching is what leaves the new round running. The
+   * `setTrayOpen` here resumes the round it is closing over — bookkeeping
+   * only, `launch` tears that round down on the next line — and by the time
+   * the new game starts there is no open panel left for it to pause behind.
+   *
+   * @param {string} key   variant the round should run on
+   * @param {string} mode  mode it should run in
+   */
+  function applyChip(key, mode) {
+    setTrayOpen(false);
+    launch(key, mode);
+  }
+
+  /**
    * Paint the tray's two chip rows.
    *
-   * No confirm step: the chip IS the change. `pick` restarts the round on
-   * the new setting immediately and leaves the tray open, so changing both
-   * pool and clock is two taps rather than four.
+   * No confirm step: the chip IS the decision, and `applyChip` acts on it
+   * immediately. A "Play" button after the choice would be a second tap
+   * that says nothing the chip didn't.
+   *
+   * The chip you are already on is not a no-op either — it restarts the
+   * round exactly like any other, because "deal me a fresh one" is a
+   * legitimate thing to want from the pool you're already playing.
+   *
+   * The cost is that changing both axes means reopening the tray. That is
+   * the deliberate trade: leaving it open left a round that had already
+   * started hidden behind the panel, and the player had to dismiss it to
+   * see the game they had just asked for.
    */
   function renderTray() {
     roundPoolsEl.innerHTML = '';
@@ -308,7 +341,7 @@ export async function bootFlagQuiz() {
       chip.appendChild(document.createTextNode(
         t(`variant.${opt.key}`, VARIANTS[opt.key].label),
       ));
-      chip.addEventListener('click', () => launch(opt.key, currentModeKey));
+      chip.addEventListener('click', () => applyChip(opt.key, currentModeKey));
       roundPoolsEl.appendChild(chip);
     }
 
@@ -318,7 +351,7 @@ export async function bootFlagQuiz() {
       chip.type = 'button';
       chip.className = opt.active ? 'pill round-chip active' : 'pill round-chip';
       chip.textContent = t(`quiz.mode.${opt.key}`, opt.key);
-      chip.addEventListener('click', () => launch(currentVariantKey, opt.key));
+      chip.addEventListener('click', () => applyChip(currentVariantKey, opt.key));
       roundModesEl.appendChild(chip);
     }
   }
@@ -351,11 +384,9 @@ export async function bootFlagQuiz() {
     renderPill();
     renderTray();
     game = startGame(key, mode, countries);
-    // The tray stays open across a chip tap, so the round it just started
-    // has to come up paused — otherwise the new clock would be running
-    // behind a dimmed board the player can't act on, and a second chip tap
-    // would cost them the seconds they spent deciding.
-    if (trayOpen) game.pause();
+    // No paused start to arrange: the only two callers are the initial load
+    // and `applyChip`, which closes the tray first. A round always begins on
+    // a page the player can act on.
   }
 
   return fetch('../flags/countries.json')
