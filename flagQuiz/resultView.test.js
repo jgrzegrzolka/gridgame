@@ -66,10 +66,10 @@ test('a clean sweep leads with the clock, and demotes the score to the line belo
     best: { score: 44, time: 53_467 },
   });
   assert.equal(v.clearedAll, true);
-  assert.equal(v.headline, '0:47.312');
+  assert.equal(v.headline, '0:47.3');
   assert.equal(v.detail, '44 / 44');
   assert.equal(v.recordScore, null, 'the record is a time here, not a score');
-  assert.equal(v.recordTime, '0:53.467');
+  assert.equal(v.recordTime, '0:53.5');
 });
 
 test('a clean sweep is full green regardless of how many were fumbled on the way', () => {
@@ -137,7 +137,7 @@ test('the untimed mode reads against the pool, and keeps its time', () => {
   assert.equal(v.detail, null);
   // best.score is the MISTAKE count in this mode; the label flips it back.
   assert.equal(v.recordScore, '40/44');
-  assert.equal(v.recordTime, '1:20.512');
+  assert.equal(v.recordTime, '1:20.5');
 });
 
 test('a perfect untimed round is full green but is NOT the clean-sweep screen', () => {
