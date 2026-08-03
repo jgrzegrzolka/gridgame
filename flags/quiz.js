@@ -606,15 +606,35 @@ export function timedBudgetUsedMs(state) {
 }
 
 /**
+ * `m:ss.t` — one decimal, rounded to the nearest tenth.
+ *
+ * It used to render all three millisecond digits, floored. Two problems, and
+ * the second is why this rounds rather than truncating.
+ *
+ * Three digits is more precision than anyone reads off a clock that is
+ * moving, and more than the number deserves once it has stopped: nobody
+ * cleared a pool "in 9.554 seconds" as opposed to 9.6.
+ *
+ * And flooring meant a 60-second round **never showed 60 seconds**. The first
+ * frame lands a few ms after `startTime`, so the clock's opening value was
+ * 59997ms — floored to `0:59.997`, and at one decimal it would still have
+ * been `0:59.9`. Rounding to the nearest tenth renders that first frame as
+ * `1:00.0`, which is what the player was promised, without special-casing the
+ * start. The same rounding is why the last frame reads `0:00.0` rather than
+ * hanging on a stray `0:00.0xx`.
+ *
  * @param {number} ms
  * @returns {string}
  */
 export function formatTime(ms) {
-  const totalSec = Math.floor(ms / 1000);
+  // Resolve to tenths FIRST, then decompose. Rounding after splitting into
+  // minutes and seconds would let 59_997 become "0:60.0" — a legal string for
+  // an illegal reading.
+  const tenths = Math.round(ms / 100);
+  const totalSec = Math.floor(tenths / 10);
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
-  const milli = ms % 1000;
-  return `${min}:${sec.toString().padStart(2, '0')}.${milli.toString().padStart(3, '0')}`;
+  return `${min}:${sec.toString().padStart(2, '0')}.${tenths % 10}`;
 }
 
 /**

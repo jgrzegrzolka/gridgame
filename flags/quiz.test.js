@@ -577,33 +577,49 @@ test('timedBudgetUsedMs and timedRemainingMs always sum to the budget — the sy
   }
 });
 
-test('formatTime(0) renders zero with the full three-digit ms field', () => {
-  assert.equal(formatTime(0), '0:00.000');
+test('formatTime(0) renders zero at one decimal', () => {
+  assert.equal(formatTime(0), '0:00.0');
 });
 
-test('formatTime pads sub-second values', () => {
-  assert.equal(formatTime(1), '0:00.001');
-  assert.equal(formatTime(42), '0:00.042');
-  assert.equal(formatTime(999), '0:00.999');
+test('formatTime pads sub-second values and rounds to the nearest tenth', () => {
+  assert.equal(formatTime(1), '0:00.0');
+  assert.equal(formatTime(42), '0:00.0');
+  assert.equal(formatTime(51), '0:00.1');
+  assert.equal(formatTime(949), '0:00.9');
 });
 
-test('formatTime rolls milliseconds into seconds at 1000', () => {
-  assert.equal(formatTime(1000), '0:01.000');
-  assert.equal(formatTime(1001), '0:01.001');
+test('formatTime rolls tenths into seconds', () => {
+  assert.equal(formatTime(950), '0:01.0', 'rounds up across the second boundary');
+  assert.equal(formatTime(1000), '0:01.0');
+  assert.equal(formatTime(1051), '0:01.1');
 });
 
 test('formatTime rolls seconds into minutes at 60000', () => {
-  assert.equal(formatTime(59999), '0:59.999');
-  assert.equal(formatTime(60000), '1:00.000');
+  assert.equal(formatTime(59949), '0:59.9');
+  assert.equal(formatTime(60000), '1:00.0');
+});
+
+test('a 60-second round shows a full minute on its first frame', () => {
+  // THE bug this rounding exists for. The first tick lands a few ms after
+  // startTime, so the clock's opening value is ~59_997ms — which floored to
+  // "0:59.997", and at one decimal would still floor to "0:59.9". A 60s game
+  // that never once reads 60s is just wrong, and no amount of special-casing
+  // the first paint fixes the same problem on every later tick boundary.
+  assert.equal(formatTime(59_997), '1:00.0');
+  assert.equal(formatTime(59_950), '1:00.0');
+});
+
+test('formatTime resolves tenths before splitting, so seconds can never read 60', () => {
+  // Rounding after the split would turn 59_997 into min 0 / sec 59 / tenth
+  // 10 → "0:60.0": a legal string for an illegal reading.
+  for (let ms = 59_940; ms <= 60_060; ms += 3) {
+    assert.doesNotMatch(formatTime(ms), /:60\./, `${ms} produced a 60-second reading`);
+  }
 });
 
 test('formatTime handles multi-minute durations without zero-padding the minutes', () => {
-  assert.equal(formatTime(123456), '2:03.456');
-  assert.equal(formatTime(600000), '10:00.000');
-});
-
-test('formatTime floors rather than rounds so it never overshoots elapsed time', () => {
-  assert.equal(formatTime(1999), '0:01.999');
+  assert.equal(formatTime(123456), '2:03.5');
+  assert.equal(formatTime(600000), '10:00.0');
 });
 
 test('lookalikesOf returns the group that contains the code', () => {
