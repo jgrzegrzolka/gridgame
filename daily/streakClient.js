@@ -50,6 +50,7 @@ const ENDPOINT_BASE = '/api/v1/daily/me';
  *   tttGamesPlayed: number,
  *   hasWonTtt: boolean,
  *   hasLostTtt: boolean,
+ *   partial: boolean,
  * }} StreakResult
  */
 
@@ -112,6 +113,13 @@ export async function fetchDailyMe(deviceId, opts = {}) {
       tttGamesPlayed: toInt(json.tttGamesPlayed),
       hasWonTtt: json.hasWonTtt === true,
       hasLostTtt: json.hasLostTtt === true,
+      // Set by the server when one of its soft reads failed, meaning
+      // some of the fields above are zeros/falses standing in for data
+      // it couldn't fetch. Only the achievement diff acts on it (an
+      // unknown must not read as "not earned"); display consumers are
+      // happy with a degraded snapshot, which is why the endpoint still
+      // answers 200.
+      partial: json.partial === true,
     };
   } catch {
     return null;

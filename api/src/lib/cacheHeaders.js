@@ -10,14 +10,21 @@
  *     response — otherwise the player would see their own data on
  *     instant refresh but cached pre-refresh data for the rest of
  *     the window.
+ *
+ * `partial` takes the same exit as `fresh`, for a different reason: the
+ * body is degraded (a soft read failed), so it describes the moment
+ * rather than the player. Keeping it out of the server's own cache isn't
+ * enough — without this, the browser holds the degraded copy for the
+ * rest of the window and hands it to the next page load, which is
+ * exactly where the achievement diff takes its baseline.
  */
 
 /**
- * @param {{ fresh: boolean, ttlMs: number }} args
+ * @param {{ fresh: boolean, ttlMs: number, partial?: boolean }} args
  * @returns {{ 'Cache-Control': string }}
  */
-function statsCacheHeaders({ fresh, ttlMs }) {
-  if (fresh) return { 'Cache-Control': 'no-store' };
+function statsCacheHeaders({ fresh, ttlMs, partial = false }) {
+  if (fresh || partial) return { 'Cache-Control': 'no-store' };
   return { 'Cache-Control': `public, max-age=${Math.floor(ttlMs / 1000)}` };
 }
 

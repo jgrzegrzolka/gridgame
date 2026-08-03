@@ -50,6 +50,7 @@ const FULL = {
   tttGamesPlayed: 14,
   hasWonTtt: true,
   hasLostTtt: false,
+  partial: false,
 };
 
 test('fetchDailyMe: happy path — passes deviceId, returns shape', async () => {
@@ -64,6 +65,28 @@ test('fetchDailyMe: bypassCache appends ?fresh=1', async () => {
   const f = fakeFetch({ body: FULL });
   await fetchDailyMe('dev-abc', { bypassCache: true, fetchImpl: f });
   assert.ok(f.calls[0].includes('fresh=1'));
+});
+
+test('fetchDailyMe: partial:true survives normalisation', async () => {
+  // The server sets this when one of its soft Cosmos reads failed, so the
+  // zeros below are "couldn't read", not "hasn't earned". Dropping it here
+  // would put the achievement diff straight back into the five-phantom-
+  // cards bug — the flag is the only thing that tells the two apart.
+  const f = fakeFetch({ body: { ...FULL, hasWonTtt: false, tttGamesPlayed: 0, partial: true } });
+  const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
+  assert.equal(out.partial, true);
+});
+
+test('fetchDailyMe: a healthy body reads as not partial', async () => {
+  const f = fakeFetch({ body: { currentStreak: 1 } });
+  const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
+  assert.equal(out.partial, false, 'absent means healthy — the flag is only sent when degraded');
+});
+
+test('fetchDailyMe: partial is strict-true only', async () => {
+  const f = fakeFetch({ body: { ...FULL, partial: 'yes' } });
+  const out = await fetchDailyMe('dev-abc', { fetchImpl: f });
+  assert.equal(out.partial, false);
 });
 
 test('fetchDailyMe: missing deviceId returns null without calling fetch', async () => {
@@ -137,6 +160,7 @@ test('fetchDailyMe: missing fields collapse to 0 (defensive shape)', async () =>
     tttGamesPlayed: 0,
     hasWonTtt: false,
     hasLostTtt: false,
+    partial: false,
   });
 });
 
@@ -181,6 +205,7 @@ test('fetchDailyMe: non-numeric field values collapse to 0', async () => {
     tttGamesPlayed: 0,
     hasWonTtt: false,
     hasLostTtt: false,
+    partial: false,
   });
 });
 

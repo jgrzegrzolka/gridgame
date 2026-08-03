@@ -10,6 +10,7 @@ const { computeMastery } = require('../lib/masteryCompute');
 const { computeQuiz } = require('../lib/quizCompute');
 const { computeEngagement } = require('../lib/engagementCompute');
 const { computeTttSignals } = require('../lib/tttCompute');
+const { isReadFailed, anyReadFailed } = require('../lib/partialSnapshot');
 const { warsawDayNumber } = require('../lib/warsawDay');
 
 const DB_NAME = 'yetanotherquiz';
@@ -262,11 +263,38 @@ app.http('dailyMe', {
       quiz60sDistinctDays: quiz60sStreak.totalPlayed,
     };
 
+    // Every soft read that failed took a slice of the snapshot down with
+    // it, and a degraded slice is indistinguishable from a player who
+    // simply hasn't done that thing yet. Say so, so a consumer that
+    // DIFFS two snapshots can tell "unknown" from "not earned" — see
+    // lib/partialSnapshot.js for the five phantom cards that cost us.
+    //
+    // The quiz read is in the list for the same reason as the other two:
+    // it degrades to zero counters, which would make a returning
+    // player's cleared-variant badges look freshly earned.
+    const partial = anyReadFailed([quizSettled, profileSettled, tttSettled]);
+    if (partial) {
+      // The rejected reads warn above; the fulfilled-but-not-ok ones had
+      // no voice at all until here, which is why the incident left no
+      // trace to find. One line, whichever way it failed.
+      // Which slice is degraded, not which promise settled how: a
+      // fulfilled-but-not-ok read logs `fulfilled`, which reads as fine.
+      context.warn('dailyMe snapshot is partial — a soft read failed', {
+        quizFailed: isReadFailed(quizSettled),
+        profileFailed: isReadFailed(profileSettled),
+        tttFailed: isReadFailed(tttSettled),
+      });
+    }
+
     const result = { ...streak, ...mastery, ...quiz, ...engagement, ...quiz60sStreakSnapshot, ...ttt };
-    cache.set(deviceId, result, now);
+    if (partial) result.partial = true;
+    // Never cache a degraded answer: the boot path reads the cache, so
+    // one blip would otherwise hand the same wrong baseline to every
+    // page load for a full TTL.
+    if (!partial) cache.set(deviceId, result, now);
     return {
       status: 200,
-      headers: statsCacheHeaders({ fresh, ttlMs: CACHE_TTL_MS }),
+      headers: statsCacheHeaders({ fresh, partial, ttlMs: CACHE_TTL_MS }),
       jsonBody: result,
     };
   },
