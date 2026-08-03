@@ -746,12 +746,12 @@ export async function bootFlagQuiz() {
       else renderCollapsedMap();
     }
 
-    // Result-screen data is captured once when showResult fires so a
-    // soft language switch can re-paint the localized labels (Final
-    // score, Your best score, Time, new record) without re-running
-    // recordResult or re-firing the celebration. Null until the game
-    // ends; refreshI18n's `paintResultLabels` no-ops until then.
-    /** @type {{ timed: boolean, isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number, gaveUp: boolean } | null} */
+    // Result-screen data is captured once when showResult fires so a soft
+    // language switch can re-derive the whole screen — headline, record line,
+    // clean-sweep eyebrow — without re-running recordResult or re-firing the
+    // celebration. Null until the game ends; refreshI18n's
+    // `paintResultLabels` no-ops until then.
+    /** @type {{ isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number, gaveUp: boolean } | null} */
     let resultLabelData = null;
 
     // Captured by `runLeaderboardCycle`'s paint callback so a soft language
@@ -1120,7 +1120,7 @@ export async function bootFlagQuiz() {
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: answeredCount, time: budgetUsed },
         );
-        resultLabelData = { timed: true, isNew, best, elapsed, budgetUsed, gaveUp };
+        resultLabelData = { isNew, best, elapsed, budgetUsed, gaveUp };
         paintResultLabels();
         // Cloud write on every finish (not just PBs): F5 added server-side
         // attempts + lastPlayedAt counters that depend on it. The chained
@@ -1190,7 +1190,7 @@ export async function bootFlagQuiz() {
         const { best, isNew } = recordResult(
           localStorage, key, mode, { score: wrongCount, time: elapsed }, lowerScoreWins,
         );
-        resultLabelData = { timed: false, isNew, best, elapsed, budgetUsed: 0, gaveUp };
+        resultLabelData = { isNew, best, elapsed, budgetUsed: 0, gaveUp };
         paintResultLabels();
         void ensureProfile(deviceId);
         // No engagement counter for endurance-mode plays — pre-Phase-3

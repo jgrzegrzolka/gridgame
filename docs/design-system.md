@@ -84,9 +84,9 @@ Present in the CSS today, not covered by a token or a documented exception:
   rgba(0,0,0,0.08)` (colour-count dropdown), `0 6px 20px rgba(0,0,0,0.08)`
   (suggestion list), `0 4px 24px rgba(0,0,0,0.22)` (dialog cards), `0 6px 24px
   rgba(43,29,36,0.1)` (desktop dock pill), `0 12px 32px rgba(43,29,36,0.25)`
-  (achievement card), `0 8px 40px rgba(0,0,0,0.5)` (lightbox image), `0 2px 6px
-  rgba(0,0,0,0.15)` (answer tile hover lift), `0 1px 2px rgba(0,0,0,0.25)`
-  (switch thumb).
+  (achievement card), `0 8px 40px rgba(0,0,0,0.5)` (lightbox image), `0 1px 2px
+  rgba(0,0,0,0.25)` (switch thumb). The answer tiles carry no hover lift — see
+  the answer-tile entry below for why.
 - The dock's mobile fill is `color-mix(in srgb, var(--page-bg-color) 94%,
   transparent)` behind `backdrop-filter: blur(6px)`.
 
@@ -135,7 +135,8 @@ Every `font-size` in px, by declaration count:
 | 18px | 5 | Screen titles (`.find-cat`), room code |
 | 19px, 20px | 1, 2 | One-off headings |
 | 22px | 4 | Flags-link glyph, larger headings |
-| 28px | 4 | `.final-score` |
+| 28px | 3 | `.final-score` (daily, tic-tac-toe) |
+| 40px, 54px, 76px | 1 each | The stats page's world total; flagQuiz's result headline (a cleared-pool time, an ordinary score) |
 | 32px, 34px | 1 each | Party score display, the daily score |
 
 Outliers: `clamp(36px, 11.5vw, 44px)` on the home hero headline; two fractional
@@ -372,8 +373,10 @@ One component, two postures at 700px.
 - `#result`: `margin-top: 32px`, entering with `result-in 500ms
   cubic-bezier(0.2, 0.7, 0.2, 1)` — opacity plus a 16px `top` slide (not a
   transform, so the fixed dock is not captured).
-- `.final-score` 28px regular; `.time` 14px `#666`; `.best` 14px muted, hidden
-  when empty; `.new-badge` in `--correct-color` bounces once over 2s.
+- `.final-score` 28px regular (daily, tic-tac-toe). flagQuiz overrides it to
+  `.result-headline` — 76px, or 54px when the round cleared its whole pool and
+  the headline becomes a time rather than a score — over a 13px
+  `.result-record` line. `.new-badge` in `--correct-color` bounces once over 2s.
 - `.result-section-title`: 14px, weight 600, uppercase, `0.06em`,
   `--muted-color`, margins `24px 0 12px`.
 - Sticky rows (`.actions-row`, `.result-links`): `position: sticky; bottom: 0`,

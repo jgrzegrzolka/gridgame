@@ -58,8 +58,6 @@
     "wideScreen": "Full width",
     "fullscreen": "Toggle fullscreen",
     "sync": "Sync across devices",
-    "deck": "Deck",
-    "partOfWorld": "Part of the world",
     "coffee": "Buy me a coffee"
   },
   "nickname": {
@@ -393,7 +391,6 @@
   "game": {
     "giveUp": "Give up",
     "playAgain": "Play again",
-    "time": "Time",
     "in": "in",
     "newRecord": "new record!",
     "failedToLoad": "Failed to load:",
@@ -404,7 +401,6 @@
     "title": "Yet Another Quiz: Country Flag Quiz",
     "statsTitle": "Yet Another Quiz: Flag Quiz Stats",
     "loading": "Loading…",
-    "play": "Play",
     "mode": {
       "60s": "60s",
       "all": "no clock"
