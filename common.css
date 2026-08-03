@@ -1503,6 +1503,29 @@ body:has(nav.dock) {
   100% { transform: translateY(0); }
 }
 
+/* ── Finish-moment choreography ────────────────────────────────────
+ * The one rise-and-fade every finish screen is built from: 10px up, half a
+ * second, ease. Both finish boards — the daily puzzle's and the flag
+ * quiz's — stage their elements with it, each setting its own
+ * `animation-delay` inline so the order is a property of the screen and
+ * never of when async data happened to land. `both` fill is what makes that
+ * work: an element is invisible until its delay elapses, so a leaderboard
+ * that arrives in 80ms and one that arrives in 800ms play identically.
+ *
+ * Both boards gate the whole cascade on `#result.result-anim`, added only
+ * on a natural finish — a revisit or a language re-paint renders the final
+ * state at once, because motion belongs to the moment it happened. */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up-in {
+  animation: fade-up 0.5s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-up-in { animation: none; }
+}
+
 /* No focus ring on the card itself.
  *
  * `showModal()` has to put focus somewhere. If the dialog holds no autofocus

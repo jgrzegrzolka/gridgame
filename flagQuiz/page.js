@@ -9,7 +9,6 @@ import {
   lowerScoreWins,
   formatTime,
   recordResult,
-  scoreColor,
   poolFor,
   targetFor,
   isQuizShowMap,
@@ -37,6 +36,9 @@ import {
   resolveRoundConfig,
 } from './roundSettings.js';
 import { quizResultView } from './resultView.js';
+import { runCountUp } from '../flags/countUp.js';
+import { fadeUpAt } from '../flags/finishCascade.js';
+import { withOwnResult } from '../flags/leaderboardOwnResult.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { QUIZ_MAP_CONFIG } from './mapConfig.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
@@ -785,10 +787,80 @@ export async function bootFlagQuiz() {
     /** @type {{ isNew: boolean, best: { score: number, time: number }, elapsed: number, budgetUsed: number, gaveUp: boolean } | null} */
     let resultLabelData = null;
 
+    // The round just played, in the shape the leaderboard stores: the score
+    // it ranks by (correct count in 60s, wrong count in endurance) and the
+    // duration that breaks ties. Null until the round ends. Held so every
+    // leaderboard paint — including the one a language switch triggers —
+    // can show the player their own finish rather than the older row the
+    // server happened to return.
+    /** @type {{ score: number, durationMs: number } | null} */
+    let ownResult = null;
+
     // Captured by `runLeaderboardCycle`'s paint callback so a soft language
     // switch can re-render translated labels without re-issuing the fetch.
     /** @type {{ state: 'loading' | 'ready' | 'failed', data?: { top: any[], you: any } } | null} */
     let leaderboardState = null;
+
+    // ── Finish cascade ───────────────────────────────────────────────
+    // The board arrives in stages rather than all at once: score, record
+    // line, map, leaderboard caption, rows. Each slot is a time measured
+    // from the finish — `stage` converts that into the delay THIS element
+    // needs given how long ago the finish was, so the leaderboard lands in
+    // its slot whether the fetch took 80ms or 800ms. See
+    // flags/finishCascade.js.
+    const CASCADE = {
+      score: 0,
+      record: 700,
+      map: 900,
+      caption: 1200,
+      rows: 1300,
+      rowStep: 60,
+    };
+    // After this much, the finish is no longer "just happening" and later
+    // repaints (a language switch, a slow leaderboard) render static. Long
+    // enough to cover the last row of a full board (1300 + 9×60 + 500).
+    const CASCADE_WINDOW_MS = 2600;
+
+    /** When the round ended. 0 whenever the screen is not a fresh finish. */
+    let finishAt = 0;
+
+    /** How long the score takes to count from 0 to what you actually got. */
+    const COUNT_UP_MS = 600;
+    /** Guards against a repaint restarting the count-up, or clobbering it. */
+    let countUpStarted = false;
+    let countUpRunning = false;
+    /** @type {(() => void) | null} */
+    let stopCountUp = null;
+
+    /** Whether the cascade is still running, so late paints stage or don't. */
+    const cascading = () => finishAt > 0 && (Date.now() - finishAt) <= CASCADE_WINDOW_MS;
+
+    /**
+     * Stage `el` to appear `targetMs` after the finish. No-op outside the
+     * cascade window, which is what makes a revisit or a language re-paint
+     * render flat.
+     *
+     * @param {Element | null} el
+     * @param {number} targetMs
+     */
+    function stage(el, targetMs) {
+      if (!el || !cascading()) return;
+      fadeUpAt(/** @type {any} */ (el), { targetMs, elapsedMs: Date.now() - finishAt });
+    }
+
+    /**
+     * Give an element back its unstaged state, so the NEXT finish can
+     * animate it again. Re-adding a class the element already carries does
+     * not restart a CSS animation — without this, only the first round of a
+     * session would cascade.
+     *
+     * @param {Element | null} el
+     */
+    function unstage(el) {
+      if (!el) return;
+      el.classList.remove('fade-up-in');
+      /** @type {HTMLElement} */ (el).style.animationDelay = '';
+    }
 
     function paintLeaderboard() {
       if (!leaderboardState) return;
@@ -810,9 +882,28 @@ export async function bootFlagQuiz() {
       // wins), so "cleared all" isn't a score threshold there — pass null
       // to suppress the time.
       const poolTotal = timed ? pool.length : null;
+      // Show the round that just finished in the player's own row. The
+      // board is a server read of a rolling window and the round we are
+      // congratulating them for may not be in it yet — which is how the
+      // screen came to announce a personal best of 53 above a pink row
+      // still reading 51. Only ever an upgrade, and only ever their own
+      // row; see flags/leaderboardOwnResult.js.
+      // `any` because the fetch payload's fields are optional (a loading
+      // state has neither) while the renderer's are not — the renderer
+      // already handles both, and narrowing here would only move the cast.
+      /** @type {any} */
+      const data = ownResult
+        ? withOwnResult({
+          data: leaderboardState.data,
+          deviceId,
+          score: ownResult.score,
+          durationMs: ownResult.durationMs,
+          lowerWins: !timed,
+        })
+        : leaderboardState.data;
       const subtree = renderLeaderboard({
         state: leaderboardState.state,
-        data: leaderboardState.data,
+        data,
         ownDeviceId: deviceId,
         t,
         formatScore,
@@ -822,6 +913,12 @@ export async function bootFlagQuiz() {
       });
       leaderboardBodyEl.innerHTML = '';
       leaderboardBodyEl.appendChild(subtree);
+
+      // The caption, then the rows one after another. Rows are rebuilt on
+      // every paint, so they always start unstaged and animate cleanly.
+      stage(leaderboardTitleEl, CASCADE.caption);
+      const rows = leaderboardBodyEl.querySelectorAll('.leaderboard-row');
+      rows.forEach((row, i) => stage(row, CASCADE.rows + (i * CASCADE.rowStep)));
     }
 
     // For timed mode the progress bar is the countdown — we widen it from
@@ -1015,45 +1112,83 @@ export async function bootFlagQuiz() {
     /**
      * Paint the result screen's localized strings from `resultLabelData`.
      * No-op until showResult has populated the data. Idempotent —
-     * `bestEl.textContent = …` wipes any prior "new record!" badge, and
-     * the badge is re-appended on each call so a soft language switch
+     * `resultRecordEl.textContent = …` wipes any prior "new record!" badge,
+     * and the badge is re-appended on each call so a soft language switch
      * mid-result re-translates correctly.
+     *
+     * The `result-anim` class is set from `cascading()` rather than from an
+     * argument: the finish is the only thing that opens the cascade window,
+     * so a re-paint after it closes takes the class off and the screen —
+     * including the record badge, whose bounce is gated on it in CSS —
+     * renders at its final state. That is daily's contract: motion belongs
+     * to the moment, not to the panel.
      */
     function paintResultLabels() {
       if (!resultLabelData) return;
-      const { isNew, best, elapsed, budgetUsed, gaveUp: rgaveUp } = resultLabelData;
-      // What goes big, what colour it is, and what the quiet line says — all
-      // decided in resultView.js, which is where the "which round earns the
-      // clean-sweep screen" rule is tested. This function only paints.
+      const { isNew, best, budgetUsed, gaveUp: rgaveUp } = resultLabelData;
+      const animate = cascading();
+      resultEl.classList.toggle('result-anim', animate);
+      // What goes big and what the quiet line says — both decided in
+      // resultView.js, which is where the "which round earns the clean-sweep
+      // screen" rule is tested. This function only paints.
       const view = quizResultView({
         modeKey: mode,
-        answeredCount, wrongCount, target,
-        budgetUsed, elapsedMs: elapsed, gaveUp: rgaveUp, best,
+        answeredCount, target,
+        budgetUsed, gaveUp: rgaveUp, isNew, best,
       });
 
       resultClearedEl.hidden = !view.clearedAll;
       resultClearedEl.querySelector('#result-cleared-label').textContent =
         t('quiz.clearedAll', 'Cleared every flag');
 
-      finalScoreEl.textContent = view.headline;
-      finalScoreLineEl.style.color = scoreColor(view.colorRatio);
+      // Counts count up; times do not. A stopwatch ticking to your finishing
+      // time would look like a replay of the round at the wrong speed, which
+      // is why `countUpTo` is null on any headline that is a clock.
+      if (animate && !countUpStarted && view.countUpTo !== null) {
+        countUpStarted = true;
+        countUpRunning = true;
+        const to = view.countUpTo;
+        stopCountUp = runCountUp({
+          target: to,
+          durationMs: COUNT_UP_MS,
+          onValue: (v) => {
+            finalScoreEl.textContent = `${v}${view.headlineSuffix}`;
+            if (v >= to) countUpRunning = false;
+          },
+        });
+      } else if (!countUpRunning) {
+        // Not mid-count: safe to write the final value. The guard is for the
+        // language switch, which repaints every label and would otherwise
+        // drop the finished number on top of one still ticking.
+        finalScoreEl.textContent = view.headline;
+      }
 
-      // "44 / 44 · record 0:53.467" on a clean sweep; "record 51" otherwise.
-      const record = [
-        t('quiz.record', 'record'),
+      // "0:47.312 · record 0:53.467" on a clean sweep, "record 51" on an
+      // ordinary round — and on a personal best, neither: the view drops
+      // both, because the badge below already says it and the number it
+      // would quote is the one directly above.
+      const parts = [
         view.recordScore,
         view.recordTime && view.recordScore ? t('game.in', 'in') : null,
         view.recordTime,
-      ].filter(Boolean).join(' ');
-      resultRecordEl.textContent = view.detail ? `${view.detail} · ${record}` : record;
+      ].filter(Boolean);
+      const record = parts.length > 0
+        ? [t('quiz.record', 'record'), ...parts].join(' ')
+        : '';
+      resultRecordEl.textContent = [view.detail, record].filter(Boolean).join(' · ');
 
       if (isNew) {
-        resultRecordEl.appendChild(document.createTextNode(' '));
+        if (resultRecordEl.textContent !== '') {
+          resultRecordEl.appendChild(document.createTextNode(' '));
+        }
         const badge = document.createElement('span');
         badge.className = 'new-badge';
         badge.textContent = t('game.newRecord', 'new record!');
         resultRecordEl.appendChild(badge);
       }
+
+      stage(finalScoreLineEl, CASCADE.score);
+      stage(resultRecordEl, CASCADE.record);
     }
 
     /**
@@ -1124,6 +1259,11 @@ export async function bootFlagQuiz() {
       // round must not bank the pause as playing time, in either mode.
       const elapsed = playElapsedMs();
 
+      // Opens the cascade window. Giving up is not a finish to celebrate —
+      // the board comes up flat, the way a revisit does, so the staging
+      // reads as "you got there" rather than as decoration on a walk-out.
+      finishAt = gaveUp ? 0 : Date.now();
+
       // Global leaderboards exist only for the "All countries" variant — the
       // small player base left every continent board empty, and each continent
       // finish still cost a Free-tier Cosmos write. When false, both finish
@@ -1152,6 +1292,7 @@ export async function bootFlagQuiz() {
           localStorage, key, mode, { score: answeredCount, time: budgetUsed },
         );
         resultLabelData = { isNew, best, elapsed, budgetUsed, gaveUp };
+        ownResult = { score: answeredCount, durationMs: budgetUsed };
         paintResultLabels();
         // Cloud write on every finish (not just PBs): F5 added server-side
         // attempts + lastPlayedAt counters that depend on it. The chained
@@ -1222,6 +1363,9 @@ export async function bootFlagQuiz() {
           localStorage, key, mode, { score: wrongCount, time: elapsed }, lowerScoreWins,
         );
         resultLabelData = { isNew, best, elapsed, budgetUsed: 0, gaveUp };
+        // Endurance ranks on wrong-count, lower first — same shape the
+        // submit uses two calls below.
+        ownResult = { score: wrongCount, durationMs: elapsed };
         paintResultLabels();
         void ensureProfile(deviceId);
         // No engagement counter for endurance-mode plays — pre-Phase-3
@@ -1283,6 +1427,7 @@ export async function bootFlagQuiz() {
       // review surface.
       if (flagMapEl && !flagMapEl.hidden) {
         resultEl.insertBefore(flagMapEl, leaderboardEl);
+        stage(flagMapEl, CASCADE.map);
         if (mapMounted) {
           flagMapEl.classList.add('is-finished');
           // Zoom out to the whole filled-in board for review — the one and
@@ -1377,8 +1522,22 @@ export async function bootFlagQuiz() {
         resultEl.hidden = true;
         leaderboardEl.hidden = true;
         leaderboardBodyEl.innerHTML = '';
-        finalScoreLineEl.style.color = '';
         resultRecordEl.textContent = '';
+
+        // Close the cascade and put every staged element back the way it
+        // started. Re-adding `fade-up-in` to an element that still has it
+        // does not restart the animation, so without this only the first
+        // round of a session would ever animate — the finish after a
+        // settings change would arrive fully-formed and look broken.
+        if (stopCountUp) stopCountUp();
+        stopCountUp = null;
+        countUpStarted = false;
+        countUpRunning = false;
+        finishAt = 0;
+        resultEl.classList.remove('result-anim');
+        for (const el of [finalScoreLineEl, resultRecordEl, leaderboardTitleEl, flagMapEl]) {
+          unstage(el);
+        }
         // The clean-sweep eyebrow is the one bit of the result panel that is
         // hidden rather than emptied, so it needs its own reset — a sweep
         // followed by an ordinary round would otherwise keep congratulating.
