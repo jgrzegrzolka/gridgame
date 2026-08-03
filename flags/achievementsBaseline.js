@@ -28,6 +28,26 @@
  *     already-earned rule on the first action of any page.
  *   - The boot prefetch is in-flight-cached so two calls to
  *     primeAchievementsBaseline never trigger two roundtrips.
+ *
+ * Degraded snapshots:
+ *   `/api/v1/daily/me` soft-degrades — if its profiles / tttPairs / quiz
+ *   reads fail it still answers 200, with that slice zeroed. A zeroed
+ *   slice looks exactly like a player who hasn't earned those rules, so
+ *   a degraded snapshot used as the diff axis reports every
+ *   already-earned rule as newly earned the moment a healthy read lands.
+ *   That is not theoretical: it fired five cards on a 60s give-up
+ *   scoring 0. The server now flags such an answer `partial: true`, and
+ *   a partial snapshot is never a diff axis on either side. Same
+ *   reasoning as the null baseline above — an unknown is not a "no".
+ *
+ * Two cached snapshots, deliberately:
+ *   `baseline` is the diff axis and only ever holds a trusted (non-
+ *   partial) snapshot. `lastSnapshot` is the newest one whatever its
+ *   state, because display consumers (daily/page.js repaints its streak
+ *   line from getCachedAchievementsBaseline right after the diff) would
+ *   rather show a degraded snapshot than nothing — the fields they read
+ *   come from the endpoint's one HARD dependency, which cannot be
+ *   partial without the request failing outright.
  */
 
 import { fetchDailyMe } from '../daily/streakClient.js';
@@ -62,8 +82,17 @@ function withLocalEngagement(serverSnap) {
   return mergeEngagementOverlay(serverSnap, store, todayDayId);
 }
 
-/** @type {import('../daily/streakClient.js').StreakResult | null} */
+/**
+ * The diff axis. Only ever a trusted snapshot — see the header note.
+ * @type {import('../daily/streakClient.js').StreakResult | null}
+ */
 let baseline = null;
+
+/**
+ * The newest snapshot regardless of trust, for display consumers.
+ * @type {import('../daily/streakClient.js').StreakResult | null}
+ */
+let lastSnapshot = null;
 
 /** @type {Promise<void> | null} */
 let inflight = null;
@@ -79,7 +108,13 @@ export function primeAchievementsBaseline(deviceId) {
   if (baseline !== null || inflight !== null) return;
   inflight = fetchDailyMe(deviceId).then((snap) => {
     const merged = withLocalEngagement(snap);
-    if (merged) baseline = /** @type {any} */ (merged);
+    if (merged) {
+      lastSnapshot = /** @type {any} */ (merged);
+      // A degraded boot read leaves the baseline null, which the diff
+      // already knows how to handle: skip, and let the cards show on the
+      // next visit. Better a late card than five wrong ones.
+      if (merged.partial !== true) baseline = /** @type {any} */ (merged);
+    }
     inflight = null;
   });
 }
@@ -98,32 +133,47 @@ export function primeAchievementsBaseline(deviceId) {
  * @returns {Promise<import('./achievements.js').AchievementRule[]>}
  */
 export async function refreshAchievementsAndDiff(deviceId) {
-  if (baseline === null) {
-    // Boot fetch hasn't completed (or wasn't called). Skip silently —
-    // the achievement still earns server-side; it'll show up on the
-    // next page visit.
-    if (inflight) await inflight;
-    if (baseline === null) return [];
-  }
+  // Let the boot prefetch settle so the diff runs against it rather than
+  // racing it. The fetch below happens either way — an unusable baseline
+  // costs the player their cards this round, and it must not also cost
+  // display consumers their refreshed snapshot.
+  if (inflight) await inflight;
+
   const fresh = await fetchDailyMe(deviceId, { bypassCache: true });
   if (!fresh) return [];
   const merged = /** @type {any} */ (withLocalEngagement(fresh));
+  lastSnapshot = merged;
+
+  // A degraded read is not evidence of anything. Don't diff it, and
+  // above all don't let it become the axis — the next healthy read
+  // would then show every already-earned rule crossing at once, which
+  // is the flood this whole guard exists to stop.
+  if (merged.partial === true) return [];
+
   const before = baseline;
   baseline = merged;
+  // Boot fetch never completed (or was never called): the achievement
+  // still earns server-side, it'll show up on the next page visit.
+  if (before === null) return [];
   return diffNewlyEarnedAchievements(before, merged);
 }
 
 /**
- * Read the most recent snapshot the helper has cached (the baseline
- * after the most recent prime or refresh). Used by callers like
- * daily/page.js that need the snapshot for non-achievement purposes
- * (the streak hint, the personal-stats line) so they don't issue a
- * second fetchDailyMe right after refreshAchievementsAndDiff.
+ * Read the most recent snapshot the helper has fetched, from the most
+ * recent prime or refresh. Used by callers like daily/page.js that need
+ * the snapshot for non-achievement purposes (the streak hint, the
+ * personal-stats line) so they don't issue a second fetchDailyMe right
+ * after refreshAchievementsAndDiff.
+ *
+ * This is `lastSnapshot`, not the diff axis: a degraded read is still
+ * the freshest thing we know, and the streak fields these callers read
+ * are never the degraded part. Anything that COMPARES two snapshots
+ * must not use this — see the header note.
  *
  * @returns {import('../daily/streakClient.js').StreakResult | null}
  */
 export function getCachedAchievementsBaseline() {
-  return baseline;
+  return lastSnapshot;
 }
 
 /**
@@ -133,5 +183,6 @@ export function getCachedAchievementsBaseline() {
  */
 export function __resetAchievementsBaselineForTest() {
   baseline = null;
+  lastSnapshot = null;
   inflight = null;
 }

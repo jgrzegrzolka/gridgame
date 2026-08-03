@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   primeAchievementsBaseline,
   refreshAchievementsAndDiff,
+  getCachedAchievementsBaseline,
   __resetAchievementsBaselineForTest,
 } from './achievementsBaseline.js';
 
@@ -103,6 +104,123 @@ test('refreshAndDiff returns [] when bypass fetch fails (silent degrade)', async
     primeAchievementsBaseline('dev-abc');
     const newly = await refreshAchievementsAndDiff('dev-abc');
     assert.deepEqual(newly, []);
+  } finally {
+    restore();
+  }
+});
+
+// ---- degraded ("partial") snapshots ----
+//
+// `/api/v1/daily/me` soft-degrades: if the profiles or tttPairs read
+// fails, it still answers 200 with `hasNickname: false`, `hasWonTtt:
+// false`, `tttGamesPlayed: 0` — indistinguishable from a player who
+// genuinely has none of it. Baselining on that and then diffing against
+// a healthy read reports every already-earned rule as newly earned.
+//
+// That is not hypothetical: a 60s-quiz give-up scoring 0 popped five
+// cards at once — Identified, Matrix, First TTT Win, First TTT Loss,
+// Ten TTT Games — which is exactly the set fed by those two reads, and
+// includes a pair (first win + first loss) that cannot both be earned
+// by one event. The server now marks such a snapshot `partial: true`;
+// these tests pin that the client treats it as "unknown", not "not
+// earned".
+
+/** A player who has long since earned the profile + TTT rules. */
+const EARNED_SNAP = {
+  ...ZERO_SNAP,
+  hasNickname: true,
+  hasLinkedDevice: true,
+  hasWonTtt: true,
+  hasLostTtt: true,
+  tttGamesPlayed: 14,
+};
+
+/** The same player, as seen through a failed profiles + tttPairs read. */
+const DEGRADED_SNAP = { ...ZERO_SNAP, partial: true };
+
+test('partial baseline does not flood: a degraded boot snapshot is not a diff axis', async () => {
+  __resetAchievementsBaselineForTest();
+  let call = 0;
+  const restore = withFakeFetch(async () => {
+    call++;
+    // Boot read degraded, post-action read healthy — the exact shape of
+    // the five-card incident.
+    return fakeJsonResponse(call === 1 ? DEGRADED_SNAP : EARNED_SNAP);
+  });
+  try {
+    primeAchievementsBaseline('dev-abc');
+    const newly = await refreshAchievementsAndDiff('dev-abc');
+    assert.deepEqual(
+      newly.map((r) => r.id),
+      [],
+      'already-earned rules must not re-fire off a degraded baseline',
+    );
+  } finally {
+    restore();
+  }
+});
+
+test('partial fresh snapshot is not diffed, and does not poison the baseline', async () => {
+  __resetAchievementsBaselineForTest();
+  let call = 0;
+  const restore = withFakeFetch(async () => {
+    call++;
+    if (call === 1) return fakeJsonResponse(EARNED_SNAP);      // healthy boot
+    if (call === 2) return fakeJsonResponse(DEGRADED_SNAP);    // degraded action
+    return fakeJsonResponse(EARNED_SNAP);                      // healthy action
+  });
+  try {
+    primeAchievementsBaseline('dev-abc');
+    const degraded = await refreshAchievementsAndDiff('dev-abc');
+    assert.deepEqual(degraded, [], 'a degraded fresh read reports nothing');
+    // If the degraded snapshot had replaced the baseline, this second
+    // refresh would see false -> true on all five and flood.
+    const after = await refreshAchievementsAndDiff('dev-abc');
+    assert.deepEqual(
+      after.map((r) => r.id),
+      [],
+      'the degraded read must not become the axis the next action diffs against',
+    );
+  } finally {
+    restore();
+  }
+});
+
+test('a real cross still fires when both snapshots are healthy', async () => {
+  __resetAchievementsBaselineForTest();
+  let call = 0;
+  const restore = withFakeFetch(async () => {
+    call++;
+    return fakeJsonResponse(
+      call === 1 ? EARNED_SNAP : { ...EARNED_SNAP, totalCompleted: 1 },
+    );
+  });
+  try {
+    primeAchievementsBaseline('dev-abc');
+    const newly = await refreshAchievementsAndDiff('dev-abc');
+    assert.deepEqual(newly.map((r) => r.id), ['first-daily']);
+  } finally {
+    restore();
+  }
+});
+
+test('the display snapshot still refreshes even when the baseline is unusable', async () => {
+  // daily/page.js repaints its streak line from
+  // getCachedAchievementsBaseline() right after the diff. A degraded
+  // boot read must not cost it that repaint.
+  __resetAchievementsBaselineForTest();
+  let call = 0;
+  const restore = withFakeFetch(async () => {
+    call++;
+    return fakeJsonResponse(
+      call === 1 ? DEGRADED_SNAP : { ...EARNED_SNAP, currentStreak: 5 },
+    );
+  });
+  try {
+    primeAchievementsBaseline('dev-abc');
+    await refreshAchievementsAndDiff('dev-abc');
+    const snap = getCachedAchievementsBaseline();
+    assert.equal(snap?.currentStreak, 5, 'latest snapshot must reach display consumers');
   } finally {
     restore();
   }
