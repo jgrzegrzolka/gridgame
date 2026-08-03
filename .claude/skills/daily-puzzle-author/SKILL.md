@@ -1,6 +1,6 @@
 ---
 name: daily-puzzle-author
-description: Owns the daily-puzzle catalog end-to-end. Use when Jan asks to add a puzzle, schedule the next few days, generate candidate ideas, promote an idea, review what's coming up or what's in ideas, audit flag-data ambiguity, or anything else that touches the catalog. The agent pulls the current state from blob, edits in `.catalog/`, runs `npm test`, shows Jan the diff for player-affecting changes, and pushes to blob. Carries the 15 rules (9 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, flag-data ambiguity, etc.
+description: Owns the daily-puzzle catalog end-to-end. Use when Jan asks to add a puzzle, schedule the next few days, generate candidate ideas, promote an idea, review what's coming up or what's in ideas, audit flag-data ambiguity, or anything else that touches the catalog. The agent pulls the current state from blob, edits in `.catalog/`, runs `npm test`, shows Jan the diff for player-affecting changes, and pushes to blob. Carries the 16 rules (10 hard / 6 soft) that the catalog and tests enforce — primary-clean colours, small-property compounds, no-subset, single-use tokens, en+pl descriptions, flag-data ambiguity, etc.
 ---
 
 # Daily-puzzle author
@@ -96,7 +96,7 @@ No `filter` field on a manual entry — `kind` is the discriminator. The page pi
   "answers": ["ru", "gb", "fr", "it", "es"],   // machine-computed, then FROZEN
   "title": {                      // hand-written, like a manual entry
     "en": "The 5 most populous white flags of Europe",
-    "pl": "5 najludniejszych białych flag Europy"
+    "pl": "5 najbardziej zaludnionych białych flag Europy"
   },
   "description": { "en": "…", "pl": "…" },
   "additionalDescription": { "en": "Sovereign countries only.", "pl": "Tylko kraje suwerenne." }
@@ -145,7 +145,7 @@ npm run validate
 
 This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing test as the rule speaking — don't suppress it without understanding why.
 
-## The 15 rules
+## The 16 rules
 
 ### Hard (test-pinned)
 
@@ -225,13 +225,20 @@ This runs the test suite (hard-rule enforcement) plus typecheck. Treat a failing
 
     *How to add a token:* edit `policy.json` and add an entry to `singleUseTokens` with `token`, `sovs`, and `reason`. Leave the existing canonical "find all X" puzzle in place — the test enforces no-recurrence going forward. *Don't* add continent tokens — continents subdivide into recognizable subgroups (Europe + cross is a natural puzzle even though "find all Europe" exists), so the exhaustion logic doesn't apply.
 
-    *Numbered 14 rather than 8* to avoid renumbering rules 8-13 (and the cross-references to them in this file plus `ideas.json` notes). The Hard / Soft split is now: hard = **1-7 + 14-15**, soft = 8-13.
+    *Numbered 14 rather than 8* to avoid renumbering rules 8-13 (and the cross-references to them in this file plus `ideas.json` notes). The Hard / Soft split is now: hard = **1-7 + 14-16**, soft = 8-13.
 
 15. **No flag-data ambiguity.** *(audit tests in `flags/daily.test.js`)* No entry in `puzzles.json` or `ideas.json` may put a flag with `ambiguousColorCount` or `ambiguousColors` into the disagreement zone — where a player's plausible-counting or plausible-membership call would flip its answer-set membership. Currently tagged in `flags/countries.json`: Bhutan (`ambiguousColorCount: [3, 4]`, `ambiguousColors: ["white"]`) and American Samoa (`ambiguousColorCount: [4, 5, 6, 7]`). `ambiguousColorCount` is the list of counts a reasonable player could give — it always includes the canonical count plus the contested neighbours; `ambiguousColors` is the list of colours whose presence on the flag is itself disputed. See `DATA_FEATURE.md` Feature DA for the rationale and the seed-tag list.
 
     *Why:* same failure shape as rule 5 (primary-clean) — a flag the game "judges" against a player's plausible count reads as "the game is wrong." Bhutan in `Asia + yellow + colorCount:3` was the poster-child: the dragon outline is the only white, and reasonable players land on 3 or 4 colours.
 
     *Authoring cue:* `node authoring/audit-ambiguity.mjs` reports any violation across `puzzles.json` + `ideas.json` with the offending flag and constraint — same gate as the test enforces, friendlier output. Run it after hand-editing a puzzle to surface the case the test would catch anyway, with a more readable message. `authoring/generate-candidates.mjs` applies the audit inline so brainstorm batches never propose ambig-broken candidates in the first place.
+
+16. **No banned Polish phrasing.** *(`checkBannedPhrasing` in `flags/dailyValidate.js`, so `push.mjs` refuses the upload)* Every Polish string on an entry — `title.pl`, `description.pl`, `additionalDescription.pl`, `notes.*.pl` — is checked against the `BANNED_PL` list. Current entries:
+    - `najludniejsz*` → use **`najbardziej zaludnion*`** ("7 najbardziej zaludnionych krajów Afryki")
+
+    *Why:* `najludniejszy` is a correct superlative of `ludny` and every dictionary has it, but it is not how Polish speakers talk. Jan rejected it, the phrasing was defended as "idiomatic and standard" and left in place, and it then shipped seven times. A native-speaker call on wording is settled by the native speaker; the list exists so the decision survives the session it was made in.
+
+    *How to add a phrase:* append `{ re, use }` to `BANNED_PL` in `flags/dailyValidate.js`, sweep `puzzles.json` **and** `ideas.json` for existing hits (ideas are the source of future puzzles — leaving them re-seeds the phrase), and add a case to `flags/dailyValidate.test.js`.
 
 ## Difficulty scoring
 

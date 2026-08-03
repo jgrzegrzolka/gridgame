@@ -365,7 +365,7 @@ test('resolvePuzzleEntry: superlative entry skips filter parsing and returns fil
       direction: 'most',
       topN: 2,
       answers: ['in', 'cn'],
-      title: { en: '2 most populous', pl: '2 najludniejsze' },
+      title: { en: '2 most populous', pl: '2 najbardziej zaludnione' },
     },
     [inC, cn],
   );
@@ -387,11 +387,11 @@ test('superlativeToCategory: label comes from entry.title[lang]', () => {
       direction: 'most',
       topN: 5,
       answers: ['ru', 'de', 'gb', 'fr', 'it'],
-      title: { en: '5 most populous in Europe', pl: '5 najludniejszych w Europie' },
+      title: { en: '5 most populous in Europe', pl: '5 najbardziej zaludnionych w Europie' },
     },
     'pl',
   );
-  assert.equal(category.label, '5 najludniejszych w Europie');
+  assert.equal(category.label, '5 najbardziej zaludnionych w Europie');
   assert.match(category.id, /60/);
   assert.match(category.id, /superlative/);
 });
