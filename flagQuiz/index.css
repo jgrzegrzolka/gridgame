@@ -339,7 +339,20 @@ body {
 }
 /* The chips are `.pill` from common.css — the same control the burger used
    for decks and findFlag uses for filters. Only the flag thumb in front of
-   the label is local. */
+   the label is local.
+
+   `.pill` is a bare <button>, so it lays its children out INLINE. The thumb
+   is a block-level box, which on an inline flow starts its own line — the
+   icon sat above its label instead of before it. The burger's `.deck-pill`
+   solved this with its own `inline-flex`, and that rule was deleted along
+   with the burger's deck list; this is that job, back where the chips are.
+   Applied to every chip, not just the ones with a thumb, so the two rows
+   are the same control. */
+.round-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .round-chip-ico {
   display: grid;
   place-items: center;

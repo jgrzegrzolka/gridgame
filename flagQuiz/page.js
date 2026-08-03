@@ -298,7 +298,7 @@ export async function bootFlagQuiz() {
     for (const opt of poolOptions(currentVariantKey)) {
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = opt.active ? 'pill active' : 'pill';
+      chip.className = opt.active ? 'pill round-chip active' : 'pill round-chip';
       // Only pools that are a different KIND of question carry an icon —
       // see `poolOptions`. The seven continent chips are deliberately bare.
       if (opt.marked) {
@@ -318,7 +318,7 @@ export async function bootFlagQuiz() {
     for (const opt of modeOptions(currentModeKey)) {
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = opt.active ? 'pill active' : 'pill';
+      chip.className = opt.active ? 'pill round-chip active' : 'pill round-chip';
       chip.textContent = t(`quiz.mode.${opt.key}`, opt.key);
       chip.addEventListener('click', () => launch(currentVariantKey, opt.key));
       roundModesEl.appendChild(chip);
