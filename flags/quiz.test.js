@@ -35,6 +35,8 @@ import {
   countModeProgressRatio,
   getQuizLastVariant,
   setQuizLastVariant,
+  getQuizLastMode,
+  setQuizLastMode,
   resolveMode,
   isQuizShowMap,
   setQuizShowMap,
@@ -1089,44 +1091,95 @@ test('resolveMode is idempotent — passing back the resolved mode returns the s
 
 // ---- isQuizShowMap / setQuizShowMap ----
 //
-// Storage key is the contract — once shipped, renaming it orphans
-// every player's preference. Pin both the default-when-missing
-// behavior and the exact key.
+// Storage keys are the contract — once shipped, renaming one orphans
+// every player's preference. Pin the per-mode defaults, the legacy
+// migration, and the exact key shapes.
 
-test('isQuizShowMap defaults to true when the key is missing', () => {
-  // Every variant has a map now — opt-out, not opt-in. Missing key
-  // reads as "show" so brand-new players see the map by default.
-  assert.equal(isQuizShowMap(fakeStore()), true);
-});
-
-test('isQuizShowMap returns false when the key is explicitly "false"', () => {
-  // Players who toggle the map off get their opt-out persisted as the
-  // literal string "false" — not removeItem, otherwise the default-on
-  // behavior would bring the map back on the next visit.
-  const store = fakeStore({ 'gridgame.flagquiz.showMap': 'false' });
-  assert.equal(isQuizShowMap(store), false);
-});
-
-test('isQuizShowMap returns true when the key is explicitly "true"', () => {
-  // Pre-rollout players who opted in have 'true' stored — same default
-  // they had then, same behavior post-rollout.
-  const store = fakeStore({ 'gridgame.flagquiz.showMap': 'true' });
-  assert.equal(isQuizShowMap(store), true);
-});
-
-test('setQuizShowMap round-trips both true and false values', () => {
+test('isQuizShowMap starts collapsed in 60s and open without a clock', () => {
+  // The whole reason the preference is per mode: in 60s the map costs
+  // seconds, so it is opt-in; with no clock there is nothing to lose.
   const store = fakeStore();
-  setQuizShowMap(store, false);
-  assert.equal(isQuizShowMap(store), false);
-  setQuizShowMap(store, true);
-  assert.equal(isQuizShowMap(store), true);
+  assert.equal(isQuizShowMap(store, '60s'), false);
+  assert.equal(isQuizShowMap(store, 'all'), true);
 });
 
-test('isQuizShowMap reads the gridgame.flagquiz.showMap key', () => {
-  // Pin the literal key so a future rename doesn't silently orphan
-  // every existing player's preference.
-  const store = fakeStore({ 'gridgame.flagquiz.showMap': 'true' });
-  assert.equal(isQuizShowMap(store), true);
+test('isQuizShowMap reads the per-mode key, not the other mode', () => {
+  // Pin the literal key shape so a future rename doesn't silently orphan
+  // every existing player's preference — and prove the modes don't leak
+  // into each other, which is the bug the split exists to prevent.
+  const store = fakeStore({ 'gridgame.flagquiz.showMap.60s': 'true' });
+  assert.equal(isQuizShowMap(store, '60s'), true);
+  assert.equal(isQuizShowMap(store, 'all'), true);
+
+  const off = fakeStore({ 'gridgame.flagquiz.showMap.all': 'false' });
+  assert.equal(off.getItem('gridgame.flagquiz.showMap.60s'), null);
+  assert.equal(isQuizShowMap(off, 'all'), false);
+  assert.equal(isQuizShowMap(off, '60s'), false, 'no per-mode value → 60s default');
+});
+
+test('isQuizShowMap falls back to the legacy single key for both modes', () => {
+  // Migration: a player who explicitly opted out before the split keeps
+  // that answer everywhere until they touch the chip again. Without this
+  // branch the split would silently re-open the map in "all" for every
+  // player who had turned it off.
+  const off = fakeStore({ 'gridgame.flagquiz.showMap': 'false' });
+  assert.equal(isQuizShowMap(off, '60s'), false);
+  assert.equal(isQuizShowMap(off, 'all'), false);
+
+  const on = fakeStore({ 'gridgame.flagquiz.showMap': 'true' });
+  assert.equal(isQuizShowMap(on, '60s'), true, 'legacy opt-in beats the 60s default');
+  assert.equal(isQuizShowMap(on, 'all'), true);
+});
+
+test('a per-mode value wins over the legacy key', () => {
+  // Once the player touches the chip in a mode, that answer is the
+  // truth for that mode — the pre-split preference stops applying there.
+  const store = fakeStore({
+    'gridgame.flagquiz.showMap': 'false',
+    'gridgame.flagquiz.showMap.60s': 'true',
+  });
+  assert.equal(isQuizShowMap(store, '60s'), true);
+  assert.equal(isQuizShowMap(store, 'all'), false);
+});
+
+test('setQuizShowMap round-trips both values, per mode', () => {
+  const store = fakeStore();
+  setQuizShowMap(store, '60s', true);
+  setQuizShowMap(store, 'all', false);
+  assert.equal(isQuizShowMap(store, '60s'), true);
+  assert.equal(isQuizShowMap(store, 'all'), false);
+  // Written as the literal string, not removeItem — otherwise turning
+  // "all" off would bounce back to its default-on on the next visit.
+  assert.equal(store.getItem('gridgame.flagquiz.showMap.all'), 'false');
+});
+
+// ---- getQuizLastMode / setQuizLastMode ----
+
+test('getQuizLastMode returns null when no value is stored', () => {
+  assert.equal(getQuizLastMode(fakeStore()), null);
+});
+
+test('setQuizLastMode + getQuizLastMode round-trips a known mode', () => {
+  const store = fakeStore();
+  setQuizLastMode(store, 'all');
+  assert.equal(getQuizLastMode(store), 'all');
+  assert.equal(store.getItem('gridgame.flagquiz.lastMode'), 'all');
+});
+
+test('getQuizLastMode returns null for a mode that no longer exists', () => {
+  // `10q` was a real mode until the Statistics deck went. A cached client
+  // can still have it stored; the caller must fall back to its own default
+  // rather than crash in targetFor.
+  const store = fakeStore({ 'gridgame.flagquiz.lastMode': '10q' });
+  assert.equal(getQuizLastMode(store), null);
+});
+
+test('setQuizLastMode silently drops an unknown mode key', () => {
+  // Same guard as setQuizLastVariant: better than poisoning localStorage
+  // with a value the getter would then reject on every load.
+  const store = fakeStore({ 'gridgame.flagquiz.lastMode': 'all' });
+  setQuizLastMode(store, 'blitz');
+  assert.equal(getQuizLastMode(store), 'all');
 });
 
 test('variantHasLeaderboard is true only for the All-countries variant', () => {

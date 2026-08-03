@@ -409,7 +409,7 @@
     "play": "Zagraj",
     "mode": {
       "60s": "60s",
-      "all": "wszystkie"
+      "all": "bez zegara"
     },
     "leaderboard": {
       "title": "Top 10: 7 dni",
@@ -423,6 +423,11 @@
       "aria": "Udostępnij wynik",
       "title": "Yet Another Quiz: {variant} {mode}, {score}",
       "text": "Pobijesz mnie?"
+    },
+    "settings": {
+      "aria": "Ustawienia rundy",
+      "whichFlags": "Które flagi",
+      "howLong": "Jak długo"
     }
   },
   "findFlag": {

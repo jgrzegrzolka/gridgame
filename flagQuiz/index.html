@@ -66,20 +66,66 @@
       <ul class="menu" id="quiz-menu"></ul>
     </nav>
     <h1 class="sr-only">Country flag quiz</h1>
-    <div id="game" hidden>
+    <!-- Click-away surface for the round-settings tray. Sits under the tray
+         and over everything else, so the first tap outside closes it instead
+         of landing on a flag tile. Sibling of #game rather than a child so it
+         also covers the chrome cluster. -->
+    <div class="round-tray-catcher" id="round-tray-catcher" hidden></div>
+    <!-- The play head: what you're playing on the left, how you're doing on
+         the right. The pill is the single home of both round settings —
+         it replaced the deck-icon popover, the scope label, the `60s | all`
+         links and the burger's deck pills + continent list.
+
+         It sits OUTSIDE #game so it survives the round: the burger no longer
+         carries a way to change pool or mode, so a pill that disappeared
+         with the play screen would leave the result screen with no way to
+         set up the next round at all. `.is-finished` hides the live
+         counters there, leaving just the pill.
+
+         Contents are painted by page.js; the tray's chips likewise. -->
+    <div class="play-head" id="play-head" data-clock="60s" hidden>
+      <button
+        type="button"
+        class="round-pill"
+        id="round-pill"
+        aria-expanded="false"
+        aria-controls="round-tray"
+        aria-label="Round settings"
+        data-i18n-attr="aria-label:quiz.settings.aria"
+      >
+        <span class="round-pill-ico" id="round-pill-ico" aria-hidden="true"></span>
+        <span class="round-pill-label" id="round-pill-label"></span>
+        <span class="round-pill-chev" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
+        </span>
+      </button>
       <p class="play-timer">
-        <!-- Deck indicator: says which deck you are in, and happens to be
-             tappable. Deliberately carries no affordance — the burger is the
-             discoverable path; this is a shortcut for people who poke at it.
-             Built by page.js so it can carry the popover. -->
-        <span class="deck-side" id="deck-side"></span>
-        <span class="play-mode" id="play-mode"></span>
-        <span class="mode-toggle" id="mode-toggle"></span>
+        <span class="play-score is-zero" id="play-score">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+          <span id="play-score-value">0</span>
+        </span>
+        <span class="play-sep" aria-hidden="true">·</span>
         <span id="play-time">0:00.000</span>
+        <span class="play-miss is-zero" id="play-miss">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+          <span id="play-miss-value">0</span>
+        </span>
       </p>
-      <p class="country-name" id="country-name" data-i18n="quiz.loading">Loading…</p>
-      <div class="choices" id="choices"></div>
-      <section id="flag-map-section" hidden aria-hidden="true"></section>
+      <div class="round-tray" id="round-tray" hidden>
+        <p class="round-tray-cap" data-i18n="quiz.settings.whichFlags">Which flags</p>
+        <div class="round-tray-chips" id="round-pools"></div>
+        <p class="round-tray-cap" data-i18n="quiz.settings.howLong">How long</p>
+        <div class="round-tray-chips" id="round-modes"></div>
+      </div>
+    </div>
+    <div id="game" hidden>
+      <!-- Everything the open tray dims and freezes. The map section is
+           re-parented out of here into #result when the round ends. -->
+      <div class="play-board" id="play-board">
+        <p class="country-name" id="country-name" data-i18n="quiz.loading">Loading…</p>
+        <div class="choices" id="choices"></div>
+        <section id="flag-map-section" hidden aria-hidden="true"></section>
+      </div>
       <nav class="dock" data-dock="playAgainInline giveUp home" data-home="../"></nav>
     </div>
     <section id="result" hidden>

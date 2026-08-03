@@ -1,6 +1,3 @@
-import { VARIANTS, resolveMode } from '../flags/quiz.js';
-import { DECKS, deckOf, variantsForDeck, deckHasScopes, defaultVariantForDeck } from '../flags/decks.js';
-import { deckIconHtml } from '../flags/deckIcons.js';
 import { t } from '../i18n.js';
 
 /**
@@ -10,91 +7,32 @@ import { t } from '../i18n.js';
  * menu doesn't morph as the user navigates within the feature. The
  * caller passes:
  *
- *   - `relativeBase`: '' for the quiz page (links are `?v=X&n=Y`,
- *     stats link is `stats/`); '../' for the stats sub-page (links are
- *     `../?v=X&n=Y`, stats link is `./`).
- *   - `currentVariantKey`: the variant the user is currently playing
- *     (quiz page), or null on stats. Marks the matching variant link
- *     with aria-current="page".
- *   - `currentMode`: the mode being played, carried onto every link so
- *     switching deck or continent doesn't silently drop you out of it.
- *     Null on stats, where there's no round in progress — those links
- *     take the default mode.
+ *   - `relativeBase`: '' for the quiz page (stats link is `stats/`);
+ *     '../' for the stats sub-page (stats link is `./`).
  *   - `statsCurrent`: true on the stats page. Marks the "Your stats"
  *     link with aria-current="page".
  *
+ * **What this menu deliberately no longer holds.** It used to open with a
+ * row of deck pills and, under them, the current deck's continent list —
+ * two of the four places the same two questions ("which flags?", "how
+ * long?") could be answered from. The round-settings pill on the play row
+ * now owns both, in one place, without a page load and without throwing
+ * away the round in progress. Duplicating them here would put the pill's
+ * answer and the burger's answer in two places that can disagree, and
+ * would keep the navigate-and-restart path alive next to the in-place one.
+ *
+ * What's left is what the pill genuinely doesn't cover: who you are, your
+ * history, and the coffee link.
+ *
  * The map's show/hide is driven entirely by the toggle chip on the map
  * itself (present as a "show" chip even on the collapsed strip), so the
- * burger menu carries no map toggle.
- *
- * The "Include territories & other flags" toggle used to be built here.
- * Feature V replaced it with the `weird` deck, which needs no wiring at
- * all: it's an ordinary `VARIANTS` entry, so the loops below render it as
- * a pill like every other deck.
+ * burger menu carries no map toggle either.
  *
  * @param {HTMLUListElement} menuEl
- * @param {{ relativeBase: string, currentVariantKey: string | null, currentMode?: string | null, statsCurrent: boolean }} opts
+ * @param {{ relativeBase: string, statsCurrent: boolean }} opts
  */
 export function buildQuizMenu(menuEl, opts) {
-  const { relativeBase, currentVariantKey, currentMode = null, statsCurrent } = opts;
-  const activeDeck = currentVariantKey ? deckOf(currentVariantKey) : null;
-  // One mode for every link on the menu. It used to be computed per link,
-  // because the Statistics deck didn't offer `all` and a blind carry-over
-  // would have dead-ended there; every remaining deck offers every mode, so
-  // the mode you're playing simply travels with you.
-  const mode = resolveMode(currentMode);
-
-  // ---- 1. deck pills ---- (no caption: the pills are self-evidently the deck
-  // switcher, and each carries its own icon + name)
-  const deckLi = document.createElement('li');
-  deckLi.className = 'menu-decks';
-  const pills = document.createElement('div');
-  pills.className = 'deck-pills';
-  for (const deck of DECKS) {
-    const fallback = defaultVariantForDeck(deck.id);
-    if (!fallback) continue;
-    // Tapping the LIT pill must not throw away your continent, so the active
-    // deck links at the variant you're on rather than its default.
-    const to = deck.id === activeDeck && currentVariantKey ? currentVariantKey : fallback;
-    const a = document.createElement('a');
-    a.className = 'pill deck-pill';
-    if (deck.id === activeDeck) a.classList.add('active');
-    a.href = `${relativeBase}?v=${to}&n=${mode}`;
-    const ico = document.createElement('span');
-    ico.className = 'deck-pill-ico';
-    ico.innerHTML = deckIconHtml(deck.id, { base: `${relativeBase}../` });
-    a.appendChild(ico);
-    a.appendChild(document.createTextNode(t(`deck.${deck.id}`, deck.label)));
-    pills.appendChild(a);
-  }
-  deckLi.appendChild(pills);
-  menuEl.appendChild(deckLi);
-
-  // ---- 2. the current deck's scopes, only when there IS a choice ----
-  // Under a single-variant deck (`weird`) the continents are absent, not
-  // disabled: there is genuinely nothing to pick. Derived from the deck's own
-  // shape, so a future world-only deck inherits it with no rule to remember.
-  if (activeDeck && deckHasScopes(activeDeck)) {
-    // No caption: the continent links speak for themselves. The first rendered
-    // scope carries the menu-divider (which the caption's <li> used to own), so
-    // the scope list still reads as its own group under the deck pills.
-    let firstScope = true;
-    for (const key of variantsForDeck(activeDeck)) {
-      const variant = VARIANTS[key];
-      if (!variant) continue;
-      const li = document.createElement('li');
-      if (firstScope) {
-        li.className = 'menu-divider';
-        firstScope = false;
-      }
-      const a = document.createElement('a');
-      a.href = `${relativeBase}?v=${key}&n=${mode}`;
-      a.textContent = t(`variant.${key}`, variant.label);
-      if (key === currentVariantKey) a.setAttribute('aria-current', 'page');
-      li.appendChild(a);
-      menuEl.appendChild(li);
-    }
-  }
+  const { relativeBase, statsCurrent } = opts;
 
   const statsLi = document.createElement('li');
   statsLi.className = 'menu-divider';

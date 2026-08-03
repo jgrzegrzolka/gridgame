@@ -2,9 +2,7 @@ import {
   createQuiz,
   VARIANTS,
   MODES,
-  availableModes,
   defaultModeFor,
-  resolveMode,
   isTimedMode,
   timedRemainingMs,
   timedBudgetUsedMs,
@@ -19,6 +17,8 @@ import {
   setQuizShowMap,
   getQuizLastVariant,
   setQuizLastVariant,
+  getQuizLastMode,
+  setQuizLastMode,
   pickCelebration,
   shouldShowBestTime,
   mistakesAfterGiveUp,
@@ -31,7 +31,13 @@ import { loadCountries } from '../flags/group.js';
 import { t, countryName } from '../i18n.js';
 import { runCelebration } from '../confetti.js';
 import { buildQuizMenu } from './menu.js';
-import { DECKS, deckOf, defaultVariantForDeck } from '../flags/decks.js';
+import {
+  poolOptions,
+  modeOptions,
+  roundPillModel,
+  roundQuery,
+  resolveRoundConfig,
+} from './roundSettings.js';
 import { deckIconHtml } from '../flags/deckIcons.js';
 import { QUIZ_MAP_CONFIG } from './mapConfig.js';
 import { mountNicknameMenuItem, shareUrl } from '../common.js';
@@ -134,11 +140,21 @@ export async function bootFlagQuiz() {
   const leaderboardTitleEl = document.getElementById('leaderboard-title');
   const leaderboardBodyEl = document.getElementById('leaderboard-body');
   const playTimerEl = document.getElementById('play-time');
-  const playModeEl = document.getElementById('play-mode');
-  const deckSideEl = document.getElementById('deck-side');
+  const playHeadEl = document.getElementById('play-head');
+  const playBoardEl = document.getElementById('play-board');
+  const playScoreEl = document.getElementById('play-score');
+  const playScoreValueEl = document.getElementById('play-score-value');
+  const playMissEl = document.getElementById('play-miss');
+  const playMissValueEl = document.getElementById('play-miss-value');
+  const roundPillEl = /** @type {HTMLButtonElement} */ (document.getElementById('round-pill'));
+  const roundPillIcoEl = document.getElementById('round-pill-ico');
+  const roundPillLabelEl = document.getElementById('round-pill-label');
+  const roundTrayEl = document.getElementById('round-tray');
+  const roundPoolsEl = document.getElementById('round-pools');
+  const roundModesEl = document.getElementById('round-modes');
+  const roundCatcherEl = document.getElementById('round-tray-catcher');
   const playAgainEl = /** @type {HTMLAnchorElement} */ (document.getElementById('play-again'));
   const progressBarEl = document.getElementById('progress-bar');
-  const modeToggleEl = document.getElementById('mode-toggle');
   const giveUpEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('give-up'));
   const playAgainInlineEl = /** @type {HTMLAnchorElement | null} */ (
     document.getElementById('play-again-inline')
@@ -183,58 +199,181 @@ export async function bootFlagQuiz() {
   primeAchievementsBaseline(deviceId);
 
   const params = new URLSearchParams(window.location.search);
-  const urlVariant = params.get('v');
-  const urlMode = params.get('n');
-  // Resolution order: explicit ?v= deep-link → player's last saved
-  // pick → first-visit picker. Last-pick memory means returning
-  // players land on the category they actually play, not "All
-  // countries" every time.
-  const savedVariant = getQuizLastVariant(window.localStorage);
-  const currentVariantKey = urlVariant && VARIANTS[urlVariant]
-    ? urlVariant
-    : (savedVariant ?? DEFAULT_VARIANT);
-  // Persist the resolved variant so the next bare-/flagQuiz/ visit lands
-  // here. Deep-link visits write through too — if a friend shares ?v=africa
-  // and you play it, that becomes your last pick. Feature V deleted the
-  // first-visit picker, so there is no longer a state where we withhold this:
-  // a bare visit starts DEFAULT_VARIANT and saving that is the truth.
-  setQuizLastVariant(window.localStorage, currentVariantKey);
+  // Resolution order per axis: explicit deep-link → player's last saved
+  // pick → default. Last-pick memory means returning players land on the
+  // category and the clock they actually play, not "All countries, 60s"
+  // every time. The two axes resolve independently (see resolveRoundConfig)
+  // so a shared `?v=europe` link no longer silently resets the mode.
+  let { variantKey: currentVariantKey, modeKey: currentModeKey } = resolveRoundConfig({
+    urlVariant: params.get('v'),
+    urlMode: params.get('n'),
+    savedVariant: getQuizLastVariant(window.localStorage),
+    savedMode: getQuizLastMode(window.localStorage),
+    defaultVariant: DEFAULT_VARIANT,
+    defaultMode: defaultModeFor(),
+  });
 
-  // Click-away + Escape close the deck popover, matching colorCountPicker's
-  // behaviour. Bound once on the document rather than per-render, so
-  // re-rendering the indicator each round can't stack listeners.
-  //
-  // MUST stay above the `return fetch(...)` below. These are statements, not
-  // function declarations, so they don't hoist: sitting after the return they
-  // were unreachable and the popover simply never closed. Nothing catches
-  // that — it typechecks, it tests, it just quietly does nothing.
-  document.addEventListener('click', () => {
-    if (deckSideEl) deckSideEl.classList.remove('is-expanded');
+  /** The live round's handle — set by `launch`, replaced on every restart. */
+  /** @type {{ refreshI18n: () => void, teardown: () => void, pause: () => void, resume: () => void } | null} */
+  let game = null;
+  /** The full country list, once fetched. Every restart reuses it. */
+  /** @type {Country[]} */
+  let countries = [];
+
+  // ── Round-settings tray ──────────────────────────────────────────
+  // Opening it PAUSES the round rather than ending it: `game.pause()` stops
+  // the clock and stops picks registering, and the board dims behind the
+  // panel. That is the whole behavioural point of the pill — the old paths
+  // (a burger link, a popover link) all navigated, which threw away
+  // whatever round you were in the middle of just to look at your options.
+  let trayOpen = false;
+
+  function setTrayOpen(open) {
+    if (open === trayOpen) return;
+    trayOpen = open;
+    roundPillEl.setAttribute('aria-expanded', String(open));
+    // On the body, not on #game: the counters and the progress bar both live
+    // outside the play panel, and all three surfaces recede together.
+    document.body.classList.toggle('is-tray-open', open);
+    progressBarEl.classList.toggle('is-paused', open);
+    roundCatcherEl.hidden = !open;
+    if (open) {
+      roundTrayEl.hidden = false;
+      // Drop `hidden` first, then add the class on the next frame: an
+      // element going from `display:none` straight to its open state has
+      // no starting style to transition FROM, so the panel would snap in.
+      window.requestAnimationFrame(() => {
+        if (trayOpen) roundTrayEl.classList.add('is-open');
+      });
+      if (game) game.pause();
+    } else {
+      roundTrayEl.classList.remove('is-open');
+      // Keep it out of the tab order once the fade has finished, and only
+      // if it hasn't been reopened in the meantime.
+      window.setTimeout(() => {
+        if (!trayOpen) roundTrayEl.hidden = true;
+      }, 240);
+      if (game) game.resume();
+    }
+  }
+
+  // Drop the penalty-flash class once the keyframes finish, so the next
+  // wrong click can restart the animation cleanly via reflow. Bound once
+  // here rather than per round: `startGame` runs again on every settings
+  // change now, and a per-round binding would stack a listener each time.
+  playTimerEl.addEventListener('animationend', () => {
+    playTimerEl.classList.remove('penalty');
   });
+
+  roundPillEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setTrayOpen(!trayOpen);
+  });
+  roundCatcherEl.addEventListener('click', () => setTrayOpen(false));
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && deckSideEl) deckSideEl.classList.remove('is-expanded');
+    if (e.key === 'Escape' && trayOpen) {
+      setTrayOpen(false);
+      roundPillEl.focus();
+    }
   });
+
+  /** Paint the pill: which pool, which clock, and the deck's icon. */
+  function renderPill() {
+    const { deck, label } = roundPillModel({
+      variantKey: currentVariantKey, modeKey: currentModeKey, t,
+    });
+    roundPillIcoEl.innerHTML = deckIconHtml(deck, { base: '../' });
+    roundPillLabelEl.textContent = label;
+  }
+
+  /**
+   * Paint the tray's two chip rows.
+   *
+   * No confirm step: the chip IS the change. `pick` restarts the round on
+   * the new setting immediately and leaves the tray open, so changing both
+   * pool and clock is two taps rather than four.
+   */
+  function renderTray() {
+    roundPoolsEl.innerHTML = '';
+    for (const opt of poolOptions(currentVariantKey)) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = opt.active ? 'pill active' : 'pill';
+      // Only pools that are a different KIND of question carry an icon —
+      // see `poolOptions`. The seven continent chips are deliberately bare.
+      if (opt.marked) {
+        const ico = document.createElement('span');
+        ico.className = 'round-chip-ico';
+        ico.innerHTML = deckIconHtml(opt.deck, { base: '../' });
+        chip.appendChild(ico);
+      }
+      chip.appendChild(document.createTextNode(
+        t(`variant.${opt.key}`, VARIANTS[opt.key].label),
+      ));
+      chip.addEventListener('click', () => launch(opt.key, currentModeKey));
+      roundPoolsEl.appendChild(chip);
+    }
+
+    roundModesEl.innerHTML = '';
+    for (const opt of modeOptions(currentModeKey)) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = opt.active ? 'pill active' : 'pill';
+      chip.textContent = t(`quiz.mode.${opt.key}`, opt.key);
+      chip.addEventListener('click', () => launch(currentVariantKey, opt.key));
+      roundModesEl.appendChild(chip);
+    }
+  }
+
+  /**
+   * Start a round on a configuration, tearing down whatever was running.
+   *
+   * This is the seam the pill needed: settings used to change by navigating
+   * to `?v=…&n=…` and letting a page load do the resetting, which is why
+   * `startGame` could get away with never cleaning up after itself. Now the
+   * only navigation left is the initial load, and every subsequent
+   * configuration change comes through here.
+   *
+   * The address bar is kept in step with `replaceState` — not for
+   * navigation, but because the share button copies `location.href` and
+   * "Play again" is a plain link to it. Without this, sharing after two chip
+   * taps would send a friend to the round you started on, not the one you
+   * played.
+   *
+   * @param {string} key   variant to play
+   * @param {string} mode  mode to play it in
+   */
+  function launch(key, mode) {
+    if (game) game.teardown();
+    currentVariantKey = key;
+    currentModeKey = mode;
+    setQuizLastVariant(window.localStorage, key);
+    setQuizLastMode(window.localStorage, mode);
+    window.history.replaceState(null, '', roundQuery(key, mode));
+    renderPill();
+    renderTray();
+    game = startGame(key, mode, countries);
+    // The tray stays open across a chip tap, so the round it just started
+    // has to come up paused — otherwise the new clock would be running
+    // behind a dimmed board the player can't act on, and a second chip tap
+    // would cost them the seconds they spent deciding.
+    if (trayOpen) game.pause();
+  }
 
   return fetch('../flags/countries.json')
     .then((r) => r.json())
     .then(loadCountries)
     .then((raw) => {
+      countries = raw;
 
       // Re-buildable menu — rebuilds clear `menuEl.innerHTML` first so
-      // a soft language switch doesn't double the variant list. The
-      // nickname "Your name: …" item is re-inserted after each rebuild
-      // for the same reason; without that, the first langchanged would
-      // wipe it.
-      // Set once the round starts (below); holds the live game's
-      // language-refresh hook.
-      /** @type {{ refreshI18n: () => void } | null} */
-      let game = null;
+      // a soft language switch doesn't double the items. The nickname
+      // "Your name: …" item is re-inserted after each rebuild for the same
+      // reason; without that, the first langchanged would wipe it.
       const rebuildMenu = () => {
         /** @type {HTMLUListElement} */ (quizMenuEl).innerHTML = '';
         buildQuizMenu(/** @type {HTMLUListElement} */ (quizMenuEl), {
           relativeBase: '',
-          currentVariantKey,
-          currentMode: resolveMode(urlMode),
           statsCurrent: false,
         });
         mountNicknameMenuItem({
@@ -244,100 +383,17 @@ export async function bootFlagQuiz() {
       };
       rebuildMenu();
 
-
-      const variantKey = currentVariantKey;
-      const modeKey = resolveMode(urlMode);
-
-      game = startGame(variantKey, modeKey, raw);
+      launch(currentVariantKey, currentModeKey);
       document.addEventListener('langchanged', () => {
         rebuildMenu();
+        renderPill();
+        renderTray();
         game.refreshI18n();
       });
     })
     .catch((err) => {
       document.body.textContent = `${t('game.failedToLoad', 'Failed to load:')} ${err.message}`;
     });
-
-  /**
-   * The play row's deck indicator: one icon, plus a popover to change deck.
-   *
-   * Mechanism is `.color-count-side` / `.color-count-options` from common.css
-   * — the same dropdown `colorCountPicker.js` uses — rather than a new
-   * component. The parked design called for exactly that promotion.
-   *
-   * No affordance by design (Jan: "it does not need to indicate that its
-   * clickable... we can keep screen cleaner"). That's sound only because the
-   * burger remains a full path to every deck: this is a shortcut, and anyone
-   * who never discovers it loses nothing.
-   *
-   * @param {string} key   current variant
-   * @param {string} mode  current mode, carried across a deck switch
-   */
-  function renderDeckIndicator(key, mode) {
-    if (!deckSideEl) return;
-    const active = deckOf(key);
-    deckSideEl.innerHTML = '';
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'deck-ind';
-    btn.innerHTML = deckIconHtml(active, { className: 'deck-ind-art' });
-    btn.setAttribute('aria-label', t('menu.deck', 'Deck') + ': ' + t(`deck.${active}`, active));
-    btn.setAttribute('aria-expanded', 'false');
-    deckSideEl.appendChild(btn);
-
-    const opts = document.createElement('span');
-    opts.className = 'deck-options';
-    for (const deck of DECKS) {
-      const to = defaultVariantForDeck(deck.id);
-      if (!to) continue;
-      // Carry the player's mode across the switch. Every deck offers every
-      // mode, so there is nothing to fall back from — the guard that used to
-      // sit here existed for the Statistics deck, which was 60s-only.
-      const a = document.createElement('a');
-      a.className = 'deck-opt';
-      a.href = `?v=${deck.id === active ? key : to}&n=${mode}`;
-      a.title = t(`deck.${deck.id}`, deck.label);
-      if (deck.id === active) a.setAttribute('aria-current', 'true');
-      a.innerHTML = deckIconHtml(deck.id, { className: 'deck-opt-art' });
-      opts.appendChild(a);
-    }
-    deckSideEl.appendChild(opts);
-
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = deckSideEl.classList.toggle('is-expanded');
-      btn.setAttribute('aria-expanded', String(open));
-    });
-  }
-
-  function renderModeToggle(key, mode) {
-    modeToggleEl.innerHTML = '';
-    // Reads `availableModes` rather than taking a list: every deck offers every
-    // mode, so both callers passed the same value. The "fewer than two, render
-    // nothing" guard that used to sit here went with the Statistics deck — it
-    // was the only variant that could ever have produced a one-mode row.
-    availableModes().forEach((m, i) => {
-      if (i > 0) {
-        const sep = document.createElement('span');
-        sep.className = 'mode-sep';
-        sep.textContent = '|';
-        modeToggleEl.appendChild(sep);
-      }
-      const label = t(`quiz.mode.${m}`, m);
-      if (m === mode) {
-        const span = document.createElement('span');
-        span.className = 'mode-current';
-        span.textContent = label;
-        modeToggleEl.appendChild(span);
-      } else {
-        const a = document.createElement('a');
-        a.href = `?v=${key}&n=${m}`;
-        a.textContent = label;
-        modeToggleEl.appendChild(a);
-      }
-    });
-  }
 
   function startGame(key, mode, raw) {
     const pool = poolFor(key, raw);
@@ -347,15 +403,14 @@ export async function bootFlagQuiz() {
     const modeDef = MODES[mode];
     const budgetMs = timed && modeDef.kind === 'timed' ? modeDef.budgetMs : 0;
     const penaltyMs = timed && modeDef.kind === 'timed' ? modeDef.penaltyMs : 0;
-    // The scope label keeps its original job: it says WHERE you are, and is
-    // empty on a deck's default variant so the row stays quiet. The deck
-    // indicator beside it says WHICH GAME — the one thing the screen can't
-    // otherwise tell you, since Flags and Weird flags render identically.
-    playModeEl.textContent = key === defaultVariantForDeck(deckOf(key))
-      ? ''
-      : t(`variant.${key}`, VARIANTS[key].label);
-    renderDeckIndicator(key, mode);
-    renderModeToggle(key, mode);
+    // Which cost the play row reports: the clock in 60s, the mistake count
+    // when there is none. Read by CSS rather than branched over in JS, so
+    // there is one place that knows the row has two layouts.
+    playHeadEl.dataset.clock = timed ? '60s' : 'all';
+    // The head outlives individual rounds (it holds the settings pill), so
+    // each round has to un-finish it rather than assume a fresh document.
+    playHeadEl.hidden = false;
+    playHeadEl.classList.remove('is-finished');
 
     let currentAnswer = null;
     let wrongCount = 0;
@@ -364,6 +419,21 @@ export async function bootFlagQuiz() {
     let gaveUp = false;
     const startTime = Date.now();
     let timerRaf = 0;
+    /** Pending `advanceTo` timer, so a restart doesn't render into a dead round. */
+    let advanceTimer = 0;
+
+    // ── Pause ────────────────────────────────────────────────────────
+    // Opening the settings tray stops the round without ending it. The
+    // timer is wall-clock (`Date.now() - startTime`), so pausing means
+    // banking the time spent paused and subtracting it — freezing the rAF
+    // instead would drift, because the clock would resume from wherever
+    // real time had moved to.
+    let pausedMs = 0;
+    let pausedAt = 0;
+    /** Elapsed play time, excluding anything spent with the tray open. */
+    function playElapsedMs() {
+      return (pausedAt || Date.now()) - startTime - pausedMs;
+    }
 
     /** @type {SVGElement | null} */
     let mapSvg = null;
@@ -654,22 +724,27 @@ export async function bootFlagQuiz() {
     }
 
     /**
-     * Single entry point for the in-map toggle chip. Persists the choice to
-     * the shared `gridgame.flagquiz.showMap` key and applies it live. The
-     * chip on the map (a "show" chip even on the collapsed strip) is the
-     * only show/hide control, so there's no burger toggle to keep in sync.
+     * Single entry point for the in-map toggle chip. Persists the choice
+     * against THIS MODE's `gridgame.flagquiz.showMap.<mode>` key and applies
+     * it live. The chip on the map (a "show" chip even on the collapsed
+     * strip) is the only show/hide control, so there's no burger toggle to
+     * keep in sync.
+     *
+     * Per mode, because the two modes want opposite things: in 60s the map
+     * is a distraction you pay for in seconds, with no clock it's the point.
+     * A single preference could only ever be right for one of them.
      * @param {boolean} show
      */
     function applyMapPreference(show) {
-      setQuizShowMap(localStorage, show);
+      setQuizShowMap(localStorage, mode, show);
       setMapVisible(show);
     }
 
     // Initial paint: for any variant that has a map, show the live map or
-    // the collapsed toggle chip per the saved preference. Variants with no
-    // map asset leave the section hidden.
+    // the collapsed toggle chip per this mode's saved preference. Variants
+    // with no map asset leave the section hidden.
     if (QUIZ_MAP_CONFIG[key]) {
-      if (isQuizShowMap()) mountMap();
+      if (isQuizShowMap(localStorage, mode)) mountMap();
       else renderCollapsedMap();
     }
 
@@ -725,11 +800,6 @@ export async function bootFlagQuiz() {
     // dwindling timer rather than the meaningless "questions done" ratio.
     if (timed) {
       progressBarEl.style.transform = 'scaleX(0)';
-      // Drop the flash class once the keyframes finish, so the next
-      // wrong click can restart the animation cleanly via reflow.
-      playTimerEl.addEventListener('animationend', () => {
-        playTimerEl.classList.remove('penalty');
-      });
     }
 
     function flashPenalty() {
@@ -740,11 +810,25 @@ export async function bootFlagQuiz() {
       playTimerEl.classList.add('penalty');
     }
 
+    /** How many the player has, and what it has cost them so far. */
+    function paintCounters() {
+      playScoreValueEl.textContent = String(answeredCount);
+      playMissValueEl.textContent = String(wrongCount);
+      // Zero isn't news — it drops to grey rather than sitting in a verdict
+      // colour for a round that has produced no verdict yet.
+      playScoreEl.classList.toggle('is-zero', answeredCount === 0);
+      playMissEl.classList.toggle('is-zero', wrongCount === 0);
+    }
+
+    /** Last ten seconds of the budget — the one point the clock changes meaning. */
+    const LOW_TIME_MS = 10_000;
+
     function tickTimer() {
       if (timed) {
-        const elapsedMs = Date.now() - startTime;
+        const elapsedMs = playElapsedMs();
         const remaining = timedRemainingMs({ budgetMs, penaltyMs, elapsedMs, wrongCount });
         playTimerEl.textContent = formatTime(remaining);
+        playTimerEl.classList.toggle('is-low', remaining < LOW_TIME_MS);
         // Drive the bar with `transform: scaleX` (not `width`): scaleX is a
         // compositor-only property, so updating it every frame is smooth and
         // costs no layout — where a per-frame `width` write would relayout /
@@ -757,7 +841,7 @@ export async function bootFlagQuiz() {
           return;
         }
       } else {
-        playTimerEl.textContent = formatTime(Date.now() - startTime);
+        playTimerEl.textContent = formatTime(playElapsedMs());
       }
       timerRaf = requestAnimationFrame(tickTimer);
     }
@@ -812,23 +896,32 @@ export async function bootFlagQuiz() {
       }
     }
 
+    // The handle is kept so `teardown` can cancel a pending advance: a
+    // settings change mid-reveal would otherwise fire ~1.2s later and render
+    // the OLD round's next question into the new round's grid.
     function advanceTo(nextQ, delayMs) {
       if (!nextQ) {
-        setTimeout(() => {
+        advanceTimer = window.setTimeout(() => {
           if (!gameOver) {
             gameOver = true;
             showResult();
           }
         }, delayMs);
       } else {
-        setTimeout(() => { if (!gameOver) render(nextQ); }, delayMs);
+        advanceTimer = window.setTimeout(() => { if (!gameOver) render(nextQ); }, delayMs);
       }
     }
 
     function onAnswer(chosen, tile) {
       if (gameOver) return;
+      // A paused round takes no picks. `pointer-events: none` on the dimmed
+      // board already stops the mouse, but a keyboard user can still reach a
+      // focused tile with Enter, and a tap that lands in the same frame the
+      // tray opens would otherwise burn a question the player never saw.
+      if (pausedAt) return;
       if (chosen.code === currentAnswer.code) {
         answeredCount++;
+        paintCounters();
         if (!timed) {
           progressBarEl.style.transform = `scaleX(${countModeProgressRatio(answeredCount, wrongCount, target)})`;
         }
@@ -848,6 +941,7 @@ export async function bootFlagQuiz() {
         // still applies so random clickers are punished by lost
         // budget.
         wrongCount++;
+        paintCounters();
         tile.classList.add('wrong');
         // Overlay the wrong country's name on the tile itself — the
         // .flag-choice.wrong[data-name]::after rule paints a strip
@@ -874,6 +968,7 @@ export async function bootFlagQuiz() {
         // advance to a fresh 4-flag set. This keeps mistakes <= target,
         // which lets the result/stats screens render as "correct/target".
         wrongCount++;
+        paintCounters();
         tile.classList.add('wrong');
         // Overlay the wrong-pick name on the tile (same strip pattern
         // as timed mode above) so the player sees what they clicked
@@ -999,7 +1094,9 @@ export async function bootFlagQuiz() {
 
     function showResult() {
       cancelAnimationFrame(timerRaf);
-      const elapsed = Date.now() - startTime;
+      // Excludes anything spent with the settings tray open — a paused
+      // round must not bank the pause as playing time, in either mode.
+      const elapsed = playElapsedMs();
 
       // Global leaderboards exist only for the "All countries" variant — the
       // small player base left every continent board empty, and each continent
@@ -1177,39 +1274,108 @@ export async function bootFlagQuiz() {
       gameEl.hidden = true;
       progressBarEl.hidden = true;
       resultEl.hidden = false;
+      // Keep the pill, drop the counters — see `.play-head.is-finished`.
+      playHeadEl.classList.add('is-finished');
     }
 
+    // Both "play again" links point at the round's own URL, which `launch`
+    // has just written with replaceState — so they replay what you're
+    // actually playing, not what you arrived on.
     playAgainEl.href = window.location.pathname + window.location.search;
     if (playAgainInlineEl) {
       playAgainInlineEl.href = window.location.pathname + window.location.search;
     }
 
-    if (giveUpEl) {
-      giveUpEl.addEventListener('click', () => {
-        if (gameOver) return;
-        gameOver = true;
-        gaveUp = true;
-        wrongCount = mistakesAfterGiveUp({ modeKey: mode, target, answeredCount, wrongCount });
-        showResult();
-      }, { once: true });
+    // Not `{ once: true }` any more: the listener has to be removable, because
+    // a settings change replaces the round underneath it and the old closure
+    // would otherwise still be holding a live reference to the dead round's
+    // counters. `teardown` detaches it.
+    function onGiveUp() {
+      if (gameOver) return;
+      gameOver = true;
+      gaveUp = true;
+      wrongCount = mistakesAfterGiveUp({ modeKey: mode, target, answeredCount, wrongCount });
+      showResult();
     }
+    if (giveUpEl) giveUpEl.addEventListener('click', onGiveUp);
 
     gameEl.hidden = false;
+    paintCounters();
     tickTimer();
     render(quiz.next());
 
     return {
       /**
+       * Freeze the round. The clock stops accruing (see `playElapsedMs`),
+       * `onAnswer` stops accepting picks, and the board dims via the
+       * `.is-tray-open` class the caller sets. Idempotent.
+       */
+      pause() {
+        if (gameOver || pausedAt) return;
+        pausedAt = Date.now();
+      },
+      /** Resume, banking however long the pause lasted. Idempotent. */
+      resume() {
+        if (!pausedAt) return;
+        pausedMs += Date.now() - pausedAt;
+        pausedAt = 0;
+      },
+
+      /**
+       * Stop this round and give back every surface it had claimed, so
+       * `launch` can start the next one into a clean page.
+       *
+       * This exists because settings changes stopped being navigations. A
+       * page load used to be the teardown: new document, new listeners, new
+       * timers. Everything below is one of those the browser used to do for
+       * us — miss one and it leaks into the next round (a stray rAF driving
+       * two clocks, a queued `advanceTo` painting a dead question, the map
+       * of the pool you just left).
+       */
+      teardown() {
+        gameOver = true;
+        cancelAnimationFrame(timerRaf);
+        if (revealRaf) { window.cancelAnimationFrame(revealRaf); revealRaf = 0; }
+        window.clearTimeout(advanceTimer);
+        if (mapZoomHandle) mapZoomHandle.teardown();
+        mapZoomHandle = null;
+        mapSvg = null;
+        if (giveUpEl) giveUpEl.removeEventListener('click', onGiveUp);
+
+        // The map section is re-parented into #result when a round ends;
+        // put it back where the play screen expects it before the next
+        // round mounts into it.
+        if (flagMapEl && flagMapEl.parentElement === resultEl) {
+          playBoardEl.appendChild(flagMapEl);
+        }
+        if (flagMapEl) flagMapEl.classList.remove('is-finished');
+
+        // Result panel back to its unpainted state — otherwise finishing a
+        // round, changing the pool, and finishing again would show the new
+        // score under the old leaderboard.
+        resultEl.hidden = true;
+        leaderboardEl.hidden = true;
+        leaderboardBodyEl.innerHTML = '';
+        finalScoreLineEl.style.color = '';
+        timeEl.textContent = '';
+        bestEl.textContent = '';
+        const shareBtn = document.getElementById('result-share');
+        if (shareBtn) shareBtn.remove();
+
+        progressBarEl.hidden = false;
+        progressBarEl.style.transform = 'scaleX(0)';
+        playTimerEl.classList.remove('penalty', 'is-low');
+      },
+
+      /**
        * Soft language switch: re-translate every text surface this
-       * game owns. Mid-round → play-mode label + mode-toggle links +
-       * the current country prompt re-paint. Post-round → result
-       * screen labels re-paint from the captured `resultLabelData`.
-       * The timer keeps running (in 60s mode this is the intended
-       * behaviour — the lang flip doesn't pause the budget).
+       * game owns. Mid-round → the current country prompt re-paints
+       * (the pill and tray are the caller's, and it repaints those).
+       * Post-round → result screen labels re-paint from the captured
+       * `resultLabelData`. The timer keeps running (in 60s mode this is
+       * the intended behaviour — the lang flip doesn't pause the budget).
        */
       refreshI18n() {
-        playModeEl.textContent = t(`variant.${key}`, VARIANTS[key].label);
-        renderModeToggle(key, mode);
         if (currentQ) paintPrompt(currentQ);
         paintResultLabels();
         // The share button itself stays mounted across a lang switch —

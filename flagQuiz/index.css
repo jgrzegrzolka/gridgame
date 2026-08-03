@@ -124,10 +124,23 @@ body {
     min-width: 0;
   }
 }
+/* ── Play head ─────────────────────────────────────────────────────
+ * What you're playing (left) against how you're doing (right), on one row.
+ * Anchored `relative` because the settings tray hangs off its bottom edge.
+ * Matches the answer grid's width so the pill's left edge lines up with the
+ * first flag tile and the tray opens exactly over the board it will replace. */
+.play-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(90vw, 480px);
+  margin: 0 auto 12px;
+}
 .play-timer {
-  font-size: 14px;
-  color: var(--muted-color);
-  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--primary-color);
+  margin: 0 0 0 auto;
   font-variant-numeric: tabular-nums;
   /* A flex row, not a text line. It was `text-align: center` while everything
    * in it was text — fine then, wrong once Feature V put a flag thumbnail
@@ -137,18 +150,260 @@ body {
    * bottom pinned to the text baseline and it floated ~3.5px high.
    * `vertical-align: middle` improves it but still misses by ~2px, because CSS
    * "middle" means baseline + half x-height, not the text's true centre.
-   * Centring on the cross axis is exact, and costs nothing: the row stays
-   * centred (body is already a column flex with align-items: center) and gets
-   * 2px shorter. */
+   * Centring on the cross axis is exact, and costs nothing. */
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
 }
-/* Wrong-pick penalty flash in the 60s mode — the -3s jump on the
+
+/* ── Live counters ─────────────────────────────────────────────────
+ * Two readings of the same round, and only ever two things on the row: how
+ * many you have got, and what it is costing you. In 60s that cost is the
+ * clock; with no clock it is the mistake count, which is what the score is
+ * computed from in that mode. Each swaps out with `[data-clock]` below, so
+ * the row never shows a number the mode can't act on. */
+.play-score,
+.play-miss {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 200ms ease;
+}
+.play-score {
+  color: var(--correct-color);
+}
+.play-miss {
+  color: var(--wrong-color);
+}
+/* Nothing scored / nothing missed yet: the number is still true but it isn't
+   news, so it drops to the quiet grey rather than sitting there in a verdict
+   colour for a round that has no verdict yet. */
+.play-score.is-zero,
+.play-miss.is-zero {
+  color: var(--muted-color);
+}
+.play-score svg,
+.play-miss svg {
+  display: block;
+}
+.play-sep {
+  color: var(--muted-soft-color);
+}
+/* The clock reddens for the last ten seconds — the one place on this row a
+   number changes meaning rather than value. */
+#play-time.is-low {
+  color: var(--wrong-color);
+}
+/* Which cost the row is showing. Driven off the head rather than each span so
+   the mode switch is one class write, and the separator can hide with the
+   clock in the no-clock layout. */
+.play-head[data-clock="60s"] .play-miss,
+.play-head[data-clock="all"] #play-time {
+  display: none;
+}
+
+/* ── Round-settings pill ───────────────────────────────────────────
+ * One visible control for the two questions a round has: which flags, and
+ * how long. It replaced four hidden places that each answered one of them —
+ * the burger's deck pills and continent list, the play row's deck-icon
+ * popover, and the play row's `60s | all` links.
+ *
+ * Reads as a control at rest (unlike the deck indicator it replaced, which
+ * was deliberately affordance-free because the burger was the discoverable
+ * path — that path is gone, so this one has to announce itself). */
+.round-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 60%;
+  box-sizing: border-box;
+  padding: 6px 8px 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--primary-color);
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.round-pill:hover,
+.round-pill[aria-expanded="true"] {
+  background: var(--hover-color);
+  border-color: var(--muted-color);
+}
+.round-pill:focus-visible {
+  outline: 2px solid var(--accent-rose);
+  outline-offset: 2px;
+}
+.round-pill-ico {
+  flex: none;
+  width: 22px;
+  height: 16px;
+  display: block;
+}
+.round-pill-ico img,
+.round-pill-ico svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px;
+  /* Flag artwork carries its own colours, so the thumb is framed with the
+     same 1px inset the game tiles use rather than tinted. */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.round-pill-label {
+  flex: 1;
+  min-width: 0;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.round-pill-chev {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-color);
+  transition:
+    transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    color 150ms ease;
+}
+.round-pill-chev svg {
+  display: block;
+}
+.round-pill:hover .round-pill-chev,
+.round-pill[aria-expanded="true"] .round-pill-chev {
+  color: var(--primary-color);
+}
+.round-pill[aria-expanded="true"] .round-pill-chev {
+  transform: rotate(180deg);
+}
+
+/* ── Round-settings tray ───────────────────────────────────────────
+ * Hangs off the pill's bottom edge, over the board. No confirm step: a chip
+ * IS the change, and the tray stays open afterwards so a second change is
+ * another single tap rather than pill → chip → pill → chip. */
+.round-tray {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(43, 29, 36, 0.14);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 240ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* `hidden` is the closed state, so the tray is out of the tab order and out
+   of the accessibility tree when shut. `.is-open` is added a frame after the
+   attribute is dropped, which is what gives the transition something to run
+   from. */
+.round-tray[hidden] {
+  display: none;
+}
+.round-tray.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+.round-tray-cap {
+  margin: 0;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+}
+.round-tray-cap + .round-tray-chips {
+  padding-top: 11px;
+}
+.round-tray-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.round-tray-chips + .round-tray-cap {
+  padding-top: 16px;
+}
+/* The chips are `.pill` from common.css — the same control the burger used
+   for decks and findFlag uses for filters. Only the flag thumb in front of
+   the label is local. */
+.round-chip-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 12px;
+}
+.round-chip-ico img,
+.round-chip-ico svg {
+  width: 16px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 1px;
+  display: block;
+}
+.round-tray-catcher {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+}
+.round-tray-catcher[hidden] {
+  display: none;
+}
+
+/* ── Board, while the tray is open ─────────────────────────────────
+ * Touching the settings pauses the round rather than killing it: the clock
+ * stops, picks stop registering, and the board recedes so the tray is
+ * unambiguously the thing you are looking at. Close it and the round is
+ * exactly where you left it. */
+.play-board {
+  transition: opacity 200ms ease;
+}
+body.is-tray-open .play-board {
+  opacity: 0.28;
+  pointer-events: none;
+}
+body.is-tray-open .play-score,
+body.is-tray-open .play-miss,
+body.is-tray-open #play-time {
+  color: var(--muted-color);
+}
+/* The round is over: the pill stays (it's the only way to set up the next
+   one) but the live counters have nothing left to count — the result screen
+   below states the score properly. */
+.play-head.is-finished .play-timer {
+  display: none;
+}
+/* The bar is a fixed element outside #game, so it can't be reached by a
+   selector rooted at the open tray — page.js toggles this class alongside. */
+.progress-bar.is-paused {
+  opacity: 0.35;
+}
+/* Wrong-pick penalty flash in the 60s mode — the -4s jump on the
    countdown is too subtle without it. inline-block lets the transform
-   take hold; the keyframes hold pink+big at the start then ease back
-   to the muted rest colour. Brand secondary (pink), not red, per the
-   palette rule of only --primary / --secondary / --muted. */
+   take hold; the keyframes hold pink+big at the start then ease back.
+   Brand secondary (pink), not red: this is the clock reacting, not a
+   verdict on the answer — the tile already carries that.
+
+   The 100% stop names no colour ON PURPOSE. Omitting it interpolates back
+   to whatever the element's own colour currently is, which is the only way
+   the flash lands correctly in both states: primary in the body of the
+   round, and `--wrong-color` once `.is-low` has taken over inside the last
+   ten seconds. Pinning an explicit end colour made a late-round penalty
+   fade to primary and then snap back to red. */
 #play-time {
   display: inline-block;
 }
@@ -158,172 +413,7 @@ body {
 @keyframes penalty-flash {
   0%   { color: var(--secondary-color); transform: scale(1.5); }
   35%  { color: var(--secondary-color); transform: scale(1.5); }
-  100% { color: var(--muted-color);     transform: scale(1); }
-}
-.play-mode:not(:empty)::after {
-  content: "·";
-  padding: 0 8px;
-}
-.mode-toggle:not(:empty)::after {
-  content: "·";
-  padding: 0 8px;
-}
-.mode-toggle a {
-  color: var(--link-color);
-  text-decoration: none;
-}
-.mode-toggle a:hover {
-  text-decoration: underline;
-}
-.mode-toggle .mode-current {
-  color: var(--primary-color);
-  font-weight: var(--weight-regular);
-}
-/* ── Deck indicator (play row) ─────────────────────────────────────
- * One icon saying which deck you're in. It is tappable but carries NO
- * affordance on purpose: the burger is the discoverable path to every deck,
- * so this is a shortcut and nobody who misses it is stuck.
- *
- * It earns its place on a narrow but real job: Flags and Weird flags render
- * IDENTICALLY — four flag tiles either way — and nothing else on screen says
- * whether you're in the 195-flag country pool or the 54-flag territory one.
- * That one disambiguation is the whole reason this exists, which is exactly
- * why it should stay quiet.
- *
- * Mechanism is common.css's `.color-count-side` / `.color-count-options`
- * (consumer: colorCountPicker.js) — same dropdown, not a new one. */
-.deck-side {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  /* `.play-timer` centres this on its cross axis (see there for why it had to
-   * become a flex row). `vertical-align` is left at its default deliberately:
-   * it does nothing to a flex item, and setting it would only mislead the next
-   * reader into thinking it's load-bearing. */
-}
-.deck-side::after {
-  content: "·";
-  padding: 0 8px;
-}
-.deck-ind {
-  border: 0;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  line-height: 0;
-  border-radius: 3px;
-}
-/* Keyboard focus still needs a mark even though pointer users get none —
-   the no-affordance rule is about resting state, not accessibility. */
-.deck-ind:focus-visible {
-  outline: 2px solid var(--accent-rose);
-  outline-offset: 2px;
-}
-/* Flag artwork carries its own colours (like every flags/svg/*.svg), so the
-   thumb is framed with the same 1px inset the game tiles use rather than
-   tinted. 24×18 was matched to Flag Party's setup-row thumbnail, which has since
-   been retired with the custom-setup panel — this box is now its own reference. */
-.deck-ind .deck-ind-art {
-  width: 24px;
-  height: 18px;
-  object-fit: cover;
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
-  display: block;
-}
-
-/* Popover — floats below the icon, sized by content so it never widens the
-   row. Mirrors .color-count-options exactly. */
-.deck-options {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  gap: 2px;
-  padding: 4px;
-  background: var(--surface-color);
-  border: 1px solid var(--muted-soft-color);
-  border-radius: 8px;
-  white-space: nowrap;
-  z-index: 10;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-.deck-side.is-expanded .deck-options {
-  display: inline-flex;
-}
-.deck-opt {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.deck-opt:hover {
-  background: var(--hover-color);
-}
-.deck-opt[aria-current="true"] {
-  background: var(--selected-color);
-}
-/* A shared box, so however each icon's artwork is made the options keep the
-   same footprint and read as one row. Both remaining decks are flag artwork,
-   which already matches; the rule stays because the box is what makes that
-   true rather than a coincidence of the current pair. */
-.deck-opt .deck-opt-art {
-  width: 24px;
-  height: 18px;
-  object-fit: contain;
-  display: block;
-  border-radius: 2px;
-}
-.deck-opt img.deck-opt-art,
-.deck-opt svg.deck-opt-art:not([fill="currentColor"]) {
-  object-fit: cover;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
-}
-
-/* ── Deck pills (burger) ───────────────────────────────────────────
- * The loud control: one .pill per deck, promoted from common.css rather than
- * restyled here. */
-.menu-decks .deck-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.menu li.menu-decks {
-  margin-bottom: 12px;
-}
-.deck-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
-}
-.deck-pill:hover {
-  text-decoration: none;
-}
-.deck-pill-ico {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 16px;
-  height: 12px;
-}
-.deck-pill-ico img,
-.deck-pill-ico svg {
-  width: 16px;
-  height: 12px;
-  object-fit: cover;
-  border-radius: 1px;
-  display: block;
-}
-
-.mode-toggle .mode-sep {
-  color: #ddd;
-  padding: 0 4px;
+  100% { transform: scale(1); }
 }
 .country-name {
   font-size: 28px;
