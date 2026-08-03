@@ -35,6 +35,7 @@ import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
 import { runFinishFlow } from './finishFlow.js';
+import { fadeUpAt } from '../flags/finishCascade.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
 import { pickMistakes, splitMistakeRail, MISTAKE_COLLAPSE_CAP } from './extraStats.js';
@@ -265,7 +266,7 @@ function renderCommunity(stats, targets, all, userWrongCodes) {
     communityFadedIn = true;
     for (const id of ['daily-callout', 'daily-extra-stats']) {
       const el = /** @type {HTMLElement} */ (document.getElementById(id));
-      if (el && !el.hidden) el.classList.add('daily-fade-in');
+      if (el && !el.hidden) el.classList.add('fade-up-in');
     }
   }
 }
@@ -577,9 +578,7 @@ function syncScoreFacts() {
  */
 function cascadeFade(el, targetMs) {
   if (!cascadeActive) return;
-  const elapsed = Date.now() - cascadeStart;
-  el.style.animationDelay = `${Math.max(0, targetMs - elapsed)}ms`;
-  el.classList.add('daily-fade-in');
+  fadeUpAt(el, { targetMs, elapsedMs: Date.now() - cascadeStart });
 }
 
 /**

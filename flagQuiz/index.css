@@ -540,26 +540,27 @@ body.is-tray-open #play-time {
  * tic-tac-toe screens) rather than changing it, because those screens put a
  * labelled sentence there and this one puts a single figure. The label is
  * gone: "Final score: 38" spends two thirds of the line restating what a
- * 76px number in the middle of a result screen already is.
+ * 62px number in the middle of a result screen already is.
  *
- * Colour is set inline by page.js via `scoreColor(ratio)` — accuracy on an
- * ordinary round, full green on a clean sweep. */
+ * 62px, down from 76px: at 76 the number crowded the board it sits above,
+ * and there is a map and a leaderboard below it that are also part of the
+ * answer.
+ *
+ * Ink, not performance-tinted. The headline used to take a green→amber→red
+ * colour from how the round went, which flattered a bad round (a 38 under a
+ * personal best of 51 still rendered "good") and, worse, put green on this
+ * screen every single round — the one colour that now has to mean "you beat
+ * your best" and nothing else. Deliberately not the pink accent either:
+ * pink marks *you* on this screen, in your own highlighted leaderboard row
+ * a few hundred pixels below. Judgement comes from the record line
+ * underneath, colour from the badge. */
 .result-headline {
-  font-size: 76px;
+  font-size: 62px;
   line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
+  color: var(--primary-color);
   margin: 0;
-}
-/* The clean-sweep screen leads with a time, which is a much longer string
-   than a score — 76px would wrap it on a narrow phone.
-
-   `:not([hidden])` is load-bearing. The eyebrow is always in the DOM and only
-   toggles `hidden`, so a bare `.result-cleared ~ .result-headline` matched on
-   every result screen and shrank the ordinary score to 54px too. */
-.result-cleared:not([hidden]) ~ .result-headline {
-  font-size: 54px;
-  letter-spacing: -0.03em;
 }
 /* The eyebrow above it: small, green, and only present on the one round that
    earns it, so it never becomes furniture. */
@@ -581,8 +582,33 @@ body.is-tray-open #play-time {
 .result-cleared svg {
   display: block;
 }
+/* ── Finish-moment choreography ────────────────────────────────────
+ * The board stages itself instead of arriving all at once: score, then the
+ * record line, the map, the leaderboard caption, and its rows. The fade is
+ * `.fade-up-in` (common.css, shared with the daily puzzle's finish); the
+ * delays are written inline by page.js, measured from the finish so that a
+ * leaderboard which takes 800ms to fetch still lands in its slot rather
+ * than 800ms behind it.
+ *
+ * `#result.result-anim` is the gate. page.js adds it only on a natural
+ * finish and takes it off on any re-paint (a language switch mid-result),
+ * so a screen that is merely being re-rendered shows everything at its
+ * final state — the motion belongs to the moment the round ended.
+ *
+ * The record badge is the one piece whose timing lives here rather than in
+ * JS: it is built synchronously with the line it sits on, so it needs no
+ * arithmetic. 900ms puts its bounce after the score has finished counting,
+ * so the two cues take turns instead of competing. */
+#result.result-anim .new-badge {
+  animation-delay: 900ms;
+  animation-fill-mode: both;
+}
+#result:not(.result-anim) .new-badge {
+  animation: none;
+}
+
 /* The quiet line under the headline: what you have to beat, plus — on a clean
-   sweep — the score the headline gave up its place to. Primary rather than
+   sweep — the finish time the headline no longer carries. Primary rather than
    muted: it is a fact about your own play, not a caption. */
 .result-record {
   margin: 14px 0 20px;

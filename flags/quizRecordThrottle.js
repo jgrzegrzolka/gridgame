@@ -48,7 +48,15 @@
  *
  * Pure decision + thin localStorage shim for the sentinel + per-config
  * day-best cache. Everything injected (no globals) so tests stay clean.
+ *
+ * The score-then-time comparator this used to keep privately now lives in
+ * `flags/leaderboardRank.js` — the result screen needs the same rule to
+ * decide whether a just-finished round outranks the row the server sent
+ * back, and two copies of a ranking rule is how a board starts disagreeing
+ * with itself.
  */
+
+import { beats } from './leaderboardRank.js';
 
 /**
  * Window between successful pushes for non-PB finishes. 30 minutes
@@ -92,30 +100,6 @@ export const DAY_BEST_KEY_PREFIX = 'gridgame.quizDayBest:';
  */
 export function utcDateKey(now) {
   return new Date(now).toISOString().slice(0, 10);
-}
-
-/**
- * Score-then-time comparator matching the server's leaderboard ORDER BY.
- * Mirrors `api/src/lib/leaderboardRank.js#beats`. Inlined rather than
- * shared because the server is CommonJS under `api/` and the client is
- * ESM under `flags/` — cross-folder import would need a build step we
- * don't have. Kept as a private helper; the public surface is
- * `computeTodayPbCandidate`.
- *
- * @param {{ score: number, durationMs: number }} a
- * @param {{ score: number, durationMs: number }} b
- * @param {boolean} lowerWins
- * @returns {boolean}
- */
-function beats(a, b, lowerWins) {
-  if (lowerWins) {
-    if (a.score < b.score) return true;
-    if (a.score > b.score) return false;
-  } else {
-    if (a.score > b.score) return true;
-    if (a.score < b.score) return false;
-  }
-  return a.durationMs < b.durationMs;
 }
 
 /**

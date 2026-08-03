@@ -4,7 +4,6 @@ import {
   shouldShowBestTime,
   formatBestScoreLabel,
   formatTime,
-  accuracyRatio,
 } from '../flags/quiz.js';
 
 /**
@@ -13,12 +12,20 @@ import {
  * A round can end in two genuinely different ways, and the old screen said
  * the same thing about both: a labelled score, a time, and a best line. But
  * in 60s the time is *always* the budget unless you cleared the pool — so
- * "Time: 1:00.000" was printing a constant — and once you HAVE cleared the
- * pool the score is always the pool size, so the score is the constant and
- * the time is the only thing that varies.
+ * "Time: 1:00.000" was printing a constant.
  *
- * So the headline swaps: normally the score is the hero, and on a clean
- * sweep the clock is.
+ * The hero is the score in both endings. A clean sweep briefly led with the
+ * clock instead, on the reasoning that the score had become the constant
+ * there — true, but it made the one screen you earn the hardest the one
+ * screen that measures you differently from every other. `44 / 44` is the
+ * achievement; the time is what separates two clean sweeps, and separating
+ * two of anything is subline work.
+ *
+ * The score's own shape follows the same "print what varies" rule. In 60s it
+ * is a bare count: nobody comes close to the pool in a minute, so `38 / 195`
+ * renders a good round as a fraction of a percent. Where you do go through
+ * the whole pool — the untimed mode, and the stats page — the denominator is
+ * the measure and stays.
  */
 
 /**
@@ -51,67 +58,88 @@ export function clearedWholePool({ modeKey, answeredCount, target, budgetUsed, g
  * and `recordTime` are separate because the caller joins them with the
  * translated "in".
  *
+ * `countUpTo` is the number the headline animates to on a fresh finish, or
+ * null where the headline must not be animated. That is a per-ending rule,
+ * not a caller preference: a stopwatch ticking up to your finishing time
+ * implies a run that didn't happen — it reads as a replay of the round at
+ * the wrong speed — so the time always arrives whole and only counts count
+ * up. It lives here because it is decided by the same branch that decides
+ * what the headline says.
+ *
+ * `isNew` suppresses the record text. The badge that fires on a personal
+ * best already carries the news, and "rekord 53" directly under a 53 you
+ * have just been congratulated for restates the number you are looking at.
+ * Without a record the line is the plain record readback, as before.
+ *
  * @param {{
  *   modeKey: string,
  *   answeredCount: number,
- *   wrongCount: number,
  *   target: number,
  *   budgetUsed: number,
- *   elapsedMs: number,
  *   gaveUp: boolean,
+ *   isNew?: boolean,
  *   best: { score: number, time: number },
  * }} args
+ * There is no colour in this model. The headline used to be tinted by how
+ * the round went — green for a strong one, amber for a middling one — and
+ * it said two untrue things at once: it called a 38 "good" while the record
+ * line under it said 51, and it put green on the screen every single round,
+ * which is the one colour that now has to mean "you beat your best" and
+ * nothing else. The number is ink; the record line supplies the judgement.
+ *
+ * `headlineSuffix` is whatever follows the number in `headline` — the
+ * denominator, or nothing. The count-up needs it: while the number is
+ * ticking, the caller renders `value + suffix`, and `headline` is what it
+ * lands on. Returning the pieces rather than a formatting callback keeps
+ * this module data-only, which is what makes its rules readable in tests.
+ *
  * @returns {{
  *   clearedAll: boolean,
  *   headline: string,
- *   colorRatio: number,
+ *   headlineSuffix: string,
+ *   countUpTo: number | null,
  *   detail: string | null,
  *   recordScore: string | null,
  *   recordTime: string | null,
  * }}
  */
 export function quizResultView({
-  modeKey, answeredCount, wrongCount, target, budgetUsed, elapsedMs, gaveUp, best,
+  modeKey, answeredCount, target, budgetUsed, gaveUp, isNew = false, best,
 }) {
   const timed = isTimedMode(modeKey);
 
   if (clearedWholePool({ modeKey, answeredCount, target, budgetUsed, gaveUp })) {
     return {
       clearedAll: true,
-      // The clock is the hero. The score is still shown, demoted to the line
-      // below as "44 / 44" — it is the thing that made this screen happen,
-      // but it can no longer distinguish one clean sweep from another.
-      headline: formatTime(budgetUsed),
-      // Full green, not accuracy-tinted. Clearing the pool IS the ceiling;
-      // shading it by how many you fumbled on the way would make the best
-      // possible outcome render as a mediocre colour.
-      colorRatio: 1,
-      detail: `${answeredCount} / ${target}`,
+      // The score is the hero here as everywhere else — "44 / 44" with the
+      // denominator, because on this one ending you did go through the whole
+      // pool and the fraction is the point.
+      headline: `${answeredCount} / ${target}`,
+      headlineSuffix: ` / ${target}`,
+      countUpTo: answeredCount,
+      // The finish time, demoted to the quiet line: it can't tell you how
+      // well you did, only which of two clean sweeps was quicker.
+      detail: formatTime(budgetUsed),
       recordScore: null,
-      recordTime: formatTime(best.time),
+      // On a record the time you just set IS the record, and it is already
+      // printed at the head of this line — the beaten one is noise.
+      recordTime: isNew ? null : formatTime(best.time),
     };
   }
 
-  // Timed: there is no "out of target" to measure against (the round ends on
-  // the clock, not on the pool), so tint by accuracy — a clean run is green, a
-  // coin-flip round amber, all-wrong red. Untimed is one-shot per question, so
-  // correct + wrong = target and the ratio is against the pool.
-  const picks = answeredCount + wrongCount;
-  const colorRatio = timed
-    ? (picks === 0 ? 0 : answeredCount / picks)
-    : accuracyRatio(wrongCount, target);
-
   return {
     clearedAll: false,
+    // Bare count in 60s, fraction where the pool is actually finishable.
     headline: timed ? String(answeredCount) : `${answeredCount}/${target}`,
-    colorRatio,
+    headlineSuffix: timed ? '' : `/${target}`,
+    countUpTo: answeredCount,
     detail: null,
-    recordScore: formatBestScoreLabel(modeKey, best, target),
+    recordScore: isNew ? null : formatBestScoreLabel(modeKey, best, target),
     // Only when it means something. In 60s that is never on this branch —
     // an unfinished pool always burns the whole budget — so the record line
     // stays a bare score there, and carries a time in the untimed mode where
     // it is the only thing separating two identical scores.
-    recordTime: shouldShowBestTime(modeKey, best) ? formatTime(best.time) : null,
+    recordTime: (!isNew && shouldShowBestTime(modeKey, best)) ? formatTime(best.time) : null,
   };
 }
 
