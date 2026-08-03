@@ -595,18 +595,33 @@ body.is-tray-open #play-time {
   display: none;
 }
 
-/* Touch-only share icon sits at the end of the headline ("23 [icon]").
- * Flex layout when the button is present keeps the 20px icon vertically
- * centred against the score (vertical-align: middle alone resolves below the
- * baseline at this type size). gap: 0.3em restores the whitespace flex would
- * otherwise collapse, and justify-content: center preserves the page-centred
- * look. Mirrors the daily-stats-headline pattern. */
+/* Touch-only share icon, hung off the headline without moving it.
+ *
+ * This was `display: flex; justify-content: center`, which centres the score
+ * AND THE BUTTON AS A PAIR — so the number itself sat left of centre by half
+ * the button's width, on exactly the touch devices where the button exists
+ * and nowhere else. Every desktop check looked perfect because the button
+ * never mounted (`mountShareButton` bails unless `pointer: coarse`).
+ *
+ * A three-track grid fixes it: the middle track holds the score and is the
+ * only one with content flowing from the page's centre line, and the button
+ * lives in the right-hand track, starting where the number ends. `1fr` on
+ * both flanks keeps the middle track — and therefore the number — dead
+ * centre whatever the button's width. The button is still vertically centred
+ * against the 76px figure, which `vertical-align: middle` cannot do at this
+ * type size. */
 #final-score-line:has(.share-link) {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: center;
-  gap: 0.3em;
-  flex-wrap: wrap;
+}
+#final-score-line:has(.share-link) #final-score {
+  grid-column: 2;
+}
+#final-score-line:has(.share-link) .share-link {
+  grid-column: 3;
+  justify-self: start;
+  margin-left: 0.3em;
 }
 
 /* Today's leaderboard panel — shown inside #result, below the headline and
