@@ -52,8 +52,16 @@ export const DECKS = [
   },
 ];
 
-/** Fallback for a variant no deck claims — treated as an ordinary flags deck. */
-const DEFAULT_DECK = 'flags';
+/**
+ * The ordinary deck: "which flag is this sovereign country?".
+ *
+ * Doubles as the fallback for a variant no deck claims, and as the baseline
+ * callers compare against when deciding whether a pool needs marking out as
+ * a different KIND of question (the round-settings tray does this — seven
+ * continent chips wearing the same flag glyph is noise; the one chip that
+ * isn't the ordinary deck is the one worth a mark).
+ */
+export const DEFAULT_DECK = 'flags';
 
 /**
  * Which deck a variant belongs to.
@@ -94,18 +102,6 @@ export function variantsForDeck(deckId) {
 export function defaultVariantForDeck(deckId) {
   const deck = DECKS.find((d) => d.id === deckId);
   return deck && deck.variants.length > 0 ? deck.variants[0] : null;
-}
-
-/**
- * Does this deck offer a scope choice? False when it has a single variant —
- * there is nothing to pick, so the burger renders no list. See the module
- * docstring: derived, not declared.
- *
- * @param {string} deckId
- * @returns {boolean}
- */
-export function deckHasScopes(deckId) {
-  return variantsForDeck(deckId).length > 1;
 }
 
 /**

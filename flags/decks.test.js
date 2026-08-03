@@ -6,7 +6,6 @@ import {
   deckOf,
   variantsForDeck,
   defaultVariantForDeck,
-  deckHasScopes,
   allDeckVariants,
   decksCoverVariants,
 } from './decks.js';
@@ -71,15 +70,6 @@ test('variantsForDeck returns display order, and a copy', () => {
   // Mutating the result must not corrupt the table for the next caller.
   variantsForDeck('flags').push('hacked');
   assert.equal(variantsForDeck('flags').length, 7);
-});
-
-// The rule the burger's reactive scope list is built on. Derived from the
-// deck's own shape, so Phases 3/4 (world-only, one variant each) get the right
-// behaviour without anyone remembering to add them to a list.
-test('deckHasScopes is true only where there is a choice to make', () => {
-  assert.equal(deckHasScopes('flags'), true, 'seven variants — offer the list');
-  assert.equal(deckHasScopes('weird'), false, 'one variant — nothing to pick');
-  assert.equal(deckHasScopes('nope'), false);
 });
 
 test('defaultVariantForDeck is the deck first variant', () => {

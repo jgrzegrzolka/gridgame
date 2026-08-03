@@ -409,7 +409,7 @@
     "play": "Play",
     "mode": {
       "60s": "60s",
-      "all": "all"
+      "all": "no clock"
     },
     "leaderboard": {
       "title": "Top 10: 7 days",
@@ -423,6 +423,11 @@
       "aria": "Share result",
       "title": "Yet Another Quiz: {variant} {mode}, {score}",
       "text": "Can you beat me?"
+    },
+    "settings": {
+      "aria": "Round settings",
+      "whichFlags": "Which flags",
+      "howLong": "How long"
     }
   },
   "findFlag": {

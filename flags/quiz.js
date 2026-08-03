@@ -1,47 +1,76 @@
 import { isSovereignFlag, isNonSovereignFlag } from './flagPools.js';
 
 const QUIZ_LAST_VARIANT_KEY = 'gridgame.flagquiz.lastVariant';
+const QUIZ_LAST_MODE_KEY = 'gridgame.flagquiz.lastMode';
+/** Legacy single-value key, kept as the migration source. See below. */
 const QUIZ_SHOW_MAP_KEY = 'gridgame.flagquiz.showMap';
 
 /**
- * Per-device preference for showing the flagQuiz contour map.
- * **Defaults to true** — every variant has a map now, so the default
- * surface is "map on" and the toggle is an opt-out.
+ * Where the map starts in each mode, before the player has said anything.
  *
- * Storage convention:
- *   - `'true'` or **missing** → show map (default-on for new players
- *     and for players who explicitly opted in pre-rollout).
- *   - `'false'`               → hide map (explicit opt-out).
+ * The two modes want opposite things. In 60s the map is a distraction you
+ * pay for in seconds, so it starts collapsed and the chip is an opt-in; with
+ * no clock there is nothing to lose by watching the board fill in, so it
+ * starts open. One shared preference could only be right for one of them —
+ * which is why the key is now per mode.
+ *
+ * @type {Record<string, boolean>}
+ */
+const SHOW_MAP_DEFAULT = { '60s': false, all: true };
+
+/** @param {string} mode */
+function showMapKey(mode) {
+  return `${QUIZ_SHOW_MAP_KEY}.${mode}`;
+}
+
+/**
+ * Per-device, **per-mode** preference for showing the flagQuiz contour map.
+ *
+ * Resolution order:
+ *   1. The mode's own key (`gridgame.flagquiz.showMap.60s`) — what the
+ *      player last chose while playing that mode.
+ *   2. The legacy single key (`gridgame.flagquiz.showMap`) — migration.
+ *      A player who explicitly opted out before this split keeps that
+ *      answer in both modes until they touch the chip again.
+ *   3. `SHOW_MAP_DEFAULT` for the mode.
  *
  * We can't use `readBoolSetting` here because that returns false-on-
- * missing — which would make the toggle off-by-default for every
- * player without any saved preference.
+ * missing, which would collapse steps 2 and 3 into "off".
  *
- * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ * @param {{ getItem(key: string): string | null } | null | undefined} store
+ * @param {string} mode
  */
-export function isQuizShowMap(store) {
+export function isQuizShowMap(store, mode) {
+  const fallback = SHOW_MAP_DEFAULT[mode] ?? true;
   const s = store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null);
-  if (!s) return true;
+  if (!s) return fallback;
   try {
-    return s.getItem(QUIZ_SHOW_MAP_KEY) !== 'false';
+    const own = s.getItem(showMapKey(mode));
+    if (own === 'true') return true;
+    if (own === 'false') return false;
+    const legacy = s.getItem(QUIZ_SHOW_MAP_KEY);
+    if (legacy === 'true') return true;
+    if (legacy === 'false') return false;
+    return fallback;
   } catch {
-    return true;
+    return fallback;
   }
 }
 
 /**
  * Writes the literal `'true'` / `'false'` (not `removeItem` on false)
  * so an explicit opt-out persists. Otherwise a player who toggled the
- * map off would see it come back on the next visit, because missing
- * key now reads as default-on.
+ * map off in a mode whose default is on would see it come back on the
+ * next visit.
  *
  * @param {{ setItem(key: string, value: string): void }} store
+ * @param {string} mode
  * @param {boolean} value
  */
-export function setQuizShowMap(store, value) {
+export function setQuizShowMap(store, mode, value) {
   if (!store) return;
   try {
-    store.setItem(QUIZ_SHOW_MAP_KEY, value ? 'true' : 'false');
+    store.setItem(showMapKey(mode), value ? 'true' : 'false');
   } catch { /* ignore */ }
 }
 
@@ -75,6 +104,40 @@ export function getQuizLastVariant(store) {
 export function setQuizLastVariant(store, key) {
   if (!Object.prototype.hasOwnProperty.call(VARIANTS, key)) return;
   store.setItem(QUIZ_LAST_VARIANT_KEY, key);
+}
+
+/**
+ * Last mode the player started a quiz with — the twin of
+ * `getQuizLastVariant`, and it exists for the same reason the variant one
+ * does: the round-settings pill changes the mode in place, so the mode is
+ * no longer carried by a `?n=` in the URL you arrived on. Without this a
+ * player who lives in "no clock" would be dropped back into 60s on every
+ * fresh visit.
+ *
+ * Validated against MODES, so a stale key from a future build returns null
+ * and the caller falls back to its own default.
+ *
+ * @param {{ getItem(key: string): string | null } | null | undefined} [store]
+ * @returns {string | null}
+ */
+export function getQuizLastMode(store) {
+  const s = store ?? (typeof globalThis !== 'undefined' ? globalThis.localStorage : null);
+  if (!s) return null;
+  const raw = s.getItem(QUIZ_LAST_MODE_KEY);
+  if (raw === null) return null;
+  return Object.prototype.hasOwnProperty.call(MODES, raw) ? raw : null;
+}
+
+/**
+ * Persist the player's current mode pick. Silently ignores unknown keys,
+ * matching `setQuizLastVariant`.
+ *
+ * @param {{ setItem(key: string, value: string): void }} store
+ * @param {string} key
+ */
+export function setQuizLastMode(store, key) {
+  if (!Object.prototype.hasOwnProperty.call(MODES, key)) return;
+  store.setItem(QUIZ_LAST_MODE_KEY, key);
 }
 
 /**
