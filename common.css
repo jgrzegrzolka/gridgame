@@ -2424,25 +2424,50 @@ dialog#zoom p.zoom-note {
   gap: 8px;
 }
 
-/* ── Correct / wrong answer pulse ────────────────────────────────────────
+/* ── Correct / wrong answer ring ─────────────────────────────────────────
  * Shared by the two flag-picking games (flagQuiz `.flag-choice`, Flag Party
  * `.opt`) so the "you got it right / you got it wrong" cue is identical on
- * both. Each game applies these to its own tile class + sets the matching
- * border colour; only the keyframes live here (CLAUDE.md "same mechanism =
- * same code"). Correct pulses on --correct-color, a positive signal orthogonal
- * to the brand pink; wrong reuses secondary so the shake and the ring agree. */
-@keyframes pulse-correct {
-  /* color-mix rather than a hardcoded rgba() so the ring tracks the token.
-     Both keyframes used to hardcode channels because alpha-on-a-CSS-var needed
-     a detour; color-mix() removes that, so changing --correct-color /
-     --wrong-color now moves the pulse with the border instead of leaving the
-     two a shade apart. */
-  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--correct-color) 70%, transparent); }
-  100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--correct-color) 0%, transparent); }
+ * both. Each game applies these to its own MEDIA element — the flag image or
+ * the contour — not to the tile; only the keyframes live here (CLAUDE.md
+ * "same mechanism = same code").
+ *
+ * **These carry the solid ring as well as the halo, which is why they are
+ * `ring-*` and not the `pulse-*` they replaced.** The tile used to paint the
+ * verdict on its own outer border while the flag carried a separate 1px
+ * frame, so the cue sat 5px out from the flag with a band of white between —
+ * two edges saying one thing. Now there is one edge, on the flag, and it
+ * simply changes colour and thickness; the halo grows out of that same edge
+ * rather than out of a second one. An animation replaces `box-shadow`
+ * wholesale while it runs, so the solid layer has to be inside the keyframes
+ * or it would vanish for the duration.
+ *
+ * color-mix rather than a hardcoded rgba() so the halo tracks the token.
+ * These used to hardcode channels because alpha-on-a-CSS-var needed a detour;
+ * color-mix() removes that, so changing --correct-color / --wrong-color moves
+ * ring and halo together instead of leaving the two a shade apart. */
+@keyframes ring-correct {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--correct-color),
+      0 0 0 2px color-mix(in srgb, var(--correct-color) 70%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px var(--correct-color),
+      0 0 0 14px color-mix(in srgb, var(--correct-color) 0%, transparent);
+  }
 }
-@keyframes pulse-wrong {
-  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wrong-color) 70%, transparent); }
-  100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--wrong-color) 0%, transparent); }
+@keyframes ring-wrong {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--wrong-color),
+      0 0 0 2px color-mix(in srgb, var(--wrong-color) 70%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px var(--wrong-color),
+      0 0 0 14px color-mix(in srgb, var(--wrong-color) 0%, transparent);
+  }
 }
 
 /* Country-name strip on the flag/outline you got wrong — a dark band across the
@@ -2450,17 +2475,22 @@ dialog#zoom p.zoom-note {
  * (flagQuiz `.flag-choice`, Flag Party `.opt`); each sets `data-name` on its
  * wrong tile. The Flag Party `.opt.named` case reuses the exact same strip for the
  * world-facts question-phase name reveal (fades in via `names-shown`, see
- * flagParty/index.css). Both tiles pad the image in by 5px, so the strip insets to
+ * flagParty/index.css). Both tiles pad the image in by 7px, so the strip insets to
  * match and sits on the flag, not the tile's outer corners. The rgba(0,0,0,.7)
- * over an SVG is the documented palette exception (CLAUDE.md, per-tile strip). */
+ * over an SVG is the documented palette exception (CLAUDE.md, per-tile strip).
+ *
+ * The inset was 5px while the tiles were `padding: 5px` + a 2px transparent
+ * border that the verdict used to colour. The border is gone and the padding
+ * absorbed it, so the flag sits in the same place on screen but is now 7px
+ * from the tile's padding box — which is what these offsets resolve against. */
 .flag-choice.wrong[data-name]::after,
 .opt.wrong[data-name]::after,
 .opt.named[data-name]::after {
   content: attr(data-name);
   position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
+  left: 7px;
+  right: 7px;
+  bottom: 7px;
   background: rgba(0, 0, 0, 0.7);
   color: var(--surface-color);
   padding: 3px 4px;

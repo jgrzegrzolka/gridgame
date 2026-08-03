@@ -239,7 +239,7 @@ line.
 - `.find-suggestions` — the country-search dropdown (findFlag, daily); the TTT
   picker sheet has its own `.picker-suggestions` variant.
 - `.loading-dots` — the shared pending indicator.
-- `.cell.shake` / `.cell.shake-win`, `pulse-correct` / `pulse-wrong` keyframes.
+- `.cell.shake` / `.cell.shake-win`, `ring-correct` / `ring-wrong` keyframes.
 - `runCelebration()` / `launchConfetti()` / `launchFireworks()` (`confetti.js`).
 - `celebrate()` (`flags/achievementCelebrate.js`) — the achievement overlay;
   `.achievement-info` — its detail dialog.
