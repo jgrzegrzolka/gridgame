@@ -1515,9 +1515,24 @@ body:has(nav.dock) {
  * Both boards gate the whole cascade on `#result.result-anim`, added only
  * on a natural finish — a revisit or a language re-paint renders the final
  * state at once, because motion belongs to the moment it happened. */
+/* The rise uses the standalone `translate` property, NOT `transform`.
+ *
+ * This is load-bearing and cost a production bug. `transform: none` in the
+ * `to` frame plus `animation-fill-mode: both` does not merely end the
+ * animation — it keeps overriding the element's own `transform` forever
+ * after. `#flag-map-section` centres itself with `left: 50%` +
+ * `transform: translateX(-50%)`, so the finish board's map snapped half its
+ * own width to the right the instant its fade finished and stayed there.
+ * `.daily-players-pill` is centred the same way and is one call away from
+ * the same fate.
+ *
+ * `translate` is a separate property that composes with `transform` instead
+ * of replacing it, so this animation can be pointed at any element without
+ * knowing how that element is positioned. Support is wider than the `:has()`
+ * this stylesheet already relies on. */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: none; }
 }
 .fade-up-in {
   animation: fade-up 0.5s ease both;
