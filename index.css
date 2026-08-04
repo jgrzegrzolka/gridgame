@@ -60,7 +60,14 @@ body {
   line-height: 1.06;
   letter-spacing: -0.04em;
   color: var(--primary-color);
-  animation: riseIn 0.5s ease both;
+  /* 0.9s, not the 0.5s this shipped with: at half a second the rise is over
+   * before the eye settles, so it reads as the page finishing loading rather
+   * than as an intentional entrance. Same motion, slower, and it reads as
+   * deliberate. This headline is the only thing on the page that moves, on
+   * purpose — home is art-directed and is listed EXEMPT from the shared
+   * page-entrance mechanism in common.css. Staging the stamps, CTA and game
+   * list behind it was tried and rejected: busier, not clearer. */
+  animation: riseIn 0.9s ease both;
 }
 /* Subtitle — desktop only. On phones the headline + flags carry the hero and
  * a second line of prose would crowd the fold, exactly as the mockup omits it. */

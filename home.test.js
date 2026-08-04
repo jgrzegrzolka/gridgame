@@ -71,6 +71,23 @@ test('hero: the invented flags stay obviously invented, so they cannot spoil a r
 
 // ---- motion is opt-out ----
 
+test('hero: the headline rise is the whole entrance, and it is paced to be seen', () => {
+  // Two decisions in one assertion pair, both deliberate and both easy to
+  // undo by accident.
+  //
+  // 0.9s: at the 0.5s this shipped with, the rise finished before the eye
+  // settled and read as the page loading rather than as an entrance.
+  //
+  // And home stays OUT of the shared `.enter` / `--enter-i` mechanism in
+  // common.css (where it is listed EXEMPT). Staging the stamps, CTA and game
+  // list behind the headline was tried and rejected — busier, not clearer.
+  // If a later change wants home on the shared mechanism, that is a design
+  // reversal to make on purpose, not a drive-by.
+  assert.match(css, /\.hero-title\s*\{[\s\S]*?animation:\s*riseIn 0\.9s ease both;[\s\S]*?\}/);
+  assert.ok(!/class="[^"]*\benter\b/.test(html), 'home must not opt into the shared page entrance');
+  assert.ok(!/--enter-i/.test(html), 'no shared entrance order on home');
+});
+
 test('hero: the stamp animation respects prefers-reduced-motion', () => {
   // The cross-fade is decorative; a reduced-motion visitor must get a still
   // page. index.css disables the layer animation under the media query.
