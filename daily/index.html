@@ -86,14 +86,20 @@
 
     <section id="daily-state" class="daily-state" hidden></section>
 
-    <section id="game" hidden>
-      <header class="find-header daily-header">
+    <!-- Staged entrance (common.css): the column washes in while its rows
+         arrive in reading order — header, hearts (dealt out one at a time by
+         paintLives), input, note, dock. `--enter-i` is the beat, not the
+         delay; beat 1 is the hearts row, which is why the input is 2. The
+         result section below is deliberately untouched — the finish board
+         owns its own choreography. -->
+    <section id="game" class="enter-wash" hidden>
+      <header class="find-header daily-header enter" style="--enter-i: 0">
         <span class="daily-n" id="daily-n"></span>
         <span class="find-cat" id="find-cat"></span>
         <span class="find-count" id="find-count">0 / 0</span>
       </header>
       <ul class="daily-lives" id="daily-lives" aria-live="polite"></ul>
-      <div class="find-input-wrap">
+      <div class="find-input-wrap enter" style="--enter-i: 2">
         <input
           type="text"
           class="find-input"
@@ -108,11 +114,12 @@
         />
         <ul class="find-suggestions" id="find-suggestions" hidden></ul>
       </div>
-      <p class="daily-desc" id="daily-desc" hidden></p>
+      <p class="daily-desc enter" id="daily-desc" style="--enter-i: 3" hidden></p>
+      <!-- No `.enter` here: found tiles keep their own per-tile .tile-drop. -->
       <ul class="find-found" id="find-found"></ul>
       <!-- Bottom dock (playing): Give up · Previous puzzles · Home.
            mountDock() builds the items; #game.is-finished hides it. -->
-      <nav class="dock" data-dock="giveUp archive home" data-home="../"></nav>
+      <nav class="dock enter" style="--enter-i: 4" data-dock="giveUp archive home" data-home="../"></nav>
     </section>
 
     <dialog id="zoom">

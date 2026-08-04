@@ -2740,3 +2740,79 @@ dialog#zoom p.zoom-note {
   color: var(--primary-color);
   margin: 4px 0 8px;
 }
+
+/* ── Page entrance ─────────────────────────────────────────────────────────
+ * One shared entrance for every game page: content arrives in reading order
+ * instead of snapping in complete. TIMING IS GLOBAL (these two tokens); only
+ * the ORDER is per-page, because each page reads differently. Set the order
+ * with --enter-i on each element: 0, 1, 2… in the order the eye should meet
+ * them. Duration is how long ONE element takes; stagger is the gap between
+ * consecutive beats.
+ *
+ * Usage:  <div class="enter" style="--enter-i: 2">
+ *
+ * The column itself gets .enter-wash — a plain opacity fade with no offset,
+ * so nothing sits at full strength while its neighbours are still moving
+ * (that mismatch is what reads as the page "cutting").
+ *
+ *   Rule — animate a screen the player enters at their own pace. Do not
+ *   animate a screen that is already running (a clock, a turn, or its own
+ *   celebration). This is a convention for FUNCTIONAL screens, not a law:
+ *   a separately crafted page whose motion is part of its art direction owns
+ *   its own entrance and stays out of here (the home page — one bespoke
+ *   headline rise, deliberately alone on the page).
+ *
+ *   APPLY    daily · lobbies · settings · profile · achievements
+ *   EXEMPT   home — bespoke hero, owns its `riseIn` headline (index.css)
+ *            60s quiz — clock starts on frame one
+ *            flag party round — shared timer, and other players are waiting
+ *            finish board — owns its choreography
+ *            found-tiles grid — .tile-drop already animates per tile
+ *
+ * The mechanism is OPT-IN: .enter does nothing until it is on an element, so
+ * an exempt screen is exempt by doing nothing.
+ *
+ * Name note: flagParty got there first with its own compound `.fchip.enter` /
+ * `.scoreline.enter` rules. Those are two-class selectors and out-specify the
+ * bare `.enter` below, so they keep their own animations — but if you add a
+ * bare `.enter` rule to a feature sheet, check it against this one first. */
+:root {
+  --enter-duration: 300ms;
+  --enter-stagger: 60ms;
+  --enter-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.enter {
+  animation: page-enter var(--enter-duration) var(--enter-ease)
+             calc(var(--enter-i, 0) * var(--enter-stagger)) both;
+}
+@keyframes page-enter {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: none; }
+}
+.enter-wash {
+  animation: page-wash 260ms ease both;
+}
+@keyframes page-wash {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+/* The heart budget is dealt out rather than offset: each heart fades from the
+ * page white up to the brand pink, on its own 70ms beat. Sliding read as a
+ * stutter at this size; the colour lift does not. */
+.daily-lives .enter-heart {
+  animation: heart-appear var(--enter-duration) ease-out
+             calc(var(--enter-stagger) + var(--enter-i, 0) * 70ms) both;
+}
+@keyframes heart-appear {
+  0%   { opacity: 0; color: var(--page-bg-color); }
+  100% { opacity: 1; color: var(--secondary-color); }
+}
+/* Reduced motion: drop the entrance entirely — no offsets, no staggered
+ * reveal. The page is simply there, which is the correct answer here. */
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .enter-wash,
+  .daily-lives .enter-heart {
+    animation: none;
+  }
+}

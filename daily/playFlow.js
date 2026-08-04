@@ -30,6 +30,7 @@
 import { suggest, exactSingleMatch } from '../flags/engine.js';
 import { findPool, classifyGuess } from '../flags/findFlag.js';
 import { createLives } from './lives.js';
+import { scheduleEntranceFocus, readEntranceEnv } from './entrance.js';
 import { saveProgress, clearProgress } from './progress.js';
 import { renderCriteriaInline, renderMetricLeadInline, renderFlagLeadInline } from '../flags/filterChips.js';
 import { scoreColor, pickFinalScoreLine, pickCelebration } from '../flags/quiz.js';
@@ -173,8 +174,12 @@ function heartSvg(spent) {
  * @param {HTMLElement} el   the `#daily-lives` list
  * @param {number} max
  * @param {number} left
+ * @param {{ enter?: boolean }} [opts]  `enter` deals the hearts out one at a
+ *   time as part of the page entrance. Opt-in and first-paint only: this
+ *   function repaints the whole row on every wrong guess, and replaying the
+ *   deal-out each time a heart is spent would turn an entrance into a tic.
  */
-export function paintLives(el, max, left) {
+export function paintLives(el, max, left, opts = {}) {
   el.setAttribute(
     'aria-label',
     // Label-then-number, not "{n} guesses left": Polish agrees the noun
@@ -189,6 +194,10 @@ export function paintLives(el, max, left) {
     const li = document.createElement('li');
     const spent = i >= left;
     li.className = spent ? 'daily-life daily-life--spent' : 'daily-life';
+    if (opts.enter) {
+      li.classList.add('enter-heart');
+      li.style.setProperty('--enter-i', String(i));
+    }
     li.appendChild(heartSvg(spent));
     el.appendChild(li);
   }
@@ -693,7 +702,10 @@ export function startGame(n, category, targets, all, opts = {}) {
     }
   }
   updateCount();
-  renderLives();
+  // First paint of the row is the entrance's second beat — the hearts deal
+  // out one at a time. Every later repaint (a heart spent, a language
+  // switch) redraws them at full strength.
+  renderLives({ enter: true });
 
   /** @type {Country[]} */
   let matches = [];
@@ -703,8 +715,9 @@ export function startGame(n, category, targets, all, opts = {}) {
   function updateCount() {
     countEl.textContent = `${foundCodes.size} / ${targetCodes.size}`;
   }
-  function renderLives() {
-    paintLives(livesEl, lives.max, lives.remaining());
+  /** @param {{ enter?: boolean }} [opts] */
+  function renderLives(opts) {
+    paintLives(livesEl, lives.max, lives.remaining(), opts);
   }
   /* Brief flash on each correct guess. Remove → force reflow → add
    * is the standard pattern for re-triggering a CSS animation on the
@@ -926,7 +939,11 @@ export function startGame(n, category, targets, all, opts = {}) {
   }
 
   gameEl.hidden = false;
-  if (!('ontouchstart' in window)) inputEl.focus();
+  // Revealing the section is what starts the CSS entrance (animations don't
+  // run on a `hidden` element), so the caret is scheduled from here — the
+  // input is live throughout, a fast typer can start before the animation
+  // ends, and `scheduleEntranceFocus` then leaves their caret alone.
+  scheduleEntranceFocus(inputEl, readEntranceEnv(window));
 
   // A resumed run that is already out of hearts should end, not sit at
   // zero waiting for a guess it can't afford. Normally unreachable —
