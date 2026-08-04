@@ -36,6 +36,7 @@ import {
   resolveRoundConfig,
 } from './roundSettings.js';
 import { quizResultView } from './resultView.js';
+import { createPlayClock } from './playClock.js';
 import { runCountUp } from '../flags/countUp.js';
 import { fadeUpAt } from '../flags/finishCascade.js';
 import { withOwnResult } from '../flags/leaderboardOwnResult.js';
@@ -448,22 +449,19 @@ export async function bootFlagQuiz() {
     let answeredCount = 0;
     let gameOver = false;
     let gaveUp = false;
-    const startTime = Date.now();
+    // Armed by the first pick, not by this call — see playClock.js for why.
+    const clock = createPlayClock();
     let timerRaf = 0;
     /** Pending `advanceTo` timer, so a restart doesn't render into a dead round. */
     let advanceTimer = 0;
 
     // ── Pause ────────────────────────────────────────────────────────
-    // Opening the settings tray stops the round without ending it. The
-    // timer is wall-clock (`Date.now() - startTime`), so pausing means
-    // banking the time spent paused and subtracting it — freezing the rAF
-    // instead would drift, because the clock would resume from wherever
-    // real time had moved to.
-    let pausedMs = 0;
-    let pausedAt = 0;
-    /** Elapsed play time, excluding anything spent with the tray open. */
+    // Opening the settings tray stops the round without ending it. Both the
+    // pause accounting and the deferred start live in `playClock.js`, which
+    // is where the reasoning and the tests are.
+    /** Elapsed play time: 0 until the first pick, tray time excluded. */
     function playElapsedMs() {
-      return (pausedAt || Date.now()) - startTime - pausedMs;
+      return clock.elapsedMs();
     }
 
     /** @type {SVGElement | null} */
@@ -1040,7 +1038,11 @@ export async function bootFlagQuiz() {
       // board already stops the mouse, but a keyboard user can still reach a
       // focused tile with Enter, and a tap that lands in the same frame the
       // tray opens would otherwise burn a question the player never saw.
-      if (pausedAt) return;
+      if (clock.isPaused()) return;
+      // This pick is what starts the round. Idempotent, so it is simply the
+      // first line of every answer rather than a special case for the first
+      // one: the clock only stamps a start the first time it is asked.
+      clock.start();
       if (chosen.code === currentAnswer.code) {
         answeredCount++;
         paintCounters();
@@ -1477,14 +1479,12 @@ export async function bootFlagQuiz() {
        * `.is-tray-open` class the caller sets. Idempotent.
        */
       pause() {
-        if (gameOver || pausedAt) return;
-        pausedAt = Date.now();
+        if (gameOver) return;
+        clock.pause();
       },
       /** Resume, banking however long the pause lasted. Idempotent. */
       resume() {
-        if (!pausedAt) return;
-        pausedMs += Date.now() - pausedAt;
-        pausedAt = 0;
+        clock.resume();
       },
 
       /**
