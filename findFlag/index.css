@@ -265,8 +265,17 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
   gap: 8px;
 }
+/* `isolation` is load-bearing, not decoration. The tile's decorations — the
+ * rank / metric / find-rate corner pills, the mistake-rail dot (daily/index.css)
+ * — are absolutely positioned with a z-index. Without a stacking context here
+ * those numbers resolve against the ROOT instead of against their own tile, and
+ * a pill at z-index 2 then outranks anything below it on the page: they floated
+ * over the open suggestion dropdown while the flag under them was correctly
+ * hidden. The tile already clips to its own box (overflow: hidden), so
+ * containing them cannot hide anything that was visible before. */
 .find-tile {
   position: relative;
+  isolation: isolate;
   aspect-ratio: 4 / 3;
   border: 1px solid var(--muted-soft-color);
   overflow: hidden;

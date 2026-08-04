@@ -72,30 +72,9 @@ test('entrance: the daily play screen arrives in reading order', () => {
   assert.match(beats[3][0], /dock/);
 });
 
-test('entrance: an .enter element that hosts an overlay carries its own z-index', () => {
-  // `.enter` fills its last keyframe forever (animation-fill-mode: both), and a
-  // FILLED `transform: none` computes to the identity matrix rather than the
-  // keyword — so every .enter element is a permanent stacking context, long
-  // after the 300ms are up. Read straight off prod:
-  //
-  //   transform: "matrix(1, 0, 0, 1, 0, 0)"   playState: "finished"
-  //
-  // That traps `.find-suggestions`'s z-index INSIDE `.find-input-wrap`, where
-  // it can only outrank the input. Everything after the wrap in the DOM — the
-  // note, the found-tiles grid — then paints straight over the open dropdown.
-  // The wrap needs a stacking level of its own, not just a containing one.
-  const findCss = readFileSync(join(HERE, '..', 'findFlag', 'index.css'), 'utf-8');
-  const wrap = findCss.match(/\.find-input-wrap\s*\{([^}]*)\}/);
-  assert.ok(wrap, 'findFlag/index.css must style .find-input-wrap');
-  assert.match(
-    wrap[1],
-    /z-index:\s*[1-9]/,
-    'the suggestion dropdown must outrank the note and the tiles below it',
-  );
-  // The mechanism this guards against — if the fill ever goes away, the comment
-  // above stops being true and this pin should be revisited, not deleted.
-  assert.match(commonCss, /animation:\s*page-enter[^;]*\bboth\b/);
-});
+// Note: `.enter` leaves every element it touches a permanent stacking context
+// (its transform keyframe fills forever). What that breaks, and the two rules
+// that hold it, are pinned in daily/stacking.test.js.
 
 test('entrance: the found-tiles grid keeps its own per-tile drop', () => {
   const game = gameSection();
