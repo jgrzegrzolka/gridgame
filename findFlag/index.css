@@ -160,9 +160,20 @@ body {
   animation: find-count-pulse 700ms ease-out, find-shake 300ms ease;
   display: inline-block;
 }
+/* The dropdown's anchor, and its stacking level.
+ *
+ * `position: relative` alone is not enough. On daily the wrap also carries
+ * `.enter` (common.css), whose animation fills its last keyframe forever —
+ * and a filled `transform: none` computes to the identity matrix, not the
+ * keyword, so the wrap is a permanent stacking context. That confines
+ * `.find-suggestions`'s z-index to the inside of the wrap, and the elements
+ * after it (the note, the found-tiles grid) paint over the open dropdown.
+ * A level of its own fixes it whether or not that context exists. Anything
+ * above 0 clears the siblings; it stays well under the fixed chrome (25). */
 .find-input-wrap {
   position: relative;
   margin-bottom: 12px;
+  z-index: 1;
 }
 .find-input {
   width: 100%;
