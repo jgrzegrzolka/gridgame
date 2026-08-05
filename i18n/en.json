@@ -481,7 +481,7 @@
       "streakLine": "🔥 {n}-day streak"
     },
     "streak": {
-      "line": "streak: {n}"
+      "line": "your streak: {n}"
     },
     "callout": {
       "easiest": "easiest:",

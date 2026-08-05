@@ -82,7 +82,7 @@ function statsLabels() {
     mistakeShowAll: t('daily.mistake.showAll', 'show all mistakes ({n})'),
     mistakeShowLess: t('daily.mistake.showLess', 'show less'),
     mistakeLegend: t('daily.mistake.legend', 'you made this mistake too'),
-    streakLine: t('daily.streak.line', 'streak: {n}'),
+    streakLine: t('daily.streak.line', 'your streak: {n}'),
     calloutEasiest: t('daily.callout.easiest', 'easiest:'),
     calloutHardest: t('daily.callout.hardest', 'hardest:'),
   };

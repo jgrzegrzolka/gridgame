@@ -481,7 +481,7 @@
       "streakLine": "🔥 Seria {n} dni"
     },
     "streak": {
-      "line": "seria: {n}"
+      "line": "twoja seria: {n}"
     },
     "callout": {
       "easiest": "najłatwiejsze:",
