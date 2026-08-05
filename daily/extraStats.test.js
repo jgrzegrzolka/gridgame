@@ -68,13 +68,45 @@ test('expanded: the whole list, in order', () => {
   assert.equal(s.singlesCount, 2);
 });
 
-test('no repeated mistakes → repeatedCount 0, no collapsed tiles', () => {
+test('no repeated mistakes → collapsed falls back to the singles', () => {
   const mistakes = [{ code: 'a', count: 1 }, { code: 'b', count: 1 }];
   const s = splitMistakeRail(mistakes, false);
   assert.equal(s.repeatedCount, 0);
-  assert.equal(s.tiles.length, 0);
+  assert.deepEqual(s.tiles.map((t) => t.code), ['a', 'b']);
+  assert.equal(s.collapsedCount, 2);
   assert.equal(s.singlesCount, 2);
   assert.equal(s.totalCount, 2);
+});
+
+test('the first player sees their own single mistake, not an empty rail', () => {
+  const mistakes = pickMistakes({ stats: statsOf({ attempts: 1, wrong: { ch: 1, lu: 1 } }) });
+  const s = splitMistakeRail(mistakes, false);
+  assert.deepEqual(s.tiles.map((t) => t.code), ['ch', 'lu']);
+});
+
+test('fallback singles are capped like repeated ones', () => {
+  const mistakes = Array.from({ length: 9 }, (_, i) => ({ code: `c${i}`, count: 1 }));
+  const s = splitMistakeRail(mistakes, false);
+  assert.equal(s.tiles.length, MISTAKE_COLLAPSE_CAP);
+  assert.equal(s.collapsedCount, MISTAKE_COLLAPSE_CAP);
+  assert.equal(s.totalCount, 9);
+});
+
+test('repeated mistakes still win the collapsed rail — singles stay behind the toggle', () => {
+  const mistakes = [{ code: 'a', count: 2 }, { code: 'b', count: 1 }, { code: 'c', count: 1 }];
+  const s = splitMistakeRail(mistakes, false);
+  assert.deepEqual(s.tiles.map((t) => t.code), ['a']);
+  assert.equal(s.collapsedCount, 1);
+});
+
+test('collapsedCount is what the collapsed rail actually rendered', () => {
+  const overCap = [
+    { code: 'a', count: 5 }, { code: 'b', count: 4 }, { code: 'c', count: 3 },
+    { code: 'd', count: 3 }, { code: 'e', count: 2 }, { code: 'f', count: 2 },
+    { code: 'g', count: 2 },
+  ];
+  assert.equal(splitMistakeRail(overCap, false).collapsedCount, MISTAKE_COLLAPSE_CAP);
+  assert.equal(splitMistakeRail([{ code: 'a', count: 3 }], false).collapsedCount, 1);
 });
 
 test('all repeated, none over the cap → collapsed shows them all, no singles', () => {
@@ -88,5 +120,7 @@ test('all repeated, none over the cap → collapsed shows them all, no singles',
 
 test('empty list', () => {
   const s = splitMistakeRail([], false);
-  assert.deepEqual(s, { tiles: [], totalCount: 0, repeatedCount: 0, singlesCount: 0 });
+  assert.deepEqual(s, {
+    tiles: [], totalCount: 0, repeatedCount: 0, singlesCount: 0, collapsedCount: 0,
+  });
 });

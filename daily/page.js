@@ -38,7 +38,7 @@ import { runFinishFlow } from './finishFlow.js';
 import { fadeUpAt } from '../flags/finishCascade.js';
 import { PROD_SITE_KEY } from './turnstileSiteKey.js';
 import { mountDevReset } from './devReset.js';
-import { pickMistakes, splitMistakeRail, MISTAKE_COLLAPSE_CAP } from './extraStats.js';
+import { pickMistakes, splitMistakeRail } from './extraStats.js';
 import { pickCallout } from './callout.js';
 import { shareText } from '../common.js';
 import { buildShareText } from '../flags/shareGrid.js';
@@ -78,7 +78,7 @@ function statsLabels() {
     playerCount: t('daily.stats.playerCount', '{count} players'),
     playersTooltip: t('daily.stats.playersTooltip', "How many players solved today's puzzle"),
     loading: t('daily.stats.loading', 'Loading stats'),
-    mistakeTitle: t('daily.mistake.title', "Other players' most common mistake"),
+    mistakeTitle: t('daily.mistake.title', "Players' most common mistake"),
     mistakeShowAll: t('daily.mistake.showAll', 'show all mistakes ({n})'),
     mistakeShowLess: t('daily.mistake.showLess', 'show less'),
     mistakeLegend: t('daily.mistake.legend', 'you made this mistake too'),
@@ -355,15 +355,20 @@ function buildCalloutFlag(code, country) {
 }
 
 /**
- * Mount the "Najczęstszy błąd innych graczy" rail under the community
- * callout. Collapsed by default: it shows only the *repeated* mistakes
- * (clicked by ≥ 2 players), capped at `MISTAKE_COLLAPSE_CAP`, so a
- * one-off click by a single player never reads as "a common mistake".
- * A "pokaż wszystkie pomyłki (N)" toggle reveals the full list.
+ * Mount the "Najczęstszy błąd graczy" rail under the community callout.
+ * Collapsed by default: it prefers the *repeated* mistakes (clicked by
+ * ≥ 2 players), capped at `MISTAKE_COLLAPSE_CAP`, so a one-off click by
+ * a single player doesn't outrank a genuinely common one. A "pokaż
+ * wszystkie pomyłki (N)" toggle reveals the full list.
  *
- * The whole rail is skipped when there are no repeated mistakes (no
- * submissions yet, all one-offs, or a legacy cached response without
- * perWrongCode) — better nothing than a heading over an empty grid.
+ * The rail is skipped only when there is no mistake at all to show (a
+ * clean sweep by everyone, or a legacy cached response without
+ * perWrongCode) — never merely because nothing was repeated yet. The
+ * first player on a puzzle has no repeats by definition, and this rail
+ * is where their own wrong clicks live: `renderResult` builds Found /
+ * Missed from the puzzle's targets, so a distractor they clicked
+ * appears in neither grid. `splitMistakeRail` falls back to the singles
+ * for exactly this case.
  *
  * @param {{ totalAttempts: number, perWrongCode?: Record<string, number> } | null} stats
  * @param {Country[]} all
@@ -379,7 +384,7 @@ function renderExtraStats(stats, all, userWrongCodes) {
 
   if (!stats) return;
   const mistakes = pickMistakes({ stats });
-  if (splitMistakeRail(mistakes, false).repeatedCount === 0) return;
+  if (mistakes.length === 0) return;
 
   mistakeRailState = { mistakes, all, userWrongCodes };
   paintMistakeRail();
@@ -417,9 +422,12 @@ function paintMistakeRail() {
   container.appendChild(ul);
 
   // Controls: a toggle exists whenever there's more than the collapsed
-  // set (extra repeated beyond the cap, or any one-off singles).
-  const collapsedShown = Math.min(split.repeatedCount, MISTAKE_COLLAPSE_CAP);
-  const canExpand = split.totalCount > collapsedShown;
+  // set (extra repeated beyond the cap, or any one-off singles). Read
+  // the count off the split rather than re-deriving it from
+  // `repeatedCount` — on a rail that fell back to the singles those two
+  // disagree, and the toggle would offer to "show all" what is already
+  // fully on screen.
+  const canExpand = split.totalCount > split.collapsedCount;
   if (canExpand || anyMine) {
     const controls = document.createElement('div');
     controls.className = 'daily-mistake-controls';
