@@ -470,7 +470,7 @@
       "missed": "Missed"
     },
     "mistake": {
-      "title": "Other players' most common mistake",
+      "title": "Players' most common mistake",
       "showAll": "show all mistakes ({n})",
       "showLess": "show less",
       "legend": "you made this mistake too"
