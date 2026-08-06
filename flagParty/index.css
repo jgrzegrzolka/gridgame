@@ -824,11 +824,12 @@ button.opt { -webkit-appearance: none; appearance: none; }
      layout is unchanged. */
   position: relative;
 }
-.scoreline.win { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
-/* On the between-rounds break, the local player's own row carries the pink ring
-   (same "this is you" highlight as a winning row) so you find yourself at a
-   glance. Reuses .win's fill/border, no new colour. */
+/* The local player's own row carries the pink ring so you find yourself at a
+   glance — on the between-rounds break, and on the finish board where you are
+   never the top row (the winner is the header above it). `.scoreline.win`, the
+   old first-place fill, went with the cascade: the finish board has no winning
+   ROW left to fill, and every other board's highlight is "this is you". */
 .scoreline.you { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 /* Weights mirror flagQuiz's daily leaderboard (`.leaderboard-*`): muted rank,
    500 name, 600 score. The old 700/800 read heavier than anything else on the
@@ -1349,72 +1350,38 @@ button.opt { -webkit-appearance: none; appearance: none; }
    implementations of one mechanism is the bug CLAUDE.md names; the shared one
    wins. */
 
-/* Finish-screen choreography — the scoreboard cascades in bottom-to-top so the
-   winner's row lands last (with a small victory bounce), then the sole winner
-   (`.champion`) settles into a slow breathe + pink glow that keeps first place
-   alive without a caption. The tie caption (the only surviving `.party-sub`)
-   pops. The page only adds `.enter` / `.pop` when the player hasn't asked to
-   reduce motion, and the sustained breathe lives entirely inside this @media
-   round, so motion-sensitive players get the static pink highlight only. Pairs
-   with the confetti / fireworks burst (winner → fireworks, else confetti). */
+/* The final board's bottom-up cascade — the winner's row landing last with a
+   victory bounce, then a sole `.champion` settling into an infinite breathe —
+   is GONE with the ceremony that replaced it. The winner is not a row on that
+   board any more; they are its header, arriving from their own screen, and the
+   rows below them fade in top-down with nothing to hold back. `.scoreline.win`,
+   `.scoreline.champion`, `scoreline-in`, `scoreline-win-in` and
+   `champion-breathe` were deleted rather than left behind: a stylesheet that
+   still describes a bounce nothing triggers is how the next reader concludes
+   the board does something it does not. `.party-sub.pop` went with them (the
+   tie is announced on the winner's beat now, so the board's caption is a label,
+   not an event). `party-sub-pop` itself survives — the ♛ pill lands on it. */
 @media (prefers-reduced-motion: no-preference) {
   .opt { transition: border-color 0.12s ease, opacity 0.12s ease; }
-  .scoreline.enter {
-    animation: scoreline-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: var(--enter-delay, 0ms);
-  }
   .scoreline.enter-fade {
     animation: scoreline-fade-in 0.4s ease both;
     animation-delay: var(--enter-delay, 0ms);
   }
-  .scoreline.win.enter {
-    animation: scoreline-win-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: var(--enter-delay, 0ms);
-  }
-  /* Sole winner: the victory bounce, then an infinite breathe that starts the
-     moment the bounce ends (delay = cascade delay + the 0.6s bounce). Must sit
-     AFTER `.scoreline.win.enter` — same specificity, later rule wins — so the
-     champion's two-animation stack replaces the bounce-only rule. */
-  .scoreline.champion.enter {
-    animation:
-      scoreline-win-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) var(--enter-delay, 0ms) both,
-      champion-breathe 2.6s ease-in-out calc(var(--enter-delay, 0ms) + 600ms) infinite;
-  }
-  /* Winner painted without an entrance (a re-render / language switch while the
-     final screen is already up): skip the bounce, just keep breathing. */
-  .scoreline.champion { animation: champion-breathe 2.6s ease-in-out infinite; }
-  .party-sub.pop { animation: party-sub-pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 }
-@keyframes scoreline-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-/* The between-rounds board's entrance. Deliberately fades WITHOUT moving, unlike
-   `scoreline-in` above: the ledger holds each row at its previous rank with an
-   inline transform, and a CSS animation beats an inline style, so animating
-   `transform` here would snap every row to its final slot and there would be no
-   movement left to watch. Same cascade idea, opacity only. */
+/* The between-rounds board's entrance. Deliberately fades WITHOUT moving: the
+   ledger holds each row at its previous rank with an inline transform, and a CSS
+   animation beats an inline style, so animating `transform` here would snap every
+   row to its final slot and there would be no movement left to watch. The finish
+   board's rows (`.enter-board`) reuse it for the same "fade, never move" reason —
+   there the rows are simply already where they belong. */
 @keyframes scoreline-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
-}
-@keyframes scoreline-win-in {
-  0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
-  70%  { opacity: 1; transform: translateY(0) scale(1.04); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes party-sub-pop {
   0%   { opacity: 0; transform: scale(0.9); }
   60%  { opacity: 1; transform: scale(1.06); }
   100% { opacity: 1; transform: scale(1); }
-}
-/* Winner's living "breathe": a gentle scale + a pink glow that swells and
-   recedes. rgb of --secondary-color (#C2899F) — alpha-on-a-CSS-var needs a
-   color-mix() / JS detour, so the channels are hardcoded and only alpha varies
-   (the same detour ring-wrong in common.css documents, and now avoids). */
-@keyframes champion-breathe {
-  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(194, 137, 159, 0); }
-  50%      { transform: scale(1.03); box-shadow: 0 0 14px 1px rgba(194, 137, 159, 0.5); }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1458,7 +1425,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
   justify-content: center;
   gap: 34px;
   /* Over the page tint rather than a dim: the room is paused, not dark. */
-  background: rgba(253, 253, 253, 0.72);
+  background: color-mix(in srgb, var(--page-bg-color) 72%, transparent);
 }
 .break-veil[hidden] { display: none; }
 
@@ -1475,7 +1442,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
   place-items: center;
   cursor: pointer;
 }
-.break-play:hover { background: var(--hover-color); border-color: #e2e2e2; }
+.break-play:hover { background: var(--hover-color); border-color: var(--border-strong-color); }
 /* Icon-only target, so the press depth is the site's ≤60px step even though the
    circle is larger: the glyph inside it is what the eye reads as the button. */
 @media (prefers-reduced-motion: no-preference) {
@@ -1517,7 +1484,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
 /* The dock item says the same thing in its own register: rose, because it is
    armed and pressing it again cancels — never greyed, which would read as
    disabled (the dock's own rule). */
-.dock-item.is-queued { color: #9F6D82; }
+.dock-item.is-queued { color: var(--accent-rose); }
 
 /* ---------------------------------------------------------------------------
    The finish, as a ceremony: honours → the winner → the board.
@@ -1572,7 +1539,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
   place-items: center;
   font-size: 18px;
   font-weight: var(--weight-bold);
-  color: #9F6D82;
+  color: var(--accent-rose);
 }
 .honour-label {
   font-size: 11px;
@@ -1615,7 +1582,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
   border: 1px solid var(--secondary-color);
   font-size: 13px;
   font-weight: var(--weight-bold);
-  color: #9F6D82;
+  color: var(--accent-rose);
 }
 .winner-crown[hidden] { display: none; }
 
@@ -1635,7 +1602,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
 .final-winner .avatar { width: 46px; height: 46px; font-size: 17px; }
 .final-winner .fw-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .final-winner .fw-name { font-size: 20px; font-weight: var(--weight-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.final-winner .fw-crown { font-size: 11px; color: #9F6D82; }
+.final-winner .fw-crown { font-size: 11px; color: var(--accent-rose); }
 .final-winner .fw-score { font-size: 26px; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
 
 /* ONE reserved line, cycling. This replaces a title under each honoured seat's
@@ -1654,7 +1621,7 @@ button.opt { -webkit-appearance: none; appearance: none; }
   border-radius: 12px;
 }
 .final-honours[hidden] { display: none; }
-.final-honours .fh-glyph { flex: none; font-size: 13px; font-weight: var(--weight-bold); color: #9F6D82; }
+.final-honours .fh-glyph { flex: none; font-size: 13px; font-weight: var(--weight-bold); color: var(--accent-rose); }
 .final-honours .fh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .final-honours .fh-label {
   font-size: 11px;
@@ -1727,12 +1694,14 @@ button.opt { -webkit-appearance: none; appearance: none; }
   0%   { opacity: 0; transform: scale(0.6); }
   100% { opacity: 1; transform: scale(1); }
 }
-/* Alpha on --secondary-color again needs hardcoded channels — same detour, and
-   the same reason, as `champion-breathe` above. */
+/* Alpha on a token resolves through color-mix, which is the site's current
+   answer (`ring-correct` / `ring-wrong` in common.css) rather than the hardcoded
+   rgb channels older keyframes carry from before color-mix landed. Going through
+   the token means the halo cannot drift away from the pink it is a halo OF. */
 @keyframes cer-halo {
-  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(194, 137, 159, 0.45); }
-  70%  { transform: scale(1.04); box-shadow: 0 0 0 14px rgba(194, 137, 159, 0); }
-  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(194, 137, 159, 0); }
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary-color) 45%, transparent); }
+  70%  { transform: scale(1.04); box-shadow: 0 0 0 14px color-mix(in srgb, var(--secondary-color) 0%, transparent); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary-color) 0%, transparent); }
 }
 /* The winner's card SHRINKING into place, from the size it held on its own
    screen. Landing rather than arriving is the whole point: it is the same card. */

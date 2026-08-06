@@ -141,6 +141,20 @@ export default class PartyGameServer {
      *  and simply leaves it out of the average.
      *  @type {number | null} */
     this.questionAt = null;
+    /** Whether the live question has been FROZEN at any point — a drop-pause or a
+     *  break. Such a question yields no usable latency and is dropped from the
+     *  fastest-hand average entirely (see {@link PartyGameServer#buzzLatency}).
+     *
+     *  It has to be dropped rather than measured because a freeze does not stop
+     *  everyone equally: a bot's buzz is a plain `setTimeout` scheduled when the
+     *  question was dealt, so it fires straight through a freeze at its real
+     *  delay, while every human's clock is held. Timing that question would show
+     *  the humans as seconds slower than they were and hand the fastest hand to
+     *  whoever happened to be a bot. (The same skew has always existed for the
+     *  speed bonus on a drop-pause; the honour is simply the first thing that
+     *  puts a number on screen where anyone can see it.)
+     *  @type {boolean} */
+    this.questionFrozen = false;
     /** Last message time per HEARTBEAT-CAPABLE seat, so a socket that died
      *  without closing stops counting as present. See `flags/heartbeat.js`.
      *  Transient like `holders` — a DO eviction takes the sockets with it, so
@@ -635,15 +649,29 @@ export default class PartyGameServer {
   markQuestionDealt(phaseBefore, indexBefore) {
     if (!this.room) return;
     if (this.room.phase !== 'question') { this.questionAt = null; return; }
-    if (phaseBefore === 'question' && indexBefore === this.room.questionIndex) return;
-    this.questionAt = Date.now();
+    if (phaseBefore !== 'question' || indexBefore !== this.room.questionIndex) {
+      // A genuinely new question: fresh stamp, and a clean slate on the freeze.
+      this.questionAt = Date.now();
+      this.questionFrozen = false;
+    }
+    // Checked on every message rather than only where a freeze begins, so it
+    // cannot be missed by a path that freezes the room some other way later.
+    if (this.room.breakBy !== null || this.room.pausedFor !== null) this.questionFrozen = true;
   }
 
-  /** Ms since the live question was dealt, or null when that is unknown (an
-   *  eviction lost the stamp). Never negative: a clock that stepped backwards
-   *  should drop the sample, not record an impossibly fast hand. */
+  /** Ms since the live question was dealt, or null when that is not a number
+   *  worth having:
+   *
+   *  - the stamp is missing (a durable-object eviction lost it);
+   *  - the question has been frozen, so the humans' clocks stopped and the bots'
+   *    did not (see {@link PartyGameServer#questionFrozen});
+   *  - the clock stepped backwards, which should drop the sample rather than
+   *    record an impossibly fast hand.
+   *
+   *  Null is not a zero: `applyBuzz` still counts the buzz for accuracy and only
+   *  leaves it out of the average, so a dropped sample costs nothing else. */
   buzzLatency() {
-    if (this.questionAt === null) return null;
+    if (this.questionAt === null || this.questionFrozen) return null;
     const dt = Date.now() - this.questionAt;
     return dt >= 0 ? dt : null;
   }
@@ -722,6 +750,11 @@ export default class PartyGameServer {
         this.room = repick.room;
         broadcasts.push(...repick.broadcasts);
       }
+      // A disconnect is the other way the room freezes (it is what sets
+      // `pausedFor`), so the live question has to be marked frozen here too —
+      // otherwise a buzz landing between this drop and the next inbound message
+      // would be timed against a clock only some of the room is running.
+      this.markQuestionDealt(phaseBefore, indexBefore);
       await this.saveRoom();
       this.dispatch(broadcasts);
       // A disconnect can complete a question (the last un-buzzed human left, so

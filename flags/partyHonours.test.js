@@ -230,10 +230,26 @@ test('winnerIdsOf: the top scorer, or everyone tied at the top', () => {
   );
 });
 
-test('winnerIdsOf: a board nobody scored on has no winner', () => {
-  // Crowning a 0 is worse than crowning nobody — and it would also empty the
-  // honours pool of the one seat most likely to hold one.
-  assert.deepEqual(winnerIdsOf([{ playerId: 'a', score: 0 }, { playerId: 'b', score: 0 }]), []);
+test('winnerIdsOf: a scoreless board still excludes the top of it', () => {
+  // The pool question is not the crown question. Nobody is crowned on a
+  // scoreless board, but the top row is still the top row — and handing THEM an
+  // honour is a rosette for the player already in first place. In solo that is
+  // the only player, collecting a consolation prize on their own winning board,
+  // which is exactly what this used to do.
+  assert.deepEqual(winnerIdsOf([{ playerId: 'a', score: 0 }, { playerId: 'b', score: 0 }]), ['a', 'b']);
+  assert.deepEqual(winnerIdsOf([{ playerId: 'solo', score: 0 }]), ['solo']);
   assert.deepEqual(winnerIdsOf([]), []);
   assert.deepEqual(winnerIdsOf(null), []);
+});
+
+test('a game nobody scored in hands out no honours at all', () => {
+  // Falls out of the rule above, and is the honest ending for a round where
+  // nothing happened: everyone is tied at the top, so the pool is empty.
+  const s = stats({
+    a: seat({ mean: 900, correct: 0 }),
+    b: seat({ mean: 4000, correct: 0 }),
+  }, [{ modeId: 'flags-all', gains: {} }]);
+  assert.deepEqual(computeHonours(s, winnerIdsOf([
+    { playerId: 'a', score: 0 }, { playerId: 'b', score: 0 },
+  ]), ['a', 'b']), []);
 });

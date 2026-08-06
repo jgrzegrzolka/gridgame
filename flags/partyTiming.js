@@ -393,15 +393,19 @@ export const WINNER_BEAT_MS = 2800;
  *  to the next. Also what makes the ending "over": the board has said everything
  *  it has to say once the strip has shown its first honour out. */
 export const HONOUR_STRIP_CYCLE_MS = 3000;
-/** The strip's crossfade between two honours. */
-export const HONOUR_STRIP_FADE_MS = 260;
 /** The winner's card landing as the board header, continued from its own screen
- *  (`scale(1.06)` → 1) rather than re-revealed. */
+ *  (`scale(1.06)` → 1) rather than re-revealed. Read by {@link honoursSchedule}
+ *  as the settle time of a ceremony with no honours to cycle. */
 export const BOARD_HEADER_MS = 320;
-/** One ranked row's fade-in, and the gap between one row starting and the next.
- *  Top-down and uniform: no cascade and no count-up, because the score already
- *  counted on the winner's screen and the result is already known. */
-export const BOARD_ROW_MS = 240;
+/** The gap between one ranked row starting to fade in and the next. Top-down and
+ *  uniform: no cascade and no count-up, because the score already counted on the
+ *  winner's screen and the result is already known.
+ *
+ *  Only the STAGGER lives here, because only the stagger is arithmetic anyone
+ *  computes — the page stamps it as a per-row `--enter-delay`. The fade's own
+ *  duration, and the strip's crossfade, are CSS and nothing else needs to know
+ *  them; exporting a constant no module imports would be a pairing that looks
+ *  enforced and is not. */
 export const BOARD_ROW_STAGGER_MS = 60;
 
 /**

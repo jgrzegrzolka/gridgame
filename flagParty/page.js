@@ -514,6 +514,11 @@ export function bootFlagParty() {
   // The break's own surface — no dialog, see index.html. A sibling of <main>, so
   // its `position: fixed` resolves against the viewport rather than the screen
   // swap's transform (the same rule the dock's placement encodes).
+  // The game itself, which recedes behind the break veil. Cached like every other
+  // ref on this page rather than re-queried per paint: `paintBreak` runs on every
+  // render, and a `querySelector` there would be the one DOM lookup in the file
+  // that repeats for no reason.
+  const partyMain = /** @type {HTMLElement} */ (document.querySelector('.party'));
   const breakVeil = $('break-veil');
   const breakPlay = /** @type {HTMLButtonElement} */ ($('break-play'));
   const breakWho = $('break-who');
@@ -1526,7 +1531,7 @@ export function bootFlagParty() {
     const who = state.breakBy;
     const on = who !== null && activeRoom !== null;
     breakVeil.hidden = !on;
-    document.querySelector('.party')?.classList.toggle('is-break', on);
+    partyMain.classList.toggle('is-break', on);
     if (!on) return;
     breakWho.textContent = '';
     const entry = state.roster.find((r) => r.playerId === who);
@@ -3182,6 +3187,12 @@ export function bootFlagParty() {
    *  keeps running long after the ceremony is "over" -- the board is a screen
    *  people sit on. */
   let honourStripTimer = 0;
+  /** Whether this finish's burst has already gone off. `finalCelebrated` cannot
+   *  answer this: it means "the finish has been rendered once", and it is set the
+   *  moment the ceremony STARTS -- some nine seconds before the burst is due. A
+   *  player who skips in that window would otherwise get no burst at all, which
+   *  is the one thing the ending owes everybody. */
+  let celebrationDone = false;
 
   /** How long the winner's score takes to climb, and when it starts. Local to
    *  this beat rather than in partyTiming: they are inside one screen's own
@@ -3211,6 +3222,9 @@ export function bootFlagParty() {
     if (honourStripTimer) { window.clearInterval(honourStripTimer); honourStripTimer = 0; }
     ceremonyScreen = null;
     ceremonyHonours = [];
+    // Re-armed with the rest of it, so a Play again gets a fresh burst — the same
+    // rule `finalCelebrated` follows one line up in render().
+    celebrationDone = false;
   }
 
   /** Arm one ceremony step at an absolute offset from the epoch. */
@@ -3296,11 +3310,26 @@ export function bootFlagParty() {
     }, WINNER_CROWN_AT_MS));
   }
 
+  /** Fire the finish burst, once per finish, whichever route the ending took.
+   *  @param {any[]} board */
+  function celebrate(board) {
+    if (celebrationDone) return;
+    celebrationDone = true;
+    runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
+  }
+
   /** Run the whole ceremony from now. Called once per finish. */
   function playCeremony(/** @type {any[]} */ honours, /** @type {any} */ winner, /** @type {any[]} */ board) {
     stopCeremony();
     ceremonyHonours = honours;
     ceremonyEpoch = Date.now();
+    // Claimed SYNCHRONOUSLY, before a single timer is armed. The first beat is
+    // scheduled at offset 0, but a `setTimeout(fn, 0)` still yields — and a
+    // message landing in that gap would find `ceremonyScreen` null with
+    // `finalCelebrated` already true, take the no-animation path, and paint the
+    // board over a ceremony that was about to start. A few milliseconds wide,
+    // and the sort of thing that only ever reproduces in front of someone.
+    ceremonyScreen = honours.length > 0 ? 'honour' : 'winner';
     const schedule = honoursSchedule(honours.length);
 
     honours.forEach((h, i) => {
@@ -3330,9 +3359,7 @@ export function bootFlagParty() {
     });
     // The burst belongs to the winner's arrival, not to the board: it punctuates
     // the moment the result is given rather than covering rows still landing.
-    atCeremony(schedule.winnerAt + FINAL_CELEBRATION_OFFSET_MS, () => {
-      runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
-    });
+    atCeremony(schedule.winnerAt + FINAL_CELEBRATION_OFFSET_MS, () => celebrate(board));
     atCeremony(schedule.boardAt, () => {
       ceremonyScreen = 'final';
       renderBoard(board, winner, true);
@@ -3448,6 +3475,11 @@ export function bootFlagParty() {
     ceremonyScreen = 'final';
     renderBoard(board, winnerRowOf(board), false);
     showSection('final');
+    // Skipping the ceremony must not skip the celebration: `stopCeremony` has
+    // just cancelled the burst armed on the winner's beat, and the burst is the
+    // one thing the ending owes everybody. `celebrate` is idempotent, so a skip
+    // that lands after it already went off changes nothing.
+    celebrate(board);
   }
 
   /** The scoreboard row that won, or null when nobody did: a tie at the top has
@@ -3492,7 +3524,7 @@ export function bootFlagParty() {
       ceremonyScreen = 'final';
       renderBoard(board, winner, false);
       showSection('final');
-      if (firstShow) runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
+      if (firstShow) celebrate(board);
       applyFinalDock();
       return;
     }

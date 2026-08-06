@@ -2165,6 +2165,28 @@ number and nothing else. It is now three beats, ~11.8 s: **honours → the winne
   and never plays again.
 - `finalBoardSchedule` and its five row constants were **deleted** — the board no longer walks up
   from last place. Only `FINAL_CELEBRATION_OFFSET_MS` survives, now measured from the winner beat.
+  The old winner-row choreography went with it (`.scoreline.win`, `.scoreline.champion`,
+  `scoreline-in`, `scoreline-win-in`, `champion-breathe`, `.party-sub.pop`): the winner is not a row
+  on that board any more.
+
+### Two rules that are easy to get backwards
+
+- **A frozen question is not timed at all.** A freeze does not stop everyone equally — a bot's buzz
+  is a plain `setTimeout` armed when the question was dealt, so it fires straight through a break or
+  a drop-pause at its real delay while every human's clock is held. Timing that question would show
+  the humans as seconds slower than they were and hand Najszybsza ręka to whichever seat was a bot.
+  So `party/partyGameServer.js` marks the live question frozen the moment either freeze is on and
+  passes `null` for the latency; the buzz still counts for accuracy and only drops out of the
+  average (that is what `SeatStat.timed` is for, alongside the eviction case). The same skew has
+  always existed for the *speed bonus* on a drop-pause; the honour is simply the first thing that
+  put a number on screen where anyone could see it.
+- **"Who is excluded from the honours" is not "who is crowned".** `winnerIdsOf` excludes everyone at
+  the top of the board *including at zero*; the crown (`winnerRowOf`, client-side) additionally
+  needs a score above zero and no tie. Merging them was a real bug: a scoreless board has no winner
+  to crown, so the top seat fell back into the honours pool and collected a consolation prize on
+  their own winning board — in solo, the only player got a rosette for coming first. A scoreless
+  multi-seat game now hands out nothing, which is the honest ending for a round where nothing
+  happened.
 
 ## Out of scope (don't sweep in)
 

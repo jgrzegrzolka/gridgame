@@ -242,9 +242,20 @@ export function computeHonours(stats, winnerIds, seatIds) {
 }
 
 /**
- * The seats a win excludes from the honours pool: the top scorer, or every seat
- * tied at the top. A board where nobody scored has no winner at all — an ending
- * that crowned a 0 would be worse than one that crowns nobody.
+ * The seats excluded from the honours pool: everyone at the top of the board.
+ *
+ * This answers "who is not eligible for a consolation", which is a **different
+ * question from "who is crowned"** — and conflating them was a real bug. The
+ * crown needs a score above zero and no tie (a board nobody scored on crowns
+ * nobody, which is better than crowning a 0). The pool does not: on a scoreless
+ * board the top row is still the top row, and handing them an honour would be a
+ * rosette awarded to the player already in first place. In solo that is the
+ * *only* player, who would collect a consolation prize on their own winning
+ * board.
+ *
+ * So a scoreless multi-seat game excludes everyone tied at 0 and simply has no
+ * honours, which is the honest ending for a round where nothing happened. The
+ * client's own `winnerRowOf` decides the crown, and the two must not be merged.
  *
  * @param {Array<{ playerId: string, score: number }> | null | undefined} scoreboard
  *   sorted descending, as the server sends it
@@ -254,6 +265,5 @@ export function winnerIdsOf(scoreboard) {
   const board = Array.isArray(scoreboard) ? scoreboard : [];
   if (board.length === 0) return [];
   const top = board[0].score;
-  if (!(top > 0)) return [];
   return board.filter((r) => r.score === top).map((r) => r.playerId);
 }

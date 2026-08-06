@@ -1472,6 +1472,10 @@ function questionBroadcasts(room) {
  * @returns {Broadcast}
  */
 function welcomeBroadcast(room, playerId) {
+  // Sorted once and used twice: the board itself, and the honours that have to
+  // agree with it about who won. Re-deriving it for the honours would be a
+  // second sort, and — worse — two answers to the same question.
+  const scoreboard = scoreboardOf(room);
   return {
     to: playerId,
     message: {
@@ -1496,7 +1500,7 @@ function welcomeBroadcast(room, playerId) {
       firstPickVeil: room.firstPickVeil,
       roster: rosterList(room),
       question: room.question ? publicQuestion(room.question) : null,
-      scoreboard: scoreboardOf(room),
+      scoreboard,
       // Draft: a reconnect mid-pick needs the current picker to paint the pick
       // screen. `youPick` is server-authoritative (this seat vs the picker), and
       // the hand is sent only to the picker (never leaked to a watcher). All null
@@ -1514,7 +1518,7 @@ function welcomeBroadcast(room, playerId) {
       // A seat that reconnects onto the finished board gets the honours with it,
       // so the ceremony's mentions survive a reload rather than leaving a board
       // whose strip has nothing to cycle.
-      honours: room.phase === 'final' ? honoursFor(room, scoreboardOf(room)) : null,
+      honours: room.phase === 'final' ? honoursFor(room, scoreboard) : null,
     },
   };
 }
