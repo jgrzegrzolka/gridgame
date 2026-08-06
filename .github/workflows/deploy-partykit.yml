@@ -22,6 +22,14 @@ name: Deploy PartyKit
 # Over-triggering is the safe failure direction.
 
 on:
+  # The manual "ship it" button, and the ONLY way to deploy this half without a
+  # terminal. `deploy.yml` has had one for a while; this one did not, which meant
+  # that whenever the push trigger failed to fire — a GitHub Actions incident
+  # dropping webhooks, most recently 2026-08-06 — the server could only be
+  # shipped from a laptop with `npx partykit deploy`. From a phone there was no
+  # route at all. Unlike the SWA workflow there is no `changes` gate to satisfy:
+  # a dispatch runs the same test + typecheck + deploy chain a push does.
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
