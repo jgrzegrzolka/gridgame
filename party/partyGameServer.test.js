@@ -1293,3 +1293,87 @@ test('onRequest: the response carries CORS headers — the site and PartyKit sit
   assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
   assert.equal(res.headers.get('Content-Type'), 'application/json');
 });
+
+// ---- the break, and what a freeze does to the honour records ----
+
+test('a break routes through the server and is announced to the room', async () => {
+  const { srv, conn } = await startSoloDraft();
+  // Question 0 is a round start, which is the one question phase a break may
+  // begin in (the round card sits at its head — see `applyRequestBreak`).
+  await srv.onMessage(JSON.stringify({ type: 'requestBreak' }), conn);
+  assert.equal(srv.room.breakBy, 'alice');
+  assert.deepEqual(conn.last('break'), { type: 'break', breakBy: 'alice' });
+
+  await srv.onMessage(JSON.stringify({ type: 'endBreak' }), conn);
+  assert.equal(srv.room.breakBy, null);
+  assert.deepEqual(conn.last('break'), { type: 'break', breakBy: null });
+});
+
+test('a break survives the save, so an eviction does not silently resume', async () => {
+  const { srv, conn } = await startSoloDraft();
+  await srv.onMessage(JSON.stringify({ type: 'requestBreak' }), conn);
+  const revived = new PartyGameServer(mockParty([conn]));
+  revived.party = srv.party;
+  await revived.onStart();
+  assert.equal(revived.room.breakBy, 'alice');
+});
+
+test('buzzes are timed, and the time is real', async () => {
+  const { srv, conn } = await startSoloDraft();
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  const stat = srv.room.honourStats.seats.alice;
+  assert.equal(stat.buzzes, 1);
+  assert.equal(stat.timed, 1, 'an ordinary buzz contributes to the fastest-hand average');
+  assert.ok(stat.latencyMs >= 0);
+});
+
+test('a question that was frozen contributes no latency at all', async () => {
+  // A freeze does not stop everyone equally: a bot's buzz is a plain setTimeout
+  // scheduled when the question was dealt, so it fires straight through at its
+  // real delay while every human's clock is held. Timing that question would
+  // show the humans as seconds slower than they were. The buzz still counts for
+  // accuracy — only the average drops it.
+  const { srv, conn } = await startSoloDraft();
+  await srv.onMessage(JSON.stringify({ type: 'requestBreak' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  const stat = srv.room.honourStats.seats.alice;
+  assert.equal(stat.buzzes, 1, 'the buzz is still recorded');
+  assert.equal(stat.timed, 0, 'but it is not in the average');
+  assert.equal(stat.latencyMs, 0);
+});
+
+test('the taint clears with the question it was on', async () => {
+  // Otherwise one break early in a game would silently un-time every question
+  // after it, and the fastest hand would be decided by whoever buzzed first
+  // before the break.
+  const { srv, conn } = await startSoloDraft();
+  await srv.onMessage(JSON.stringify({ type: 'requestBreak' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'endBreak' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
+  await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+  const stat = srv.room.honourStats.seats.alice;
+  assert.equal(stat.buzzes, 2);
+  assert.equal(stat.timed, 1, 'the question after the break is timed again');
+});
+
+test('the finish carries honours computed server-side', async () => {
+  const { srv, conn } = await startSoloDraft();
+  // Solo: one seat, so it wins and there is nobody left to honour. The point is
+  // that the field is present and the game finishes.
+  // Generous cap: a medium draft is seven rounds of five, plus a pick between
+  // each. The loop is bounded only so a routing bug fails as a test rather than a
+  // hang.
+  for (let i = 0; i < 400 && srv.room.phase !== 'final'; i++) {
+    if (srv.room.phase === 'picking') {
+      await srv.onMessage(JSON.stringify({ type: 'pick', modeId: srv.room.hand[0] }), conn);
+      continue;
+    }
+    await srv.onMessage(JSON.stringify({ type: 'buzz', choice: 'zz' }), conn);
+    await srv.onMessage(JSON.stringify({ type: 'next' }), conn);
+  }
+  assert.equal(srv.room.phase, 'final');
+  const final = conn.last('final');
+  assert.ok(Array.isArray(final.honours), 'the final message carries an honours array');
+  assert.deepEqual(final.honours, [], 'solo has no non-winner to honour, and never pads');
+});

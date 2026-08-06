@@ -77,10 +77,17 @@
    * alongside the dock redesign: the design calls for a darker, warmer
    * rose than the brand pink on press so the spring-scale reads as a
    * genuine "pushed" state, and --secondary-color (#C2899F) sits too light
-   * against --primary to register that dip. Scope is intentionally narrow —
-   * dock item hover/active only. It is NOT a second brand accent: pink
-   * (--secondary-color) remains the accent everywhere else; reach for this
-   * only when a dock item needs its transient pressed/hover tint. */
+   * against --primary to register that dip.
+   *
+   * It is NOT a second brand accent: pink (--secondary-color) remains the accent
+   * everywhere else. Its scope has grown twice, both times for the same reason
+   * and both deliberately: (1) `:focus-visible` outlines, which need the same
+   * darker rose to read against the ring they replace, and (2) **small rose type
+   * that has to stay legible** — the Flag Party finish's ♛ pill, its honour
+   * glyphs and the board's honours strip, all 11-13px on --selected-color, where
+   * #C2899F lands near 2.3:1 and simply cannot be read. That is the test before
+   * reaching for this: pink first, and this only when pink is too light to
+   * register at the size the thing is actually set. */
   --accent-rose: #9F6D82;
   /* One step sharper than --muted-soft-color (#eee): the hover border for the
    * pressable button family (the Button-Motion grammar in Part 3). A deliberate

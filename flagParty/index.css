@@ -824,11 +824,12 @@ button.opt { -webkit-appearance: none; appearance: none; }
      layout is unchanged. */
   position: relative;
 }
-.scoreline.win { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 .scoreline.other { background: var(--surface-color); border: 1px solid var(--muted-soft-color); }
-/* On the between-rounds break, the local player's own row carries the pink ring
-   (same "this is you" highlight as a winning row) so you find yourself at a
-   glance. Reuses .win's fill/border, no new colour. */
+/* The local player's own row carries the pink ring so you find yourself at a
+   glance — on the between-rounds break, and on the finish board where you are
+   never the top row (the winner is the header above it). `.scoreline.win`, the
+   old first-place fill, went with the cascade: the finish board has no winning
+   ROW left to fill, and every other board's highlight is "this is you". */
 .scoreline.you { background: var(--selected-color); border: 1px solid var(--secondary-color); }
 /* Weights mirror flagQuiz's daily leaderboard (`.leaderboard-*`): muted rank,
    500 name, 600 score. The old 700/800 read heavier than anything else on the
@@ -1349,70 +1350,362 @@ button.opt { -webkit-appearance: none; appearance: none; }
    implementations of one mechanism is the bug CLAUDE.md names; the shared one
    wins. */
 
-/* Finish-screen choreography — the scoreboard cascades in bottom-to-top so the
-   winner's row lands last (with a small victory bounce), then the sole winner
-   (`.champion`) settles into a slow breathe + pink glow that keeps first place
-   alive without a caption. The tie caption (the only surviving `.party-sub`)
-   pops. The page only adds `.enter` / `.pop` when the player hasn't asked to
-   reduce motion, and the sustained breathe lives entirely inside this @media
-   round, so motion-sensitive players get the static pink highlight only. Pairs
-   with the confetti / fireworks burst (winner → fireworks, else confetti). */
+/* The final board's bottom-up cascade — the winner's row landing last with a
+   victory bounce, then a sole `.champion` settling into an infinite breathe —
+   is GONE with the ceremony that replaced it. The winner is not a row on that
+   board any more; they are its header, arriving from their own screen, and the
+   rows below them fade in top-down with nothing to hold back. `.scoreline.win`,
+   `.scoreline.champion`, `scoreline-in`, `scoreline-win-in` and
+   `champion-breathe` were deleted rather than left behind: a stylesheet that
+   still describes a bounce nothing triggers is how the next reader concludes
+   the board does something it does not. `.party-sub.pop` went with them (the
+   tie is announced on the winner's beat now, so the board's caption is a label,
+   not an event). `party-sub-pop` itself survives — the ♛ pill lands on it. */
 @media (prefers-reduced-motion: no-preference) {
   .opt { transition: border-color 0.12s ease, opacity 0.12s ease; }
-  .scoreline.enter {
-    animation: scoreline-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: var(--enter-delay, 0ms);
-  }
   .scoreline.enter-fade {
     animation: scoreline-fade-in 0.4s ease both;
     animation-delay: var(--enter-delay, 0ms);
   }
-  .scoreline.win.enter {
-    animation: scoreline-win-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: var(--enter-delay, 0ms);
-  }
-  /* Sole winner: the victory bounce, then an infinite breathe that starts the
-     moment the bounce ends (delay = cascade delay + the 0.6s bounce). Must sit
-     AFTER `.scoreline.win.enter` — same specificity, later rule wins — so the
-     champion's two-animation stack replaces the bounce-only rule. */
-  .scoreline.champion.enter {
-    animation:
-      scoreline-win-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) var(--enter-delay, 0ms) both,
-      champion-breathe 2.6s ease-in-out calc(var(--enter-delay, 0ms) + 600ms) infinite;
-  }
-  /* Winner painted without an entrance (a re-render / language switch while the
-     final screen is already up): skip the bounce, just keep breathing. */
-  .scoreline.champion { animation: champion-breathe 2.6s ease-in-out infinite; }
-  .party-sub.pop { animation: party-sub-pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 }
-@keyframes scoreline-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-/* The between-rounds board's entrance. Deliberately fades WITHOUT moving, unlike
-   `scoreline-in` above: the ledger holds each row at its previous rank with an
-   inline transform, and a CSS animation beats an inline style, so animating
-   `transform` here would snap every row to its final slot and there would be no
-   movement left to watch. Same cascade idea, opacity only. */
+/* The between-rounds board's entrance. Deliberately fades WITHOUT moving: the
+   ledger holds each row at its previous rank with an inline transform, and a CSS
+   animation beats an inline style, so animating `transform` here would snap every
+   row to its final slot and there would be no movement left to watch. The finish
+   board's rows (`.enter-board`) reuse it for the same "fade, never move" reason —
+   there the rows are simply already where they belong. */
 @keyframes scoreline-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
-}
-@keyframes scoreline-win-in {
-  0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
-  70%  { opacity: 1; transform: translateY(0) scale(1.04); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes party-sub-pop {
   0%   { opacity: 0; transform: scale(0.9); }
   60%  { opacity: 1; transform: scale(1.06); }
   100% { opacity: 1; transform: scale(1); }
 }
-/* Winner's living "breathe": a gentle scale + a pink glow that swells and
-   recedes. rgb of --secondary-color (#C2899F) — alpha-on-a-CSS-var needs a
-   color-mix() / JS detour, so the channels are hardcoded and only alpha varies
-   (the same detour ring-wrong in common.css documents, and now avoids). */
-@keyframes champion-breathe {
-  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(194, 137, 159, 0); }
-  50%      { transform: scale(1.03); box-shadow: 0 0 14px 1px rgba(194, 137, 159, 0.5); }
+
+/* ---------------------------------------------------------------------------
+   The break: a pause any seat asks for.
+
+   Deliberately NOT the pause card (`.pause-dialog`). A drop is something that
+   happened TO the room and needs explaining — who, and whose call it is to move
+   on — so it gets a modal with a title and two lines. A break is something the
+   room chose and needs exactly one affordance, so it gets no dialog at all: the
+   game greys out, one play button sits in the middle, and a single line names
+   who asked. Same freeze underneath (`flags/partyTiming.js`'s hold arithmetic),
+   two surfaces, because the two causes need different things from the player.
+   --------------------------------------------------------------------------- */
+
+/* The game recedes rather than disappears: you can still see the question you
+   were on, which is what makes the freeze read as a pause rather than a
+   navigation. `pointer-events: none` is the load-bearing half — tiles behind a
+   veil must not be tappable, or a break becomes free thinking time with a
+   buzzer. */
+.party.is-break > section,
+.party.is-break > .dock {
+  filter: grayscale(1);
+  opacity: 0.22;
+  pointer-events: none;
+}
+/* The dock is in the list on purpose. The veil already swallows its presses (it
+   is a full-viewport layer above the dock's z-index of 5), but a bar that stays
+   crisp and legible while nothing on it responds reads as a broken page rather
+   than a paused one. Recede it with everything else, so the only thing that
+   looks pressable is the only thing that is.
+   The chrome cluster and burger need no rule: they sit at z-index 25, still
+   under the veil, and they are site chrome rather than part of the game. */
+
+.break-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  /* Over the page tint rather than a dim: the room is paused, not dark. */
+  background: color-mix(in srgb, var(--page-bg-color) 72%, transparent);
+}
+.break-veil[hidden] { display: none; }
+
+.break-play {
+  appearance: none;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  box-shadow: 0 4px 24px rgba(43, 29, 36, 0.12);
+  color: var(--primary-color);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.break-play:hover { background: var(--hover-color); border-color: var(--border-strong-color); }
+/* Icon-only target, so the press depth is the site's ≤60px step even though the
+   circle is larger: the glyph inside it is what the eye reads as the button. */
+@media (prefers-reduced-motion: no-preference) {
+  .break-play { transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .break-play:active { transform: scale(0.9); }
+}
+
+/* One line, no sentence structure beyond it: who asked. Sits below the button
+   so the thing you press is what the eye lands on first. */
+.break-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted-color);
+}
+.break-who[hidden] { display: none; }
+.break-who .avatar { width: 20px; height: 20px; font-size: 8px; }
+
+/* Pressed during a question: the press is acknowledged, not refused. A pill on
+   the question screen rather than a change of state on the dock alone, because
+   the dock label at 11px cannot carry the full sentence and "Queued" on its own
+   does not say queued for WHAT. */
+.break-queued {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  color: var(--muted-color);
+}
+.break-queued[hidden] { display: none; }
+/* The dock item says the same thing in its own register: rose, because it is
+   armed and pressing it again cancels — never greyed, which would read as
+   disabled (the dock's own rule). */
+.dock-item.is-queued { color: var(--accent-rose); }
+
+/* ---------------------------------------------------------------------------
+   The finish, as a ceremony: honours → the winner → the board.
+
+   Every beat's motion sits at the EDGES — a fast deal in, a long still middle,
+   a fast leave. A slow symmetric fade reads as a bad connection, not a
+   ceremony, which is what the first version of this got wrong. The still middle
+   is the reading time and it is the scarce thing (the same call
+   CHART_REVEAL_SECONDS makes).
+   --------------------------------------------------------------------------- */
+
+.pt-honour,
+.pt-winner {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+/* All THREE finish screens share one height floor, the beats and the board
+   alike. Without it on the board the dock jumps ~190px upward at the exact
+   moment the board lands — the last frame of a twelve-second ending, and the
+   one place a jolt is most obvious. Tall enough for the winner beat (the
+   largest of the three), and viewport-relative so it never pushes the dock off
+   a short phone. A board with more rows than this simply grows past it. */
+.pt-honour,
+.pt-winner,
+.pt-final {
+  min-height: min(62vh, 460px);
+}
+.pt-winner { gap: 16px; }
+/* The beat's contents live one level in, because the whole body is rebuilt per
+   beat (its children carry animations that only play on a fresh element) while
+   the dots outside it persist. So the column lives here, not on the section. */
+.honour-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* The honours are at a deliberately smaller scale than the winner beat: three
+   full screens of mentions followed by nothing but a table row made the
+   mentions read as the bigger prize, so the winner's screen has to out-size
+   them for the ordering to mean anything. */
+.honour-glyph {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--selected-color);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  color: var(--accent-rose);
+}
+.honour-label {
+  font-size: 11px;
+  color: var(--muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.honour-av .avatar { width: 56px; height: 56px; font-size: 20px; }
+.honour-name { font-weight: 300; font-size: 26px; letter-spacing: -0.02em; }
+.honour-value { font-size: 15px; color: var(--muted-color); }
+/* Three dots at the foot: how far through the honours you are. The only thing
+   on the screen that persists across beats, so the ceremony has a length. */
+.honour-dots { position: absolute; bottom: 0; display: flex; gap: 6px; }
+.honour-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted-soft-color);
+}
+.honour-dots i.on { background: var(--secondary-color); }
+
+.winner-av .avatar { width: 104px; height: 104px; font-size: 38px; }
+.winner-name { font-weight: 300; font-size: 44px; line-height: 1; letter-spacing: -0.03em; }
+.winner-score {
+  font-weight: var(--weight-bold);
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+/* Lands late, once the number has finished climbing: the score is the fact and
+   the crown is the verdict, so they must not arrive together. */
+.winner-crown {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px;
+  border-radius: 999px;
+  background: var(--selected-color);
+  border: 1px solid var(--secondary-color);
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  color: var(--accent-rose);
+}
+.winner-crown[hidden] { display: none; }
+
+/* The winner's card continued onto the board as its header — the same card,
+   landed, not a second reveal of the same result. The board must never
+   re-announce what the beat before it just announced. */
+.final-winner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--selected-color);
+  border: 1px solid var(--secondary-color);
+}
+.final-winner[hidden] { display: none; }
+.final-winner .avatar { width: 46px; height: 46px; font-size: 17px; }
+.final-winner .fw-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.final-winner .fw-name { font-size: 20px; font-weight: var(--weight-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.final-winner .fw-crown { font-size: 11px; color: var(--accent-rose); }
+.final-winner .fw-score { font-size: 26px; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+
+/* ONE reserved line, cycling. This replaces a title under each honoured seat's
+   row: a second line per seat would cost a row's height for EVERY player to say
+   something only three of them earned. It also means an honoured seat keeps its
+   mention when its row is scrolled out of view — which is the case that decides
+   it at twelve seats. */
+.final-honours {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--surface-color);
+  border: 1px solid var(--muted-soft-color);
+  border-radius: 12px;
+}
+.final-honours[hidden] { display: none; }
+.final-honours .fh-glyph { flex: none; font-size: 13px; font-weight: var(--weight-bold); color: var(--accent-rose); }
+.final-honours .fh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.final-honours .fh-label {
+  font-size: 11px;
+  color: var(--muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.final-honours .fh-who { font-size: 13px; font-weight: var(--weight-bold); }
+.final-honours .fh-value { flex: none; font-size: 11px; color: var(--muted-color); }
+
+/* The ranked rows start at 2 and simply scroll. MAX_SEATS is 20, so the board is
+   a LIST, not a screen: no "+4 more" row to decode, no pinned local row. A plain
+   ranked list past the fold is easier to read than a collapsed one, and the
+   header above keeps the result permanently visible however far you scroll.
+   The header and the strip are siblings ABOVE this box, never inside it. */
+.pt-final .final-board {
+  overflow-y: auto;
+  /* Leaves room for the header card, the strip, the page chrome and the dock.
+     A max rather than a fixed height so a two-player board stays its own size
+     instead of reserving a screen it does not need. */
+  max-height: calc(100dvh - 320px);
+  min-height: 96px;
+  /* Hidden, not styled: the rows already have their own rhythm and a bar down
+     the side of a four-row board reads as a defect. The dock's backdrop blur
+     obscures rows passing under it, so the list needs no fade of its own. */
+  scrollbar-width: none;
+}
+.pt-final .final-board::-webkit-scrollbar { width: 0; height: 0; display: none; }
+/* The rows carry no titles any more — the strip does — so a single line is all
+   a row needs, and 40px is what lets eight of them sit above the dock. */
+.pt-final .final-board .scoreline { padding: 9px 12px; gap: 10px; }
+.pt-final .final-board .scoreline .avatar { width: 24px; height: 24px; font-size: 9px; }
+.pt-final .final-board .scoreline .nm { font-size: 15px; }
+.pt-final .final-board .scoreline .sc { font-size: 16px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Dealt from the right with a small overshoot, then away to the left, fading.
+     Driven by classes the clock toggles rather than one long keyframe: the
+     ceremony's timing lives in `honoursSchedule` where it is unit-pinned, and a
+     keyframe on a subtree that re-renders per beat pins itself to its first
+     frame and never advances. */
+  .pt-honour.beat-in { animation: cer-deal-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .pt-honour.beat-out { animation: cer-deal-out 0.18s ease both; }
+  .honour-glyph { animation: cer-stamp 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) 60ms both; }
+  /* Two pulses, so the still middle of the beat is not flat. Exactly two: an
+     infinite halo would still be pulsing as the next honour deals in. */
+  .honour-av { animation: cer-halo 1.6s cubic-bezier(0.23, 1, 0.32, 1) 240ms 2; border-radius: 50%; }
+  .pt-winner.beat-in { animation: cer-deal-in 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .winner-crown.land { animation: party-sub-pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .final-winner.land { animation: cer-header-land 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .final-honours.swap { animation: scoreline-fade-in 0.26s ease both; }
+  .pt-final .final-board .scoreline.enter-board {
+    animation: scoreline-fade-in 0.24s ease both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+}
+@keyframes cer-deal-in {
+  0%   { opacity: 0; transform: translateX(34px); }
+  70%  { opacity: 1; transform: translateX(0) scale(1.035); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes cer-deal-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-26px) scale(0.97); }
+}
+@keyframes cer-stamp {
+  0%   { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* Alpha on a token resolves through color-mix, which is the site's current
+   answer (`ring-correct` / `ring-wrong` in common.css) rather than the hardcoded
+   rgb channels older keyframes carry from before color-mix landed. Going through
+   the token means the halo cannot drift away from the pink it is a halo OF. */
+@keyframes cer-halo {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary-color) 45%, transparent); }
+  70%  { transform: scale(1.04); box-shadow: 0 0 0 14px color-mix(in srgb, var(--secondary-color) 0%, transparent); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary-color) 0%, transparent); }
+}
+/* The winner's card SHRINKING into place, from the size it held on its own
+   screen. Landing rather than arriving is the whole point: it is the same card. */
+@keyframes cer-header-land {
+  from { transform: scale(1.06); }
+  to   { transform: scale(1); }
 }

@@ -63,6 +63,17 @@
  *   clock on this (the room stays time-free, so a pause is a flag to respect
  *   rather than a duration anyone counts), and the host is offered the choice to
  *   carry on without them. Null on an older server, which simply never pauses.
+ * @property {string | null} breakBy  the seat that asked the room to take a
+ *   **break**, or null when nobody has. Freezes every client's clock exactly the
+ *   way {@link PartyClientState.pausedFor} does — the arithmetic is shared — but
+ *   it is a room decision rather than a forced stop, so any seat can end it and
+ *   the screen it paints is a play button, not an explanation. Null on an older
+ *   server, which simply never sends one.
+ * @property {Array<{ id: string, playerId: string, nickname: string, value: number,
+ *   outOf?: number, round?: number, modeId?: string | null }> | null} honours
+ *   the finish ceremony's titles, resolved server-side (`flags/partyHonours.js`)
+ *   and sent with the final board. Null until the game ends, and on an older
+ *   server — where the finish simply skips the honour beats and shows the board.
  * @property {{ picker: string, modeId: string } | null} lastPick  who picked the
  *   current round and which mode, for the "Zosia's pick" attribution; null in a
  *   non-drafted round.
@@ -99,6 +110,8 @@ export function initialPartyClientState() {
     hand: null,
     lastPick: null,
     pausedFor: null,
+    breakBy: null,
+    honours: null,
     statusOverride: null,
   };
 }
@@ -191,6 +204,13 @@ function reduceOne(state, message) {
           // away, instead of running a countdown nobody else is running until
           // the next `paused` broadcast happens along.
           pausedFor: message.pausedFor ?? null,
+          // Same reasoning for the break: reconnecting into a room that is on a
+          // break must paint the break rather than run a clock nobody else is.
+          breakBy: message.breakBy ?? null,
+          // Present only when the room is already on the final board, so a
+          // reconnect onto a finished game gets its honours back instead of a
+          // board with an empty strip.
+          honours: Array.isArray(message.honours) ? message.honours : null,
           // A reconnect can't recover whether we already buzzed this question;
           // treat as fresh — the server ignores a duplicate buzz anyway.
           myChoice: null,
@@ -215,6 +235,15 @@ function reduceOne(state, message) {
       // exactly where they were, which is the point.
       return {
         state: { ...state, pausedFor: message.pausedFor ?? null },
+        effects: [],
+      };
+    }
+    case 'break': {
+      // A seat asked the room to stop, or somebody started it again. Like
+      // `paused`, nothing else on the screen changes — the question, the scores
+      // and the pick all stay exactly where they were, which is the point.
+      return {
+        state: { ...state, breakBy: message.breakBy ?? null },
         effects: [],
       };
     }
@@ -259,6 +288,11 @@ function reduceOne(state, message) {
           // same reset, and says so through this message rather than a second
           // `paused` broadcast.
           pausedFor: null,
+          // A break belongs to the game it was called in; the room clears it on
+          // the same reset and says so here rather than through a second
+          // `break` broadcast.
+          breakBy: null,
+          honours: null,
         },
         effects: [],
       };
@@ -368,7 +402,20 @@ function reduceOne(state, message) {
     }
     case 'final': {
       return {
-        state: { ...state, phase: 'final', scoreboard: message.scoreboard ?? state.scoreboard },
+        state: {
+          ...state,
+          phase: 'final',
+          scoreboard: message.scoreboard ?? state.scoreboard,
+          // An older server sends no honours; `null` (not `[]`) so the page can
+          // tell "this build has no ceremony" from "this game earned none", and
+          // both simply go straight to the board.
+          honours: Array.isArray(message.honours) ? message.honours : null,
+          // The game is over; nothing is frozen any more. Stated here rather than
+          // relied on from a trailing `break` broadcast, so a client that misses
+          // that message does not sit on a finished board behind a play button.
+          breakBy: null,
+          pausedFor: null,
+        },
         effects: [],
       };
     }

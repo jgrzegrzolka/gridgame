@@ -29,10 +29,14 @@ import {
   LEDGER_PASS_COUNT_MS,
   LEDGER_PASS_SETTLE_MS,
   LEDGER_PASS_SLIDE_MS,
-  finalBoardSchedule,
-  FINAL_ROW_STAGGER_MS,
-  FINAL_WINNER_HOLD_MS,
-  FINAL_ROW_ENTER_MS,
+  honoursSchedule,
+  HONOUR_IN_MS,
+  HONOUR_HOLD_MS,
+  HONOUR_OUT_MS,
+  HONOUR_STRIP_CYCLE_MS,
+  WINNER_BEAT_MS,
+  BREAK_PHASES,
+  breakAllowedIn,
   initialHold,
   beginHold,
   endHold,
@@ -319,65 +323,91 @@ test('ledgerSchedule: an empty board has no entrance to wait for', () => {
   assert.equal(ledgerSchedule(0).enterMs, 0);
 });
 
-// ---- finalBoardSchedule: the finish reveal, bottom-up with the winner last ----
+// ---- honoursSchedule: the finish ceremony's ordering ----
+// These assert ORDER, not sums. The ledger schedules exist for the same reason
+// (see `ledgerSchedule`): a total can be right while the sequence is wrong, and
+// the sequence is what a reader notices.
 
-test('finalBoardSchedule: last place leads, each row above follows a step later', () => {
-  const s = finalBoardSchedule(4);
-  // Index 3 is last place and goes first; 2 and 1 follow one stagger apart.
-  assert.equal(s.rows[3].enterAt, 0);
-  assert.equal(s.rows[2].enterAt, FINAL_ROW_STAGGER_MS);
-  assert.equal(s.rows[1].enterAt, FINAL_ROW_STAGGER_MS * 2);
-});
-
-test('finalBoardSchedule: the winner is held back an extra beat', () => {
-  // Without the hold, first place is just the next row one stagger later, and
-  // "winner last" reads as nothing in particular.
-  const s = finalBoardSchedule(4);
-  assert.equal(s.rows[0].enterAt, FINAL_ROW_STAGGER_MS * 3 + FINAL_WINNER_HOLD_MS);
-  assert.ok(s.rows[0].enterAt - s.rows[1].enterAt > FINAL_ROW_STAGGER_MS, 'the winner waits longer than a plain step');
-});
-
-test('finalBoardSchedule: every row enters strictly after the one below it', () => {
-  // The property that makes it read as a walk up the board, at any table size.
-  for (const n of [2, 3, 5, 8, 20]) {
-    const s = finalBoardSchedule(n);
-    for (let i = 0; i < n - 1; i += 1) {
-      assert.ok(s.rows[i].enterAt > s.rows[i + 1].enterAt, `row ${i} must follow row ${i + 1} (n=${n})`);
-    }
+test('honoursSchedule: no two honour beats are on screen at once', () => {
+  const s = honoursSchedule(3);
+  for (let i = 0; i < s.beats.length - 1; i += 1) {
+    assert.ok(
+      s.beats[i].outAt + HONOUR_OUT_MS <= s.beats[i + 1].inAt,
+      `honour ${i} must have finished leaving before honour ${i + 1} deals in`,
+    );
   }
 });
 
-test('finalBoardSchedule: a score counts only once its row is on screen', () => {
-  const s = finalBoardSchedule(3);
-  for (const row of s.rows) assert.ok(row.countAt > row.enterAt, 'the number moves where you are already looking');
+test('honoursSchedule: each beat holds still long enough to be read', () => {
+  // The still middle is the reading time and it is the scarce thing (the same
+  // call CHART_REVEAL_SECONDS makes). A beat that only dealt in and out would be
+  // motion with nothing to look at.
+  const s = honoursSchedule(3);
+  for (const b of s.beats) {
+    assert.equal(b.outAt - b.inAt, HONOUR_IN_MS + HONOUR_HOLD_MS);
+    assert.ok(HONOUR_HOLD_MS > HONOUR_IN_MS + HONOUR_OUT_MS, 'the middle outlasts both edges');
+  }
 });
 
-test('finalBoardSchedule: the burst lands on the winner, not on the rows still arriving', () => {
-  const s = finalBoardSchedule(4);
-  assert.ok(s.celebrationAt > s.rows[0].enterAt, 'after the winner starts arriving');
-  assert.ok(s.celebrationAt < s.rows[0].enterAt + FINAL_ROW_ENTER_MS, 'and while they are still landing');
+test('honoursSchedule: the winner comes after every honour has left', () => {
+  // The whole ordering argument: while the result is unknown an honour is live
+  // information about someone who might have won. Overlapping the winner beat
+  // with the last honour would spend that honour on a room already looking
+  // somewhere else.
+  for (const n of [1, 2, 3, 5]) {
+    const s = honoursSchedule(n);
+    const last = s.beats[n - 1];
+    assert.ok(s.winnerAt >= last.outAt + HONOUR_OUT_MS, `winner must follow honour ${n - 1}`);
+  }
 });
 
-test('finalBoardSchedule: a solo board has no hold and no cascade to wait for', () => {
-  const s = finalBoardSchedule(1);
-  assert.equal(s.rows.length, 1);
-  assert.equal(s.rows[0].enterAt, 0, 'one player is both first and last: nothing to hold them behind');
+test('honoursSchedule: the board comes after the winner has had their beat', () => {
+  const s = honoursSchedule(3);
+  assert.equal(s.boardAt - s.winnerAt, WINNER_BEAT_MS);
+  assert.ok(s.boardAt > s.winnerAt);
 });
 
-test('finalBoardSchedule: an empty board schedules nothing', () => {
-  const s = finalBoardSchedule(0);
-  assert.deepEqual(s.rows, []);
-  assert.equal(s.celebrationAt, 0);
-  assert.equal(s.totalMs, 0);
+test('honoursSchedule: the winner beat outlasts an honour beat', () => {
+  // Three full screens of mentions followed by nothing but a table row made the
+  // honours read as the bigger prize. The winner's screen has to be the largest
+  // thing in the ending for the order to mean anything, and its LENGTH is half
+  // of that (the other half is type size, which lives in the CSS).
+  const s = honoursSchedule(3);
+  const honourBeat = s.beats[0].outAt - s.beats[0].inAt + HONOUR_OUT_MS;
+  assert.ok(WINNER_BEAT_MS > honourBeat, 'the winner gets more time than any single honour');
 });
 
-test('finalBoardSchedule: the whole reveal is long enough to read but stays under a second and a half', () => {
-  // The measured complaint was a 3-row board finishing its cascade in 148 ms.
-  // Guard both ways: slow enough to follow, not so slow the finish drags.
-  const s = finalBoardSchedule(3);
-  const cascadeMs = s.rows[0].enterAt - s.rows[2].enterAt;
-  assert.ok(cascadeMs >= 400, `the walk up the board must be readable, got ${cascadeMs}ms`);
-  assert.ok(s.totalMs <= 1500, `the finish must not drag, got ${s.totalMs}ms`);
+test('honoursSchedule: fewer honours simply makes a shorter ceremony', () => {
+  // A duel has one honour (the only seat that can hold one is the player who
+  // lost); solo has none. Neither pads to three.
+  const three = honoursSchedule(3);
+  const one = honoursSchedule(1);
+  const none = honoursSchedule(0);
+  assert.equal(three.beats.length, 3);
+  assert.equal(one.beats.length, 1);
+  assert.deepEqual(none.beats, []);
+  assert.ok(one.winnerAt < three.winnerAt);
+  assert.ok(none.winnerAt < one.winnerAt);
+});
+
+test('honoursSchedule: with no honours the winner opens the ending', () => {
+  const s = honoursSchedule(0);
+  assert.equal(s.winnerAt, 0, 'nothing to read out first, so the winner is the ending');
+  assert.equal(s.boardAt, WINNER_BEAT_MS);
+});
+
+test('honoursSchedule: a negative or fractional count is treated as whole honours', () => {
+  assert.deepEqual(honoursSchedule(-2).beats, []);
+  assert.equal(honoursSchedule(2.7).beats.length, 2);
+});
+
+test('honoursSchedule: the ending is over once the strip has shown its first honour', () => {
+  // The board never "finishes" — it is a screen people sit on — so `totalMs` is
+  // the point at which everything that was going to be announced has been.
+  const s = honoursSchedule(3);
+  assert.equal(s.totalMs, s.boardAt + HONOUR_STRIP_CYCLE_MS);
+  // The design's headline number, against the ~1.5 s the ending used to spend.
+  assert.ok(s.totalMs > 11000 && s.totalMs < 12500, `expected ~11.9 s, got ${s.totalMs}`);
 });
 
 test('a chart reveal gets its full beat even when everyone got it right', () => {
@@ -503,4 +533,41 @@ test('barPaints: short reveals and the pick stay bar-less', () => {
   assert.equal(barPaints('reveal', false), false);
   assert.equal(barPaints('picking', false), false);
   assert.equal(barPaints('picking', true), false, 'a pick is untimed even between chart questions');
+});
+
+// ---- breakAllowedIn: where a break may start immediately ----
+
+test('breakAllowedIn: never during a question', () => {
+  // The one rule the whole feature turns on. The 20 s window is a shared race,
+  // so a freeze while people are aiming at tiles hands one seat free thinking
+  // time — the exact thing a fixed window exists to prevent. The press is not
+  // refused (the control would read as broken); it is queued for the reveal.
+  assert.equal(breakAllowedIn('question'), false);
+});
+
+test('breakAllowedIn: every calm beat of the show takes one straight away', () => {
+  // The reveal, the standings break, the draft pick and the round card: nobody
+  // is answering anything on any of them, which is exactly when somebody reaches
+  // for the control.
+  for (const phase of ['reveal', 'break', 'picking', 'roundcard']) {
+    assert.equal(breakAllowedIn(phase), true, `${phase} must take a break immediately`);
+  }
+  assert.deepEqual([...BREAK_PHASES].sort(), ['break', 'picking', 'reveal', 'roundcard']);
+});
+
+test('breakAllowedIn: the lobby and the final board are not beats to pause', () => {
+  // Nothing is running on either, so a freeze would be a control that appears to
+  // do nothing. The dock leaves the item off both screens for the same reason.
+  assert.equal(breakAllowedIn('lobby'), false);
+  assert.equal(breakAllowedIn('final'), false);
+  assert.equal(breakAllowedIn('start'), false);
+});
+
+test('breakAllowedIn: a null or unknown screen queues rather than throwing', () => {
+  // `swapper.target` is genuinely null before the first screen is chosen, and a
+  // future screen nobody has classified must fall on the cautious side: queue it
+  // for a beat we know is safe, never freeze a phase we have not thought about.
+  assert.equal(breakAllowedIn(null), false);
+  assert.equal(breakAllowedIn(undefined), false);
+  assert.equal(breakAllowedIn('nope'), false);
 });

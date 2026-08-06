@@ -27,6 +27,8 @@ import {
   applyPick,
   applyAddBot,
   applyRemoveBot,
+  applyRequestBreak,
+  applyEndBreak,
   serializeRoom,
   deserializeRoom,
 } from '../flags/partyRoom.js';
@@ -131,6 +133,28 @@ export default class PartyGameServer {
     /** Pending bot self-pick timer, when a bot holds the draft pick.
      *  @type {ReturnType<typeof setTimeout> | null} */
     this.botPickTimer = null;
+    /** Epoch ms the live question was dealt, for the finish ceremony's
+     *  fastest-hand average. Transient on purpose (like `holders` and
+     *  `botTimers`): it is a measurement, not game state, and the room must stay
+     *  time-free. The cost of not persisting it is that a durable-object eviction
+     *  mid-question loses that one question's latencies — `applyBuzz` takes null
+     *  and simply leaves it out of the average.
+     *  @type {number | null} */
+    this.questionAt = null;
+    /** Whether the live question has been FROZEN at any point — a drop-pause or a
+     *  break. Such a question yields no usable latency and is dropped from the
+     *  fastest-hand average entirely (see {@link PartyGameServer#buzzLatency}).
+     *
+     *  It has to be dropped rather than measured because a freeze does not stop
+     *  everyone equally: a bot's buzz is a plain `setTimeout` scheduled when the
+     *  question was dealt, so it fires straight through a freeze at its real
+     *  delay, while every human's clock is held. Timing that question would show
+     *  the humans as seconds slower than they were and hand the fastest hand to
+     *  whoever happened to be a bot. (The same skew has always existed for the
+     *  speed bonus on a drop-pause; the honour is simply the first thing that
+     *  puts a number on screen where anyone can see it.)
+     *  @type {boolean} */
+    this.questionFrozen = false;
     /** Last message time per HEARTBEAT-CAPABLE seat, so a socket that died
      *  without closing stops counting as present. See `flags/heartbeat.js`.
      *  Transient like `holders` — a DO eviction takes the sockets with it, so
@@ -466,9 +490,18 @@ export default class PartyGameServer {
           const q = this.room.question;
           const question = q ? QUESTIONS[q.questionId] : null;
           const correct = q && question ? question.isCorrect(q, choice) : false;
-          result = applyBuzz(this.room, playerId, choice, correct);
+          result = applyBuzz(this.room, playerId, choice, correct, this.buzzLatency());
           break;
         }
+        case 'requestBreak':
+          // Any seat, not just the host — see `applyRequestBreak`. The reducer
+          // owns every guard (seat, phase, one-at-a-time), so nothing is checked
+          // here that it would not check again.
+          result = applyRequestBreak(this.room, playerId);
+          break;
+        case 'endBreak':
+          result = applyEndBreak(this.room, playerId);
+          break;
         case 'reveal':
           result = applyForceReveal(this.room, playerId);
           break;
@@ -590,6 +623,7 @@ export default class PartyGameServer {
       // departed seat from unfreezing a hold nobody was holding -- but they must
       // agree on WHEN a hold dies. Change one, change the other.
       if (result.room.phase !== phaseBefore) this.holders.clear();
+      this.markQuestionDealt(phaseBefore, indexBefore);
       await this.saveRoom();
       this.dispatch(result.broadcasts);
       // Bots react to whatever just happened: a fresh question schedules their
@@ -600,6 +634,46 @@ export default class PartyGameServer {
     } catch (err) {
       console.error('[partyGameServer] onMessage failed:', err);
     }
+  }
+
+  /**
+   * Stamp the deal time when a NEW question has just gone out, so buzzes on it
+   * can be timed. "New" is a phase or index change into `question` — the same
+   * two-value comparison `syncBots` already uses to decide it has a fresh
+   * question to schedule against, so the two cannot disagree about when a
+   * question started.
+   *
+   * @param {string | null} phaseBefore
+   * @param {number} indexBefore
+   */
+  markQuestionDealt(phaseBefore, indexBefore) {
+    if (!this.room) return;
+    if (this.room.phase !== 'question') { this.questionAt = null; return; }
+    if (phaseBefore !== 'question' || indexBefore !== this.room.questionIndex) {
+      // A genuinely new question: fresh stamp, and a clean slate on the freeze.
+      this.questionAt = Date.now();
+      this.questionFrozen = false;
+    }
+    // Checked on every message rather than only where a freeze begins, so it
+    // cannot be missed by a path that freezes the room some other way later.
+    if (this.room.breakBy !== null || this.room.pausedFor !== null) this.questionFrozen = true;
+  }
+
+  /** Ms since the live question was dealt, or null when that is not a number
+   *  worth having:
+   *
+   *  - the stamp is missing (a durable-object eviction lost it);
+   *  - the question has been frozen, so the humans' clocks stopped and the bots'
+   *    did not (see {@link PartyGameServer#questionFrozen});
+   *  - the clock stepped backwards, which should drop the sample rather than
+   *    record an impossibly fast hand.
+   *
+   *  Null is not a zero: `applyBuzz` still counts the buzz for accuracy and only
+   *  leaves it out of the average, so a dropped sample costs nothing else. */
+  buzzLatency() {
+    if (this.questionAt === null || this.questionFrozen) return null;
+    const dt = Date.now() - this.questionAt;
+    return dt >= 0 ? dt : null;
   }
 
   /** @param {any} conn */
@@ -676,6 +750,11 @@ export default class PartyGameServer {
         this.room = repick.room;
         broadcasts.push(...repick.broadcasts);
       }
+      // A disconnect is the other way the room freezes (it is what sets
+      // `pausedFor`), so the live question has to be marked frozen here too —
+      // otherwise a buzz landing between this drop and the next inbound message
+      // would be timed against a clock only some of the room is running.
+      this.markQuestionDealt(phaseBefore, indexBefore);
       await this.saveRoom();
       this.dispatch(broadcasts);
       // A disconnect can complete a question (the last un-buzzed human left, so
@@ -821,10 +900,15 @@ export default class PartyGameServer {
       const correct = q && question ? question.isCorrect(q, choice) : false;
       const phaseBefore = this.room.phase;
       const indexBefore = this.room.questionIndex;
-      const result = applyBuzz(this.room, botId, choice, correct);
+      // Timed exactly like a human's, off the same stamp — a bot that never
+      // appeared in the fastest-hand average would leave a title nobody could
+      // lose to it, which reads as a bug the first time a bot buzzes in 300 ms
+      // and someone else is called the fastest hand.
+      const result = applyBuzz(this.room, botId, choice, correct, this.buzzLatency());
       if (result.broadcasts.length === 0) { this.room = result.room; return; }
       this.room = result.room;
       if (this.room.phase !== phaseBefore) this.holders.clear();
+      this.markQuestionDealt(phaseBefore, indexBefore);
       await this.saveRoom();
       this.dispatch(result.broadcasts);
       // Reconcile timers through the same path every transition uses. A buzz that

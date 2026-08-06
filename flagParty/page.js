@@ -17,7 +17,7 @@ import { dockSpecFor } from './dockSpec.js';
 import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, barPaints, finalBoardSchedule, FINAL_COUNT_MS, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, barPaints, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS, breakAllowedIn, honoursSchedule, HONOUR_STRIP_CYCLE_MS, BOARD_ROW_STAGGER_MS, FINAL_CELEBRATION_OFFSET_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak, breakOpeningOrder } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally } from '../flags/partyRoundTally.js';
@@ -479,7 +479,11 @@ export function bootFlagParty() {
   const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
   const statusEl = $('party-status');
   const sections = {
-    start: $('pt-start'), lobby: $('pt-lobby'), question: $('pt-question'), roundcard: $('pt-roundcard'), pick: $('pt-pick'), break: $('pt-break'), final: $('pt-final'),
+    start: $('pt-start'), lobby: $('pt-lobby'), question: $('pt-question'), roundcard: $('pt-roundcard'), pick: $('pt-pick'), break: $('pt-break'),
+    // The finish is three screens, not one: the honour beats, the winner's own
+    // beat, and the board. All three are ordinary sections so the swapper, the
+    // dock map and the `[hidden]` guards treat them like every other screen.
+    honour: $('pt-honour'), winner: $('pt-winner'), final: $('pt-final'),
   };
   const roomCodeEl = $('room-code');
   const playersEl = $('players');
@@ -507,9 +511,29 @@ export function bootFlagParty() {
   const pauseBodyEl = $('pause-body');
   const pauseSubEl = $('pause-sub');
   const pauseGoEl = /** @type {HTMLButtonElement} */ ($('pause-go'));
+  // The break's own surface — no dialog, see index.html. A sibling of <main>, so
+  // its `position: fixed` resolves against the viewport rather than the screen
+  // swap's transform (the same rule the dock's placement encodes).
+  // The game itself, which recedes behind the break veil. Cached like every other
+  // ref on this page rather than re-queried per paint: `paintBreak` runs on every
+  // render, and a `querySelector` there would be the one DOM lookup in the file
+  // that repeats for no reason.
+  const partyMain = /** @type {HTMLElement} */ (document.querySelector('.party'));
+  const breakVeil = $('break-veil');
+  const breakPlay = /** @type {HTMLButtonElement} */ ($('break-play'));
+  const breakWho = $('break-who');
+  const breakQueuedEl = $('break-queued');
   const footEl = $('question-foot');
   const finalSub = $('final-sub');
+  const finalWinner = $('final-winner');
+  const finalHonours = $('final-honours');
   const finalBoard = $('final-board');
+  const honourBody = $('honour-body');
+  const honourDots = $('honour-dots');
+  const winnerAv = $('winner-av');
+  const winnerName = $('winner-name');
+  const winnerScore = $('winner-score');
+  const winnerCrown = $('winner-crown');
   const breakMvp = $('break-mvp');
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
@@ -692,14 +716,17 @@ export function bootFlagParty() {
     // The finish board choreographs itself and therefore has to start when it is
     // actually on screen — `renderFinal` builds it during the out phase.
     onShown: (which) => {
-      if (which === 'final') startFinalReveal();
       // The break ledger measures row heights for its FLIP, so it can only run once
       // the section is actually visible — see `startBreakLedger`.
-      else if (which === 'break') startBreakLedger();
+      if (which === 'break') startBreakLedger();
+      // The finish no longer needs a hook here: its beats are driven by the
+      // ceremony's own clock (`playCeremony`), which paints each screen and THEN
+      // asks for it, rather than building a board and waiting to be told it is
+      // visible.
     },
   });
 
-  function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'|null} */ which) {
+  function showSection(/** @type {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'honour'|'winner'|'final'|null} */ which) {
     // Leaving the break ends the ledger's claim on the board, so the next break
     // builds and animates from scratch. See `breakBuilt`. Stays outside the
     // swapper and keyed on the request (not on the swap completing): it is a
@@ -708,6 +735,13 @@ export function bootFlagParty() {
     if (which !== 'break') { breakBuilt = false; breakLedgerPending = null; }
     syncDock(which);
     swapper.to(which);
+    // A queued break is handed to the room from HERE rather than from render(),
+    // and the ordering is the reason: render decides the screen and then calls
+    // this, so anything asking "may a break start now?" earlier in render is
+    // still looking at the previous screen. This is the one place that knows
+    // where the show has actually got to, and every path into a new screen —
+    // including render's several early returns — goes through it.
+    flushQueuedBreak();
   }
 
   /**
@@ -728,6 +762,10 @@ export function bootFlagParty() {
     if (spec === null || spec === mountedDockSpec) return;
     setDock(spec, partyDock);
     mountedDockSpec = spec;
+    // A remount builds fresh items from the catalog, so a queued break would
+    // silently repaint itself back to "Pause" on every screen change. Re-applied
+    // here, at the one place that knows the bar was just rebuilt.
+    paintBreakControl();
   }
 
   /** @returns {boolean} whether the socket was open enough to actually send.
@@ -1393,10 +1431,116 @@ export function bootFlagParty() {
   /** @type {import('../flags/partyTiming.js').HoldState} */
   let pause = initialHold();
 
+  /** Whether the room's clock is frozen right now, for EITHER reason.
+   *
+   *  A drop-pause and a break are one freeze with two causes, so they share the
+   *  arithmetic and compose: a room can be waiting for an absent seat while
+   *  somebody has also asked for a break, and it un-freezes only when both are
+   *  gone. Keeping two `HoldState`s instead would double the bookkeeping to
+   *  answer a question nothing asks — the clock only wants "frozen or not". */
+  function frozenNow() {
+    return state.pausedFor !== null || state.breakBy !== null;
+  }
+
   /** Advance the pause clock to now, following the server's answer. */
   function syncPauseAccounting() {
     const now = Date.now();
-    pause = state.pausedFor ? beginHold(pause, now) : endHold(pause, now);
+    pause = frozenNow() ? beginHold(pause, now) : endHold(pause, now);
+  }
+
+  // ---- the break: a pause any seat asks for ----
+  // The freeze is the same one `pause` above accounts for. What is different is
+  // who starts it (anyone), who ends it (anyone), and what it puts on screen: a
+  // greyed game and one play button, rather than the card that explains a drop.
+  //
+  // Pressed during a QUESTION it does not freeze anything — the 20 s window is a
+  // shared race and a mid-question freeze is free thinking time. It queues
+  // instead, and this device flushes it at the next screen a break is allowed in.
+  // The queue is local: nothing has happened to the room until it is sent.
+  let breakQueued = false;
+
+  /**
+   * The beat the show is on, in the vocabulary `breakAllowedIn` speaks.
+   *
+   * Neither the room's phase nor the screen answers this alone, which is the
+   * whole reason it is a function. The **reveal has no screen of its own** — it
+   * is painted into `#pt-question`, over the grid you just answered on — so
+   * asking the swapper would report "question" for the calmest beat in the show
+   * and queue every break for a reveal that had already happened. Asking the room
+   * instead misses the round card, which is a client-side beat inside the
+   * question phase and the one screen most likely to be pressed on.
+   *
+   * So: the screen decides the two beats only it knows about, and the room
+   * decides the rest.
+   */
+  function breakPhaseNow() {
+    if (swapper.target === 'roundcard' || swapper.target === 'break') return swapper.target;
+    return state.phase;
+  }
+
+  /** Send the break now if this screen allows one, else remember the press.
+   *  Pressing again while queued cancels — the item stays live rather than
+   *  greying out, so the second press has something to undo. */
+  function toggleBreak() {
+    // Already on a break: this is the resume, wherever it was pressed from.
+    if (state.breakBy !== null) { send({ type: 'endBreak' }); return; }
+    if (breakQueued) { breakQueued = false; paintBreakControl(); return; }
+    if (breakAllowedIn(breakPhaseNow())) { send({ type: 'requestBreak' }); return; }
+    breakQueued = true;
+    paintBreakControl();
+  }
+
+  /** Hand a queued break to the room once the show reaches a beat that can take
+   *  one. Called on every render, so it fires on the first reveal after the
+   *  press whichever way the room got there (the clock, the last buzz landing,
+   *  a seat dropping). */
+  function flushQueuedBreak() {
+    if (!breakQueued) return;
+    if (state.breakBy !== null) { breakQueued = false; paintBreakControl(); return; }
+    if (!breakAllowedIn(breakPhaseNow())) return;
+    breakQueued = false;
+    send({ type: 'requestBreak' });
+    paintBreakControl();
+  }
+
+  /** The dock item + the question-screen pill, which say the same thing at two
+   *  scales: 11px in the bar cannot carry the sentence, and the sentence alone
+   *  would not be where the finger is. */
+  function paintBreakControl() {
+    breakQueuedEl.hidden = !breakQueued;
+    if (breakQueued) breakQueuedEl.textContent = t('party.breakQueued', 'Pause after this question');
+    const item = dockItem('party-pause');
+    if (!item) return;
+    // Rose rather than greyed: greyed reads as disabled (the dock's own rule),
+    // and this item is very much still pressable — pressing it again cancels.
+    item.classList.toggle('is-queued', breakQueued);
+    const label = /** @type {HTMLElement | null} */ (item.querySelector('.dock-item__label'));
+    if (!label) return;
+    const key = breakQueued ? 'party.breakQueuedShort' : 'party.breakAction';
+    // The `data-i18n` moves with the text, not just the text: a language switch
+    // re-applies every marked element from its key, so leaving the original key
+    // in place would silently repaint "Pause" over a queued item.
+    label.dataset.i18n = key;
+    label.textContent = t(key, breakQueued ? 'Queued' : 'Pause');
+  }
+
+  /** Show or hide the break veil and name who asked for it. Cheap and
+   *  independent of render(), like the pause card: a break must not rebuild the
+   *  grid underneath a question people are mid-answer on. */
+  function paintBreak() {
+    const who = state.breakBy;
+    const on = who !== null && activeRoom !== null;
+    breakVeil.hidden = !on;
+    partyMain.classList.toggle('is-break', on);
+    if (!on) return;
+    breakWho.textContent = '';
+    const entry = state.roster.find((r) => r.playerId === who);
+    // The roster update and the break can cross, so the name is briefly unknown.
+    // Say "someone" rather than painting a headless sentence — same beat of
+    // uncertainty the hold line already handles this way.
+    const name = entry ? entry.nickname : t('party.holdReadingSomeone', 'Someone');
+    breakWho.appendChild(buildAvatar(who));
+    breakWho.appendChild(el('span', undefined, fmt(t('party.breakBy', '{name} paused the game'), { name })));
   }
 
   /** Pending "show the popup" timer, or 0. Held so a pause that ends inside the
@@ -2000,7 +2144,16 @@ export function bootFlagParty() {
     // the top layer, so a screen change does not take it down. Leaving a room
     // mid-pause used to strand it over the start screen — Esc suppressed, and a
     // guest with no button on it — until a reload.
-    if (!activeRoom) { stopClock(); stopVeil(); resetRoundIntro(); paintPause(); paintResume(); showSection('start'); return; }
+    if (!activeRoom) {
+      // A break dies with the room the same way the pause card does, and for the
+      // same reason: nobody is going to send this client a `break` message about
+      // a game it walked out of, so a veil left up would sit over the start
+      // screen with its only button wired to a socket that is gone.
+      breakQueued = false;
+      endCeremony();
+      stopClock(); stopVeil(); resetRoundIntro(); paintPause(); paintBreak(); paintResume(); showSection('start');
+      return;
+    }
     // Put the hold button away by default; only the chart-reveal path below turns
     // it back on. Doing it here rather than per-branch means every screen that
     // returns early (the standings break, the round card, the pick, the final
@@ -2012,8 +2165,17 @@ export function bootFlagParty() {
     // paused) and a `roster` (hosting migrating onto this seat, which is what
     // decides whether the button is ours to press).
     paintPause();
-    // Leaving (or not yet in) the final screen re-arms the one-shot celebration.
-    if (state.phase !== 'final') finalCelebrated = false;
+    // The break's veil follows the same rule, plus one of its own: a queued break
+    // is handed to the room as soon as the show reaches a beat that can take it,
+    // and render() runs on every message — so the flush lands on the first reveal
+    // after the press whichever way the room got there (the clock running out,
+    // the last buzz landing, a seat dropping).
+    paintBreak();
+    // Leaving (or not yet in) the final screen re-arms the one-shot celebration —
+    // and tears the ceremony down with it. Both halves matter: a Play again that
+    // reaches the lobby while a beat is still armed would otherwise pull the
+    // honour screen back over the lobby some seconds later.
+    if (state.phase !== 'final') { finalCelebrated = false; endCeremony(); }
     // Re-arm the pick guard whenever we're not mid-pick, so the next draft turn
     // accepts a fresh choice.
     if (state.phase !== 'picking') { pickSent = false; pickVeil = new Set(); }
@@ -2093,7 +2255,11 @@ export function bootFlagParty() {
       if (handAction === 'blocked') { stopClock(); stopVeil(); resetRoundIntro(); showSection('question'); renderUpdateNotice(); return; }
       stopVeil(); showSection('pick'); renderPick(); syncClock();
     }
-    else if (state.phase === 'final') { stopClock(); stopVeil(); resetRoundIntro(); showSection('final'); renderFinal(); }
+    // No `showSection('final')` here any more: the finish is three screens, and
+    // which of them is on stage is the ceremony's decision, not render()'s.
+    // Forcing the board from here would cut every beat off at the first message
+    // that happened to arrive during it.
+    else if (state.phase === 'final') { stopClock(); stopVeil(); resetRoundIntro(); renderFinal(); }
     else {
       // Lobby = a fresh game (or play-again reset): forget the round baselines so
       // the first break of the next game shows gains-from-zero, no deltas, and
@@ -2989,100 +3155,384 @@ export function bootFlagParty() {
     // shows who scored and moves on.
   }
 
-  /** The finish reveal waiting for its screen: which scores count up when, and
-   *  when the burst goes off. Set by `renderFinal`, consumed once by
-   *  `startFinalReveal`, and null whenever nothing is pending. */
-  let finalPending = /** @type {{ celebrate: boolean, steps: Array<{ node: HTMLElement, to: number, at: number }>, celebrationAt: number, board: Array<{ playerId: string, nickname: string, score: number }> } | null} */ (null);
+  // ---- the finish, as a ceremony ----
+  // Three beats: the honours one screen at a time, then the winner's own screen,
+  // then the board with the winner's card continued as its header.
+  //
+  // The order is deliberate and must not be "improved" by showing the winner
+  // first. Once the result is known the room stops watching -- people talk, reach
+  // for phones, argue about the last question -- so anything after the result
+  // gets talked over, which is why award ceremonies run the minor categories
+  // first. While the result is still unknown, every honour is live information
+  // about someone who might have won; after the board the same line is a rosette
+  // handed to a loser.
 
-  /** Run the pending finish reveal. Called the moment the final section becomes
-   *  visible — never at build time, which is ~200 ms earlier and used to leave
-   *  last place's score already sprinting before the winner's row had appeared.
-   *  Idempotent: consuming the pending sequence is what stops a second call (a
-   *  re-render, a repeated state message) from restarting a reveal mid-flight. */
-  function startFinalReveal() {
-    const pending = finalPending;
-    if (!pending) return;
-    finalPending = null;
-    for (const step of pending.steps) countUp(step.node, 0, step.to, FINAL_COUNT_MS, step.at);
-    if (!pending.celebrate) return;
-    window.setTimeout(() => {
-      runCelebration(pickPartyCelebration({ scoreboard: pending.board, you: state.you }));
-    }, pending.celebrationAt);
+  /** The ceremony's epoch, and the timers it is running.
+   *
+   *  Every step is scheduled against an ABSOLUTE offset from this epoch and the
+   *  delay is recomputed against `Date.now()` when the step is armed. A throttled
+   *  tab therefore loses smoothness but never position -- a step whose moment has
+   *  already passed fires at once instead of shifting everything after it, which
+   *  is what an accumulated counter would do. */
+  let ceremonyEpoch = 0;
+  /** @type {number[]} */
+  let ceremonyTimers = [];
+  /** Which screen the ceremony wants on stage. Non-null for as long as it owns
+   *  the finish, so a re-render mid-ceremony (a roster message, a language
+   *  switch) repaints the beat that is up rather than dragging the board over it. */
+  let ceremonyScreen = /** @type {'honour' | 'winner' | 'final' | null} */ (null);
+  /** The honours this finish is cycling, kept for the board's strip. */
+  let ceremonyHonours = /** @type {any[]} */ ([]);
+  /** The strip's cycle on the board. Separate from the beats above because it
+   *  keeps running long after the ceremony is "over" -- the board is a screen
+   *  people sit on. */
+  let honourStripTimer = 0;
+  /** Whether this finish's burst has already gone off. `finalCelebrated` cannot
+   *  answer this: it means "the finish has been rendered once", and it is set the
+   *  moment the ceremony STARTS -- some nine seconds before the burst is due. A
+   *  player who skips in that window would otherwise get no burst at all, which
+   *  is the one thing the ending owes everybody. */
+  let celebrationDone = false;
+
+  /** How long the winner's score takes to climb, and when it starts. Local to
+   *  this beat rather than in partyTiming: they are inside one screen's own
+   *  choreography, where partyTiming's schedule is about the ORDER of the beats,
+   *  which is the thing that regresses. */
+  const WINNER_COUNT_MS = 900;
+  const WINNER_COUNT_AT_MS = 420;
+  /** The crown lands after the number has stopped: the score is the fact and the
+   *  crown is the verdict, so arriving together would make one of them noise. */
+  const WINNER_CROWN_AT_MS = 1100;
+
+  /** Glyphs are part of the title, not decoration: each honour is recognisable
+   *  from across a table before its label has been read. */
+  const HONOUR_GLYPHS = { fastest: '⚡', bestRound: '✓', thoughtful: '⏳' };
+
+  function stopCeremony() {
+    for (const h of ceremonyTimers) window.clearTimeout(h);
+    ceremonyTimers = [];
+  }
+
+  /** Tear the whole finish down: the beats, the strip's cycle, and the claim on
+   *  the screen. Called when the room leaves `final` — a Play again, a Back to
+   *  settings, or leaving the room entirely. Without this, an armed beat fires
+   *  seconds later and pulls an honour screen back over the lobby. */
+  function endCeremony() {
+    stopCeremony();
+    if (honourStripTimer) { window.clearInterval(honourStripTimer); honourStripTimer = 0; }
+    ceremonyScreen = null;
+    ceremonyHonours = [];
+    // Re-armed with the rest of it, so a Play again gets a fresh burst — the same
+    // rule `finalCelebrated` follows one line up in render().
+    celebrationDone = false;
+  }
+
+  /** Arm one ceremony step at an absolute offset from the epoch. */
+  function atCeremony(/** @type {number} */ offsetMs, /** @type {() => void} */ fn) {
+    ceremonyTimers.push(window.setTimeout(fn, Math.max(0, ceremonyEpoch + offsetMs - Date.now())));
+  }
+
+  /** @param {any} h */
+  function honourTitle(h) {
+    if (h.id === 'fastest') return t('party.honourFastest', 'Fastest hand');
+    if (h.id === 'bestRound') {
+      // Named by the round's MODE ("Best in Flags"), which is what makes the
+      // title say something the leaderboard does not. A round whose mode we
+      // cannot name (an eviction lost it) falls back to the plain wording rather
+      // than rendering the placeholder.
+      const name = h.modeId ? modeLabel(h.modeId) : null;
+      return name
+        ? fmt(t('party.honourBestRound', 'Best in {round}'), { round: name })
+        : t('party.honourBestRoundPlain', 'Best round');
+    }
+    return t('party.honourThoughtful', 'Thoughtful answers');
+  }
+
+  /** @param {any} h */
+  function honourValueText(h) {
+    if (h.id === 'fastest') {
+      const lang = document.documentElement.lang || 'en';
+      const seconds = (h.value / 1000).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      return fmt(t('party.honourFastestValue', '{seconds} s on average'), { seconds });
+    }
+    if (h.id === 'bestRound') return fmt(t('party.honourBestRoundValue', '+{points} points'), { points: h.value });
+    return fmt(t('party.honourThoughtfulValue', 'last click, {correct} of {total} right'),
+      { correct: h.value, total: h.outOf ?? h.value });
+  }
+
+  /** Paint one honour beat. The body is rebuilt rather than mutated so the glyph
+   *  stamp and the avatar's halo pulses restart -- see the note in index.html.
+   *  Inside the beat the parts arrive in order (glyph, what it was for, avatar,
+   *  name, the number) so there is something to follow rather than a card
+   *  appearing whole.
+   *  @param {any} h @param {number} index @param {number} total */
+  function paintHonourBeat(h, index, total) {
+    honourBody.innerHTML = '';
+    honourBody.appendChild(el('span', 'honour-glyph', HONOUR_GLYPHS[h.id] ?? ''));
+    honourBody.appendChild(el('span', 'honour-label', honourTitle(h)));
+    const av = el('span', 'honour-av');
+    av.appendChild(buildAvatar(h.playerId));
+    honourBody.appendChild(av);
+    honourBody.appendChild(el('span', 'honour-name', h.nickname || ''));
+    honourBody.appendChild(el('span', 'honour-value', honourValueText(h)));
+    honourDots.innerHTML = '';
+    for (let i = 0; i < total; i += 1) honourDots.appendChild(el('i', i === index ? 'on' : undefined));
+  }
+
+  /** @param {any} winner  the scoreboard row that won, or null on a tie / a board
+   *   nobody scored on. */
+  function paintWinnerBeat(winner) {
+    winnerAv.innerHTML = '';
+    winnerCrown.hidden = true;
+    winnerCrown.classList.remove('land');
+    if (!winner) {
+      // A tie has no winner to crown. The beat still runs -- the shape of the
+      // ending must not change at the one moment it is most surprising -- but it
+      // carries the tie caption instead of a name and a number.
+      winnerName.textContent = t('party.tie', "It's a tie!");
+      winnerScore.textContent = '';
+      return;
+    }
+    winnerAv.appendChild(buildAvatar(winner.playerId));
+    winnerName.textContent = winner.nickname;
+    // The DOM shows 0 before the timer starts -- never a flash of the final value
+    // -- and the count begins a beat in, so the number moves where the eye has
+    // already landed.
+    winnerScore.textContent = '0';
+    // Abandoned if the beat is skipped out from under it, so a count does not go
+    // on ticking against a hidden screen after the board has arrived.
+    countUp(winnerScore, 0, winner.score, WINNER_COUNT_MS, WINNER_COUNT_AT_MS,
+      () => ceremonyScreen !== 'winner');
+    ceremonyTimers.push(window.setTimeout(() => {
+      winnerCrown.textContent = t('party.honourWinner', '♛ Winner');
+      winnerCrown.hidden = false;
+      winnerCrown.classList.add('land');
+    }, WINNER_CROWN_AT_MS));
+  }
+
+  /** Fire the finish burst, once per finish, whichever route the ending took.
+   *  @param {any[]} board */
+  function celebrate(board) {
+    if (celebrationDone) return;
+    celebrationDone = true;
+    runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
+  }
+
+  /** Run the whole ceremony from now. Called once per finish. */
+  function playCeremony(/** @type {any[]} */ honours, /** @type {any} */ winner, /** @type {any[]} */ board) {
+    stopCeremony();
+    ceremonyHonours = honours;
+    ceremonyEpoch = Date.now();
+    // Claimed SYNCHRONOUSLY, before a single timer is armed. The first beat is
+    // scheduled at offset 0, but a `setTimeout(fn, 0)` still yields — and a
+    // message landing in that gap would find `ceremonyScreen` null with
+    // `finalCelebrated` already true, take the no-animation path, and paint the
+    // board over a ceremony that was about to start. A few milliseconds wide,
+    // and the sort of thing that only ever reproduces in front of someone.
+    ceremonyScreen = honours.length > 0 ? 'honour' : 'winner';
+    const schedule = honoursSchedule(honours.length);
+
+    honours.forEach((h, i) => {
+      atCeremony(schedule.beats[i].inAt, () => {
+        ceremonyScreen = 'honour';
+        paintHonourBeat(h, i, honours.length);
+        sections.honour.classList.remove('beat-out');
+        sections.honour.classList.add('beat-in');
+        showSection('honour');
+      });
+      // Energy at the EDGES of the beat, never in the middle: a fast deal in, a
+      // long still middle to read it in, a fast leave. A slow symmetric fade
+      // reads as a bad connection rather than a ceremony.
+      atCeremony(schedule.beats[i].outAt, () => {
+        sections.honour.classList.remove('beat-in');
+        sections.honour.classList.add('beat-out');
+      });
+    });
+
+    atCeremony(schedule.winnerAt, () => {
+      ceremonyScreen = 'winner';
+      sections.winner.classList.remove('beat-in');
+      void sections.winner.offsetWidth;
+      sections.winner.classList.add('beat-in');
+      paintWinnerBeat(winner);
+      showSection('winner');
+    });
+    // The burst belongs to the winner's arrival, not to the board: it punctuates
+    // the moment the result is given rather than covering rows still landing.
+    atCeremony(schedule.winnerAt + FINAL_CELEBRATION_OFFSET_MS, () => celebrate(board));
+    atCeremony(schedule.boardAt, () => {
+      ceremonyScreen = 'final';
+      renderBoard(board, winner, true);
+      showSection('final');
+    });
+  }
+
+  /**
+   * The board: winner header, honours strip, then the ranked rows starting at 2.
+   *
+   * The header and the strip are SIBLINGS of the scrolling list, never inside it.
+   * If they scrolled away the whole structure would lose its point -- the result
+   * is meant to stay visible however far down the list you go, and an honoured
+   * seat is meant to keep its mention when its own row scrolls out of view.
+   *
+   * @param {any[]} board
+   * @param {any} winner  null on a tie, or on a board nobody scored on
+   * @param {boolean} animate
+   */
+  function renderBoard(board, winner, animate) {
+    const tie = !winner && board.length > 1;
+    // No heading on this screen: the winner card IS the heading now. The caption
+    // survives only for the tie, where there is no card to carry the message.
+    finalSub.textContent = tie ? t('party.tie', "It's a tie!") : '';
+    finalSub.hidden = !tie;
+
+    finalWinner.hidden = !winner;
+    finalWinner.innerHTML = '';
+    if (winner) {
+      finalWinner.appendChild(buildAvatar(winner.playerId));
+      const text = el('div', 'fw-text');
+      text.appendChild(el('span', 'fw-name', winner.nickname));
+      text.appendChild(el('span', 'fw-crown', t('party.honourWinner', '♛ Winner')));
+      finalWinner.appendChild(text);
+      finalWinner.appendChild(el('span', 'fw-score', String(winner.score)));
+      // Landed, not arriving: it is the same card the winner beat just showed,
+      // shrinking into its place at the top of the board.
+      finalWinner.classList.toggle('land', animate);
+    }
+
+    paintHonourStrip(animate);
+
+    // Rows start at 2: the winner is the header, not a row. On a tie nobody is
+    // the header, so the list runs from 1 and reads as the plain ranking it is.
+    const rows = winner ? board.slice(1) : board;
+    const firstRank = winner ? 2 : 1;
+    finalBoard.innerHTML = '';
+    rows.forEach((entry, i) => {
+      const row = el('div', 'scoreline other' + (entry.playerId === state.you ? ' you' : ''));
+      row.appendChild(el('span', 'rank', String(firstRank + i)));
+      row.appendChild(buildAvatar(entry.playerId));
+      row.appendChild(el('span', 'nm', entry.nickname));
+      // No count-up: the score already counted on the winner's screen, and a
+      // board that re-reveals what was just announced is the thing this whole
+      // structure exists to avoid.
+      row.appendChild(el('span', 'sc', String(entry.score)));
+      if (animate) {
+        row.classList.add('enter-board');
+        row.style.setProperty('--enter-delay', `${i * BOARD_ROW_STAGGER_MS}ms`);
+      }
+      finalBoard.appendChild(row);
+    });
+    // Always at the top. The header and the strip are pinned there, so the top is
+    // where the story is; your own row is a flick away, and nothing moves on its
+    // own once the rows have landed.
+    finalBoard.scrollTop = 0;
+  }
+
+  /** Start (or restart) the honours strip's cycle.
+   *
+   *  ONE reserved line rather than a title under each honoured seat: a second
+   *  line per row would cost a row's height for every player to say something
+   *  only three of them earned, and it would take an honoured seat's mention off
+   *  screen the moment its row scrolled out of view. */
+  function paintHonourStrip(/** @type {boolean} */ animate) {
+    if (honourStripTimer) { window.clearInterval(honourStripTimer); honourStripTimer = 0; }
+    const honours = ceremonyHonours;
+    finalHonours.hidden = honours.length === 0;
+    if (honours.length === 0) return;
+    let i = 0;
+    const paint = () => {
+      const h = honours[i % honours.length];
+      finalHonours.innerHTML = '';
+      finalHonours.appendChild(el('span', 'fh-glyph', HONOUR_GLYPHS[h.id] ?? ''));
+      const text = el('div', 'fh-text');
+      text.appendChild(el('span', 'fh-label', honourTitle(h)));
+      text.appendChild(el('span', 'fh-who', h.nickname || ''));
+      finalHonours.appendChild(text);
+      finalHonours.appendChild(el('span', 'fh-value', honourValueText(h)));
+      if (animate) {
+        finalHonours.classList.remove('swap');
+        void finalHonours.offsetWidth;
+        finalHonours.classList.add('swap');
+      }
+      i += 1;
+    };
+    paint();
+    // A single honour has nothing to cycle to, so it simply sits there.
+    if (honours.length > 1) honourStripTimer = window.setInterval(paint, HONOUR_STRIP_CYCLE_MS);
+  }
+
+  /** Cut the ceremony short and go straight to the board.
+   *
+   *  ANY seat may skip, which is a deliberate widening of the design note's
+   *  "a host tap". Nothing about the ceremony is broadcast -- it is built from
+   *  the final payload every client already has -- so one player skipping changes
+   *  nothing for anyone else, and a guest who cannot leave a twelve-second ending
+   *  on the fourth playthrough is in a hostage situation the host is not. */
+  function skipCeremony() {
+    if (ceremonyScreen === null || ceremonyScreen === 'final') return;
+    stopCeremony();
+    const board = state.scoreboard || [];
+    ceremonyScreen = 'final';
+    renderBoard(board, winnerRowOf(board), false);
+    showSection('final');
+    // Skipping the ceremony must not skip the celebration: `stopCeremony` has
+    // just cancelled the burst armed on the winner's beat, and the burst is the
+    // one thing the ending owes everybody. `celebrate` is idempotent, so a skip
+    // that lands after it already went off changes nothing.
+    celebrate(board);
+  }
+
+  /** The scoreboard row that won, or null when nobody did: a tie at the top has
+   *  no single winner to crown, and a board where nobody scored has none either
+   *  (crowning a 0 is worse than crowning nobody). Mirrors `winnerIdsOf` on the
+   *  server, which decides the same question for the honours pool -- the two
+   *  must agree, or the winner would be offered an honour on their own board.
+   *  @param {any[]} board */
+  function winnerRowOf(board) {
+    const top = board[0];
+    if (!top || !(top.score > 0)) return null;
+    if (board.length > 1 && board[1].score === top.score) return null;
+    return top;
   }
 
   function renderFinal() {
     const board = state.scoreboard || [];
-    const top = board[0];
-    const tie = board.length > 1 && !!top && board[1].score === top.score;
-    // A clear winner needs no "{name} takes it" caption — the pink highlight
-    // and the breathing effect on the top row already say it. The subtitle
-    // only earns its place on a tie, where there's no single winner row to
-    // carry the message.
-    finalSub.textContent = tie ? t('party.tie', "It's a tie!") : '';
-    finalSub.hidden = !tie;
+    const winner = winnerRowOf(board);
+    // The honours ride the final payload. Absent from a server older than this
+    // build, which simply means no honour beats -- the board still arrives,
+    // exactly as it did before.
+    const honours = Array.isArray(state.honours) ? state.honours : [];
 
-    // The full finish "moment" — cascade, count-up, subtitle pop, and the
-    // confetti / fireworks burst — plays once, on the first render of the
-    // final screen. Later re-renders (a language switch, a repeated state
-    // message) paint the board statically so nothing re-animates.
-    const firstShow = !finalCelebrated;
-    const animate = firstShow && !prefersReducedMotion();
-
-    // The reveal walks up the board from last place, holds the winner back, and
-    // only then lets the burst off — the gameshow grammar the mock calls for. The
-    // beats are data (`finalBoardSchedule`), so they are unit-pinned rather than
-    // three magic numbers scattered through this function.
-    const schedule = finalBoardSchedule(board.length);
-    finalPending = null;
-    finalBoard.innerHTML = '';
-    board.forEach((entry, i) => {
-      const isWinner = i === 0 && !tie && entry.score > 0;
-      // `.champion` (a sole winner) carries the sustained breathe + glow; a
-      // tie's top row still gets `.win` styling but no champion effect.
-      const row = el('div', 'scoreline' + (i === 0 ? ' win' : ' other') + (isWinner ? ' champion' : ''));
-      row.appendChild(el('span', 'rank', String(i + 1)));
-      row.appendChild(buildAvatar(entry.playerId));
-      row.appendChild(el('span', 'nm', entry.nickname));
-      // Start every animated row at zero. The CSS entrance is declarative (it
-      // begins when the section is displayed, so it needs no gate), but the
-      // count-up is a JS clock and must not start until anyone can see it.
-      const sc = el('span', 'sc', String(animate ? 0 : entry.score));
-      row.appendChild(sc);
-      if (animate) {
-        row.classList.add('enter');
-        row.style.setProperty('--enter-delay', `${schedule.rows[i].enterAt}ms`);
-      }
-      finalBoard.appendChild(row);
-    });
-
-    if (firstShow) {
-      // Pop only applies to the tie caption (the sole surviving subtitle).
-      if (animate && tie) { finalSub.classList.remove('pop'); void finalSub.offsetWidth; finalSub.classList.add('pop'); }
-      finalCelebrated = true;
-    }
-    if (!animate) {
-      // Reduced motion (or a re-render of a board already up): no sequence to
-      // run, so the celebration such a player gets is whatever runCelebration
-      // itself allows, immediately.
-      if (firstShow) runCelebration(pickPartyCelebration({ scoreboard: board, you: state.you }));
+    // A ceremony already in flight owns the screen: a re-render must repaint the
+    // beat that is up, not drag the board forward over it.
+    if (ceremonyScreen !== null) {
+      if (ceremonyScreen === 'final') renderBoard(board, winner, false);
+      showSection(ceremonyScreen);
+      applyFinalDock();
       return;
     }
-    // Held until the swap actually displays the section (see `onShown`). Built
-    // here because this is where the rows and their targets are known.
-    finalPending = {
-      celebrate: firstShow,
-      steps: board.map((entry, i) => ({
-        node: /** @type {HTMLElement} */ (finalBoard.children[i].querySelector('.sc')),
-        to: entry.score,
-        at: schedule.rows[i].countAt,
-      })),
-      celebrationAt: schedule.celebrationAt,
-      board,
-    };
-    // A re-render while the final screen is ALREADY up gets no `onShown` (the
-    // swapper is settled), so kick the sequence off here instead.
-    if (swapper.shown === 'final') startFinalReveal();
 
+    const firstShow = !finalCelebrated;
+    const animate = firstShow && !prefersReducedMotion();
+    if (firstShow) finalCelebrated = true;
+
+    if (!animate) {
+      // Reduced motion, or a board being repainted after the fact: no beats, no
+      // count-up, no crossfade. The strip itself stays -- it is content, not
+      // motion -- so an honoured seat is still named.
+      ceremonyHonours = honours;
+      ceremonyScreen = 'final';
+      renderBoard(board, winner, false);
+      showSection('final');
+      if (firstShow) celebrate(board);
+      applyFinalDock();
+      return;
+    }
+    playCeremony(honours, winner, board);
+    applyFinalDock();
+  }
+
+  function applyFinalDock() {
     // Only the host can restart, so "Play again" shows for the host alone;
     // everyone else sees just "Home". (The dock has no separators, and hidden
     // items drop out with the remaining ones re-centring — so hiding Play
@@ -3256,7 +3706,20 @@ export function bootFlagParty() {
     if (!target) return;
     if (target.closest('#play-again')) send({ type: 'playAgain' });
     else if (target.closest('#question-to-settings')) send({ type: 'backToLobby' });
+    else if (target.closest('#party-pause')) toggleBreak();
   });
+
+  // The one thing on the break veil. Same handler as the dock item, so "start a
+  // break" and "end a break" are one decision in one place — which is what keeps
+  // a queued break cancellable from either surface.
+  breakPlay.addEventListener('click', () => toggleBreak());
+
+  // Skipping the ceremony: a tap anywhere on an honour or winner beat goes
+  // straight to the board. On the beats themselves rather than a labelled button,
+  // because a "Skip" control on screen invites you to use it the first time —
+  // and the first time is the one time the ending is worth watching.
+  sections.honour.addEventListener('click', () => skipCeremony());
+  sections.winner.addEventListener('click', () => skipCeremony());
 
   // Same share mechanism as Tic-Tac-Toe (common.js `shareUrl` → native sheet,
   // clipboard fallback), so the invite icon behaves identically across the two
