@@ -451,6 +451,10 @@
         <p class="party-sub" id="final-sub"></p>
         <div class="final-winner" id="final-winner" hidden></div>
         <div class="final-honours" id="final-honours" hidden aria-live="polite"></div>
+        <!-- One dot per awarded title, so the strip reads as a set being cycled
+             rather than a line that changes on its own. Decorative: the strip
+             itself is the aria-live region. -->
+        <span class="final-honour-dots" id="final-honour-dots" hidden aria-hidden="true"></span>
         <div class="final-board" id="final-board"></div>
       </section>
 

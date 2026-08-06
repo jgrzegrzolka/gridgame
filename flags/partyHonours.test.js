@@ -1,255 +1,352 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeHonours, winnerIdsOf, THOUGHTFUL_ACCURACY_FLOOR } from './partyHonours.js';
+import {
+  computeHonours,
+  honourPlan,
+  soleWinnerId,
+  titlelessModes,
+  TITLES,
+  THINKER_ACCURACY_FLOOR,
+  SLEEPER_MIN_UNANSWERED,
+} from './partyHonours.js';
 
-/** A seat's records, with sensible defaults so each test states only what it
- *  is about. `mean` is the mean latency in ms; the store keeps a total.
- *  @param {{ buzzes?: number, mean?: number, correct?: number, timed?: number | null }} [opts]
+/** A seat's records, with defaults so each test states only what it is about.
+ *  `mean` is the mean latency in ms; the store keeps a total.
+ *  @param {{ buzzes?: number, mean?: number, correct?: number, timed?: number | null, unanswered?: number }} [opts]
  *  @returns {import('./partyHonours.js').SeatStat} */
 function seat(opts = {}) {
-  const { buzzes = 10, mean = 5000, correct = 5, timed = null } = opts;
+  const { buzzes = 10, mean = 5000, correct = 8, timed = null, unanswered = 0 } = opts;
   const t = timed === null ? buzzes : timed;
-  return { buzzes, timed: t, latencyMs: mean * t, correct };
+  return { buzzes, timed: t, latencyMs: mean * t, correct, unanswered };
 }
 
 /** @param {Record<string, import('./partyHonours.js').SeatStat>} seats
- *  @param {Array<{ modeId: string | null, gains: Record<string, number> }>} [rounds]
+ *  @param {Record<string, import('./partyHonours.js').ModeStat>} [modes]
  *  @returns {import('./partyHonours.js').HonourStats} */
-function stats(seats, rounds = []) {
-  return { seats, rounds };
+function stats(seats, modes = {}) {
+  return { seats, modes };
 }
 
-/** @param {import('./partyHonours.js').Honour[]} h */
-const ids = (h) => h.map((x) => x.id);
-/** @param {import('./partyHonours.js').Honour[]} h @returns {Record<string, string>} */
-const who = (h) => Object.fromEntries(h.map((x) => [x.id, x.playerId]));
+/** A mode's records. @param {Record<string, number>} gains
+ *  @param {{ asked?: number, correct?: Record<string, number> }} [opts]
+ *  @returns {import('./partyHonours.js').ModeStat} */
+function mode(gains, opts = {}) {
+  return { asked: opts.asked ?? 5, gains, correct: opts.correct ?? {} };
+}
 
-test('honours go to seats that did not win', () => {
-  // The winner's mark is the crown, awarded on its own screen. A winner who also
-  // collected "fastest hand" would make the honours read as a restatement of the
-  // leaderboard, which is the failure this whole assignment step exists to avoid.
+/** A scoreboard, score-descending. @param {Array<[string, number]>} rows */
+function board(rows) {
+  return rows.map(([playerId, score]) => ({ playerId, nickname: playerId, score }));
+}
+
+const ids = (/** @type {any[]} */ h) => h.map((x) => x.id);
+const holders = (/** @type {any[]} */ h) => h.map((x) => x.playerId);
+
+// ---- how many, and where ----
+
+test('honourPlan: titles and screens are two different numbers', () => {
+  // The split is the whole point: it lets a full room hand out seven trophies
+  // without a seven-screen ceremony nobody sits through.
+  assert.deepEqual(honourPlan(2), { titles: 3, screens: 2 });
+  assert.deepEqual(honourPlan(3), { titles: 4, screens: 3 });
+  assert.deepEqual(honourPlan(4), { titles: 5, screens: 3 });
+  assert.deepEqual(honourPlan(6), { titles: 5, screens: 3 });
+  assert.deepEqual(honourPlan(7), { titles: 7, screens: 3 });
+  assert.deepEqual(honourPlan(20), { titles: 7, screens: 3 });
+});
+
+test('honourPlan: never more than three screens, at any roster', () => {
+  // Each screen is a 2 s beat the whole room waits through. Past three the
+  // ceremony stops being a ceremony.
+  for (const n of [2, 3, 4, 5, 6, 7, 12, 20]) {
+    assert.ok(honourPlan(n).screens <= 3, `${n} seats asked for ${honourPlan(n).screens} screens`);
+  }
+});
+
+test('honourPlan: seven is the ceiling because the strip cycles at 3 s', () => {
+  // Seven titles is 21 s for one full pass, already longer than anyone looks at
+  // a board. A cap that grows with the roster would make the strip unreadable
+  // exactly when it matters most.
+  for (const n of [7, 8, 12, 20]) assert.equal(honourPlan(n).titles, 7);
+});
+
+test('honourPlan: a solo game has no ceremony to hold', () => {
+  assert.deepEqual(honourPlan(1), { titles: 0, screens: 0 });
+  assert.deepEqual(honourPlan(0), { titles: 0, screens: 0 });
+});
+
+// ---- the catalog ----
+
+test('every mode the game can deal has a title', () => {
+  // A mode with no title is a round that is played and that nobody can be
+  // honoured for — legal, but silent. Adding a mode without adding its title
+  // should fail here rather than quietly making that round unhonourable.
+  assert.deepEqual(titlelessModes(), []);
+});
+
+test('every title carries a glyph', () => {
+  // The glyph is part of the title: it is what makes one recognisable from
+  // across a table before the label has been read.
+  for (const [id, t] of Object.entries(TITLES)) {
+    assert.ok(t.glyph && t.glyph.length > 0, `${id} has no glyph`);
+  }
+});
+
+// ---- the caps ----
+
+test('the winner may hold one title, never two', () => {
+  // Not excluded — capped. Winning everything was the problem; winning
+  // something never was.
   const s = stats({
-    win: seat({ mean: 900, correct: 10 }),
-    a: seat({ mean: 3000, correct: 8 }),
+    win: seat({ mean: 400, correct: 10 }),
+    a: seat({ mean: 5000, correct: 8 }),
     b: seat({ mean: 9000, correct: 9 }),
-  }, [{ modeId: 'flags-all', gains: { win: 40, a: 20, b: 30 } }]);
-  const out = computeHonours(s, ['win'], ['win', 'a', 'b']);
-  assert.ok(out.length > 0);
-  for (const h of out) assert.notEqual(h.playerId, 'win', `${h.id} was given to the winner`);
+  }, {
+    'flags-all': mode({ win: 40, a: 5, b: 4 }),
+    'map-outlines': mode({ win: 38, a: 6, b: 3 }),
+    'superlative-gdp': mode({ win: 30, a: 2, b: 1 }, { correct: { win: 5 } }),
+  });
+  const out = computeHonours(s, board([['win', 90], ['a', 20], ['b', 10]]));
+  assert.equal(holders(out).filter((p) => p === 'win').length, 1,
+    `the winner took ${holders(out).filter((p) => p === 'win').length} titles`);
 });
 
-test('no seat is honoured twice — the title falls through to the next candidate', () => {
-  // One player who is fastest AND had the best round AND is accurate would sweep
-  // all three by absolute value. Three mentions of one person is not a ceremony.
+test('nobody takes a second title until every seat holds one', () => {
+  // A room's trophies spread before they stack. Otherwise two strong players
+  // take everything and the rest watch a ceremony about other people.
   const s = stats({
-    win: seat({ mean: 8000, correct: 2 }),
-    star: seat({ mean: 500, correct: 10 }),
-    a: seat({ mean: 4000, correct: 7 }),
-    b: seat({ mean: 12000, correct: 8 }),
-  }, [{ modeId: 'flags-all', gains: { star: 60, a: 20, b: 25 } }]);
-  const out = computeHonours(s, ['win'], ['win', 'star', 'a', 'b']);
-  const holders = out.map((h) => h.playerId);
-  assert.equal(new Set(holders).size, holders.length, `a seat was honoured twice: ${holders.join(',')}`);
+    a: seat({ mean: 400, correct: 10 }),
+    b: seat({ mean: 4000, correct: 9 }),
+    c: seat({ mean: 9000, correct: 9 }),
+  }, {
+    'flags-all': mode({ a: 40, b: 20, c: 5 }),
+    'map-outlines': mode({ a: 35, b: 18, c: 4 }),
+    'spot-flag': mode({ a: 33, b: 16, c: 3 }),
+  });
+  const out = computeHonours(s, board([['a', 60], ['b', 40], ['c', 20]]));
+  const counts = new Map();
+  for (const p of holders(out)) counts.set(p, (counts.get(p) ?? 0) + 1);
+  const min = Math.min(...[...counts.values()]);
+  const max = Math.max(...[...counts.values()]);
+  assert.ok(max - min <= 1, `trophies stacked before they spread: ${JSON.stringify([...counts])}`);
 });
 
-test('fastest hand ignores correctness entirely', () => {
-  // Nerve, not accuracy, and no floor: a player who mashes to win it pays for it
-  // in last place, and that is the joke. An accuracy filter here would quietly
-  // turn it into a second "best player" award.
+test('no title is awarded twice', () => {
+  const s = stats({
+    a: seat({ mean: 400 }), b: seat({ mean: 4000 }), c: seat({ mean: 9000 }), d: seat({ mean: 6000 }),
+  }, {
+    'flags-all': mode({ a: 40, b: 20 }),
+    'map-outlines': mode({ b: 35, c: 18 }),
+    'spot-flag': mode({ c: 33, d: 16 }),
+  });
+  const out = computeHonours(s, board([['a', 60], ['b', 50], ['c', 40], ['d', 30]]));
+  assert.equal(new Set(ids(out)).size, out.length, `a title repeated: ${ids(out).join(', ')}`);
+});
+
+// ---- the floors ----
+
+test('fastest finger counts every answer, wrong ones included', () => {
+  // Nerve, not accuracy. A player who mashes to win it pays for it in last
+  // place, and that is the joke — an accuracy filter would quietly turn it into
+  // a second "best player" award.
   const s = stats({
     win: seat({ mean: 6000, correct: 10 }),
     masher: seat({ buzzes: 10, mean: 400, correct: 0 }),
     careful: seat({ buzzes: 10, mean: 7000, correct: 9 }),
-  }, [{ modeId: 'flags-all', gains: { win: 50, careful: 30 } }]);
-  const out = computeHonours(s, ['win'], ['win', 'masher', 'careful']);
-  assert.equal(who(out).fastest, 'masher', 'the fastest hand is the fastest hand, right or wrong');
+  }, { 'flags-all': mode({ win: 50, careful: 30 }) });
+  const out = computeHonours(s, board([['win', 50], ['careful', 30], ['masher', 0]]));
+  const fastest = out.find((h) => h.id === 'fastestFinger');
+  assert.ok(fastest, 'expected a fastest-finger title');
+  assert.equal(fastest.playerId, 'masher', 'the fastest finger is the fastest finger, right or wrong');
 });
 
-test('thoughtful answers needs the accuracy floor', () => {
-  // "Last click, 2 of 10 right" reads as a consolation prize for being slow AND
-  // wrong, which is worse than saying nothing. Slow and often-right is the claim.
-  const slowAndWrong = stats({
-    win: seat({ mean: 1000, correct: 10 }),
-    fast: seat({ mean: 1200, correct: 6 }),
-    slow: seat({ buzzes: 10, mean: 15000, correct: 2 }),
-  }, [{ modeId: 'flags-all', gains: { win: 50, fast: 20, slow: 5 } }]);
-  assert.ok(!ids(computeHonours(slowAndWrong, ['win'], ['win', 'fast', 'slow'])).includes('thoughtful'));
+test('the thinker floor is 60%, not a coin flip', () => {
+  // The title makes a claim about the QUALITY of the answers, so awarding it to
+  // someone slow and wrong reads as sarcasm aimed at a player who just lost.
+  const belowFloor = stats({
+    a: seat({ mean: 1000, correct: 9 }),
+    slow: seat({ buzzes: 10, mean: 15000, correct: 5 }),
+  }, { 'flags-all': mode({ a: 40, slow: 10 }) });
+  assert.ok(!ids(computeHonours(belowFloor, board([['a', 40], ['slow', 10]]))).includes('thinker'),
+    '5 of 10 is a coin flip, not thought');
 
-  const slowAndRight = stats({
-    win: seat({ mean: 1000, correct: 10 }),
-    fast: seat({ mean: 1200, correct: 6 }),
-    slow: seat({ buzzes: 10, mean: 15000, correct: 8 }),
-  }, [{ modeId: 'flags-all', gains: { win: 50, fast: 20, slow: 5 } }]);
-  const out = computeHonours(slowAndRight, ['win'], ['win', 'fast', 'slow']);
-  assert.equal(who(out).thoughtful, 'slow');
+  const clearsFloor = stats({
+    a: seat({ mean: 1000, correct: 9 }),
+    slow: seat({ buzzes: 10, mean: 15000, correct: 6 }),
+  }, { 'flags-all': mode({ a: 40, slow: 10 }) });
+  const out = computeHonours(clearsFloor, board([['a', 40], ['slow', 10]]));
+  const thinker = out.find((h) => h.id === 'thinker');
+  assert.ok(thinker, '6 of 10 clears the floor');
+  assert.equal(thinker.playerId, 'slow');
+  assert.equal(0.6, THINKER_ACCURACY_FLOOR, 'sanity: the fixtures straddle the real floor');
 });
 
-test('the accuracy floor is a share of a seat’s own answers, not a raw count', () => {
-  // A seat that answered three questions and got two right is 67% and qualifies;
-  // one that answered twenty and got nine is 45% and does not. A raw count would
-  // reward volume, which the honour is not about.
-  const few = stats({
-    win: seat({ mean: 800, correct: 10 }),
-    a: seat({ mean: 1000, correct: 3 }),
-    slow: seat({ buzzes: 3, mean: 14000, correct: 2 }),
-  }, [{ modeId: 'flags-all', gains: { win: 40, a: 10, slow: 5 } }]);
-  const out = computeHonours(few, ['win'], ['win', 'a', 'slow']);
-  assert.equal(who(out).thoughtful, 'slow');
-  assert.ok(2 / 3 >= THOUGHTFUL_ACCURACY_FLOOR, 'sanity: the fixture really is above the floor');
+test('the sleeper needs three unanswered questions, not one distraction', () => {
+  const one = stats({
+    a: seat({ mean: 900 }),
+    dozy: seat({ buzzes: 9, mean: 4000, unanswered: SLEEPER_MIN_UNANSWERED - 1 }),
+  });
+  assert.ok(!ids(computeHonours(one, board([['a', 40], ['dozy', 30]]))).includes('sleeper'));
+
+  // Three or more, and with nothing else for them to hold, the small-room
+  // guarantee reaches the tail and names it.
+  const three = stats({
+    a: seat({ mean: 900 }),
+    dozy: seat({ buzzes: 7, mean: 4000, correct: 1, unanswered: SLEEPER_MIN_UNANSWERED }),
+  }, { 'flags-all': mode({ a: 40 }) });
+  const out = computeHonours(three, board([['a', 40], ['dozy', 5]]));
+  const sleeper = out.find((h) => h.id === 'sleeper');
+  assert.ok(sleeper, 'expected the sleeper title');
+  assert.equal(sleeper.playerId, 'dozy');
+  assert.equal(sleeper.unanswered, SLEEPER_MIN_UNANSWERED);
 });
 
-test('best round names the round it was won in, and its mode', () => {
-  // "Best in Flags" is what makes the title say something the leaderboard does
-  // not. Without the mode it is just a second score.
+// ---- what each title reports ----
+
+test('a picture-mode title reports points; a statistics title reports answers', () => {
+  // A picture round is scored as a block, so "+29 in the Flags round" is the
+  // fact. A statistics category is a handful of questions you either knew or
+  // did not, so "4 of 4 GDP questions" is.
+  // Three seats, and the two mode titles belong to two DIFFERENT non-winners —
+  // otherwise the winner's one-title cap correctly withholds the second, which
+  // is a rule of its own and not what this test is about.
   const s = stats({
-    win: seat({ mean: 900, correct: 10 }),
-    a: seat({ mean: 4000, correct: 6 }),
-    b: seat({ mean: 1200, correct: 6 }),
-    c: seat({ buzzes: 10, mean: 13000, correct: 9 }),
-  }, [
-    { modeId: 'flags-all', gains: { win: 20, a: 5, b: 6, c: 4 } },
-    { modeId: 'superlative-area', gains: { win: 10, a: 33, b: 7, c: 5 } },
-  ]);
-  const out = computeHonours(s, ['win'], ['win', 'a', 'b', 'c']);
-  const best = out.find((h) => h.id === 'bestRound');
-  assert.ok(best, 'expected a best-round honour');
-  assert.equal(best.playerId, 'a');
-  assert.equal(best.value, 33, 'the seat’s single best ROUND, not their total');
-  assert.equal(best.round, 1);
-  assert.equal(best.modeId, 'superlative-area');
+    win: seat({ mean: 900 }), b: seat({ mean: 4000 }), c: seat({ mean: 5000 }),
+  }, {
+    'flags-all': mode({ b: 29, win: 4, c: 2 }),
+    'superlative-gdp': mode({ c: 20, win: 1, b: 0 }, { asked: 4, correct: { c: 4 } }),
+  });
+  const out = computeHonours(s, board([['win', 60], ['b', 40], ['c', 30]]));
+  const flags = out.find((h) => h.id === 'flagSommelier');
+  const gdp = out.find((h) => h.id === 'economist');
+  assert.ok(flags && gdp, `expected both mode titles, got ${ids(out).join(', ')}`);
+  assert.equal(flags.gain, 29);
+  assert.equal(flags.correct, undefined, 'a picture round reports points, not answers');
+  assert.equal(gdp.correct, 4);
+  assert.equal(gdp.total, 4);
+  assert.equal(gdp.gain, undefined, 'a statistics category reports answers, not points');
 });
 
-test('a duel cycles one honour and solo cycles none', () => {
-  // The ceremony degrades to however many honours have a real non-winner behind
-  // them. In a duel the only seat that can hold one is the player who lost.
-  const duel = stats({
-    win: seat({ mean: 900, correct: 9 }),
-    loser: seat({ mean: 4000, correct: 6 }),
-  }, [{ modeId: 'flags-all', gains: { win: 40, loser: 20 } }]);
-  assert.equal(computeHonours(duel, ['win'], ['win', 'loser']).length, 1);
-
-  const solo = stats({ me: seat({ mean: 1000, correct: 9 }) }, [{ modeId: 'flags-all', gains: { me: 40 } }]);
-  assert.deepEqual(computeHonours(solo, ['me'], ['me']), []);
+test('a mode nobody scored in produces no title', () => {
+  // There is no "best at this" to be, so inventing one would be padding.
+  const s = stats({ a: seat({ mean: 900 }), b: seat({ mean: 4000 }) },
+    { 'flags-all': mode({}) });
+  assert.ok(!ids(computeHonours(s, board([['a', 0], ['b', 0]]))).includes('flagSommelier'));
 });
 
-test('a tie at the top excludes every tied leader', () => {
-  // None of them is the loser a title would be consoling, and honouring one of
-  // two joint winners would look like the board picking a favourite.
+test('a mode the game never played produces no title', () => {
+  const s = stats({ a: seat({ mean: 900 }), b: seat({ mean: 4000 }) },
+    { 'flags-all': mode({ a: 20 }) });
+  const out = computeHonours(s, board([['a', 20], ['b', 5]]));
+  assert.ok(!ids(out).includes('cartographer'), 'no maps round was played');
+});
+
+// ---- the small-room guarantee ----
+
+test('at three seats, no non-winner leaves empty-handed', () => {
+  // Two strong players would otherwise take every honour and the third watches a
+  // ceremony about other people — the exact failure the honours exist to prevent.
   const s = stats({
-    a: seat({ mean: 900, correct: 9 }),
-    b: seat({ mean: 1100, correct: 9 }),
-    c: seat({ mean: 6000, correct: 7 }),
-  }, [{ modeId: 'flags-all', gains: { a: 40, b: 40, c: 20 } }]);
-  const out = computeHonours(s, ['a', 'b'], ['a', 'b', 'c']);
-  for (const h of out) assert.equal(h.playerId, 'c');
+    win: seat({ mean: 400, correct: 10 }),
+    good: seat({ mean: 1000, correct: 9 }),
+    quiet: seat({ buzzes: 6, mean: 5000, correct: 2, unanswered: 4 }),
+  }, {
+    'flags-all': mode({ win: 40, good: 20, quiet: 2 }),
+    'map-outlines': mode({ good: 30, win: 10, quiet: 1 }),
+  });
+  const out = computeHonours(s, board([['win', 60], ['good', 55], ['quiet', 5]]));
+  assert.ok(holders(out).includes('quiet'),
+    `the third seat left with nothing: ${out.map((h) => h.id + '->' + h.playerId).join(', ')}`);
 });
 
-test('titles are assigned by distinctiveness, not by absolute value', () => {
-  // `alsoQuick` is fastest in absolute terms by a hair, but `dominant` owns the
-  // best-round category by a mile. Assigning fastest first by list order would
-  // take `alsoQuick` out of the pool for no gain; assigning the clearest claim
-  // first gives each title to the seat that actually owns it.
-  const s = stats({
-    win: seat({ mean: 700, correct: 10 }),
-    alsoQuick: seat({ mean: 1000, correct: 5 }),
-    dominant: seat({ mean: 1010, correct: 5 }),
-    plodder: seat({ mean: 9000, correct: 8 }),
-  }, [
-    { modeId: 'flags-all', gains: { win: 50, alsoQuick: 10, dominant: 55, plodder: 12 } },
-  ]);
-  const out = computeHonours(s, ['win'], ['win', 'alsoQuick', 'dominant', 'plodder']);
-  const m = who(out);
-  assert.equal(m.bestRound, 'dominant', 'the runaway round win is the clearest claim');
-  assert.equal(m.fastest, 'alsoQuick', 'and the fastest title still finds its owner');
+test('above three non-winners the guarantee lapses', () => {
+  // Twelve titles means twelve meaningless ones, and the strip cannot cycle more
+  // than a few before the room stops reading it.
+  /** @type {Record<string, import('./partyHonours.js').SeatStat>} */
+  const seats = {};
+  /** @type {Array<[string, number]>} */
+  const rows = [];
+  for (let i = 0; i < 9; i += 1) {
+    seats['p' + i] = seat({ mean: 1000 + i * 100, correct: 8, buzzes: 10 });
+    rows.push(['p' + i, 90 - i * 10]);
+  }
+  const out = computeHonours(stats(seats, { 'flags-all': mode({ p0: 40, p1: 20 }) }), board(rows));
+  assert.ok(out.length <= honourPlan(9).titles);
+  assert.ok(new Set(holders(out)).size < 9, 'not every seat is honoured at nine players');
 });
 
-test('a seat that never buzzed wins nothing', () => {
-  // A title won by not playing is a bug. Reachable for real: someone who joins
-  // and then leaves their phone on the table keeps a seat and a zero.
+// ---- screens ----
+
+test('only the planned number of titles gets a screen, and they build weakest-first', () => {
+  // The ceremony must build toward the winner rather than peak on its first beat.
   const s = stats({
-    win: seat({ mean: 900, correct: 9 }),
-    ghost: { buzzes: 0, timed: 0, latencyMs: 0, correct: 0 },
-  }, [{ modeId: 'flags-all', gains: { win: 40 } }]);
-  assert.deepEqual(computeHonours(s, ['win'], ['win', 'ghost']), []);
+    a: seat({ mean: 400 }), b: seat({ mean: 3000 }), c: seat({ mean: 9000, correct: 9 }), d: seat({ mean: 6000 }),
+  }, {
+    'flags-all': mode({ a: 40, b: 2 }),
+    'map-outlines': mode({ b: 35, c: 2 }),
+    'spot-flag': mode({ d: 33, a: 2 }),
+    'superlative-gdp': mode({ c: 30 }, { correct: { c: 4 } }),
+  });
+  const out = computeHonours(s, board([['a', 60], ['b', 50], ['c', 40], ['d', 30]]));
+  const screened = out.filter((h) => h.screened);
+  assert.equal(screened.length, honourPlan(4).screens);
+  // Screened titles lead the returned list, so the page can take the first N.
+  assert.deepEqual(out.slice(0, screened.length).map((h) => h.screened), screened.map(() => true));
 });
 
-test('a stats record for a seat that is no longer in the room wins nothing', () => {
-  // The records outlive a seat (they are additive and never pruned), so the
-  // seat list is the authority on who can be named at all.
+test('everything awarded is returned, screened or not — nothing is lost', () => {
+  // A title that did not earn a screen still gets named in front of everyone, in
+  // the strip. That is what makes handing out more titles than screens honest.
   const s = stats({
-    win: seat({ mean: 900, correct: 9 }),
-    gone: seat({ mean: 300, correct: 9 }),
-  }, [{ modeId: 'flags-all', gains: { win: 40, gone: 30 } }]);
-  assert.deepEqual(computeHonours(s, ['win'], ['win']), []);
+    a: seat({ mean: 400 }), b: seat({ mean: 3000 }), c: seat({ mean: 9000, correct: 9 }), d: seat({ mean: 6000 }),
+  }, {
+    'flags-all': mode({ a: 40 }), 'map-outlines': mode({ b: 35 }),
+    'spot-flag': mode({ d: 33 }), 'superlative-gdp': mode({ c: 30 }, { correct: { c: 4 } }),
+  });
+  const out = computeHonours(s, board([['a', 60], ['b', 50], ['c', 40], ['d', 30]]));
+  assert.ok(out.length > out.filter((h) => h.screened).length, 'some titles are strip-only');
+  assert.ok(out.length <= honourPlan(4).titles);
 });
 
-test('an untimed seat is left out of the average rather than counted as instant', () => {
-  // A durable-object eviction loses a question's deal time. Counting those buzzes
-  // as 0 ms would hand the fastest hand to whoever happened to be playing when
-  // the room got evicted.
-  const s = stats({
-    win: seat({ mean: 900, correct: 9 }),
-    quick: seat({ buzzes: 10, timed: 10, mean: 1500, correct: 5 }),
-    unknown: { buzzes: 10, timed: 0, latencyMs: 0, correct: 5 },
-  }, [{ modeId: 'flags-all', gains: { win: 40, quick: 20, unknown: 20 } }]);
-  const out = computeHonours(s, ['win'], ['win', 'quick', 'unknown']);
-  assert.equal(who(out).fastest, 'quick');
-});
+// ---- degenerate boards ----
 
-test('honours always come back in presentation order', () => {
-  // Assignment order is "most distinctive first"; the SHOW always runs fastest →
-  // best round → thoughtful, so replaying a game is the same ceremony.
-  const s = stats({
-    win: seat({ mean: 600, correct: 10 }),
-    a: seat({ mean: 1000, correct: 5 }),
-    b: seat({ mean: 4000, correct: 5 }),
-    c: seat({ buzzes: 10, mean: 14000, correct: 9 }),
-  }, [{ modeId: 'flags-all', gains: { win: 60, a: 10, b: 44, c: 12 } }]);
-  const SHOW = ['fastest', 'bestRound', 'thoughtful'];
-  const order = ids(computeHonours(s, ['win'], ['win', 'a', 'b', 'c']));
-  assert.deepEqual(order, order.slice().sort(
-    (/** @type {string} */ x, /** @type {string} */ y) => SHOW.indexOf(x) - SHOW.indexOf(y),
-  ));
+test('a duel and a solo game', () => {
+  const duel = stats({ a: seat({ mean: 900 }), b: seat({ mean: 4000 }) },
+    { 'flags-all': mode({ a: 40, b: 20 }) });
+  assert.ok(computeHonours(duel, board([['a', 40], ['b', 20]])).length <= honourPlan(2).titles);
+
+  const solo = stats({ me: seat({ mean: 900 }) }, { 'flags-all': mode({ me: 40 }) });
+  assert.deepEqual(computeHonours(solo, board([['me', 40]])), [], 'a solo game has no ceremony');
 });
 
 test('missing or empty records produce no honours rather than throwing', () => {
   // A game finished on a room restored from a snapshot written before the
   // ceremony existed has nothing recorded. It must still finish.
-  assert.deepEqual(computeHonours(null, [], []), []);
-  assert.deepEqual(computeHonours(undefined, ['a'], ['a']), []);
-  assert.deepEqual(computeHonours({ seats: {}, rounds: [] }, [], ['a']), []);
+  assert.deepEqual(computeHonours(null, board([['a', 1], ['b', 0]])), []);
+  assert.deepEqual(computeHonours(undefined, board([['a', 1]])), []);
+  assert.deepEqual(computeHonours(stats({}), board([['a', 1], ['b', 0]])), []);
+  assert.deepEqual(computeHonours(stats({ a: seat() }), []), []);
 });
 
-// ---- winnerIdsOf ----
+// ---- soleWinnerId ----
 
-test('winnerIdsOf: the top scorer, or everyone tied at the top', () => {
-  assert.deepEqual(winnerIdsOf([{ playerId: 'a', score: 9 }, { playerId: 'b', score: 4 }]), ['a']);
-  assert.deepEqual(
-    winnerIdsOf([{ playerId: 'a', score: 9 }, { playerId: 'b', score: 9 }, { playerId: 'c', score: 1 }]),
-    ['a', 'b'],
-  );
+test('soleWinnerId: the top scorer, or nobody', () => {
+  assert.equal(soleWinnerId(board([['a', 9], ['b', 4]])), 'a');
+  assert.equal(soleWinnerId(board([['a', 9], ['b', 9]])), null, 'a tie crowns nobody');
+  assert.equal(soleWinnerId(board([['a', 0], ['b', 0]])), null, 'crowning a 0 is worse than crowning nobody');
+  assert.equal(soleWinnerId([]), null);
+  assert.equal(soleWinnerId(null), null);
 });
 
-test('winnerIdsOf: a scoreless board still excludes the top of it', () => {
-  // The pool question is not the crown question. Nobody is crowned on a
-  // scoreless board, but the top row is still the top row — and handing THEM an
-  // honour is a rosette for the player already in first place. In solo that is
-  // the only player, collecting a consolation prize on their own winning board,
-  // which is exactly what this used to do.
-  assert.deepEqual(winnerIdsOf([{ playerId: 'a', score: 0 }, { playerId: 'b', score: 0 }]), ['a', 'b']);
-  assert.deepEqual(winnerIdsOf([{ playerId: 'solo', score: 0 }]), ['solo']);
-  assert.deepEqual(winnerIdsOf([]), []);
-  assert.deepEqual(winnerIdsOf(null), []);
-});
-
-test('a game nobody scored in hands out no honours at all', () => {
-  // Falls out of the rule above, and is the honest ending for a round where
-  // nothing happened: everyone is tied at the top, so the pool is empty.
+test('the cap follows the crown: an uncrowned top seat is not capped', () => {
+  // On a tie there is no winner, so nobody carries the winner's one-title limit
+  // — which is right: the cap exists to stop a runaway winner sweeping the
+  // ceremony, and a tie has no runaway winner.
   const s = stats({
-    a: seat({ mean: 900, correct: 0 }),
-    b: seat({ mean: 4000, correct: 0 }),
-  }, [{ modeId: 'flags-all', gains: {} }]);
-  assert.deepEqual(computeHonours(s, winnerIdsOf([
-    { playerId: 'a', score: 0 }, { playerId: 'b', score: 0 },
-  ]), ['a', 'b']), []);
+    a: seat({ mean: 400, correct: 10 }), b: seat({ mean: 900, correct: 10 }), c: seat({ mean: 9000, correct: 2 }),
+  }, {
+    'flags-all': mode({ a: 40, b: 39 }), 'map-outlines': mode({ a: 38, b: 2 }), 'spot-flag': mode({ a: 30, b: 1 }),
+  });
+  const out = computeHonours(s, board([['a', 50], ['b', 50], ['c', 5]]));
+  assert.ok(out.length > 0);
 });

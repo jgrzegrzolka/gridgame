@@ -2188,6 +2188,61 @@ number and nothing else. It is now three beats, ~11.8 s: **honours → the winne
   multi-seat game now hands out nothing, which is the honest ending for a round where nothing
   happened.
 
+## Iteration 18b — the honours become job titles — BUILT (2026-08-07)
+
+Revision of Iteration 18's ceremony against the updated design (`Yetanotherquiz Flag Party
+Changes.dc.html`, `2b`–`2d`/`2g`/`2h`). The break's mechanism is unchanged; the honours system was
+replaced.
+
+### What the titles are now
+
+Three metric-shaped honours became a **fixed table of job titles, given straight**. The app never
+winks, which is what makes them funny and what lets them be read out loud to the room. One title per
+game may mock rather than promote (Sardynka); more than one and the whole set becomes a bit. They
+are never generated at runtime — a title that changes between games is a joke nobody can repeat.
+
+- Always available: **Najszybszy palec Zachodu** (⚡, lowest mean buzz latency, no accuracy floor),
+  **Myśliciel** (⏳, slowest buzzer at **≥60 %** correct).
+- One per mode the game played: Flagowy sommelier, Kolekcjoner dziwactw, Sokole oko, Kartograf, and
+  one for each `superlative*` id — each statistics category is its own title, because owning the
+  coffee questions is a different thing from owning the GDP ones.
+- The consolation tail, reached only by the small-room guarantee: **Śpiąca królewna** (☾, ≥3
+  unanswered) and **Praktykant** (◇, answered everything, distinguished himself in nothing).
+
+**Titles awarded and ceremony screens are two different numbers** (2h), which is what lets a full
+room hand out seven trophies without a seven-screen ceremony: 2 seats → 3/2, 3 → 4/3, 4–6 → 5/3,
+7+ → 7/3. Seven is the ceiling because the strip cycles at 3 s and seven is already a 21 s pass.
+Everything not screened is still named, in the strip, which now marks each entry "miał swój ekran" /
+"tylko tutaj" and carries a dot per title so it reads as a set being cycled.
+
+**The winner is capped, not excluded** — one title besides ♛, shown on the header card as
+"♛ Zwycięzca · ✓ Flagowy sommelier". Winning everything was the problem; winning something never was.
+Assignment runs in **passes**, one title per seat per pass, so nobody takes a second until every seat
+holds one; within a pass, candidates are ranked by **distinctiveness** (how far that seat led the
+field, normalised) so the honours do not restate the leaderboard, and ties go to the lower final
+placing. At three or fewer non-winners the guarantee kicks in: none of them leaves empty-handed.
+
+### Also changed
+
+- The queued break is acknowledged by **one pill** only. The dock item keeps its own label — saying
+  it in both places states the same thing twice, in a slot too narrow to say it properly.
+- The break veil dims the **dock and the site chrome to 0.35** (the game itself stays at 0.22): they
+  are the frame the phone is in, and a bar that vanished would read as having navigated somewhere.
+  The dock stays exactly where it always is; it is a sibling of every screen for a structural reason.
+- The veil carries a **second line, drawn at random once per break and then left alone** — "kibel",
+  "idę po piwo", "obiecał, że wróci". Nobody has to declare a reason: the fact is stated and the
+  guess is the joke. English gets its own three rather than translations.
+- The room's records are keyed **by mode, not by round** (two rounds of one mode are one body of
+  evidence) and now count **unanswered** questions per present seat, which the sleeper reads.
+
+### Open for review
+
+`flags/partyHonours.js` covers **all 41 modes**, but the design named only six statistics titles.
+The other 35 Polish/English pairs are **drafted, not authored** — they follow the pattern (a real job
+the mode's skill would qualify you for) and are flagged for rewriting. `titlelessModes()` is pinned
+empty by a test, so adding a mode without a title fails loudly rather than quietly making that round
+unhonourable.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).

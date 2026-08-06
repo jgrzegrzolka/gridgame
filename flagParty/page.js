@@ -16,6 +16,7 @@ import { setupSummaryParts, canStartGame } from './lobbySetup.js';
 import { dockSpecFor } from './dockSpec.js';
 import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
+import { soleWinnerId } from '../flags/partyHonours.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS, breakAllowedIn, honoursSchedule, HONOUR_STRIP_CYCLE_MS, BOARD_ROW_STAGGER_MS, FINAL_CELEBRATION_OFFSET_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -527,6 +528,7 @@ export function bootFlagParty() {
   const finalSub = $('final-sub');
   const finalWinner = $('final-winner');
   const finalHonours = $('final-honours');
+  const finalHonourDots = $('final-honour-dots');
   const finalBoard = $('final-board');
   const honourBody = $('honour-body');
   const honourDots = $('honour-dots');
@@ -1458,6 +1460,20 @@ export function bootFlagParty() {
   // instead, and this device flushes it at the next screen a break is allowed in.
   // The queue is local: nothing has happened to the room until it is sent.
   let breakQueued = false;
+  /** The second line on the break veil: a light guess at where they went, drawn
+   *  at random. Nobody has to declare a reason — asking someone already halfway
+   *  to the door to pick one is a tap too many — so the screen states the fact
+   *  and guesses the rest. A fixed set, in i18n, because the English jokes are
+   *  their own jokes rather than translations of the Polish. */
+  const BREAK_QUIPS = [
+    { key: 'party.breakQuip1', fallback: 'bathroom break' },
+    { key: 'party.breakQuip2', fallback: 'gone for a beer' },
+    { key: 'party.breakQuip3', fallback: "said they'd be right back" },
+  ];
+  /** The guess drawn under the asker's name, as an index into {@link BREAK_QUIPS}.
+   *  Null between breaks; drawn on the first paint of one and then left alone, so
+   *  the line is stable for as long as the room is looking at it. */
+  let breakQuipIndex = /** @type {number | null} */ (null);
 
   /**
    * The beat the show is on, in the vocabulary `breakAllowedIn` speaks.
@@ -1503,25 +1519,18 @@ export function bootFlagParty() {
     paintBreakControl();
   }
 
-  /** The dock item + the question-screen pill, which say the same thing at two
-   *  scales: 11px in the bar cannot carry the sentence, and the sentence alone
-   *  would not be where the finger is. */
+  /** Acknowledge a queued break with ONE pill on screen.
+   *
+   *  The dock item deliberately **keeps its own label**: relabelling it as well
+   *  would state the same thing twice, in a slot too narrow to say it properly.
+   *  It only takes the rose tint, so it still reads as armed — never greyed,
+   *  which the dock's own rule reserves for disabled, and this item is very much
+   *  still pressable (pressing it again cancels). */
   function paintBreakControl() {
     breakQueuedEl.hidden = !breakQueued;
     if (breakQueued) breakQueuedEl.textContent = t('party.breakQueued', 'Pause after this question');
     const item = dockItem('party-pause');
-    if (!item) return;
-    // Rose rather than greyed: greyed reads as disabled (the dock's own rule),
-    // and this item is very much still pressable — pressing it again cancels.
-    item.classList.toggle('is-queued', breakQueued);
-    const label = /** @type {HTMLElement | null} */ (item.querySelector('.dock-item__label'));
-    if (!label) return;
-    const key = breakQueued ? 'party.breakQueuedShort' : 'party.breakAction';
-    // The `data-i18n` moves with the text, not just the text: a language switch
-    // re-applies every marked element from its key, so leaving the original key
-    // in place would silently repaint "Pause" over a queued item.
-    label.dataset.i18n = key;
-    label.textContent = t(key, breakQueued ? 'Queued' : 'Pause');
+    if (item) item.classList.toggle('is-queued', breakQueued);
   }
 
   /** Show or hide the break veil and name who asked for it. Cheap and
@@ -1532,15 +1541,31 @@ export function bootFlagParty() {
     const on = who !== null && activeRoom !== null;
     breakVeil.hidden = !on;
     partyMain.classList.toggle('is-break', on);
-    if (!on) return;
-    breakWho.textContent = '';
+    // The site chrome sits outside <main>, so it needs its own hook. On the body
+    // rather than derived with :has() from the veil, because the veil's exact
+    // position in the document is an implementation detail (it moved once
+    // already) and a selector that depends on it would break silently.
+    document.body.classList.toggle('party-break', on);
+    // A new break draws a new guess. Cleared on the way out rather than on the
+    // way in, so every paint of ONE break keeps the line it started with.
+    if (!on) { breakQuipIndex = null; return; }
     const entry = state.roster.find((r) => r.playerId === who);
     // The roster update and the break can cross, so the name is briefly unknown.
     // Say "someone" rather than painting a headless sentence — same beat of
     // uncertainty the hold line already handles this way.
     const name = entry ? entry.nickname : t('party.holdReadingSomeone', 'Someone');
+    // The quip below the name is drawn ONCE per break and then left alone. A
+    // guess that kept changing while the room stared at it would stop being a
+    // joke and start being a slot machine — and the point of it is that nobody
+    // has to declare anything: the fact is stated, the guess is the joke.
+    if (breakQuipIndex === null) breakQuipIndex = Math.floor(Math.random() * BREAK_QUIPS.length);
+    breakWho.innerHTML = '';
     breakWho.appendChild(buildAvatar(who));
-    breakWho.appendChild(el('span', undefined, fmt(t('party.breakBy', '{name} paused the game'), { name })));
+    const lines = el('span', 'break-who-lines');
+    lines.appendChild(el('span', 'break-who-name', fmt(t('party.breakBy', '{name} paused the game'), { name })));
+    const quip = BREAK_QUIPS[breakQuipIndex ?? 0];
+    lines.appendChild(el('span', 'break-who-quip', t(quip.key, quip.fallback)));
+    breakWho.appendChild(lines);
   }
 
   /** Pending "show the popup" timer, or 0. Held so a pause that ends inside the
@@ -3204,9 +3229,12 @@ export function bootFlagParty() {
    *  crown is the verdict, so arriving together would make one of them noise. */
   const WINNER_CROWN_AT_MS = 1100;
 
-  /** Glyphs are part of the title, not decoration: each honour is recognisable
-   *  from across a table before its label has been read. */
-  const HONOUR_GLYPHS = { fastest: '⚡', bestRound: '✓', thoughtful: '⏳' };
+  /** Title id -> i18n key. The titles are a fixed table (`flags/partyHonours.js`
+   *  owns which one is earned; this owns what it is called), never generated at
+   *  runtime — a title that changes between games is a joke nobody can repeat.
+   *  Derived from the id so adding a title is one catalog entry plus one string,
+   *  and a missing string shows the id rather than an empty line. */
+  const honourKey = (/** @type {string} */ id) => `party.honour${id[0].toUpperCase()}${id.slice(1)}`;
 
   function stopCeremony() {
     for (const h of ceremonyTimers) window.clearTimeout(h);
@@ -3232,32 +3260,42 @@ export function bootFlagParty() {
     ceremonyTimers.push(window.setTimeout(fn, Math.max(0, ceremonyEpoch + offsetMs - Date.now())));
   }
 
-  /** @param {any} h */
+  /** The title itself — a job title, given straight. @param {any} h */
   function honourTitle(h) {
-    if (h.id === 'fastest') return t('party.honourFastest', 'Fastest hand');
-    if (h.id === 'bestRound') {
-      // Named by the round's MODE ("Best in Flags"), which is what makes the
-      // title say something the leaderboard does not. A round whose mode we
-      // cannot name (an eviction lost it) falls back to the plain wording rather
-      // than rendering the placeholder.
-      const name = h.modeId ? modeLabel(h.modeId) : null;
-      return name
-        ? fmt(t('party.honourBestRound', 'Best in {round}'), { round: name })
-        : t('party.honourBestRoundPlain', 'Best round');
-    }
-    return t('party.honourThoughtful', 'Thoughtful answers');
+    return t(honourKey(h.id), h.id);
   }
 
-  /** @param {any} h */
+  /** What the title is evidenced by. Each shape reports the thing its own
+   *  category is actually about: a picture round is scored as a block, so points
+   *  are the fact; a statistics category is a handful of questions you either
+   *  knew or did not.
+   *  @param {any} h */
   function honourValueText(h) {
-    if (h.id === 'fastest') {
+    if (h.id === 'fastestFinger') {
       const lang = document.documentElement.lang || 'en';
-      const seconds = (h.value / 1000).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      return fmt(t('party.honourFastestValue', '{seconds} s on average'), { seconds });
+      const seconds = ((h.meanMs ?? 0) / 1000).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      return fmt(t('party.honourValueFastest', '{seconds} s on average'), { seconds });
     }
-    if (h.id === 'bestRound') return fmt(t('party.honourBestRoundValue', '+{points} points'), { points: h.value });
-    return fmt(t('party.honourThoughtfulValue', 'last click, {correct} of {total} right'),
-      { correct: h.value, total: h.outOf ?? h.value });
+    if (h.id === 'thinker') {
+      return fmt(t('party.honourValueThinker', 'last click, {correct} of {total} right'),
+        { correct: h.correct ?? 0, total: h.total ?? 0 });
+    }
+    if (h.id === 'sleeper') {
+      // Polish counts 3-4 and 5+ differently, and the floor is 3, so exactly two
+      // forms occur. Per-N keys carry the grammar, as everywhere else on the site.
+      const n = h.unanswered ?? 0;
+      const key = n <= 4 ? 'party.honourValueSleeperFew' : 'party.honourValueSleeperMany';
+      return fmt(t(key, 'slept through {count} questions'), { count: n });
+    }
+    if (h.id === 'intern') return t('party.honourValueIntern', 'answered every single one');
+    // A mode title. `modeLabel` is the same resolver the round card and the draft
+    // hand use, so the round is named identically wherever it is mentioned.
+    const mode = h.modeId ? modeLabel(h.modeId) : '';
+    if (h.gain !== undefined) {
+      return fmt(t('party.honourValueRound', '+{points} in the {mode} round'), { points: h.gain, mode });
+    }
+    return fmt(t('party.honourValueMetric', '{correct} of {total} {mode} questions'),
+      { correct: h.correct ?? 0, total: h.total ?? 0, mode });
   }
 
   /** Paint one honour beat. The body is rebuilt rather than mutated so the glyph
@@ -3268,7 +3306,7 @@ export function bootFlagParty() {
    *  @param {any} h @param {number} index @param {number} total */
   function paintHonourBeat(h, index, total) {
     honourBody.innerHTML = '';
-    honourBody.appendChild(el('span', 'honour-glyph', HONOUR_GLYPHS[h.id] ?? ''));
+    honourBody.appendChild(el('span', 'honour-glyph', h.glyph ?? ''));
     honourBody.appendChild(el('span', 'honour-label', honourTitle(h)));
     const av = el('span', 'honour-av');
     av.appendChild(buildAvatar(h.playerId));
@@ -3329,13 +3367,19 @@ export function bootFlagParty() {
     // `finalCelebrated` already true, take the no-animation path, and paint the
     // board over a ceremony that was about to start. A few milliseconds wide,
     // and the sort of thing that only ever reproduces in front of someone.
-    ceremonyScreen = honours.length > 0 ? 'honour' : 'winner';
-    const schedule = honoursSchedule(honours.length);
+    // Awarded titles and ceremony SCREENS are two different numbers — the split
+    // is what lets a full room hand out seven trophies without a seven-screen
+    // ceremony nobody sits through. The beats run only over the screened ones;
+    // `ceremonyHonours` above keeps the whole set, because the board's strip
+    // reads every title in turn and nothing is lost by not having had a screen.
+    const screened = honours.filter((h) => h.screened);
+    ceremonyScreen = screened.length > 0 ? 'honour' : 'winner';
+    const schedule = honoursSchedule(screened.length);
 
-    honours.forEach((h, i) => {
+    screened.forEach((h, i) => {
       atCeremony(schedule.beats[i].inAt, () => {
         ceremonyScreen = 'honour';
-        paintHonourBeat(h, i, honours.length);
+        paintHonourBeat(h, i, screened.length);
         sections.honour.classList.remove('beat-out');
         sections.honour.classList.add('beat-in');
         showSection('honour');
@@ -3392,7 +3436,13 @@ export function bootFlagParty() {
       finalWinner.appendChild(buildAvatar(winner.playerId));
       const text = el('div', 'fw-text');
       text.appendChild(el('span', 'fw-name', winner.nickname));
-      text.appendChild(el('span', 'fw-crown', t('party.honourWinner', '♛ Winner')));
+      // The winner is capped at one title, not excluded from them — so when they
+      // hold one it rides beside the crown on the same line rather than being
+      // withheld from the header that names them. "♛ Winner · ✓ Flag Sommelier".
+      const own = ceremonyHonours.find((h) => h.playerId === winner.playerId);
+      const crown = t('party.honourWinner', '♛ Winner');
+      text.appendChild(el('span', 'fw-crown',
+        own ? `${crown} · ${own.glyph ?? ''} ${honourTitle(own)}`.replace('  ', ' ') : crown));
       finalWinner.appendChild(text);
       finalWinner.appendChild(el('span', 'fw-score', String(winner.score)));
       // Landed, not arriving: it is the same card the winner beat just showed,
@@ -3438,17 +3488,39 @@ export function bootFlagParty() {
     if (honourStripTimer) { window.clearInterval(honourStripTimer); honourStripTimer = 0; }
     const honours = ceremonyHonours;
     finalHonours.hidden = honours.length === 0;
+    // One title has nothing to cycle through, so a row of one dot would only say
+    // "there is one of these", which the strip already says by not changing.
+    finalHonourDots.hidden = honours.length < 2;
     if (honours.length === 0) return;
     let i = 0;
     const paint = () => {
       const h = honours[i % honours.length];
       finalHonours.innerHTML = '';
-      finalHonours.appendChild(el('span', 'fh-glyph', HONOUR_GLYPHS[h.id] ?? ''));
+      finalHonours.appendChild(el('span', 'fh-glyph', h.glyph ?? ''));
       const text = el('div', 'fh-text');
       text.appendChild(el('span', 'fh-label', honourTitle(h)));
       text.appendChild(el('span', 'fh-who', h.nickname || ''));
       finalHonours.appendChild(text);
-      finalHonours.appendChild(el('span', 'fh-value', honourValueText(h)));
+      // The value, and under it whether this title also earned a ceremony screen.
+      // That mark is what makes handing out more titles than screens honest: a
+      // strip-only title is not a lesser title, it is one the ceremony did not
+      // have room for, and saying so is better than leaving the room to wonder
+      // why some names were read out and others only appear here.
+      const right = el('span', 'fh-right');
+      right.appendChild(el('span', 'fh-value', honourValueText(h)));
+      right.appendChild(el('span', 'fh-mark' + (h.screened ? ' screened' : ''),
+        h.screened
+          ? t('party.honourMarkScreened', 'had its own screen')
+          : t('party.honourMarkStripOnly', 'only here')));
+      finalHonours.appendChild(right);
+      // One dot per awarded title, the current one lit — so the strip says how
+      // many there are and how far through them you are, rather than looking
+      // like a line that changes at random.
+      finalHonourDots.innerHTML = '';
+      honours.forEach((x, k) => {
+        finalHonourDots.appendChild(el('i',
+          (k === i % honours.length ? 'on' : '') + (x.screened ? ' was-screened' : '')));
+      });
       if (animate) {
         finalHonours.classList.remove('swap');
         void finalHonours.offsetWidth;
@@ -3482,17 +3554,17 @@ export function bootFlagParty() {
     celebrate(board);
   }
 
-  /** The scoreboard row that won, or null when nobody did: a tie at the top has
-   *  no single winner to crown, and a board where nobody scored has none either
-   *  (crowning a 0 is worse than crowning nobody). Mirrors `winnerIdsOf` on the
-   *  server, which decides the same question for the honours pool -- the two
-   *  must agree, or the winner would be offered an honour on their own board.
+  /** The scoreboard row that won, or null when nobody did.
+   *
+   *  Resolved through the SAME `soleWinnerId` the server uses to cap the winner's
+   *  honours, rather than re-deriving the rule here. The two must agree — a
+   *  client that crowned someone the server did not cap would show a header card
+   *  for a player the ceremony was still handing titles to — and the cheapest way
+   *  to guarantee agreement is to have only one implementation.
    *  @param {any[]} board */
   function winnerRowOf(board) {
-    const top = board[0];
-    if (!top || !(top.score > 0)) return null;
-    if (board.length > 1 && board[1].score === top.score) return null;
-    return top;
+    const id = soleWinnerId(board);
+    return id === null ? null : board.find((r) => r.playerId === id) ?? null;
   }
 
   function renderFinal() {
