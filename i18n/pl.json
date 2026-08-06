@@ -774,7 +774,20 @@
       "roomFull": "Ten pokój jest pełny, poproś gospodarza o start lub utwórz nowy pokój",
       "missingPlayerId": "Błąd połączenia, odśwież stronę",
       "fallback": "Odrzucono: {reason}"
-    }
+    },
+    "breakAction": "Wstrzymaj",
+    "breakQueued": "Pauza po tym pytaniu",
+    "breakQueuedShort": "W kolejce",
+    "breakBy": "{name} wstrzymał grę",
+    "breakResume": "Wznów",
+    "honourFastest": "Najszybsza ręka",
+    "honourFastestValue": "średnio {seconds} s",
+    "honourBestRound": "Najlepsza w rundzie {round}",
+    "honourBestRoundPlain": "Najlepsza runda",
+    "honourBestRoundValue": "+{points} punktów",
+    "honourThoughtful": "Przemyślane odpowiedzi",
+    "honourThoughtfulValue": "ostatni klik, {correct} z {total} trafionych",
+    "honourWinner": "♛ Zwycięzca"
   },
   "variant": {
     "countries": "Wszystkie kraje",

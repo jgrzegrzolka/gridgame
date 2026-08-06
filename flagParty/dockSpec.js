@@ -18,13 +18,21 @@
  * position-fixed element must not sit inside anything that can be transformed.**
  *
  * Values are `data-dock` specs (see DOCK_CATALOG in common.js). `null` means the
- * screen shows no dock at all — the three mid-show beats (round card, draft
- * pick, between-rounds break) are timed and self-advancing, and none of them
- * carried a dock before this change either. That is deliberate rather than an
- * oversight: they are moments the show is driving, not moments you act in.
+ * screen shows no dock at all.
+ *
+ * The three mid-show beats (round card, draft pick, between-rounds break) used to
+ * be null on the reasoning that they are moments the show is driving, not moments
+ * you act in. They now carry a dock, and only because of `partyPause`: those are
+ * exactly the beats a break may start in ({@link module:partyTiming.BREAK_PHASES}),
+ * so a dockless screen there would mean the control vanishes at the calmest
+ * moments in the show — the ones somebody is most likely to reach for it in. They
+ * still carry nothing else: Home, and the break.
+ *
+ * `partyPause` is always FIRST, on every screen that has it. Same slot everywhere
+ * is the whole point of a control you reach for without looking.
  */
 
-/** @typedef {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'final'} PartySection */
+/** @typedef {'start'|'lobby'|'question'|'roundcard'|'pick'|'break'|'honour'|'winner'|'final'} PartySection */
 
 /** @type {Record<PartySection, string | null>} */
 export const DOCK_BY_SECTION = {
@@ -32,10 +40,17 @@ export const DOCK_BY_SECTION = {
   lobby: 'home',
   // Only the host can abort a running game back to the lobby; the item itself is
   // hidden per-seat at render time, which is why the spec is the same for both.
-  question: 'backToSettings home',
-  roundcard: null,
-  pick: null,
-  break: null,
+  // Three items is the dock's documented maximum, and a guest sees two.
+  question: 'partyPause backToSettings home',
+  roundcard: 'partyPause home',
+  pick: 'partyPause home',
+  break: 'partyPause home',
+  // The finish's three screens share ONE spec, which is the point: the ceremony
+  // runs for ~12 s and a bar that appeared only at the end of it would blink into
+  // existence under the player's thumb at the exact moment the board arrives.
+  // Nothing left to pause on any of them — the game is over.
+  honour: 'playAgainParty home',
+  winner: 'playAgainParty home',
   final: 'playAgainParty home',
 };
 

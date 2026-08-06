@@ -1,5 +1,6 @@
 import { scoreQuestionDetailed } from './partyScore.js';
-import { isRoundBoundary, isFinalRound } from './partyPlan.js';
+import { isRoundBoundary, isFinalRound, isRoundStart, roundIndexAt } from './partyPlan.js';
+import { computeHonours, winnerIdsOf } from './partyHonours.js';
 import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode, validatePicksPerPlayer } from './partyDraft.js';
 
 /**
@@ -110,6 +111,12 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode, validat
  *   playing its own drafted round gets the picker's edge (`flags/partyBot.js`).
  *   Held explicitly rather than derived from `pickedBy`'s tail so it stays correct
  *   across a reconnect. Null in a non-draft game, where nobody picked anything.
+ * @property {string | null} roundMode  the **mode id** the live round is playing
+ *   (`flags/partyPlan.js`'s `PARTY_MODES`), the sibling of `roundPicker`. Set the
+ *   same two places a round can start — {@link applyStart} and {@link applyPick} —
+ *   and read only by the honour records, so the finish can say "Best in Flags"
+ *   with the client's own mode labels. The plan's segments carry the *question*
+ *   id, which is not the same thing (several modes share one question type).
  * @property {string[] | null} hand  during `picking`, the mode ids the picker may
  *   choose from (server-dealt); null otherwise. Stored so a reconnect mid-pick
  *   sees the same hand.
@@ -119,6 +126,17 @@ import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode, validat
  *   or when the host carries on without them ({@link applyResume}). The room
  *   stays time-free: this is a flag every client's clock respects — the same
  *   shape as the `holding` relay — not a duration the room counts down.
+ * @property {string | null} breakBy  the seat that asked the room to take a
+ *   **break**, or null when nobody has. The other half of the freeze `pausedFor`
+ *   drives, and deliberately a separate field rather than a reuse of it: a drop
+ *   and a break are the same stop for opposite reasons (one the room was forced
+ *   into, one it chose), they can be true at the same time, and only one of them
+ *   is something a seat can end. Time-free like `pausedFor` — a flag every
+ *   client's clock respects, never a duration the room counts.
+ * @property {import('./partyHonours.js').HonourStats} honourStats  the buzz and per-round records the finish
+ *   ceremony reads (`flags/partyHonours.js`). Accumulated as the game runs and
+ *   discarded on reset — the room never reads it back, it only carries it to the
+ *   final broadcast.
  * @property {string[]} waived  playerIds whose continued absence no longer
  *   pauses the room, because the host already chose to carry on without them.
  *   Without it {@link applyResume} would re-pause for the same seat the instant
@@ -203,8 +221,13 @@ export function createRoom(totalQuestions = DEFAULT_QUESTIONS, plan = null) {
     pickedBy: [],
     picker: null,
     roundPicker: null,
+    roundMode: null,
     hand: null,
     pausedFor: null,
+    // Nobody has asked for a break yet. Separate from `pausedFor` (see the
+    // typedef): the two freezes coexist and only this one is seat-endable.
+    breakBy: null,
+    honourStats: emptyHonourStats(),
     waived: [],
     // The server stamps this on every inbound message before saving. Null here
     // is honest — a room nobody has yet touched has no activity time — and
@@ -273,6 +296,86 @@ function nextHostFor(room) {
     if (seat.bot !== true && room.present.has(pid)) return pid;
   }
   return null;
+}
+
+/** A room whose ceremony has nothing recorded yet.
+ *  @returns {import('./partyHonours.js').HonourStats} */
+function emptyHonourStats() {
+  return { seats: {}, rounds: [] };
+}
+
+/**
+ * Whether a seat may start a **break** right now.
+ *
+ * The room's phases are coarser than the client's screens
+ * ({@link module:partyTiming.BREAK_PHASES}): `break` and `roundcard` are beats
+ * the client paints inside `reveal` and `question`. `reveal` and `picking` map
+ * straight across. The round card is the awkward one — it sits at the head of
+ * the question phase, where nothing is answerable yet and no clock is running,
+ * and it is a natural "hold on, before this round starts" moment. The room can
+ * see that it is at a round START but not that the 2 s card is still up, so the
+ * window here is wider than the card: the whole first question of every round.
+ *
+ * That is a deliberate trade, not an oversight. What makes it safe is that a
+ * break is not a hold: **any** seat ends it in one tap, so the worst a seat can
+ * do by freezing a question they are losing is annoy four people who can each
+ * undo it instantly. The alternative — refusing the round card outright — would
+ * mean the one screen most likely to be pressed on silently swallows the press.
+ *
+ * @param {Room} room
+ * @returns {boolean}
+ */
+function breakablePhase(room) {
+  if (room.phase === 'reveal' || room.phase === 'picking') return true;
+  return room.phase === 'question' && isRoundStart(room.questionIndex, room.totalQuestions);
+}
+
+/** @param {Room} room */
+function breakBroadcast(room) {
+  return { to: /** @type {const} */ ('all'), message: { type: 'break', breakBy: room.breakBy } };
+}
+
+/**
+ * A seat asks the room to take a break: the clock freezes for everyone until
+ * somebody ends it.
+ *
+ * **Any seat, not just the host.** It is rarely the host who needs to leave the
+ * table, and the person who walked away is the least able to press anything —
+ * so gating this on hosting would put the control in the wrong hands twice over.
+ *
+ * One break at a time: a second request while one is running is a no-op rather
+ * than a nested freeze, so `endBreak` always has exactly one thing to undo.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @returns {ApplyResult}
+ */
+export function applyRequestBreak(room, playerId) {
+  if (!room.seats.has(playerId)) return { room, broadcasts: [] };
+  if (!breakablePhase(room)) return { room, broadcasts: [] };
+  if (room.breakBy !== null) return { room, broadcasts: [] };
+  const nextRoom = { ...room, breakBy: playerId };
+  return { room: nextRoom, broadcasts: [breakBroadcast(nextRoom)] };
+}
+
+/**
+ * Somebody ends the break. **Anyone seated may**, including a seat that did not
+ * start it: a break is a room decision, not a private lock, and the one person
+ * who cannot be relied on to press play is the person who walked away. The
+ * asker is not privileged here and neither is the host.
+ *
+ * No-op when nothing is running, so a duplicate tap from two phones that both
+ * saw the same screen resolves to one resume.
+ *
+ * @param {Room} room
+ * @param {string} playerId
+ * @returns {ApplyResult}
+ */
+export function applyEndBreak(room, playerId) {
+  if (room.breakBy === null) return { room, broadcasts: [] };
+  if (!room.seats.has(playerId)) return { room, broadcasts: [] };
+  const nextRoom = { ...room, breakBy: null };
+  return { room: nextRoom, broadcasts: [breakBroadcast(nextRoom)] };
 }
 
 /** @param {Room} room */
@@ -448,7 +551,14 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
     // one answer here and encoding it now is what keeps the field honest if the
     // first pick ever moves.
     roundPicker: draft ? playerId : null,
+    // Round 1's mode is the host's lobby choice, threaded in by the server on the
+    // same options object the attribution below reads.
+    roundMode: (draftOpts && draftOpts.firstPickMode) || null,
     hand: null,
+    // A fresh game records a fresh ceremony. `applyStart` is reachable only from
+    // the lobby, where `resetToLobby` has already cleared this — belt and braces,
+    // because a stat carried across games would honour last game's fastest hand.
+    honourStats: emptyHonourStats(),
   };
   const bcs = questionBroadcasts(nextRoom);
   // Round 1's first question carries the same `draftPick` attribution as any
@@ -475,15 +585,21 @@ export function applyStart(room, playerId, question, plan, totalQuestionsValue, 
  * @param {string} playerId
  * @param {string} choice  the chosen option's code
  * @param {boolean} correct
+ * @param {number | null} [latencyMs]  ms from the question appearing to this
+ *   buzz, measured by the caller (`party/partyGameServer.js` holds the deal time
+ *   transiently). Null when it isn't known — a durable-object eviction mid-
+ *   question loses it — in which case the buzz still counts toward accuracy but
+ *   drops out of the fastest-hand average rather than counting as instant.
+ *   Recorded, never acted on: the room stays time-free.
  * @returns {ApplyResult}
  */
-export function applyBuzz(room, playerId, choice, correct) {
+export function applyBuzz(room, playerId, choice, correct, latencyMs = null) {
   if (room.phase !== 'question') return { room, broadcasts: [] };
   if (!room.seats.has(playerId)) return { room, broadcasts: [] };
   if (room.buzzes.some((b) => b.playerId === playerId)) return { room, broadcasts: [] };
 
   const buzzes = [...room.buzzes, { playerId, choice, correct: !!correct }];
-  const nextRoom = { ...room, buzzes };
+  const nextRoom = { ...room, buzzes, honourStats: recordBuzz(room.honourStats, playerId, !!correct, latencyMs) };
   /** @type {Broadcast[]} */
   const broadcasts = [{
     to: 'all',
@@ -500,6 +616,59 @@ export function applyBuzz(room, playerId, choice, correct) {
     return { room: reveal.room, broadcasts: [...broadcasts, ...reveal.broadcasts] };
   }
   return { room: nextRoom, broadcasts };
+}
+
+/**
+ * Fold one buzz into the ceremony's records. Additive and total — no filtering
+ * by correctness, because "fastest hand" counts every answer including the wrong
+ * ones (nerve, not accuracy) and the thoughtful honour needs the denominator.
+ *
+ * @param {import('./partyHonours.js').HonourStats} stats
+ * @param {string} playerId
+ * @param {boolean} correct
+ * @param {number | null} latencyMs
+ * @returns {import('./partyHonours.js').HonourStats}
+ */
+function recordBuzz(stats, playerId, correct, latencyMs) {
+  const base = stats && stats.seats ? stats : emptyHonourStats();
+  const prev = base.seats[playerId] ?? { buzzes: 0, timed: 0, latencyMs: 0, correct: 0 };
+  const timed = typeof latencyMs === 'number' && Number.isFinite(latencyMs) && latencyMs >= 0;
+  return {
+    rounds: base.rounds,
+    seats: {
+      ...base.seats,
+      [playerId]: {
+        buzzes: prev.buzzes + 1,
+        timed: prev.timed + (timed ? 1 : 0),
+        latencyMs: prev.latencyMs + (timed ? /** @type {number} */ (latencyMs) : 0),
+        correct: prev.correct + (correct ? 1 : 0),
+      },
+    },
+  };
+}
+
+/**
+ * Fold one question's points into the round they belong to. The round bucket is
+ * created on first use, so a game that ends mid-round still has an honest entry
+ * for the part of it that was played.
+ *
+ * @param {import('./partyHonours.js').HonourStats} stats
+ * @param {number} questionIndex
+ * @param {string | null} modeId  the round's mode, so "Best in Flags" can name it
+ * @param {Record<string, number>} points
+ * @returns {import('./partyHonours.js').HonourStats}
+ */
+function recordRoundGains(stats, questionIndex, modeId, points) {
+  const base = stats && stats.seats ? stats : emptyHonourStats();
+  const ri = roundIndexAt(questionIndex);
+  const rounds = base.rounds.slice();
+  while (rounds.length <= ri) rounds.push({ modeId: null, gains: {} });
+  const gains = { ...rounds[ri].gains };
+  for (const [pid, pts] of Object.entries(points)) gains[pid] = (gains[pid] ?? 0) + pts;
+  // The mode is learned from whichever question in the round carries it; a null
+  // simply leaves the last known answer alone rather than blanking it.
+  rounds[ri] = { modeId: modeId ?? rounds[ri].modeId, gains };
+  return { seats: base.seats, rounds };
 }
 
 /**
@@ -578,10 +747,15 @@ export function applyNext(room, playerId, nextQuestion) {
     // Any pause dies with the game. `final` isn't a pausable phase, so a flag
     // left set here would never be recomputed away — it would just ride every
     // later `welcome` telling arrivals the finished game is waiting for someone.
-    const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [], pausedFor: null };
+    // Any pause OR break dies with the game, for the same reason: `final` is
+    // neither pausable nor breakable, so a flag left set here would never be
+    // recomputed away and would ride every later `welcome` telling arrivals the
+    // finished game is frozen.
+    const nextRoom = { ...room, phase: /** @type {Phase} */ ('final'), question: null, buzzes: [], pausedFor: null, breakBy: null };
+    const scoreboard = scoreboardOf(nextRoom);
     return {
       room: nextRoom,
-      broadcasts: [{ to: 'all', message: { type: 'final', scoreboard: scoreboardOf(nextRoom) } }],
+      broadcasts: [{ to: 'all', message: { type: 'final', scoreboard, honours: honoursFor(nextRoom, scoreboard) } }],
     };
   }
   const nextRoom = {
@@ -592,6 +766,25 @@ export function applyNext(room, playerId, nextQuestion) {
     buzzes: [],
   };
   return { room: nextRoom, broadcasts: questionBroadcasts(nextRoom) };
+}
+
+/**
+ * The finish ceremony's honours, resolved against the board that is about to be
+ * shown. Computed here rather than on the client because the raw records never
+ * leave the server: a client that held them could name the fastest hand before
+ * the game ended.
+ *
+ * Nicknames are attached at the last moment (rather than stored per honour) so a
+ * seat that renamed itself mid-game is announced under the name on its row.
+ *
+ * @param {Room} room
+ * @param {ReturnType<typeof scoreboardOf>} scoreboard
+ * @returns {Array<import('./partyHonours.js').Honour & { nickname: string }>}
+ */
+function honoursFor(room, scoreboard) {
+  const names = new Map(scoreboard.map((r) => [r.playerId, r.nickname]));
+  return computeHonours(room.honourStats, winnerIdsOf(scoreboard), [...room.seats.keys()])
+    .map((h) => ({ ...h, nickname: names.get(h.playerId) ?? '' }));
 }
 
 /**
@@ -672,8 +865,10 @@ export function applyPick(room, pickerId, modeId, segment, question) {
     pickedBy: [...room.pickedBy, pickerId],
     picker: null,
     // "Whose round is this" — the seat whose pick started it, held for its whole
-    // run where `picker` is cleared the moment the choice is made.
+    // run where `picker` is cleared the moment the choice is made. `roundMode` is
+    // the same idea for WHAT is being played, kept for the finish's honours.
     roundPicker: pickerId,
+    roundMode: modeId,
     hand: null,
   };
   const bcs = questionBroadcasts(nextRoom);
@@ -711,11 +906,16 @@ function resetToLobby(room) {
     pickedBy: [],
     picker: null,
     roundPicker: null,
+    roundMode: null,
     hand: null,
     // A new game starts with nobody owed a wait and nobody left behind. Keeping
     // either across a reset would pause the next game for a seat that dropped
-    // out of the last one.
+    // out of the last one. A break dies here too: it belongs to the game it was
+    // called in, and a room that resets while frozen must not open its lobby
+    // frozen.
     pausedFor: null,
+    breakBy: null,
+    honourStats: emptyHonourStats(),
     waived: [],
   };
   return {
@@ -802,6 +1002,23 @@ export function applyDisconnect(room, playerId) {
     const reveal = toReveal(nextRoom);
     nextRoom = reveal.room;
     broadcasts.push(...reveal.broadcasts);
+  }
+
+  // A break ends when the seat that called it loses its socket. Not because the
+  // break was theirs to hold — anyone can end it — but because the room is about
+  // to freeze again for the same person under `pausedFor`, and leaving both set
+  // would mean their return un-drops the room while the break they can no longer
+  // see keeps it frozen. Handing the freeze over to the drop-pause keeps exactly
+  // one reason on screen at a time.
+  //
+  // Deliberately NOT released on `visibilitychange` / `pagehide` the way a hold
+  // is, which is where this differs from hold-to-read: a hold is a finger on a
+  // button and cannot survive a hidden tab, whereas a break is a latch pressed by
+  // someone who is walking away — ending it the moment they pocket the phone
+  // would break it in exactly the case it exists for.
+  if (nextRoom.breakBy === playerId) {
+    nextRoom = { ...nextRoom, breakBy: null };
+    broadcasts.push(breakBroadcast(nextRoom));
   }
 
   nextRoom = settlePause(nextRoom, broadcasts);
@@ -1104,7 +1321,15 @@ function toReveal(room) {
   for (const [pid, seat] of room.seats) {
     seats.set(pid, { ...seat, score: seat.score + (points[pid] ?? 0) });
   }
-  const nextRoom = { ...room, phase: /** @type {Phase} */ ('reveal'), seats };
+  const nextRoom = {
+    ...room,
+    phase: /** @type {Phase} */ ('reveal'),
+    seats,
+    // The break already tallies per-round gains and then throws them away when
+    // the next round starts. Keeping a copy here is what lets the ending say
+    // "best in Flags" without measuring anything new.
+    honourStats: recordRoundGains(room.honourStats, room.questionIndex, room.roundMode, points),
+  };
   /** @type {Record<string, string>} */
   const picks = {};
   for (const b of room.buzzes) picks[b.playerId] = b.choice;
@@ -1283,6 +1508,13 @@ function welcomeBroadcast(room, playerId) {
       // and the "waiting for" line immediately, instead of running a countdown
       // nobody else is running until the next `paused` broadcast happens by.
       pausedFor: room.pausedFor,
+      // Same reasoning for the other freeze: a seat that reconnects into a room
+      // on a break must paint the break, not run a clock nobody else is running.
+      breakBy: room.breakBy,
+      // A seat that reconnects onto the finished board gets the honours with it,
+      // so the ceremony's mentions survive a reload rather than leaving a board
+      // whose strip has nothing to cycle.
+      honours: room.phase === 'final' ? honoursFor(room, scoreboardOf(room)) : null,
     },
   };
 }
@@ -1316,8 +1548,11 @@ export function serializeRoom(room) {
     pickedBy: room.pickedBy,
     picker: room.picker,
     roundPicker: room.roundPicker,
+    roundMode: room.roundMode,
     hand: room.hand,
     pausedFor: room.pausedFor,
+    breakBy: room.breakBy,
+    honourStats: room.honourStats,
     waived: room.waived,
     lastActiveAt: room.lastActiveAt,
   };
@@ -1358,12 +1593,23 @@ export function deserializeRoom(snapshot) {
     // bot mid-round loses the picker's edge across an eviction and gains nothing
     // it shouldn't. The safe direction of the two.
     roundPicker: snapshot.roundPicker ?? null,
+    // Same "written before this field existed" fallback as `roundPicker`: the
+    // live round simply has no mode name, so a Best-in-round honour earned across
+    // the eviction is announced without one rather than with a wrong one.
+    roundMode: snapshot.roundMode ?? null,
     hand: snapshot.hand ?? null,
     // An eviction empties `present`, so every seat reads as absent for a moment
     // and the room would pause for whoever happens to be first in seat order.
     // Restoring the stored answer instead means the pause survives the eviction
     // as itself, and the first reconnect settles it honestly.
     pausedFor: snapshot.pausedFor ?? null,
+    // A break survives an eviction as itself. The alternative — dropping it —
+    // would silently un-freeze a room whose players are still away from the
+    // table, which is the one thing the feature promises not to do.
+    breakBy: snapshot.breakBy ?? null,
+    // A snapshot from before the ceremony existed has nothing recorded, so that
+    // game simply finishes with no honours rather than failing to finish.
+    honourStats: snapshot.honourStats ?? emptyHonourStats(),
     waived: snapshot.waived ?? [],
     // A snapshot from before this field existed reads as "never touched" and
     // therefore dead (see `flags/roomLiveness.js`). The next inbound message

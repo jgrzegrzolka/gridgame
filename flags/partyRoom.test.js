@@ -23,6 +23,8 @@ import {
   applyPick,
   applyAddBot,
   applyRemoveBot,
+  applyRequestBreak,
+  applyEndBreak,
   serializeRoom,
   deserializeRoom,
   DEFAULT_QUESTIONS,
@@ -1430,4 +1432,213 @@ test('serialize/deserialize: lastActiveAt survives an eviction, so a woken room 
 test('deserialize: a snapshot from before lastActiveAt existed reads as null (dead until proven live)', () => {
   const legacy = deserializeRoom({ phase: 'lobby' });
   assert.equal(legacy.lastActiveAt, null);
+});
+
+// ---- the break: a pause any seat asks for ----
+
+/** Two seats, started, then advanced to the reveal — the nearest breakable
+ *  phase to where a game actually spends its time. */
+function atReveal() {
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true).room;
+  room = applyBuzz(room, 'bob', 'kr', false).room;
+  assert.equal(room.phase, 'reveal', 'fixture: both seats buzzed, so the room revealed');
+  return room;
+}
+
+/** Mid-round, mid-question: question 1 of a 3-question game, which is NOT a round
+ *  start (rounds are five questions) and so is the plain answering phase. */
+function atMidRoundQuestion() {
+  const room = applyNext(atReveal(), 'alice', q('kr')).room;
+  assert.equal(room.phase, 'question');
+  assert.equal(room.questionIndex, 1);
+  return room;
+}
+
+/** Play the 3-question fixture out to the final board. Alice wins throughout, so
+ *  the honours pool is Bob. */
+function playToFinal(latencies = [[800, 5000], [900, 5200], [850, 5400]]) {
+  let room = startedTwoPlayer();
+  for (let i = 0; i < 3; i += 1) {
+    room = applyBuzz(room, 'alice', 'jp', true, latencies[i][0]).room;
+    room = applyBuzz(room, 'bob', 'kr', false, latencies[i][1]).room;
+    const r = applyNext(room, 'alice', q('jp'));
+    room = r.room;
+    if (room.phase === 'final') return { room, result: r };
+  }
+  throw new Error('fixture never reached the final board');
+}
+
+test('any seat can start a break, not just the host', () => {
+  // It is rarely the host who needs to leave the table, and the person who walked
+  // away is the least able to press anything. Gating this on hosting would put the
+  // control in the wrong hands twice over.
+  const room = atReveal();
+  const r = applyRequestBreak(room, 'bob');
+  assert.equal(r.room.breakBy, 'bob');
+  assert.deepEqual(msg(r, 'break'), { type: 'break', breakBy: 'bob' });
+});
+
+test('any seat can end a break, including one that did not start it', () => {
+  // A break is a room decision, not a private lock. The one person who cannot be
+  // relied on to press play is the person who walked away.
+  let room = applyRequestBreak(atReveal(), 'bob').room;
+  const r = applyEndBreak(room, 'alice');
+  assert.equal(r.room.breakBy, null);
+  assert.deepEqual(msg(r, 'break'), { type: 'break', breakBy: null });
+});
+
+test('a break is refused during a question', () => {
+  // The rule the whole feature turns on: the 20 s window is a shared race, and a
+  // mid-question freeze hands one seat free thinking time. The client queues the
+  // press instead; the room simply will not take it.
+  const room = atMidRoundQuestion();
+  const r = applyRequestBreak(room, 'bob');
+  assert.equal(r.room.breakBy, null);
+  assert.deepEqual(r.broadcasts, []);
+});
+
+test('a break IS allowed at the head of a round, where the round card sits', () => {
+  // The round card is a calm "hold on, before this round starts" beat with no
+  // clock running, and the room cannot see the card itself — only that it is at a
+  // round start. The window is therefore wider than the card, which is safe
+  // because any seat un-breaks it in one tap.
+  const room = startedTwoPlayer();
+  assert.equal(room.questionIndex, 0, 'fixture: question 0 is a round start');
+  const r = applyRequestBreak(room, 'bob');
+  assert.equal(r.room.breakBy, 'bob');
+});
+
+test('a break is refused from the lobby and from the final board', () => {
+  // Nothing is running on either, so a freeze there would be a control that
+  // appears to do nothing — and a flag left set on `final` would ride every later
+  // welcome telling arrivals the finished game is frozen.
+  let room = createRoom(1);
+  room = applyHello(room, 'alice', 'Alice').room;
+  assert.equal(applyRequestBreak(room, 'alice').room.breakBy, null);
+
+  const { room: final } = playToFinal();
+  assert.equal(final.phase, 'final');
+  assert.equal(applyRequestBreak(final, 'alice').room.breakBy, null);
+});
+
+test('a break is refused from a seat that is not in the room', () => {
+  const r = applyRequestBreak(atReveal(), 'stranger');
+  assert.equal(r.room.breakBy, null);
+  assert.deepEqual(r.broadcasts, []);
+});
+
+test('one break at a time — a second request does not nest', () => {
+  // `endBreak` must always have exactly one thing to undo. A nested freeze would
+  // mean the first resume looked like it had done nothing.
+  let room = applyRequestBreak(atReveal(), 'bob').room;
+  const r = applyRequestBreak(room, 'alice');
+  assert.equal(r.room.breakBy, 'bob', 'the first asker keeps the break');
+  assert.deepEqual(r.broadcasts, [], 'and nothing is announced twice');
+});
+
+test('ending a break nobody started is a no-op', () => {
+  // Two phones that both saw the same screen resolve to one resume.
+  const r = applyEndBreak(atReveal(), 'alice');
+  assert.deepEqual(r.broadcasts, []);
+});
+
+test('a break ends when the seat that called it loses its socket', () => {
+  // Not because the break was theirs to hold, but because the drop-pause is about
+  // to freeze the room for the same person: leaving both set would mean their
+  // return un-drops the room while a break they can no longer see keeps it frozen.
+  let room = applyRequestBreak(atReveal(), 'bob').room;
+  const r = applyDisconnect(room, 'bob');
+  assert.equal(r.room.breakBy, null);
+  assert.deepEqual(msg(r, 'break'), { type: 'break', breakBy: null });
+  assert.equal(r.room.pausedFor, 'bob', 'and the drop-pause takes the freeze over');
+});
+
+test("a break survives someone ELSE's disconnect", () => {
+  // The asker is still at the table; nothing about their break has changed.
+  let room = applyRequestBreak(atReveal(), 'bob').room;
+  const r = applyDisconnect(room, 'alice');
+  assert.equal(r.room.breakBy, 'bob');
+});
+
+test('a break dies with the game — Play again opens an unfrozen lobby', () => {
+  // Force a stale flag on, the way an older snapshot could carry one.
+  const final = { ...playToFinal().room, breakBy: 'bob' };
+  const lobby = applyPlayAgain(final, 'alice').room;
+  assert.equal(lobby.breakBy, null);
+});
+
+test('a break survives serialization, so an eviction does not silently resume', () => {
+  // Dropping it would un-freeze a room whose players are still away from the
+  // table — the one thing the feature promises not to do.
+  const room = applyRequestBreak(atReveal(), 'bob').room;
+  const back = deserializeRoom(serializeRoom(room));
+  assert.equal(back.breakBy, 'bob');
+});
+
+test('a snapshot from before the break existed reads as not on a break', () => {
+  const back = deserializeRoom({ phase: 'reveal', seats: [] });
+  assert.equal(back.breakBy, null);
+});
+
+test('the welcome tells a reconnecting seat about the break', () => {
+  // Otherwise they run a countdown nobody else in the room is running.
+  const room = applyRequestBreak(atReveal(), 'bob').room;
+  const r = applyHello(room, 'bob', 'Bob');
+  assert.equal(msg(r, 'welcome').breakBy, 'bob');
+});
+
+// ---- the honour records the finish reads ----
+
+test('a buzz is recorded with its latency, correct or not', () => {
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true, 1200).room;
+  room = applyBuzz(room, 'bob', 'kr', false, 4800).room;
+  assert.deepEqual(room.honourStats.seats.alice, { buzzes: 1, timed: 1, latencyMs: 1200, correct: 1 });
+  assert.deepEqual(room.honourStats.seats.bob, { buzzes: 1, timed: 1, latencyMs: 4800, correct: 0 },
+    'a wrong answer still counts toward the fastest hand');
+});
+
+test('a buzz with no measurable latency still counts, but not toward the average', () => {
+  // A durable-object eviction mid-question loses the deal time. Counting the buzz
+  // as instant would hand the fastest hand to whoever was playing at the time.
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true, null).room;
+  assert.deepEqual(room.honourStats.seats.alice, { buzzes: 1, timed: 0, latencyMs: 0, correct: 1 });
+});
+
+test('a round banks the points everyone earned in it, under the round’s mode', () => {
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true, 900).room;
+  room = applyBuzz(room, 'bob', 'jp', true, 2000).room;
+  assert.equal(room.phase, 'reveal');
+  const round = room.honourStats.rounds[0];
+  assert.ok(round.gains.alice > 0 && round.gains.bob > 0);
+});
+
+test('the final board carries the honours', () => {
+  // Computed server-side and sent with the board, because the raw records must
+  // never leave the server: a client holding them could name the fastest hand
+  // before the game ended.
+  const { result } = playToFinal();
+  const final = msg(result, 'final');
+  assert.ok(Array.isArray(final.honours), 'the final message must carry an honours array');
+  for (const h of final.honours) {
+    assert.notEqual(h.playerId, 'alice', 'the winner takes no honour');
+    assert.equal(typeof h.nickname, 'string', 'named for the board that is about to show them');
+  }
+});
+
+test('a fresh game records fresh honours', () => {
+  // A stat carried across games would honour the last game's fastest hand.
+  const lobby = applyPlayAgain(playToFinal().room, 'alice').room;
+  assert.deepEqual(lobby.honourStats, { seats: {}, rounds: [] });
+});
+
+test('the live round’s mode is held on the room so an honour can name it', () => {
+  let room = createRoom(5);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyStart(room, 'alice', q('jp'), null, 5, false, null,
+    { draft: true, targetRounds: 1, firstPickMode: 'flags-all' }).room;
+  assert.equal(room.roundMode, 'flags-all');
 });

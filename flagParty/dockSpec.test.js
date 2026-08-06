@@ -61,12 +61,46 @@ test('every screen that shows a dock offers Home', () => {
   }
 });
 
-test('the mid-show beats stay dockless, exactly as before the dock moved', () => {
-  // Not an oversight being preserved: these three are timed, self-advancing
-  // beats the show drives. This asserts the move did not quietly add navigation
-  // to screens that never had it.
+test('the mid-show beats carry the break and nothing else', () => {
+  // These three used to be dockless, on the reasoning that they are timed,
+  // self-advancing beats the show drives rather than moments you act in. The
+  // break is the one exception that reasoning has to make room for: they are
+  // exactly the beats a break may start in (BREAK_PHASES), so leaving them
+  // dockless would hide the control at the calmest moments in the show.
+  //
+  // What they must NOT pick up is the rest of the bar — no "Back to settings",
+  // no play-again — so this pins the exception as an exception.
   for (const s of ['roundcard', 'pick', 'break']) {
-    assert.equal(dockSpecFor(s), null, `${s} must show no dock`);
+    assert.equal(dockSpecFor(s), 'partyPause home', `${s} must show only the break and Home`);
+  }
+});
+
+test('the break control is present on every playing screen, always in the first slot', () => {
+  // "Always the same slot so nobody hunts for it" is the whole design of this
+  // item: it is reached for while the room is waiting, often without looking.
+  // A screen that ordered it second would still work and would still be wrong.
+  const PLAYING = ['question', 'roundcard', 'pick', 'break'];
+  for (const s of PLAYING) {
+    const spec = dockSpecFor(s);
+    assert.ok(spec, `${s} must show a dock`);
+    assert.equal(spec.split(/\s+/)[0], 'partyPause',
+      `${s} must carry the break control in the FIRST dock slot`);
+  }
+  // And nowhere there is nothing to pause: the lobby has no clock, the final
+  // board has no game left.
+  for (const s of ['start', 'lobby', 'final']) {
+    assert.ok(!(dockSpecFor(s) ?? '').includes('partyPause'),
+      `${s} must not offer a break`);
+  }
+});
+
+test('no dock exceeds the three-item maximum', () => {
+  // The dock spec (CLAUDE_CODE_PROMPT.md) caps it at three: past that the
+  // Polish labels stop fitting at 11px on a phone, which is the width the whole
+  // component is sized around.
+  for (const [section, spec] of Object.entries(DOCK_BY_SECTION)) {
+    if (spec === null) continue;
+    assert.ok(spec.split(/\s+/).length <= 3, `${section} has more than three dock items`);
   }
 });
 

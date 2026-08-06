@@ -85,6 +85,9 @@ const DOCK_ICONS = {
   'monitor-smartphone': '<path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/>',
   // Back to the parent page (profile/sync → profile).
   'arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  // Ask the room to take a break (Flag Party). Two bars, not a "stop" square:
+  // the break is temporary and the play button that ends it is its mirror.
+  pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
 };
 
 /**
@@ -120,6 +123,11 @@ const DOCK_CATALOG = {
   // dodge exactly that; dropping the id removes the need.)
   archive: { tag: 'a', domId: null, i18nKey: 'daily.archive', en: 'Previous puzzles', icon: 'history', href: 'archive.html' },
   backToSettings: { tag: 'button', domId: 'question-to-settings', i18nKey: 'party.backToSettings', en: 'Back to settings', icon: 'settings-2' },
+  // Flag Party's "I need a minute". Present on every playing screen and always in
+  // the FIRST slot, so it is in the same place whichever beat the show is on and
+  // nobody has to hunt for it while the room waits. page.js swaps its label to
+  // the queued wording when it is pressed mid-question.
+  partyPause: { tag: 'button', domId: 'party-pause', i18nKey: 'party.breakAction', en: 'Pause', icon: 'pause' },
   // findFlag reshuffle. Two ids: `game-random` mid-game, `play-random` on
   // the result screen — page.js wires them to separate handlers, so (like
   // playAgain/playAgainInline) they can't share one id.

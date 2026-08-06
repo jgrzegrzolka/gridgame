@@ -576,3 +576,88 @@ test('revealOrder: missing points / empty board are safe and non-mutating', () =
   assert.deepEqual(out.map((r) => r.playerId), ['a', 'b']);
   assert.deepEqual(board.map((r) => r.playerId), ['b', 'a'], 'input array untouched');
 });
+
+// ---- the break: a pause any seat asks for ----
+
+test('break: adopts who asked, and clears it again', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  const s0 = { ...initialPartyClientState(), you, phase: 'reveal', question: { prompt: 'q', options: ['jp'] }, myChoice: 'jp' };
+  const paused = reduce(s0, { type: 'break', breakBy: 'bob' });
+  assert.equal(paused.breakBy, 'bob');
+  // Like a drop-pause, the freeze must not disturb the screen it froze.
+  assert.equal(paused.phase, 'reveal');
+  assert.equal(paused.myChoice, 'jp');
+  assert.deepEqual(paused.question, s0.question);
+
+  assert.equal(reduce(paused, { type: 'break', breakBy: null }).breakBy, null);
+});
+
+test('break: the two freezes are independent and can both be true', () => {
+  // A room can be waiting for an absent seat while somebody has also asked for a
+  // break, and it un-freezes only when both are gone. Collapsing them into one
+  // field would make the first resume look like it had done nothing.
+  let s = reduce(initialPartyClientState(), { type: 'paused', pausedFor: 'ada' });
+  s = reduce(s, { type: 'break', breakBy: 'bob' });
+  assert.equal(s.pausedFor, 'ada');
+  assert.equal(s.breakBy, 'bob');
+  s = reduce(s, { type: 'break', breakBy: null });
+  assert.equal(s.pausedFor, 'ada', 'ending the break does not un-drop the room');
+});
+
+test('break: welcome carries one into a reconnecting client', () => {
+  // Otherwise they run a countdown nobody else in the room is running.
+  const s = reduce(initialPartyClientState(), {
+    type: 'welcome', you, phase: 'reveal', roster: [], breakBy: 'bob',
+  });
+  assert.equal(s.breakBy, 'bob');
+});
+
+test('break: a server that never sends the field simply never breaks', () => {
+  const s = reduce(initialPartyClientState(), { type: 'welcome', you, phase: 'question', roster: [] });
+  assert.equal(s.breakBy, null);
+});
+
+test('break: a new game starts unfrozen', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  const s0 = { ...initialPartyClientState(), you, phase: 'final', breakBy: 'bob' };
+  assert.equal(reduce(s0, { type: 'lobby', hostId: you, roster: [] }).breakBy, null);
+});
+
+test('final: the board arrives unfrozen, whatever was set before it', () => {
+  // Stated on the message rather than relied on from a trailing broadcast, so a
+  // client that misses that one does not sit on a finished board behind a veil.
+  /** @type {import('./partyClient.js').PartyClientState} */
+  const s0 = { ...initialPartyClientState(), you, phase: 'reveal', breakBy: 'bob', pausedFor: 'ada' };
+  const s = reduce(s0, { type: 'final', scoreboard: [] });
+  assert.equal(s.breakBy, null);
+  assert.equal(s.pausedFor, null);
+});
+
+// ---- the finish ceremony's honours ----
+
+test('honours ride the final board', () => {
+  const honours = [{ id: 'fastest', playerId: 'bob', nickname: 'Bob', value: 1400 }];
+  const s = reduce(initialPartyClientState(), { type: 'final', scoreboard: [], honours });
+  assert.deepEqual(s.honours, honours);
+});
+
+test('an older server sends no honours, which is null rather than empty', () => {
+  // The page has to tell "this build has no ceremony" from "this game earned
+  // none" — both go straight to the board, but only one of them is a bug if it
+  // ever stops being true.
+  const s = reduce(initialPartyClientState(), { type: 'final', scoreboard: [] });
+  assert.equal(s.honours, null);
+});
+
+test('honours come back on a reconnect onto a finished board', () => {
+  // Otherwise the board's strip would have nothing to cycle after a reload.
+  const honours = [{ id: 'thoughtful', playerId: 'ada', nickname: 'Ada', value: 8, outOf: 10 }];
+  const s = reduce(initialPartyClientState(), { type: 'welcome', you, phase: 'final', roster: [], honours });
+  assert.deepEqual(s.honours, honours);
+});
+
+test('a new game clears the last game’s honours', () => {
+  /** @type {import('./partyClient.js').PartyClientState} */
+  const s0 = { ...initialPartyClientState(), you, phase: 'final', honours: [{ id: 'fastest', playerId: 'bob', nickname: 'Bob', value: 900 }] };
+  assert.equal(reduce(s0, { type: 'lobby', hostId: you, roster: [] }).honours, null);
+});

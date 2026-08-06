@@ -2075,6 +2075,97 @@ other option — on statistics rounds this would mean favouring rank 2, where th
 near miss); multiple bots as an explicit designed mode (the seat model allows it, but tune the UX);
 bot personalities / names theming.
 
+## Iteration 18 — a real break, and a finish worth watching — BUILT (2026-08-06)
+
+Two changes to the live show, from the design doc `Yetanotherquiz Flag Party Flow Current.dc.html`
+(sections `2b`–`2d`, `2g`) and its implementation prompt. **The 20-second answer window did not
+change** and neither change may shorten, extend or freeze it — it is a promise to the players.
+
+### Part 1 — the break
+
+Before this the room could only freeze for a reason it did not choose: a dropped player
+(`pausedFor`) or one seat holding `#hold-btn` on a chart reveal. There was no way to say "I need a
+minute". The draft pick is not one either — the picker is on the invisible 45 s `PICK_TIMEOUT_SECONDS`
+fallback and play resumes the instant they choose.
+
+- **Reuses hold-to-read's arithmetic, not a second clock.** `initialHold` / `beginHold` / `endHold` /
+  `heldMsAt` already add frozen time to the phase deadline off wall time, so it survives skipped
+  ticks and reconnects. `frozenNow()` in `flagParty/page.js` simply says "paused OR on a break", and
+  everything downstream — including the pick's `forcePick` fallback — is deferred for free.
+- **Any seat starts it; any seat ends it.** A break is a room decision, not a host privilege, and the
+  person who walked away from the table is the least able to press anything. `applyRequestBreak` /
+  `applyEndBreak` in `flags/partyRoom.js`; the room stays time-free and only knows `breakBy`.
+- **Never during a question.** The 20 s window is a shared race, and freezing mid-question lets one
+  seat stall the room to think. A press there is *queued*, not refused — greying the control out at
+  the one moment somebody reaches for it reads as broken. The dock item swaps to "W kolejce" and a
+  pill on the question screen says "Pauza po tym pytaniu"; pressing again cancels.
+  `BREAK_PHASES` / `breakAllowedIn` (`flags/partyTiming.js`) decide it.
+- **Its own surface, not the pause card.** A drop happened *to* the room and needs explaining (who,
+  and whose call it is to move on) — it keeps `#pause-dialog`. A break was chosen and needs exactly
+  one affordance, so `#break-veil` greys the game out and puts one play button on screen with a
+  single line naming who asked. Two causes, two surfaces, one freeze underneath. (The prompt said to
+  reuse the dialog; the mock `2c` draws the overlay. Jan chose the overlay for the break, the dialog
+  for the drop.)
+- **Released on socket close, deliberately NOT on `visibilitychange` / `pagehide`.** That is where it
+  differs from a hold: a hold is a finger on a button and cannot survive a hidden tab, whereas a
+  break is a latch pressed by someone walking away — ending it when they pocket the phone would
+  break it in exactly the case it exists for. On a close the drop-pause takes the freeze over, so
+  exactly one reason is on screen at a time.
+- The three mid-show beats (round card, draft pick, break) **gained a dock**, which reverses the
+  earlier "moments the show is driving, not moments you act in" call — they are precisely the beats a
+  break may start in, so a dockless screen would hide the control at the calmest moments. They carry
+  the break and Home, nothing else. `partyPause` is always the FIRST slot on every screen that has it.
+
+**Widened window, knowingly:** the room can see that it is at a round *start* but not that the 2 s
+round card is still up, so a break is accepted for the whole first question of every round. Safe
+because any seat un-breaks it in one tap; the alternative was for the round card — the screen most
+likely to be pressed on — to swallow the press silently.
+
+### Part 2 — the finish as a ceremony
+
+The ending was `renderFinal` + `finalBoardSchedule`: rows cascading bottom-up, winner held back
+260 ms, confetti at +220 ms — about 1.5 s, then four totals. Everyone who was not the winner got a
+number and nothing else. It is now three beats, ~11.8 s: **honours → the winner → the board**.
+
+- **Honours** (`flags/partyHonours.js`), one per screen, 2000 ms each: Najszybsza ręka / Najlepsza w
+  rundzie {mode} / Przemyślane odpowiedzi. Every number comes from data the game already computed and
+  then discarded — buzz order, correctness, and the per-round gains the break already tallies. The
+  room stops throwing them away (`honourStats`); the server times each buzz off a transient
+  `questionAt` stamp so the room stays time-free.
+- **Fastest hand counts every answer, wrong ones included** — nerve, not accuracy, no floor. A player
+  who mashes to win it pays for it in last place; that is the joke. **Przemyślane odpowiedzi** does
+  carry a 50% accuracy floor (Jan, 2026-08-06): the title makes a claim about judgement, and "last
+  click, 2 of 10 right" is a consolation prize for being slow *and* wrong. No minimum-questions floor
+  on Best in round — one round is 5 questions and that was judged evidence enough.
+- **Assigned by scarcity, then distinctiveness.** Honours go to seats that did *not* win (all tied
+  leaders are excluded), never the same seat twice, and never padded — a duel cycles one and solo
+  none. Titles are handed out most-constrained-first so a category only one seat qualifies for is not
+  starved by a broader one, then by how far ahead of the field that seat was, so a strong player's
+  honours do not just restate the leaderboard.
+- **The winner's own screen**, 2800 ms, is the largest thing in the ending: 104px identicon, 44px
+  name, 64px score counting up, ♛ Zwycięzca landing late as a pill. The celebration burst fires
+  *here*, not on the board. Three screens of mentions followed by nothing but a table row made the
+  honours read as the bigger prize, which is why the honours are deliberately smaller.
+- **The board keeps the winner's card as its header**, with the honours strip beneath it cycling
+  every 3000 ms, then the ranked rows starting at 2. Header and strip are siblings **above** the
+  scrolling list, never inside it: the result stays visible however far you scroll, and an honoured
+  seat keeps its mention when its own row scrolls out of view. `MAX_SEATS` is 20 so the board is a
+  list — no "+4 more", no pinned local row, no count-up (the score already counted a beat ago), and
+  `#pt-final` carries no heading because the winner card is the heading now.
+- **Order is deliberate: honours first.** Once the result is known the room stops watching — people
+  talk, reach for phones, argue about the last question. While it is unknown, every honour is live
+  information about someone who might have won; after the board the same line is a rosette handed to
+  a loser. Do not reorder.
+- **Skippable by any seat**, not only the host (a widening of the design note): nothing about the
+  ceremony is broadcast, so one player skipping changes nothing for anyone else, and a guest stuck in
+  a twelve-second ending on the fourth playthrough is in a hostage situation the host is not.
+- Beats are driven from the ceremony's own epoch against absolute offsets (`honoursSchedule`), never
+  an accumulated counter, so a throttled tab loses smoothness but never position. The honour screen's
+  body is rebuilt per beat because a CSS animation on a surviving element pins to its first keyframe
+  and never plays again.
+- `finalBoardSchedule` and its five row constants were **deleted** — the board no longer walks up
+  from last place. Only `FINAL_CELEBRATION_OFFSET_MS` survives, now measured from the winner beat.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).

@@ -32,6 +32,35 @@ export const QUESTION_SECONDS = 20;
  */
 export const PAUSE_POPUP_DELAY_MS = 2000;
 
+/**
+ * Screens a **break** may start in — a pause any seat asks for, as opposed to
+ * the drop-pause above that the room is forced into.
+ *
+ * Never during a question: the 20 s window is a shared race, and freezing
+ * mid-question lets one seat stall the room to think — the exact thing a fixed
+ * window protects against. So a press during a question is not refused, it is
+ * *queued* and honoured at the next reveal; greying the control out at the one
+ * moment a player reaches for it reads as broken.
+ *
+ * These are the client's SCREEN names, which are finer-grained than the room's
+ * phases: `break` and `roundcard` are beats the client paints inside the room's
+ * `reveal` / `question` phases. The room applies the coarser guard it can
+ * actually see (`flags/partyRoom.js` {@link module:partyRoom.applyRequestBreak});
+ * this is what decides, on the pressing device, between "freeze now" and "queue
+ * it for the reveal".
+ */
+export const BREAK_PHASES = ['reveal', 'break', 'picking', 'roundcard'];
+
+/**
+ * Whether a break started right now would freeze immediately, rather than being
+ * queued for the next reveal.
+ * @param {string | null | undefined} phase  a client screen name
+ * @returns {boolean}
+ */
+export function breakAllowedIn(phase) {
+  return typeof phase === 'string' && BREAK_PHASES.includes(phase);
+}
+
 /** Seconds a clean reveal lingers — every present player got it right, so
  *  there's nothing to study and the question snaps on. Mirrors flagQuiz's pace
  *  (a correct pick advances almost immediately). */
@@ -321,62 +350,101 @@ export function passLedgerSchedule(rowCount = 0, passCount = 0) {
   return { enterMs, steps, settleAt, totalMs: settleAt };
 }
 
-// ---- the finish: revealing the final board from the bottom up ----
-// The rows already cascaded bottom-to-top, but at a 90 ms step the whole walk up
-// a three-player board was over in 148 ms — measured, not guessed — which is why
-// it read as everyone arriving at once. These beats are the same choreography
-// slowed to where an eye can follow it, plus the gameshow grammar the break
-// already uses: hold the winner back, and let the burst punctuate their arrival
-// rather than cover the reveal.
-
-/** Gap between one row landing and the next one up starting. */
-export const FINAL_ROW_STAGGER_MS = 200;
-/** How long a row's own entrance animation runs (matches `scoreline-in`). */
-export const FINAL_ROW_ENTER_MS = 500;
-/** How long a row's score takes to count up to its final value. */
-export const FINAL_COUNT_MS = 600;
-/** A row counts from just after it is on screen, not before: the number should
- *  move where you are already looking. */
-export const FINAL_COUNT_OFFSET_MS = 120;
-/** The extra beat the winner is held back for, on top of their turn in the
- *  cascade. This is the whole "winner last" idea — without it first place is
- *  just the next row 200 ms later. */
-export const FINAL_WINNER_HOLD_MS = 260;
-/** Delay from the winner's row starting to arrive to the confetti / fireworks.
- *  Slightly into their entrance, so the burst lands *on* the winner rather than
- *  over the rows still arriving underneath. */
+/** Delay from the winner's beat starting to the confetti / fireworks burst.
+ *  Slightly into their screen, so the burst lands ON the winner's arrival rather
+ *  than over it — and on the WINNER'S beat, not on the board, because a burst
+ *  over rows still landing punctuates nothing.
+ *
+ *  This is the sole survivor of the old bottom-up final cascade
+ *  (`finalBoardSchedule` and its five row constants), which the ceremony
+ *  replaced: the board no longer walks up from last place, holds the winner
+ *  back, or counts any row up — every one of those jobs moved into a beat of its
+ *  own in {@link honoursSchedule}. */
 export const FINAL_CELEBRATION_OFFSET_MS = 220;
 
+// ---- the finish, as a ceremony: honours, the winner, then the board ----
+// Three beats run where the board used to be the whole ending: one screen per
+// honour, then the winner's own screen, then the board with the winner's card
+// continued as its header.
+//
+// The ORDER is the design, and it is deliberate. Once the result is known the
+// room stops watching: people talk, reach for phones, argue about the last
+// question. Anything after the result gets talked over, which is why award
+// ceremonies run the minor categories first. While the result is unknown, every
+// honour is live information about someone who might have won; after the board
+// the same line is a rosette handed to a loser.
+
+/** An honour screen deals in from the right, with a small overshoot. */
+export const HONOUR_IN_MS = 220;
+/** ...holds still, which is the reading time and the scarce thing here (the same
+ *  call {@link CHART_REVEAL_SECONDS} makes)... */
+export const HONOUR_HOLD_MS = 1600;
+/** ...then leaves to the left, fading. Energy at the EDGES of the beat, never in
+ *  the middle: a slow symmetric fade reads as a bad connection, not a ceremony. */
+export const HONOUR_OUT_MS = 180;
+/** The winner's own screen — the largest thing in the ending. Longer than an
+ *  honour because the score counts up inside it and the ♛ pill lands late.
+ *
+ *  It has to out-last (and out-size) the honours or the ordering says the wrong
+ *  thing: three full screens of mentions followed by nothing but a table row is
+ *  what made the honours read as the bigger prize. */
+export const WINNER_BEAT_MS = 2800;
+/** How long the honours strip on the board holds one honour before crossfading
+ *  to the next. Also what makes the ending "over": the board has said everything
+ *  it has to say once the strip has shown its first honour out. */
+export const HONOUR_STRIP_CYCLE_MS = 3000;
+/** The strip's crossfade between two honours. */
+export const HONOUR_STRIP_FADE_MS = 260;
+/** The winner's card landing as the board header, continued from its own screen
+ *  (`scale(1.06)` → 1) rather than re-revealed. */
+export const BOARD_HEADER_MS = 320;
+/** One ranked row's fade-in, and the gap between one row starting and the next.
+ *  Top-down and uniform: no cascade and no count-up, because the score already
+ *  counted on the winner's screen and the result is already known. */
+export const BOARD_ROW_MS = 240;
+export const BOARD_ROW_STAGGER_MS = 60;
+
 /**
- * The finish-screen reveal, as data: when each row enters and when its score
- * starts counting, plus when the celebration fires.
+ * The ceremony, as absolute offsets from the moment the final phase begins.
  *
- * Rows are indexed **as the board renders them** — index 0 is first place at the
- * top — while the reveal runs the other way, so index 0 gets the *largest* delay.
- * A caller can therefore hand this its scoreboard order untouched.
+ * Absolute rather than nested for the same reason the ledger schedules are (see
+ * {@link ledgerSchedule}): the ORDERING is what regresses, and summing durations
+ * can be right while the order is wrong. `winnerAt` must land after the last
+ * honour has left, and `boardAt` after the winner beat — neither is something a
+ * total can assert.
  *
- * @param {number} rowCount  how many players finished
- * @returns {{ rows: Array<{ enterAt: number, countAt: number }>, celebrationAt: number, totalMs: number }}
+ * `honourCount` is however many honours have a real non-winner behind them, not
+ * a fixed three: a duel has one (the only seat that can hold one is the player
+ * who lost) and solo has none. The ceremony degrades to what it actually has
+ * rather than padding.
+ *
+ * @param {number} [honourCount]  honours to cycle, 0..n
+ * @returns {{ beats: Array<{ inAt: number, outAt: number }>, winnerAt: number, boardAt: number, totalMs: number }}
  */
-export function finalBoardSchedule(rowCount = 0) {
-  const count = Math.max(0, Math.floor(rowCount));
-  /** @type {Array<{ enterAt: number, countAt: number }>} */
-  const rows = [];
-  for (let i = 0; i < count; i += 1) {
-    // Last place (the highest index) leads at 0; each row above waits one more
-    // step; first place waits an extra beat on top of that.
-    const stepsFromBottom = count - 1 - i;
-    const enterAt = stepsFromBottom * FINAL_ROW_STAGGER_MS + (i === 0 && count > 1 ? FINAL_WINNER_HOLD_MS : 0);
-    rows.push({ enterAt, countAt: enterAt + FINAL_COUNT_OFFSET_MS });
+export function honoursSchedule(honourCount = 0) {
+  const n = Math.max(0, Math.floor(honourCount));
+  /** @type {Array<{ inAt: number, outAt: number }>} */
+  const beats = [];
+  let t = 0;
+  for (let i = 0; i < n; i += 1) {
+    // A beat OWNS its screen from `inAt` until `outAt + HONOUR_OUT_MS`; the next
+    // one starts only then, so two honours are never on screen together.
+    const inAt = t;
+    const outAt = inAt + HONOUR_IN_MS + HONOUR_HOLD_MS;
+    beats.push({ inAt, outAt });
+    t = outAt + HONOUR_OUT_MS;
   }
-  if (!rows.length) return { rows, celebrationAt: 0, totalMs: 0 };
-  const winnerEnterAt = rows[0].enterAt;
+  const winnerAt = t;
+  const boardAt = winnerAt + WINNER_BEAT_MS;
   return {
-    rows,
-    celebrationAt: winnerEnterAt + FINAL_CELEBRATION_OFFSET_MS,
-    // The finish is over when the last number stops moving, or when the winner's
-    // row has finished arriving — whichever is later.
-    totalMs: Math.max(rows[0].countAt + FINAL_COUNT_MS, winnerEnterAt + FINAL_ROW_ENTER_MS),
+    beats,
+    winnerAt,
+    boardAt,
+    // The ending is "over" when the board has settled and the strip has held its
+    // first honour out — the board itself never finishes, it just sits there
+    // being read, and the strip cycles for as long as anyone is looking. At three
+    // honours that is ~11.8 s, against the ~1.5 s the ending used to spend.
+    totalMs: boardAt + (n > 0 ? HONOUR_STRIP_CYCLE_MS : BOARD_HEADER_MS),
   };
 }
 

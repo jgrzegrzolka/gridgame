@@ -353,6 +353,15 @@
           </button>
           <p class="hold-who" id="hold-who" aria-live="polite"></p>
         </div>
+        <!-- A break asked for DURING a question waits for that question to end:
+             the 20 s window is a shared race, and freezing while people are
+             aiming at tiles lets one seat stall the room to think. The press is
+             acknowledged here rather than refused — greying the control out at
+             the one moment somebody reaches for it reads as broken.
+
+             Local to the pressing device: it is a promise to you, not yet a
+             thing that has happened to the room. -->
+        <p class="break-queued" id="break-queued" hidden aria-live="polite"></p>
         <div class="question-foot" id="question-foot"></div>
       </section>
 
@@ -404,9 +413,44 @@
         <div class="break-mvp" id="break-mvp" hidden></div>
       </section>
 
-      <!-- Final -->
+      <!-- The finish, beat 1: one honour per screen, read out while the result
+           is still unknown. ONE section, re-keyed per beat rather than three —
+           the beats are sequential and only one is ever on screen, and a subtree
+           that re-renders per frame would pin any CSS animation to its first
+           keyframe (see `playCeremony`). -->
+      <section class="pt-honour" id="pt-honour" hidden>
+        <!-- Rebuilt wholesale per beat rather than mutated. Its children carry
+             CSS animations (the glyph's stamp, the avatar's two halo pulses), and
+             an animation on a surviving element pins to its first keyframe and
+             never plays again — so the elements have to be new each beat for the
+             beat to have any motion at all. The dots below are the one thing that
+             persists across beats, which is what gives the ceremony a length. -->
+        <div class="honour-body" id="honour-body"></div>
+        <span class="honour-dots" id="honour-dots" aria-hidden="true"></span>
+      </section>
+
+      <!-- The finish, beat 2: the winner's own screen. Deliberately the largest
+           thing in the ending — three screens of mentions followed by nothing but
+           a table row made the honours read as the bigger prize. -->
+      <section class="pt-winner" id="pt-winner" hidden>
+        <span class="winner-av" id="winner-av"></span>
+        <span class="winner-name" id="winner-name"></span>
+        <span class="winner-score" id="winner-score"></span>
+        <span class="winner-crown" id="winner-crown"></span>
+      </section>
+
+      <!-- The finish, beat 3: the board. No heading — the winner card IS the
+           heading now. `#final-sub` is filled only on a tie, where there is no
+           single winner card to carry the message.
+
+           The header and the honours strip are SIBLINGS of the scrolling list,
+           never inside it: if they scrolled away the whole structure would lose
+           its point (the result stays permanently visible, and an honoured seat
+           keeps its mention when its row scrolls out of view). -->
       <section class="pt-final" id="pt-final" hidden>
         <p class="party-sub" id="final-sub"></p>
+        <div class="final-winner" id="final-winner" hidden></div>
+        <div class="final-honours" id="final-honours" hidden aria-live="polite"></div>
         <div class="final-board" id="final-board"></div>
       </section>
 
@@ -444,6 +488,29 @@
       <p class="pause-sub" id="pause-sub" hidden></p>
       <button type="button" class="help-close" id="pause-go" data-i18n="party.playOnAnyway" hidden>Play on without waiting</button>
     </dialog>
+
+    <!-- The room is on a BREAK somebody asked for. A different surface from the
+         pause card above, and deliberately so: a drop is something that happened
+         TO the room and needs explaining (who, and whose call it is to move on),
+         whereas a break is something the room chose and needs exactly one
+         affordance — play. So there is nothing to read here, no title, and no
+         dismiss: the game greys out behind, one button sits in the middle, and a
+         single line names who asked.
+
+         Anyone may press it. A break is a room decision, not a host privilege,
+         and the person who walked away from the table is the least able to press
+         anything.
+
+         A sibling of <main>, like the dock and for the same reason: it is
+         position-fixed, and a fixed element inside a section would resolve its
+         offsets against the screen-swap transform instead of the viewport. -->
+    <div class="break-veil" id="break-veil" hidden>
+      <button type="button" class="break-play" id="break-play">
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <span class="sr-only" id="break-play-label" data-i18n="party.breakResume">Resume</span>
+      </button>
+      <span class="break-who" id="break-who"></span>
+    </div>
 
     <script type="module">
       import { bootFlagParty } from './page.js';

@@ -774,7 +774,20 @@
       "roomFull": "That room is full, ask the host to start or create a new room",
       "missingPlayerId": "Connection error, please reload the page",
       "fallback": "Rejected: {reason}"
-    }
+    },
+    "breakAction": "Pause",
+    "breakQueued": "Pause after this question",
+    "breakQueuedShort": "Queued",
+    "breakBy": "{name} paused the game",
+    "breakResume": "Resume",
+    "honourFastest": "Fastest hand",
+    "honourFastestValue": "{seconds} s on average",
+    "honourBestRound": "Best in {round}",
+    "honourBestRoundPlain": "Best round",
+    "honourBestRoundValue": "+{points} points",
+    "honourThoughtful": "Thoughtful answers",
+    "honourThoughtfulValue": "last click, {correct} of {total} right",
+    "honourWinner": "♛ Winner"
   },
   "variant": {
     "countries": "All countries",
