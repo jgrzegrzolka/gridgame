@@ -1,6 +1,6 @@
 import { scoreQuestionDetailed } from './partyScore.js';
-import { isRoundBoundary, isFinalRound, isRoundStart, roundIndexAt } from './partyPlan.js';
-import { computeHonours, winnerIdsOf } from './partyHonours.js';
+import { isRoundBoundary, isFinalRound, isRoundStart } from './partyPlan.js';
+import { computeHonours } from './partyHonours.js';
 import { DEFAULT_GAME_LENGTH, validateGameLength, validateFirstPickMode, validatePicksPerPlayer } from './partyDraft.js';
 
 /**
@@ -301,7 +301,7 @@ function nextHostFor(room) {
 /** A room whose ceremony has nothing recorded yet.
  *  @returns {import('./partyHonours.js').HonourStats} */
 function emptyHonourStats() {
-  return { seats: {}, rounds: [] };
+  return { seats: {}, modes: {} };
 }
 
 /**
@@ -631,13 +631,14 @@ export function applyBuzz(room, playerId, choice, correct, latencyMs = null) {
  */
 function recordBuzz(stats, playerId, correct, latencyMs) {
   const base = stats && stats.seats ? stats : emptyHonourStats();
-  const prev = base.seats[playerId] ?? { buzzes: 0, timed: 0, latencyMs: 0, correct: 0 };
+  const prev = seatStat(base, playerId);
   const timed = typeof latencyMs === 'number' && Number.isFinite(latencyMs) && latencyMs >= 0;
   return {
-    rounds: base.rounds,
+    modes: base.modes,
     seats: {
       ...base.seats,
       [playerId]: {
+        ...prev,
         buzzes: prev.buzzes + 1,
         timed: prev.timed + (timed ? 1 : 0),
         latencyMs: prev.latencyMs + (timed ? /** @type {number} */ (latencyMs) : 0),
@@ -647,28 +648,50 @@ function recordBuzz(stats, playerId, correct, latencyMs) {
   };
 }
 
+/** One seat's records, defaulted. @param {import('./partyHonours.js').HonourStats} stats
+ *  @param {string} playerId @returns {import('./partyHonours.js').SeatStat} */
+function seatStat(stats, playerId) {
+  return stats.seats[playerId] ?? { buzzes: 0, timed: 0, latencyMs: 0, correct: 0, unanswered: 0 };
+}
+
 /**
- * Fold one question's points into the round they belong to. The round bucket is
- * created on first use, so a game that ends mid-round still has an honest entry
- * for the part of it that was played.
+ * Fold one finished question into the ceremony's records: what it was worth to
+ * each seat in its own mode, and who let it go by unanswered.
  *
- * @param {import('./partyHonours.js').HonourStats} stats
- * @param {number} questionIndex
- * @param {string | null} modeId  the round's mode, so "Best in Flags" can name it
- * @param {Record<string, number>} points
+ * Keyed by MODE rather than by round, because the titles are: each `superlative*`
+ * id is its own category ("4 of 4 GDP questions"), and two rounds of the same
+ * mode in one game are one body of evidence about who owns it.
+ *
+ * `unanswered` counts only seats that were **present** for the question. A seat
+ * whose socket had dropped could not have answered, and calling that sleeping
+ * would hand a title to someone whose train went into a tunnel.
+ *
+ * @param {Room} room  the room as it was when the question ran
+ * @param {string | null} modeId  the live round's mode
+ * @param {Record<string, number>} points  what each seat earned on this question
  * @returns {import('./partyHonours.js').HonourStats}
  */
-function recordRoundGains(stats, questionIndex, modeId, points) {
-  const base = stats && stats.seats ? stats : emptyHonourStats();
-  const ri = roundIndexAt(questionIndex);
-  const rounds = base.rounds.slice();
-  while (rounds.length <= ri) rounds.push({ modeId: null, gains: {} });
-  const gains = { ...rounds[ri].gains };
+function recordQuestion(room, modeId, points) {
+  const base = room.honourStats && room.honourStats.seats ? room.honourStats : emptyHonourStats();
+  /** @type {Record<string, import('./partyHonours.js').SeatStat>} */
+  const seats = { ...base.seats };
+  const buzzed = new Set(room.buzzes.map((b) => b.playerId));
+  for (const pid of room.seats.keys()) {
+    if (!room.present.has(pid) || buzzed.has(pid)) continue;
+    const prev = seatStat(base, pid);
+    seats[pid] = { ...prev, unanswered: prev.unanswered + 1 };
+  }
+  if (!modeId) return { seats, modes: base.modes };
+
+  const prevMode = base.modes[modeId] ?? { asked: 0, gains: {}, correct: {} };
+  const gains = { ...prevMode.gains };
   for (const [pid, pts] of Object.entries(points)) gains[pid] = (gains[pid] ?? 0) + pts;
-  // The mode is learned from whichever question in the round carries it; a null
-  // simply leaves the last known answer alone rather than blanking it.
-  rounds[ri] = { modeId: modeId ?? rounds[ri].modeId, gains };
-  return { seats: base.seats, rounds };
+  const correct = { ...prevMode.correct };
+  for (const b of room.buzzes) if (b.correct) correct[b.playerId] = (correct[b.playerId] ?? 0) + 1;
+  return {
+    seats,
+    modes: { ...base.modes, [modeId]: { asked: prevMode.asked + 1, gains, correct } },
+  };
 }
 
 /**
@@ -783,7 +806,7 @@ export function applyNext(room, playerId, nextQuestion) {
  */
 function honoursFor(room, scoreboard) {
   const names = new Map(scoreboard.map((r) => [r.playerId, r.nickname]));
-  return computeHonours(room.honourStats, winnerIdsOf(scoreboard), [...room.seats.keys()])
+  return computeHonours(room.honourStats, scoreboard)
     .map((h) => ({ ...h, nickname: names.get(h.playerId) ?? '' }));
 }
 
@@ -1326,9 +1349,11 @@ function toReveal(room) {
     phase: /** @type {Phase} */ ('reveal'),
     seats,
     // The break already tallies per-round gains and then throws them away when
-    // the next round starts. Keeping a copy here is what lets the ending say
-    // "best in Flags" without measuring anything new.
-    honourStats: recordRoundGains(room.honourStats, room.questionIndex, room.roundMode, points),
+    // the next round starts. Keeping a copy here — plus who sat the question out
+    // — is what lets the ending name a Flag Sommelier without measuring anything
+    // new. Built from `room`, not `nextRoom`: it needs this question's buzzes and
+    // the presence that was true while it ran.
+    honourStats: recordQuestion(room, room.roundMode, points),
   };
   /** @type {Record<string, string>} */
   const picks = {};

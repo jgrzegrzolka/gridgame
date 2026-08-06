@@ -1401,19 +1401,30 @@ button.opt { -webkit-appearance: none; appearance: none; }
    navigation. `pointer-events: none` is the load-bearing half — tiles behind a
    veil must not be tappable, or a break becomes free thinking time with a
    buzzer. */
-.party.is-break > section,
-.party.is-break > .dock {
+.party.is-break > section {
   filter: grayscale(1);
   opacity: 0.22;
   pointer-events: none;
 }
-/* The dock is in the list on purpose. The veil already swallows its presses (it
-   is a full-viewport layer above the dock's z-index of 5), but a bar that stays
-   crisp and legible while nothing on it responds reads as a broken page rather
-   than a paused one. Recede it with everything else, so the only thing that
-   looks pressable is the only thing that is.
-   The chrome cluster and burger need no rule: they sit at z-index 25, still
-   under the veil, and they are site chrome rather than part of the game. */
+/* The game recedes furthest; the dock and the site chrome only step back.
+   0.35 rather than the game's 0.22 because they are still the frame the phone is
+   in — a bar that vanished would read as the page having navigated somewhere,
+   which is not what happened. The dock **stays where it always is**: it is a
+   sibling of every screen for a structural reason (the position:fixed
+   containing-block bug documented in index.html), so hiding it for one state
+   would be a special case, and while the room is paused "Home" is not somewhere
+   anyone should arrive by accident.
+   The veil already swallows every press (it is a full-viewport layer above the
+   dock's z-index of 5 and the chrome's 25); these rules only make the screen
+   agree with what is actually live, which is the play button and nothing else. */
+.party.is-break > .dock,
+body.party-break > .site-logo,
+body.party-break > .lang-toggle,
+body.party-break > .flags-link,
+body.party-break > .burger {
+  opacity: 0.35;
+  pointer-events: none;
+}
 
 .break-veil {
   position: fixed;
@@ -1633,7 +1644,37 @@ button.opt { -webkit-appearance: none; appearance: none; }
   white-space: nowrap;
 }
 .final-honours .fh-who { font-size: 13px; font-weight: var(--weight-bold); }
-.final-honours .fh-value { flex: none; font-size: 11px; color: var(--muted-color); }
+/* The value, and under it whether this title also earned a ceremony screen. The
+   mark is what makes handing out more titles than screens honest: a strip-only
+   title is not a lesser one, it is one the ceremony had no room for. Rose when it
+   was screened, muted when it was not — the same weighting the dots below use. */
+.final-honours .fh-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.final-honours .fh-value { font-size: 11px; color: var(--muted-color); }
+.final-honours .fh-mark { font-size: 10px; color: var(--muted-color); }
+.final-honours .fh-mark.screened { color: var(--secondary-color); }
+
+/* One dot per awarded title, so the strip reads as a set being cycled rather
+   than a line that changes on its own — at seven titles a full pass takes 21 s,
+   and without these nobody would know they were waiting for a set at all. The
+   dot for a screened title sits between "current" and "not yet": it already had
+   its moment, so it is dimmer than the live one but louder than a strip-only. */
+.final-honour-dots { display: flex; justify-content: center; gap: 5px; margin-top: 8px; }
+.final-honour-dots[hidden] { display: none; }
+.final-honour-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted-soft-color);
+}
+.final-honour-dots i.was-screened { background: var(--control-line-color); }
+.final-honour-dots i.on { background: var(--secondary-color); }
+
+/* The break veil's two lines: the fact, then the guess. The guess is smaller and
+   quieter because it is a joke the room can ignore — it must never read as
+   information the player is expected to act on. */
+.break-who-lines { display: flex; flex-direction: column; gap: 1px; }
+.break-who-name { font-size: 14px; }
+.break-who-quip { font-size: 12px; color: var(--muted-color); }
 
 /* The ranked rows start at 2 and simply scroll. MAX_SEATS is 20, so the board is
    a LIST, not a screen: no "+4 more" row to decode, no pinned local row. A plain

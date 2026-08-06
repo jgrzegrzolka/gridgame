@@ -1594,8 +1594,8 @@ test('a buzz is recorded with its latency, correct or not', () => {
   let room = startedTwoPlayer();
   room = applyBuzz(room, 'alice', 'jp', true, 1200).room;
   room = applyBuzz(room, 'bob', 'kr', false, 4800).room;
-  assert.deepEqual(room.honourStats.seats.alice, { buzzes: 1, timed: 1, latencyMs: 1200, correct: 1 });
-  assert.deepEqual(room.honourStats.seats.bob, { buzzes: 1, timed: 1, latencyMs: 4800, correct: 0 },
+  assert.deepEqual(room.honourStats.seats.alice, { buzzes: 1, timed: 1, latencyMs: 1200, correct: 1, unanswered: 0 });
+  assert.deepEqual(room.honourStats.seats.bob, { buzzes: 1, timed: 1, latencyMs: 4800, correct: 0, unanswered: 0 },
     'a wrong answer still counts toward the fastest hand');
 });
 
@@ -1604,16 +1604,41 @@ test('a buzz with no measurable latency still counts, but not toward the average
   // as instant would hand the fastest hand to whoever was playing at the time.
   let room = startedTwoPlayer();
   room = applyBuzz(room, 'alice', 'jp', true, null).room;
-  assert.deepEqual(room.honourStats.seats.alice, { buzzes: 1, timed: 0, latencyMs: 0, correct: 1 });
+  assert.deepEqual(room.honourStats.seats.alice, { buzzes: 1, timed: 0, latencyMs: 0, correct: 1, unanswered: 0 });
 });
 
-test('a round banks the points everyone earned in it, under the round’s mode', () => {
-  let room = startedTwoPlayer();
+test('a question banks its points under the round’s MODE, not its round', () => {
+  // Keyed by mode because the titles are: two rounds of the same mode in one game
+  // are one body of evidence about who owns it, and each `superlative*` id is its
+  // own category rather than "the third round".
+  // A DRAFT start, because that is the only way a round has a mode at all — the
+  // plain `applyStart` fixture leaves `roundMode` null and banks no mode figures,
+  // which is correct and is why this test cannot use it.
+  let room = createRoom(3);
+  room = applyHello(room, 'alice', 'Alice').room;
+  room = applyHello(room, 'bob', 'Bob').room;
+  room = applyStart(room, 'alice', q('jp'), null, 15, false, null,
+    { draft: true, targetRounds: 3, firstPickMode: 'flags-all' }).room;
   room = applyBuzz(room, 'alice', 'jp', true, 900).room;
   room = applyBuzz(room, 'bob', 'jp', true, 2000).room;
   assert.equal(room.phase, 'reveal');
-  const round = room.honourStats.rounds[0];
-  assert.ok(round.gains.alice > 0 && round.gains.bob > 0);
+  const mode = room.honourStats.modes['flags-all'];
+  assert.ok(mode, `expected the round's mode to be keyed: ${Object.keys(room.honourStats.modes)}`);
+  assert.equal(mode.asked, 1);
+  assert.ok(mode.gains.alice > 0 && mode.gains.bob > 0);
+  assert.equal(mode.correct.alice, 1, 'and who got it right, for the statistics titles');
+});
+
+test('a seat that lets a question go by is recorded as unanswered', () => {
+  // The sleeper title reads this. Only PRESENT seats count: a seat whose socket
+  // had dropped could not have answered, and calling that sleeping would hand a
+  // title to someone whose train went into a tunnel.
+  let room = startedTwoPlayer();
+  room = applyBuzz(room, 'alice', 'jp', true, 900).room;
+  room = applyForceReveal(room, 'alice').room;
+  assert.equal(room.phase, 'reveal');
+  assert.equal(room.honourStats.seats.bob.unanswered, 1);
+  assert.equal(room.honourStats.seats.alice.unanswered, 0);
 });
 
 test('the final board carries the honours', () => {
@@ -1624,15 +1649,15 @@ test('the final board carries the honours', () => {
   const final = msg(result, 'final');
   assert.ok(Array.isArray(final.honours), 'the final message must carry an honours array');
   for (const h of final.honours) {
-    assert.notEqual(h.playerId, 'alice', 'the winner takes no honour');
     assert.equal(typeof h.nickname, 'string', 'named for the board that is about to show them');
+    assert.equal(typeof h.glyph, 'string', 'and carrying its glyph, which is part of the title');
   }
 });
 
 test('a fresh game records fresh honours', () => {
   // A stat carried across games would honour the last game's fastest hand.
   const lobby = applyPlayAgain(playToFinal().room, 'alice').room;
-  assert.deepEqual(lobby.honourStats, { seats: {}, rounds: [] });
+  assert.deepEqual(lobby.honourStats, { seats: {}, modes: {} });
 });
 
 test('the live round’s mode is held on the room so an honour can name it', () => {
