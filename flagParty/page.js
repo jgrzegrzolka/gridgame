@@ -3501,17 +3501,15 @@ export function bootFlagParty() {
       text.appendChild(el('span', 'fh-label', honourTitle(h)));
       text.appendChild(el('span', 'fh-who', h.nickname || ''));
       finalHonours.appendChild(text);
-      // The value, and under it whether this title also earned a ceremony screen.
-      // That mark is what makes handing out more titles than screens honest: a
-      // strip-only title is not a lesser title, it is one the ceremony did not
-      // have room for, and saying so is better than leaving the room to wonder
-      // why some names were read out and others only appear here.
+      // The value, and under it — only for a title the ceremony had no room for —
+      // the mark that says so. A screened title needs no mark: the room just
+      // watched it get its screen, so restating it is noise on the one line the
+      // strip has.
       const right = el('span', 'fh-right');
       right.appendChild(el('span', 'fh-value', honourValueText(h)));
-      right.appendChild(el('span', 'fh-mark' + (h.screened ? ' screened' : ''),
-        h.screened
-          ? t('party.honourMarkScreened', 'had its own screen')
-          : t('party.honourMarkStripOnly', 'only here')));
+      if (!h.screened) {
+        right.appendChild(el('span', 'fh-mark', t('party.honourMarkStripOnly', 'only here')));
+      }
       finalHonours.appendChild(right);
       // One dot per awarded title, the current one lit — so the strip says how
       // many there are and how far through them you are, rather than looking

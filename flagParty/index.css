@@ -1644,14 +1644,12 @@ body.party-break > .burger {
   white-space: nowrap;
 }
 .final-honours .fh-who { font-size: 13px; font-weight: var(--weight-bold); }
-/* The value, and under it whether this title also earned a ceremony screen. The
-   mark is what makes handing out more titles than screens honest: a strip-only
-   title is not a lesser one, it is one the ceremony had no room for. Rose when it
-   was screened, muted when it was not — the same weighting the dots below use. */
+/* The value, and under it the strip-only mark. Only a title the ceremony had no
+   room for carries one — a screened title was just read out, so saying so again
+   here adds nothing. Muted, the same weighting the strip-only dot below uses. */
 .final-honours .fh-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .final-honours .fh-value { font-size: 11px; color: var(--muted-color); }
 .final-honours .fh-mark { font-size: 10px; color: var(--muted-color); }
-.final-honours .fh-mark.screened { color: var(--secondary-color); }
 
 /* One dot per awarded title, so the strip reads as a set being cycled rather
    than a line that changes on its own — at seven titles a full pass takes 21 s,
