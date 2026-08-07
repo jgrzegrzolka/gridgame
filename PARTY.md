@@ -2212,8 +2212,9 @@ are never generated at runtime — a title that changes between games is a joke 
 **Titles awarded and ceremony screens are two different numbers** (2h), which is what lets a full
 room hand out seven trophies without a seven-screen ceremony: 2 seats → 3/2, 3 → 4/3, 4–6 → 5/3,
 7+ → 7/3. Seven is the ceiling because the strip cycles at 3 s and seven is already a 21 s pass.
-Everything not screened is still named, in the strip, which now marks each entry "miał swój ekran" /
-"tylko tutaj" and carries a dot per title so it reads as a set being cycled.
+Everything not screened is still named, in the strip, which marks a strip-only entry "tylko tutaj"
+(a screened title carries no mark — the room just watched it get its screen) and carries a dot per
+title so it reads as a set being cycled.
 
 **The winner is capped, not excluded** — one title besides ♛, shown on the header card as
 "♛ Zwycięzca · ✓ Flagowy sommelier". Winning everything was the problem; winning something never was.
