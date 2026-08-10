@@ -107,28 +107,85 @@ test('every title carries a glyph', () => {
 
 // ---- the caps ----
 
-test('the winner may hold one title, never two', () => {
-  // Not excluded — capped. Winning everything was the problem; winning
-  // something never was.
+// Not excluded — capped. Winning everything was the problem; winning something
+// never was. The cap decides who gets the SPARE title in a room with more titles
+// than seats, and it goes to someone the room has not heard about: the winner
+// already holds the crown, their own screen, and the board's header. The two tests
+// below are the two halves of that — when the spare has another owner, and when it
+// has none. (An older test asserted a flat "never two" against a fixture where the
+// winner owned every category and nobody else had a candidate spare, which is the
+// second case, not the first; it now reads as 2 and is covered here properly.)
+
+test('the winner takes a spare title rather than leaving it unawarded', () => {
+  // The cap was written to give the spare to somebody else, not to leave a true
+  // title unsaid. Once no other seat can take the next one, the choice is no longer
+  // "the winner or someone else" but "the winner or nobody" — so it is awarded, and
+  // the two seats the game had nothing to say about are still named by the tail.
+  //
+  // Four seats: the winner owns four categories, one seat owns one, two owned
+  // nothing. Under a hard cap of one this room awarded four of its five titles and
+  // sat on the winner's other three.
   const s = stats({
     win: seat({ mean: 400, correct: 10 }),
-    a: seat({ mean: 5000, correct: 8 }),
-    b: seat({ mean: 9000, correct: 9 }),
+    b: seat({ mean: 3000, correct: 8 }),
+    c: seat({ mean: 5000, correct: 8 }),
+    d: seat({ buzzes: 10, mean: 9000, correct: 2 }),
   }, {
-    'flags-all': mode({ win: 40, a: 5, b: 4 }),
-    'map-outlines': mode({ win: 38, a: 6, b: 3 }),
-    'superlative-gdp': mode({ win: 30, a: 2, b: 1 }, { correct: { win: 5 } }),
+    'flags-all': mode({ win: 40, b: 2 }),
+    'map-outlines': mode({ win: 35, b: 1 }),
+    'spot-flag': mode({ win: 30, b: 1 }),
+    'superlative-gdp': mode({ b: 20 }, { correct: { b: 4 } }),
   });
-  const out = computeHonours(s, board([['win', 90], ['a', 20], ['b', 10]]));
-  assert.equal(holders(out).filter((p) => p === 'win').length, 1,
-    `the winner took ${holders(out).filter((p) => p === 'win').length} titles`);
+  const out = computeHonours(s, board([['win', 60], ['b', 30], ['c', 20], ['d', 10]]));
+  assert.equal(holders(out).filter((p) => p === 'win').length, 2, `win took ${ids(out).join(', ')}`);
+  assert.ok(holders(out).includes('c') && holders(out).includes('d'),
+    'the quiet seats are still named');
+});
+
+test('the spare never becomes a sweep: the winner stops at the ordinary per-seat cap', () => {
+  // The winner owns everything and nobody else owns anything, which is the exact
+  // shape the cap exists for. Two is where they stop, level with the seats that
+  // took two elsewhere -- never four of the plan's five.
+  const s = stats({
+    win: seat({ mean: 400, correct: 10 }),
+    b: seat({ buzzes: 10, mean: 5000, correct: 2 }),
+    c: seat({ buzzes: 10, mean: 9000, correct: 2 }),
+  }, {
+    'flags-all': mode({ win: 40 }),
+    'map-outlines': mode({ win: 35 }),
+    'spot-flag': mode({ win: 30 }),
+    'superlative-gdp': mode({ win: 20 }, { correct: { win: 4 } }),
+  });
+  const out = computeHonours(s, board([['win', 90], ['b', 5], ['c', 2]]));
+  const perSeatCap = Math.max(1, Math.ceil(honourPlan(3).titles / 3));
+  assert.equal(holders(out).filter((p) => p === 'win').length, perSeatCap,
+    `win took ${holders(out).filter((p) => p === 'win').length}, cap is ${perSeatCap}`);
+});
+
+test('at seven seats and up nobody holds two, winner included', () => {
+  // perSeatCap is 1 there (seven titles over seven-plus seats), and the spare rule
+  // is bounded by it — so a big room stays one title each however lopsided it was.
+  /** @type {Record<string, import('./partyHonours.js').SeatStat>} */
+  const seats = {};
+  /** @type {Array<[string, number]>} */
+  const rows = [];
+  for (let i = 0; i < 8; i += 1) {
+    seats['p' + i] = seat({ mean: 1000 + i * 100, correct: 8, buzzes: 10 });
+    rows.push(['p' + i, 90 - i * 10]);
+  }
+  const out = computeHonours(stats(seats, {
+    'flags-all': mode({ p0: 40 }), 'map-outlines': mode({ p0: 35 }), 'spot-flag': mode({ p0: 30 }),
+  }), board(rows));
+  const counts = new Map();
+  for (const p of holders(out)) counts.set(p, (counts.get(p) ?? 0) + 1);
+  assert.deepEqual([...counts.values()].filter((n) => n > 1), [],
+    `somebody holds two at eight seats: ${JSON.stringify([...counts])}`);
 });
 
 test('a duel splits four titles 2+2 when both seats earned two', () => {
-  // The winner's one-title cap exists to stop a runaway winner sweeping the
-  // ceremony. In a duel it does not do that — it just makes the plan unreachable,
-  // because there is nobody else to hold the rest. Two each is not a sweep: the
-  // other seat holds exactly as many.
+  // A duel is the roster where the spare rule fires every time: the plan asks for
+  // four and the other seat can only ever hold two of them. Two each is not a
+  // sweep — the other seat holds exactly as many.
   const s = stats({
     a: seat({ mean: 400, correct: 10 }),
     b: seat({ mean: 9000, correct: 9 }),
@@ -163,18 +220,25 @@ test('a duel where one player earned everything awards three, not four', () => {
   assert.equal(mine - theirs, 1, 'the winner is never more than one ahead');
 });
 
-test('the winner keeps the hard cap of one wherever the room can fill the plan', () => {
-  // Three seats can reach five titles as 1+2+2, so the cap costs nothing there and
-  // stays — it is only relaxed where it would otherwise leave titles unawarded.
-  for (const n of [3, 4, 5, 6, 7, 12]) {
-    const p = honourPlan(n);
-    const perSeat = Math.max(1, Math.ceil(p.titles / n));
-    assert.ok(1 + (n - 1) * perSeat >= p.titles,
-      `${n} seats cannot fill ${p.titles} titles with the winner held to one`);
-  }
-  const p2 = honourPlan(2);
-  assert.ok(1 + Math.max(1, Math.ceil(p2.titles / 2)) < p2.titles,
-    'two seats is the roster the relaxation exists for');
+test('the winner keeps the cap of one while a real candidate is still going spare', () => {
+  // The relaxation is about titles nobody else can take, never about the winner
+  // being strong. Three seats, all three carrying two candidates each: the spare
+  // has an owner every time, so the winner stays on one.
+  const s = stats({
+    win: seat({ mean: 400, correct: 10 }),
+    b: seat({ mean: 3000, correct: 9 }),
+    c: seat({ mean: 9000, correct: 9 }),
+  }, {
+    'flags-all': mode({ win: 40, b: 2 }),
+    'map-outlines': mode({ b: 35, c: 2 }),
+    'spot-flag': mode({ b: 30, c: 1 }),
+    'superlative-gdp': mode({ c: 25 }, { correct: { c: 4 } }),
+    'flags-weird': mode({ c: 20 }),
+  });
+  const out = computeHonours(s, board([['win', 60], ['b', 40], ['c', 30]]));
+  assert.equal(out.length, honourPlan(3).titles, `awarded ${ids(out).join(', ')}`);
+  assert.equal(holders(out).filter((p) => p === 'win').length, 1,
+    `win took ${holders(out).filter((p) => p === 'win').length} while others had candidates spare`);
 });
 
 test('nobody takes a second title until every seat holds one', () => {

@@ -424,8 +424,9 @@ function partyDrawSeed(stats, seats) {
  *
  * - **The winner is not excluded, they are capped** at one title besides
  *   ♛ Zwycięzca. Winning everything was the problem; winning something never was.
- *   The cap relaxes to the ordinary per-seat cap on a roster too small to fill the
- *   plan without the winner — a duel, today. See `winnerCap` below.
+ *   The cap holds for as long as any other seat can take the next title; when none
+ *   can, the winner takes it rather than leaving a true title unawarded, up to the
+ *   ordinary per-seat cap. See "the winner's spare titles" below.
  * - **Nobody takes a second title until every seat holds one.** The assignment
  *   runs in passes, one title per seat per pass, so a room's trophies spread
  *   before they stack.
@@ -458,24 +459,9 @@ export function computeHonours(stats, board) {
    *  celebrate. */
   const placing = new Map(seats.map((pid, i) => [pid, i]));
   const perSeatCap = Math.max(1, Math.ceil(plan.titles / seats.length));
-  /**
-   * The winner's cap — one title besides ♛, **but only while the rest of the room
-   * can fill the plan without them.**
-   *
-   * The cap exists to stop a runaway winner sweeping the ceremony, and at four or
-   * more seats it does exactly that at no cost. In a **duel** it does something
-   * else: there is nobody else to hold the remaining titles, so a hard 1 caps the
-   * ending at 1+2 and two of the four the plan asked for are never awarded, even
-   * when both players genuinely earned two.
-   *
-   * Relaxing it to `perSeatCap` there is not a sweep, because the passes above
-   * already spread before they stack: the winner cannot take a second until the
-   * other seat has had its chance at one. So a duel resolves to 2+2 when both
-   * earned two, and to 2+1 when one player earned everything and the other has a
-   * single true thing to their name — never 3+0, and never more than one ahead.
-   */
-  const winnerCap = (1 + (seats.length - 1) * perSeatCap) >= plan.titles ? 1 : perSeatCap;
-  const capFor = (/** @type {string} */ pid) => (pid === winnerId ? winnerCap : perSeatCap);
+  /** The winner holds one title besides ♛ for as long as any other seat can take
+   *  the next one; see the spare pass below for the case where none can. */
+  const capFor = (/** @type {string} */ pid) => (pid === winnerId ? 1 : perSeatCap);
 
   const candidates = buildCandidates(/** @type {HonourStats} */ (stats), seats);
   /** @type {Honour[]} */
@@ -505,6 +491,40 @@ export function computeHonours(stats, board) {
       awardedThisPass += 1;
     }
     if (awardedThisPass === 0) break;
+  }
+
+  // ---- the winner's spare titles ----
+  // The cap above hands the SPARE title — the one a room with more titles than
+  // seats has left over — to somebody the room has not heard about yet, because
+  // the winner already holds the crown, their own screen, and the board's header.
+  // It was never meant to leave a **true** title unsaid. Once no other seat can
+  // take the next one, the choice is no longer "the winner or someone else" but
+  // "the winner or nobody", and a ceremony that stays quiet there is not being
+  // fair to anyone, it is just saying less than it knows.
+  //
+  // Bounded by `perSeatCap`, which is what keeps it from becoming the sweep the cap
+  // exists to prevent: at worst the winner ends level with the seats that took two,
+  // and at seven-plus seats `perSeatCap` is 1 so nothing is relaxed at all.
+  //
+  // A duel is the roster where this fires every time (its plan asks for four and
+  // the other seat can only ever hold two), which is why it needs no special case
+  // of its own.
+  while (winnerId && awarded.length < plan.titles && (held.get(winnerId) ?? 0) < perSeatCap) {
+    // The invariant, stated rather than assumed: the passes above are exhaustive
+    // for the non-winners (each runs until every seat that can hold another has),
+    // so this is false by the time we get here. It is cheap, and it means the rule
+    // reads as its own sentence instead of a consequence of the loop above.
+    const someoneElseCanTake = candidates.some((c) => c.playerId !== winnerId
+      && !usedTitles.has(c.id) && (held.get(c.playerId) ?? 0) < perSeatCap);
+    if (someoneElseCanTake) break;
+    const next = candidates
+      .filter((c) => c.playerId === winnerId && !usedTitles.has(c.id))
+      .sort((a, b) => b.score - a.score)[0];
+    if (!next) break;
+    const { score, ...honour } = next;
+    awarded.push(honour);
+    usedTitles.add(next.id);
+    held.set(winnerId, (held.get(winnerId) ?? 0) + 1);
   }
 
   // ---- the small-room guarantee ----
