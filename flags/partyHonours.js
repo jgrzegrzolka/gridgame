@@ -200,15 +200,28 @@ export const SLEEPER_MIN_UNANSWERED = 1;
 /**
  * How many titles a room hands out, and how many of them get a ceremony screen.
  *
- * **These are two different numbers**, and the split is what lets a full room
- * hand out seven trophies without a seven-screen ceremony nobody sits through.
- * Each screen is a 2 s beat the whole room waits through; past three the
- * ceremony stops being a ceremony. Everything else is awarded on the board, in
- * the strip that reads every title in turn — nothing is lost, it just does not
- * cost the room a screen.
+ * **These are two different numbers**, and the split is what lets a big room hand
+ * out seven trophies without a seven-screen ceremony. Everything not screened is
+ * still awarded, on the board, in the strip that reads every title in turn —
+ * nothing is lost by not having had a screen, it is just read somewhere the room
+ * is already talking.
  *
- * Seven is the cap because the strip cycles at 3 s: seven titles is 21 s for one
- * full pass, already longer than anyone looks at a board.
+ * **The screens are the valuable half**, which is why there are five of them. A
+ * screen is the only moment a title is the single thing on the phone, and it
+ * happens while the result is still unknown, so it lands on a room that is still
+ * watching. Five 2 s beats is ~10 s before the winner's screen: a long ending, on
+ * purpose. Past five, holding the result back costs the room more than the next
+ * title gives it.
+ *
+ * Seven titles is the cap for a different reason: the strip cycles at 3 s, so
+ * seven is a 21 s pass, already longer than anyone looks at a board.
+ *
+ * Small rooms hand out nearly as many as big ones (four at two seats, five at
+ * three) because the ending is per seat, not per room — the failure being avoided
+ * is a player watching an ending about other people. The caps in {@link
+ * computeHonours} still bind, and at two seats they allow at most three (one for
+ * the winner, two for the loser), so the fourth is a ceiling that game cannot
+ * reach. That is "never pad" working, not a number to chase.
  *
  * @param {number} seatCount
  * @returns {{ titles: number, screens: number }}
@@ -216,10 +229,11 @@ export const SLEEPER_MIN_UNANSWERED = 1;
 export function honourPlan(seatCount) {
   const n = Math.max(0, Math.floor(seatCount));
   if (n <= 1) return { titles: 0, screens: 0 };
-  if (n === 2) return { titles: 3, screens: 2 };
-  if (n === 3) return { titles: 4, screens: 3 };
-  if (n <= 6) return { titles: 5, screens: 3 };
-  return { titles: 7, screens: 3 };
+  if (n === 2) return { titles: 4, screens: 4 };
+  if (n === 3) return { titles: 5, screens: 5 };
+  if (n === 4) return { titles: 5, screens: 5 };
+  if (n === 5) return { titles: 6, screens: 5 };
+  return { titles: 7, screens: 5 };
 }
 
 /** A seat with nothing recorded at all — never buzzed, never sat out a question.
@@ -410,6 +424,8 @@ function partyDrawSeed(stats, seats) {
  *
  * - **The winner is not excluded, they are capped** at one title besides
  *   ♛ Zwycięzca. Winning everything was the problem; winning something never was.
+ *   The cap relaxes to the ordinary per-seat cap on a roster too small to fill the
+ *   plan without the winner — a duel, today. See `winnerCap` below.
  * - **Nobody takes a second title until every seat holds one.** The assignment
  *   runs in passes, one title per seat per pass, so a room's trophies spread
  *   before they stack.
@@ -442,7 +458,24 @@ export function computeHonours(stats, board) {
    *  celebrate. */
   const placing = new Map(seats.map((pid, i) => [pid, i]));
   const perSeatCap = Math.max(1, Math.ceil(plan.titles / seats.length));
-  const capFor = (/** @type {string} */ pid) => (pid === winnerId ? 1 : perSeatCap);
+  /**
+   * The winner's cap — one title besides ♛, **but only while the rest of the room
+   * can fill the plan without them.**
+   *
+   * The cap exists to stop a runaway winner sweeping the ceremony, and at four or
+   * more seats it does exactly that at no cost. In a **duel** it does something
+   * else: there is nobody else to hold the remaining titles, so a hard 1 caps the
+   * ending at 1+2 and two of the four the plan asked for are never awarded, even
+   * when both players genuinely earned two.
+   *
+   * Relaxing it to `perSeatCap` there is not a sweep, because the passes above
+   * already spread before they stack: the winner cannot take a second until the
+   * other seat has had its chance at one. So a duel resolves to 2+2 when both
+   * earned two, and to 2+1 when one player earned everything and the other has a
+   * single true thing to their name — never 3+0, and never more than one ahead.
+   */
+  const winnerCap = (1 + (seats.length - 1) * perSeatCap) >= plan.titles ? 1 : perSeatCap;
+  const capFor = (/** @type {string} */ pid) => (pid === winnerId ? winnerCap : perSeatCap);
 
   const candidates = buildCandidates(/** @type {HonourStats} */ (stats), seats);
   /** @type {Honour[]} */

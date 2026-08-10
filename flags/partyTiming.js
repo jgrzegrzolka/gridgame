@@ -386,7 +386,7 @@ export const HONOUR_OUT_MS = 180;
  *  honour because the score counts up inside it and the ♛ pill lands late.
  *
  *  It has to out-last (and out-size) the honours or the ordering says the wrong
- *  thing: three full screens of mentions followed by nothing but a table row is
+ *  thing: five full screens of mentions followed by nothing but a table row is
  *  what made the honours read as the bigger prize. */
 export const WINNER_BEAT_MS = 2800;
 /** How long the honours strip on the board holds one honour before crossfading
@@ -418,7 +418,7 @@ export const BOARD_ROW_STAGGER_MS = 60;
  * total can assert.
  *
  * `honourCount` is however many honours have a real non-winner behind them, not
- * a fixed three: a duel has one (the only seat that can hold one is the player
+ * a fixed five: a duel has one (the only seat that can hold one is the player
  * who lost) and solo has none. The ceremony degrades to what it actually has
  * rather than padding.
  *
@@ -447,7 +447,8 @@ export function honoursSchedule(honourCount = 0) {
     // The ending is "over" when the board has settled and the strip has held its
     // first honour out — the board itself never finishes, it just sits there
     // being read, and the strip cycles for as long as anyone is looking. At three
-    // honours that is ~11.8 s, against the ~1.5 s the ending used to spend.
+    // honours that is ~11.8 s and at five ~15.8 s, against the ~1.5 s the ending
+    // used to spend.
     totalMs: boardAt + (n > 0 ? HONOUR_STRIP_CYCLE_MS : BOARD_HEADER_MS),
   };
 }

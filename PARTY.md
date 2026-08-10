@@ -2212,7 +2212,8 @@ are never generated at runtime — a title that changes between games is a joke 
 
 **Titles awarded and ceremony screens are two different numbers** (2h), which is what lets a full
 room hand out seven trophies without a seven-screen ceremony: 2 seats → 3/2, 3 → 4/3, 4–6 → 5/3,
-7+ → 7/3. Seven is the ceiling because the strip cycles at 3 s and seven is already a 21 s pass.
+7+ → 7/3. *Retabled in 18d below — the screens are the valuable half, so most titles now get one.*
+Seven is the ceiling because the strip cycles at 3 s and seven is already a 21 s pass.
 Everything not screened is still named, in the strip, which marks a strip-only entry "tylko tutaj"
 (a screened title carries no mark — the room just watched it get its screen) and carries a dot per
 title so it reads as a set being cycled.
@@ -2283,6 +2284,47 @@ finish draws a **party title** instead.
 - `i18n.test.js` now walks `TITLES` and demands an en+pl name for every id. The ceremony derives its
   key from the id (`party.honour<Id>`), so a title added without a string read the raw id out to a
   room full of people and nothing failed.
+
+## Iteration 18d — the screens are the valuable half — BUILT (2026-08-10)
+
+`honourPlan` retabled. More titles, and far more of them get a ceremony screen rather than only a
+line in the board's strip:
+
+| seats | titles | screens | (was) |
+|---|---|---|---|
+| 2 | 4 | 4 | 3 / 2 |
+| 3 | 5 | 5 | 4 / 3 |
+| 4 | 5 | 5 | 5 / 3 |
+| 5 | 6 | 5 | 5 / 3 |
+| 6+ | 7 | 5 | 5–7 / 3 |
+
+**Why.** A screen is the only moment a title is the single thing on the phone, and the beats run
+*before* the result, so they land on a room that is still watching. The strip runs after it, on a
+board people are already talking over. Capping screens at three sent most of a room's titles to the
+half of the ending nobody is paying attention to. Five 2 s beats is ~10 s before the winner's screen
+and ~15.8 s to a settled board (`honoursSchedule`), against ~11.8 s at three: a long ending, on
+purpose. Past five, holding the result back costs the room more than the next title gives it.
+
+Seven titles is still the cap, for the unchanged reason: the strip cycles at 3 s, so seven is a 21 s
+pass.
+
+**Two consequences worth knowing before reading the ending as broken:**
+
+- **At 2–4 seats every awarded title now gets a screen**, so the strip's `only here` mark (#1159)
+  never appears in a small room. Nothing was left out of the ceremony, so there is nothing to mark.
+  Pinned by a test, so a future change that reintroduces strip-only titles at four seats is a
+  decision rather than a surprise.
+- **The winner's cap now relaxes on a roster too small to fill the plan without them** — a duel,
+  today. A hard cap of one is what stops a runaway winner sweeping the ceremony, and at three or more
+  seats it does that at no cost (three seats reach five titles as 1+2+2). In a duel it does something
+  else: there is nobody else to hold the rest, so a hard 1 caps the ending at 1+2 and two of the four
+  are never awarded even when both players genuinely earned two. The cap there becomes the ordinary
+  `perSeatCap`, which is not a sweep, because the passes still spread before they stack: the winner
+  cannot take a second until the other seat has had its chance at a first. So a duel is **2+2 when
+  both earned two, and 2+1 when one player earned everything and the other has a single true thing to
+  their name** — never 3+0, and never more than one ahead. The condition is written as arithmetic
+  (`1 + (seats - 1) * perSeatCap >= titles`), not as `seats === 2`, so a future retabling that makes a
+  bigger roster unfillable relaxes on its own.
 
 ## Out of scope (don't sweep in)
 
