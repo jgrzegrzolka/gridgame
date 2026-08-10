@@ -16,7 +16,7 @@ import { setupSummaryParts, canStartGame } from './lobbySetup.js';
 import { dockSpecFor } from './dockSpec.js';
 import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
-import { soleWinnerId } from '../flags/partyHonours.js';
+import { isPartyTitle, soleWinnerId } from '../flags/partyHonours.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS, breakAllowedIn, honoursSchedule, HONOUR_STRIP_CYCLE_MS, BOARD_ROW_STAGGER_MS, FINAL_CELEBRATION_OFFSET_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -3281,13 +3281,17 @@ export function bootFlagParty() {
         { correct: h.correct ?? 0, total: h.total ?? 0 });
     }
     if (h.id === 'sleeper') {
-      // Polish counts 3-4 and 5+ differently, and the floor is 3, so exactly two
+      // Polish counts 1, 2-4 and 5+ differently, and the floor is 1, so all three
       // forms occur. Per-N keys carry the grammar, as everywhere else on the site.
       const n = h.unanswered ?? 0;
-      const key = n <= 4 ? 'party.honourValueSleeperFew' : 'party.honourValueSleeperMany';
+      const key = n === 1 ? 'party.honourValueSleeperOne'
+        : n <= 4 ? 'party.honourValueSleeperFew' : 'party.honourValueSleeperMany';
       return fmt(t(key, 'slept through {count} questions'), { count: n });
     }
-    if (h.id === 'intern') return t('party.honourValueIntern', 'answered every single one');
+    // A party title is drawn, not won: nothing about it was measured, so there is
+    // no number to put beside it. Inventing one ("was here the whole time") is how
+    // the retired Praktykant read as a pity prize in the first place.
+    if (isPartyTitle(h.id)) return '';
     // A mode title. `modeLabel` is the same resolver the round card and the draft
     // hand use, so the round is named identically wherever it is mentioned.
     const mode = h.modeId ? modeLabel(h.modeId) : '';
@@ -3312,7 +3316,10 @@ export function bootFlagParty() {
     av.appendChild(buildAvatar(h.playerId));
     honourBody.appendChild(av);
     honourBody.appendChild(el('span', 'honour-name', h.nickname || ''));
-    honourBody.appendChild(el('span', 'honour-value', honourValueText(h)));
+    // A drawn party title has no value line at all -- appending an empty one would
+    // leave the beat with a gap where every other title has its number.
+    const value = honourValueText(h);
+    if (value) honourBody.appendChild(el('span', 'honour-value', value));
     honourDots.innerHTML = '';
     for (let i = 0; i < total; i += 1) honourDots.appendChild(el('i', i === index ? 'on' : undefined));
   }
@@ -3506,7 +3513,8 @@ export function bootFlagParty() {
       // watched it get its screen, so restating it is noise on the one line the
       // strip has.
       const right = el('span', 'fh-right');
-      right.appendChild(el('span', 'fh-value', honourValueText(h)));
+      const value = honourValueText(h);
+      if (value) right.appendChild(el('span', 'fh-value', value));
       if (!h.screened) {
         right.appendChild(el('span', 'fh-mark', t('party.honourMarkStripOnly', 'only here')));
       }

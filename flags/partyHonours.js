@@ -64,7 +64,7 @@ import { PARTY_MODES } from './partyPlan.js';
  * nobody can be honoured for it. `titlelessModes()` below names the gap so a
  * test can hold the line rather than letting it widen unnoticed.
  *
- * @type {Record<string, { glyph: string, mode?: string, tail?: boolean }>}
+ * @type {Record<string, { glyph: string, mode?: string, tail?: boolean, party?: boolean }>}
  */
 export const TITLES = {
   // ---- speed and pace: available in every game, whatever it played ----
@@ -72,7 +72,19 @@ export const TITLES = {
   thinker: { glyph: '⏳' },
   // ---- the consolation tail: only reached by the small-room guarantee ----
   sleeper: { glyph: '☾', tail: true },
-  intern: { glyph: '◇', tail: true },
+  // The bottom of the tail: **party** titles, drawn rather than earned. Every
+  // other title in this table is a claim about how someone played; these are
+  // jokes about the room, which is exactly why they are the ones handed to a seat
+  // the game has nothing true to say about. See {@link tailCandidates}.
+  // No barman here on purpose: `bartender` above is an EARNED title (the alcohol
+  // round), and in Polish both are "Barman" — one game could hand out two rows
+  // reading the same word, one for knowing the drinking statistics and one for
+  // knowing nothing at all.
+  partyDancer: { glyph: '♪', tail: true, party: true },
+  partyCrisps: { glyph: '◔', tail: true, party: true },
+  partyPlaylist: { glyph: '▤', tail: true, party: true },
+  partySoul: { glyph: '♥', tail: true, party: true },
+  partyPhotographer: { glyph: '⊡', tail: true, party: true },
 
   // ---- one per picture mode ----
   flagSommelier: { glyph: '✓', mode: 'flags-all' },
@@ -125,6 +137,24 @@ export const TITLES = {
   smallNationWinterPundit: { glyph: '❅', mode: 'superlative-winter-medals-pc' },
 };
 
+/**
+ * The party titles, in catalog order — what the draw draws from. Derived, so the
+ * table above stays the single place a title is declared.
+ * @type {string[]}
+ */
+export const PARTY_TITLES = Object.keys(TITLES).filter((id) => TITLES[id].party);
+
+/**
+ * Whether a title is a party title, and therefore says nothing about how its
+ * holder played. The client asks so it can leave the evidence line off: every
+ * other title reports the number it was won on, and a drawn one has none.
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isPartyTitle(id) {
+  return !!(TITLES[id] && TITLES[id].party);
+}
+
 /** mode id -> title id, derived so the catalog stays the single source. */
 const TITLE_BY_MODE = Object.fromEntries(
   Object.entries(TITLES).filter(([, t]) => t.mode).map(([id, t]) => [/** @type {string} */ (t.mode), id]),
@@ -156,9 +186,16 @@ const MODE_GROUP = Object.fromEntries(PARTY_MODES.map((m) => [m.id, m.group]));
  */
 export const THINKER_ACCURACY_FLOOR = 0.6;
 
-/** Minimum questions a seat must have let go by before it is a title rather than
- *  a single distraction. */
-export const SLEEPER_MIN_UNANSWERED = 3;
+/**
+ * Minimum questions a seat must have let go by to be called a sleeper.
+ *
+ * One, because the sleeper is the rung directly above the party titles and its
+ * whole job is to be reachable: a question that went by with nobody's finger on
+ * it is a **true** thing to say about a seat, and anything true beats a drawn
+ * joke. A higher floor did not make the title more deserved, it just pushed more
+ * seats past the truth and into the draw.
+ */
+export const SLEEPER_MIN_UNANSWERED = 1;
 
 /**
  * How many titles a room hands out, and how many of them get a ceremony screen.
@@ -300,8 +337,8 @@ function tailCandidates(stats, seats) {
   /** @type {Array<Honour>} */
   const out = [];
   // Sleeper: affectionate, and the only honour that may land on the last-placed
-  // seat — the player it names already knows. Three is the floor so a single
-  // distraction is not a title.
+  // seat — the player it names already knows. Listed first, so a seat that slept
+  // is named for the thing it actually did rather than falling through to a draw.
   const sleepy = seats
     .map((pid) => ({ pid, n: (stats.seats[pid] || {}).unanswered || 0 }))
     .filter((x) => x.n >= SLEEPER_MIN_UNANSWERED)
@@ -309,14 +346,61 @@ function tailCandidates(stats, seats) {
   for (const s of sleepy) {
     out.push({ id: 'sleeper', playerId: s.pid, glyph: TITLES.sleeper.glyph, screened: false, unanswered: s.n });
   }
-  // Intern: answered everything and was the best at none of it. The plainest
-  // possible way to say "you were here", which is the whole point of the tail.
-  for (const pid of seats) {
-    const s = stats.seats[pid];
-    if (!s || s.unanswered > 0 || s.buzzes === 0) continue;
-    out.push({ id: 'intern', playerId: pid, glyph: TITLES.intern.glyph, screened: false });
-  }
+  // The bottom rung: a party title, drawn rather than earned.
+  //
+  // This is where the tail used to hand out **Praktykant** — "answered
+  // everything, was the best at none of it" — which told a player, on a screen, in
+  // front of the room, that the game had nothing to say about them. When there is
+  // nothing true to a seat's name, giving them a quiz title anyway is the one
+  // thing that reads as a pity prize. A party title is a joke about the room, not
+  // a verdict on their play, so anyone can wear it.
+  //
+  // Drawn once per game, which here means DERIVED rather than randomised: the
+  // finish is computed more than once for the same game — the `final` broadcast,
+  // and again for every seat that reconnects onto the board (`honoursFor` in
+  // `flags/partyRoom.js`) — so a `Math.random()` here would hand a rejoining
+  // player a different joke from the one the room just watched. {@link
+  // partyDrawSeed} reads the game's own record instead: frozen by the time the
+  // finish is computed, and different in every game.
+  //
+  // A seat with nothing recorded at all is skipped, same as everywhere else: a
+  // room restored from a snapshot written before the ceremony existed knows
+  // nothing about who played, and must still finish handing out nothing.
+  const start = partyDrawSeed(stats, seats) % PARTY_TITLES.length;
+  seats.forEach((pid, i) => {
+    if (!played(stats.seats[pid])) return;
+    // Offset by seat, so two seats that both reach the draw wear two different
+    // titles rather than queueing for one.
+    const id = PARTY_TITLES[(start + i) % PARTY_TITLES.length];
+    out.push({ id, playerId: pid, glyph: TITLES[id].glyph, screened: false });
+  });
   return out;
+}
+
+/**
+ * Where the party draw starts, as a non-negative integer.
+ *
+ * A hash of the game's own record — the seat ids and their buzz counts, summed
+ * latencies, right answers and misses. Same finish, same title however many times
+ * it is computed (see {@link tailCandidates}); different game, different title,
+ * because no two games have the same numbers.
+ *
+ * @param {HonourStats} stats
+ * @param {string[]} seats
+ * @returns {number}
+ */
+function partyDrawSeed(stats, seats) {
+  let h = 2166136261;
+  const mix = (/** @type {number} */ n) => { h = (Math.imul(h, 16777619) ^ (n | 0)) | 0; };
+  for (const pid of seats) {
+    for (let i = 0; i < pid.length; i += 1) mix(pid.charCodeAt(i));
+    const s = stats.seats[pid] || { buzzes: 0, timed: 0, latencyMs: 0, correct: 0, unanswered: 0 };
+    mix(s.buzzes);
+    mix(s.latencyMs);
+    mix(s.correct);
+    mix(s.unanswered);
+  }
+  return Math.abs(h);
 }
 
 /**
@@ -331,10 +415,12 @@ function tailCandidates(stats, seats) {
  *   before they stack.
  * - Never the same title twice, and never the same seat twice in one pass.
  * - **At three or fewer non-winners, none of them leaves empty-handed**: the
- *   consolation tail is fallen through until each holds something. Two strong
- *   players would otherwise take everything and the third watches a ceremony
- *   about other people, which is the exact failure the honours exist to prevent.
- *   Above that the guarantee lapses — twelve titles means twelve meaningless ones.
+ *   consolation tail is fallen through until each holds something — the sleeper
+ *   first, and a drawn party title under it when even that is not true of them.
+ *   Two strong players would otherwise take everything and the third watches a
+ *   ceremony about other people, which is the exact failure the honours exist to
+ *   prevent. Above that the guarantee lapses, and with it the only route to a
+ *   party title — twelve titles means twelve meaningless ones.
  * - **Never pad.** Fewer real candidates than the table asks for is fine.
  *
  * @param {HonourStats | null | undefined} stats
