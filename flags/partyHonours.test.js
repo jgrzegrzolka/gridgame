@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   computeHonours,
   honourPlan,
+  isPartyTitle,
   soleWinnerId,
   titlelessModes,
+  PARTY_TITLES,
   TITLES,
   THINKER_ACCURACY_FLOOR,
   SLEEPER_MIN_UNANSWERED,
@@ -181,24 +183,28 @@ test('the thinker floor is 60%, not a coin flip', () => {
   assert.equal(0.6, THINKER_ACCURACY_FLOOR, 'sanity: the fixtures straddle the real floor');
 });
 
-test('the sleeper needs three unanswered questions, not one distraction', () => {
+test('the sleeper is one question let go by, not a spell of them', () => {
+  // One is the floor: a question that went by with nobody's finger on it is a
+  // true thing to say about a seat, and it is the rung that keeps the party
+  // titles where they belong — under everything the game can actually evidence.
+  assert.equal(SLEEPER_MIN_UNANSWERED, 1, 'sanity: the floor this test is about');
   const one = stats({
     a: seat({ mean: 900 }),
-    dozy: seat({ buzzes: 9, mean: 4000, unanswered: SLEEPER_MIN_UNANSWERED - 1 }),
-  });
-  assert.ok(!ids(computeHonours(one, board([['a', 40], ['dozy', 30]]))).includes('sleeper'));
-
-  // Three or more, and with nothing else for them to hold, the small-room
-  // guarantee reaches the tail and names it.
-  const three = stats({
-    a: seat({ mean: 900 }),
-    dozy: seat({ buzzes: 7, mean: 4000, correct: 1, unanswered: SLEEPER_MIN_UNANSWERED }),
+    dozy: seat({ buzzes: 9, mean: 4000, correct: 1, unanswered: 1 }),
   }, { 'flags-all': mode({ a: 40 }) });
-  const out = computeHonours(three, board([['a', 40], ['dozy', 5]]));
+  const out = computeHonours(one, board([['a', 40], ['dozy', 5]]));
   const sleeper = out.find((h) => h.id === 'sleeper');
-  assert.ok(sleeper, 'expected the sleeper title');
+  assert.ok(sleeper, `expected the sleeper title, got ${ids(out).join(', ')}`);
   assert.equal(sleeper.playerId, 'dozy');
-  assert.equal(sleeper.unanswered, SLEEPER_MIN_UNANSWERED);
+  assert.equal(sleeper.unanswered, 1);
+});
+
+test('a seat that answered every question is no sleeper', () => {
+  const s = stats({
+    a: seat({ mean: 900 }),
+    keen: seat({ buzzes: 10, mean: 4000, correct: 1, unanswered: 0 }),
+  }, { 'flags-all': mode({ a: 40 }) });
+  assert.ok(!ids(computeHonours(s, board([['a', 40], ['keen', 5]]))).includes('sleeper'));
 });
 
 // ---- what each title reports ----
@@ -273,6 +279,113 @@ test('above three non-winners the guarantee lapses', () => {
   const out = computeHonours(stats(seats, { 'flags-all': mode({ p0: 40, p1: 20 }) }), board(rows));
   assert.ok(out.length <= honourPlan(9).titles);
   assert.ok(new Set(holders(out)).size < 9, 'not every seat is honoured at nine players');
+});
+
+// ---- the party titles: the bottom of the tail ----
+
+/** A game whose third seat has nothing the game can evidence: never the fastest,
+ *  too wrong to be the thinker, best at no round, and awake through all of it.
+ *  `nudgeMs` moves the second seat's pace, which is a different GAME on the same
+ *  shape — the draw reads the room's own record, so nudging it re-draws.
+ *  @param {number} [nudgeMs] */
+function nothingTrueGame(nudgeMs = 0) {
+  return stats({
+    win: seat({ mean: 400, correct: 10 }),
+    good: seat({ mean: 1000 + nudgeMs, correct: 9 }),
+    also: seat({ buzzes: 10, mean: 3000, correct: 2, unanswered: 0 }),
+  }, {
+    'flags-all': mode({ win: 40, good: 20, also: 2 }),
+    'map-outlines': mode({ good: 30, win: 10, also: 1 }),
+  });
+}
+const NOTHING_TRUE = board([['win', 60], ['good', 55], ['also', 20]]);
+
+test('the party titles are drawn, never earned', () => {
+  assert.ok(PARTY_TITLES.length >= 2, 'a draw needs something to draw from');
+  for (const id of PARTY_TITLES) {
+    assert.ok(isPartyTitle(id), `${id} is in the list but not marked`);
+    assert.equal(TITLES[id].mode, undefined, `${id} must not be earnable by playing a mode`);
+  }
+  assert.ok(!isPartyTitle('sleeper'), 'the sleeper is a true thing, and the rung above');
+  assert.ok(!isPartyTitle('fastestFinger'));
+  assert.ok(!isPartyTitle('bartender'), 'the alcohol round title is earned, not drawn');
+});
+
+test('when the game has nothing to say about a seat, it draws a party title', () => {
+  // Praktykant told a player, on a screen, in front of the room, that they were
+  // the best at nothing — the one thing that reads as a pity prize. A party title
+  // is a joke about the room instead, and makes no claim about their play at all.
+  const out = computeHonours(nothingTrueGame(), NOTHING_TRUE);
+  const mine = out.filter((h) => h.playerId === 'also');
+  assert.equal(mine.length, 1, `expected one title for the third seat, got ${ids(mine).join(', ')}`);
+  assert.ok(PARTY_TITLES.includes(mine[0].id), `expected a party title, got ${mine[0].id}`);
+  assert.ok(!ids(out).includes('intern'), 'Praktykant is gone');
+});
+
+test('the sleeper outranks the draw: a seat that slept is named for what it did', () => {
+  // The draw is the LAST resort. Anything true, however small, is better than a
+  // joke — so one unanswered question is enough to keep the quiz title.
+  const slept = stats({
+    win: seat({ mean: 400, correct: 10 }),
+    good: seat({ mean: 1000, correct: 9 }),
+    also: seat({ buzzes: 9, mean: 3000, correct: 2, unanswered: 1 }),
+  }, {
+    'flags-all': mode({ win: 40, good: 20, also: 2 }),
+    'map-outlines': mode({ good: 30, win: 10, also: 1 }),
+  });
+  const mine = computeHonours(slept, NOTHING_TRUE).filter((h) => h.playerId === 'also');
+  assert.deepEqual(ids(mine), ['sleeper'], 'a sleeper must not be handed a drawn title');
+});
+
+test('the draw happens once per game, not once per render', () => {
+  // The finish is computed more than once for the same game: the `final`
+  // broadcast, and again for every seat that reconnects onto the board
+  // (`honoursFor` in flags/partyRoom.js). A title that moved between those two
+  // would be a different joke on two phones in the same room.
+  const s = nothingTrueGame();
+  const first = computeHonours(s, NOTHING_TRUE).find((h) => h.playerId === 'also');
+  const again = computeHonours(s, NOTHING_TRUE).find((h) => h.playerId === 'also');
+  assert.ok(first && again);
+  assert.equal(first.id, again.id);
+  assert.equal(first.glyph, again.glyph);
+});
+
+test('the draw is not the same title in every game', () => {
+  // Fixed per game — but a title fixed across ALL games is not a draw at all, and
+  // the room would watch the same joke every night.
+  const seen = new Set();
+  for (let i = 0; i < 24; i += 1) {
+    const out = computeHonours(nothingTrueGame(i * 37), NOTHING_TRUE);
+    const mine = out.find((h) => h.playerId === 'also');
+    if (mine) seen.add(mine.id);
+  }
+  assert.ok(seen.size > 1, `the draw never moved: ${[...seen].join(', ')}`);
+});
+
+test('a party title never reaches a room the guarantee has lapsed in', () => {
+  // They are a floor under a small room, not titles to compete for. At nine seats
+  // there is no guarantee, so there is no route to one.
+  /** @type {Record<string, import('./partyHonours.js').SeatStat>} */
+  const seats = {};
+  /** @type {Array<[string, number]>} */
+  const rows = [];
+  for (let i = 0; i < 9; i += 1) {
+    seats['p' + i] = seat({ mean: 1000 + i * 100, correct: 8, buzzes: 10 });
+    rows.push(['p' + i, 90 - i * 10]);
+  }
+  const out = computeHonours(stats(seats, { 'flags-all': mode({ p0: 40, p1: 20 }) }), board(rows));
+  assert.deepEqual(ids(out).filter((id) => PARTY_TITLES.includes(id)), []);
+});
+
+test('a drawn title carries no evidence to report', () => {
+  // Nothing was measured, so there is no number to put next to it. Inventing one
+  // would turn the joke back into the verdict the draw exists to avoid.
+  const mine = computeHonours(nothingTrueGame(), NOTHING_TRUE).find((h) => h.playerId === 'also');
+  assert.ok(mine);
+  const reported = /** @type {const} */ (['meanMs', 'correct', 'total', 'unanswered', 'gain', 'modeId']);
+  for (const field of reported) {
+    assert.equal(mine[field], undefined, `a party title must not report ${field}`);
+  }
 });
 
 // ---- screens ----

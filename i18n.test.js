@@ -741,6 +741,26 @@ test('i18n: every flag colour in ALL_FLAG_COLORS has a translation in every lang
   assert.deepEqual(missing, []);
 });
 
+test('i18n: every Flag Party honour title has a name in every language', async () => {
+  // The ceremony derives its key from the title id (`party.honour<Id>`, see
+  // `honourKey` in flagParty/page.js), so a title added to the catalog without a
+  // string does not fail anywhere — it reads out the raw id ("partyCrisps") to a
+  // room full of people. Nothing else compares the two lists.
+  const { TITLES } = await import('./flags/partyHonours.js');
+  const enJson = JSON.parse(await readFile(new URL('./i18n/en.json', import.meta.url), 'utf8'));
+  const plJson = JSON.parse(await readFile(new URL('./i18n/pl.json', import.meta.url), 'utf8'));
+  /** @type {string[]} */
+  const missing = [];
+  for (const id of Object.keys(TITLES)) {
+    const key = `honour${id[0].toUpperCase()}${id.slice(1)}`;
+    for (const [lang, json] of [['en', enJson], ['pl', plJson]]) {
+      const v = json.party && json.party[key];
+      if (typeof v !== 'string' || v.length === 0) missing.push(`${lang}.party.${key}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});
+
 // ---- placeholder consistency ----
 
 /**

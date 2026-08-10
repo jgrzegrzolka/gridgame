@@ -2208,6 +2208,7 @@ are never generated at runtime — a title that changes between games is a joke 
   coffee questions is a different thing from owning the GDP ones.
 - The consolation tail, reached only by the small-room guarantee: **Śpiąca królewna** (☾, ≥3
   unanswered) and **Praktykant** (◇, answered everything, distinguished himself in nothing).
+  *Both revised in 18c below — the floor is now one unanswered question, and Praktykant is gone.*
 
 **Titles awarded and ceremony screens are two different numbers** (2h), which is what lets a full
 room hand out seven trophies without a seven-screen ceremony: 2 seats → 3/2, 3 → 4/3, 4–6 → 5/3,
@@ -2243,6 +2244,45 @@ The other 35 Polish/English pairs are **drafted, not authored** — they follow 
 the mode's skill would qualify you for) and are flagged for rewriting. `titlelessModes()` is pinned
 empty by a test, so adding a mode without a title fails loudly rather than quietly making that round
 unhonourable.
+
+## Iteration 18c — the party titles: what the tail says when there is nothing to say — BUILT (2026-08-10)
+
+One change to 18b's consolation tail. **Praktykant is gone.** The bottom rung of the small-room
+guarantee no longer awards a quiz title at all: when a non-winner has nothing true to their name, the
+finish draws a **party title** instead.
+
+- **Mistrz parkietu** (♪) · **Pożeracz chipsów** (◔) · **Kierownik playlisty** (▤) · **Dusza
+  towarzystwa** (♥) · **Fotograf wieczoru** (⊡). English gets its own five jokes rather than
+  translations (Last One Dancing, Snack Table Custodian, Keeper of the Aux Cord, Life of the Party,
+  Official Photographer).
+- **No Barman in the set**, though the design named one: `bartender` is already an *earned* title (the
+  `superlative-alcohol` round) and in Polish both are "Barman", so one game could hand out two rows
+  reading the same word — one for knowing the drinking statistics, one for knowing nothing at all.
+  Kierownik playlisty took the slot.
+- **Why.** When the game has nothing to say about a player, giving them a quiz title anyway is the one
+  thing that reads as a pity prize — "answered everything, was the best at none of it" is a verdict,
+  delivered on a screen, in front of the room. A party title is a joke about the room, not about how
+  they played, so anyone can wear it.
+- **Fallback only, never earned.** No mode awards one, and the only route to one is the small-room
+  guarantee (≤3 non-winners); at nine seats the guarantee lapses and so does the draw. Pinned.
+- **Śpiąca królewna is still the rung above it**, and its floor drops from **≥3 unanswered to ≥1**.
+  The tail's order is the rule that matters: anything *true* about a seat, however small, beats a
+  drawn joke, and at five questions a round "≥3 unanswered" pushed seats past the truth into the draw
+  for no gain. The Polish value line therefore needs all three count forms now, so
+  `honourValueSleeperOne` joins `…Few` / `…Many`.
+- **Drawn once per game, not per render — which here means derived, not randomised.** `honoursFor`
+  (`flags/partyRoom.js`) runs the finish twice for the same game: once for the `final` broadcast, and
+  again for every seat that reconnects onto the board. A `Math.random()` in `computeHonours` would
+  hand a rejoining player a different joke from the one the room just watched, so the draw hashes the
+  game's own record (seat ids, buzz counts, summed latencies, right answers, misses) — frozen by the
+  time the finish is computed, different in every game. Both properties are tests: same stats twice →
+  the same title, and 24 different games → more than one title.
+- **A drawn title has no value line.** Every other title reports the number it was won on; this one
+  was won on nothing, and inventing a line ("was here the whole time") is exactly how Praktykant read
+  as a pity prize. The beat and the strip omit the element rather than painting it empty.
+- `i18n.test.js` now walks `TITLES` and demands an en+pl name for every id. The ceremony derives its
+  key from the id (`party.honour<Id>`), so a title added without a string read the raw id out to a
+  room full of people and nothing failed.
 
 ## Out of scope (don't sweep in)
 
