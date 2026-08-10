@@ -558,9 +558,9 @@ test('everything awarded is returned, screened or not — nothing is lost', () =
 });
 
 test('at four seats or fewer, every title awarded gets its own screen', () => {
-  // A consequence of 4/4 and 5/5 worth stating out loud: in a small room the
-  // "only here" mark on the board's strip never appears, because nothing was
-  // left out of the ceremony. It is not a rendering bug.
+  // A consequence of 4/4 and 5/5 worth stating out loud: in a small room the strip
+  // on the board is a repeat of the ceremony rather than the first mention of
+  // anything, because nothing was left out of it.
   const s = stats({
     a: seat({ mean: 400 }), b: seat({ mean: 3000 }), c: seat({ mean: 9000, correct: 9 }), d: seat({ mean: 6000 }),
   }, {

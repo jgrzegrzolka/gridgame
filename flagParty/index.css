@@ -1644,12 +1644,11 @@ body.party-break > .burger {
   white-space: nowrap;
 }
 .final-honours .fh-who { font-size: 13px; font-weight: var(--weight-bold); }
-/* The value, and under it the strip-only mark. Only a title the ceremony had no
-   room for carries one — a screened title was just read out, so saying so again
-   here adds nothing. Muted, the same weighting the strip-only dot below uses. */
+/* The value, and only the value — a title that never got a ceremony screen wears
+   no mark saying so (see the note in page.js). The column stays a column because a
+   drawn party title has no value at all and the row must not reflow around it. */
 .final-honours .fh-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .final-honours .fh-value { font-size: 11px; color: var(--muted-color); }
-.final-honours .fh-mark { font-size: 10px; color: var(--muted-color); }
 
 /* One dot per awarded title, so the strip reads as a set being cycled rather
    than a line that changes on its own — at seven titles a full pass takes 21 s,

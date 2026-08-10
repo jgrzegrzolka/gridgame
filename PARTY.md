@@ -2216,7 +2216,8 @@ room hand out seven trophies without a seven-screen ceremony: 2 seats → 3/2, 3
 Seven is the ceiling because the strip cycles at 3 s and seven is already a 21 s pass.
 Everything not screened is still named, in the strip, which marks a strip-only entry "tylko tutaj"
 (a screened title carries no mark — the room just watched it get its screen) and carries a dot per
-title so it reads as a set being cycled.
+title so it reads as a set being cycled. *The "tylko tutaj" mark is gone as of 18f below — the dot
+row stays.*
 
 **The winner is capped, not excluded** — one title besides ♛, shown on the header card as
 "♛ Zwycięzca · ✓ Flagowy sommelier". Winning everything was the problem; winning something never was.
@@ -2312,6 +2313,7 @@ pass.
 
 - **At 2–4 seats every awarded title now gets a screen**, so the strip's `only here` mark (#1159)
   never appears in a small room. Nothing was left out of the ceremony, so there is nothing to mark.
+  *(The mark itself was deleted in 18f — this is why it had become rare enough to be confusing.)*
   Pinned by a test, so a future change that reintroduces strip-only titles at four seats is a
   decision rather than a surprise.
 - **The winner's cap now relaxes on a roster too small to fill the plan without them** — a duel,
@@ -2357,6 +2359,27 @@ relaxed at all (pinned at eight seats).
 The `someoneElseCanTake` guard inside the spare loop is an invariant stated rather than a live branch:
 the passes are exhaustive for non-winners, so it is false by the time the loop runs. It stays because
 it makes the rule a sentence in its own right instead of a consequence of the loop above it.
+
+## Iteration 18f — the "tylko tutaj" mark is deleted — BUILT (2026-08-10)
+
+The board's honours strip no longer marks a title that never got a ceremony screen. `.fh-mark`, the
+`party.honourMarkStripOnly` keys in both languages, and the CSS rule are gone.
+
+**Why.** It told the player which half of the app's *screen budget* a title fell into, which is
+bookkeeping — nobody in the room has a model for "there were only five screens", so the note answers a
+question nobody asked. Worse, sitting beside a job title it reads as qualifying the title itself, as
+though the trophy only counts on that screen. Jan's reaction on reading it in Polish was "what the hell
+does 'tylko tutaj' mean", which is the whole argument: a mechanic that has to be explained is a
+mechanic to delete, not to reword.
+
+18d had already made it rare — at 2–4 seats every awarded title gets a screen, so the mark could only
+appear at 5+ seats, and a cryptic label that shows up occasionally is worse than one that always does.
+#1159 was the first pass at the same problem (it stopped the mark appearing on *screened* titles); this
+is the other half.
+
+Nothing is lost: the strip still shows glyph, title, holder and value for every awarded title, and the
+dot row still says how many there are and which one is up. The `fh-right` column stays a column
+because a drawn party title has no value line and the row must not reflow around it.
 
 ## Out of scope (don't sweep in)
 
