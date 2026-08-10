@@ -49,19 +49,30 @@ const holders = (/** @type {any[]} */ h) => h.map((x) => x.playerId);
 test('honourPlan: titles and screens are two different numbers', () => {
   // The split is the whole point: it lets a full room hand out seven trophies
   // without a seven-screen ceremony nobody sits through.
-  assert.deepEqual(honourPlan(2), { titles: 3, screens: 2 });
-  assert.deepEqual(honourPlan(3), { titles: 4, screens: 3 });
-  assert.deepEqual(honourPlan(4), { titles: 5, screens: 3 });
-  assert.deepEqual(honourPlan(6), { titles: 5, screens: 3 });
-  assert.deepEqual(honourPlan(7), { titles: 7, screens: 3 });
-  assert.deepEqual(honourPlan(20), { titles: 7, screens: 3 });
+  assert.deepEqual(honourPlan(2), { titles: 4, screens: 4 });
+  assert.deepEqual(honourPlan(3), { titles: 5, screens: 5 });
+  assert.deepEqual(honourPlan(4), { titles: 5, screens: 5 });
+  assert.deepEqual(honourPlan(5), { titles: 6, screens: 5 });
+  assert.deepEqual(honourPlan(6), { titles: 7, screens: 5 });
+  assert.deepEqual(honourPlan(7), { titles: 7, screens: 5 });
+  assert.deepEqual(honourPlan(20), { titles: 7, screens: 5 });
 });
 
-test('honourPlan: never more than three screens, at any roster', () => {
-  // Each screen is a 2 s beat the whole room waits through. Past three the
-  // ceremony stops being a ceremony.
+test('honourPlan: the screens are the valuable half, so most titles get one', () => {
+  // A screen is the only moment a title is the single thing on the phone, and it
+  // lands while the result is still unknown. The strip is read over.
   for (const n of [2, 3, 4, 5, 6, 7, 12, 20]) {
-    assert.ok(honourPlan(n).screens <= 3, `${n} seats asked for ${honourPlan(n).screens} screens`);
+    const p = honourPlan(n);
+    assert.ok(p.screens >= Math.min(4, p.titles), `${n} seats screen only ${p.screens} of ${p.titles}`);
+  }
+});
+
+test('honourPlan: never more than five screens, at any roster', () => {
+  // Each screen is a 2 s beat the whole room waits through, and they run BEFORE
+  // the result. Five is ~10 s of holding the winner back; past that, keeping the
+  // room from the result costs more than the next title gives it.
+  for (const n of [2, 3, 4, 5, 6, 7, 12, 20]) {
+    assert.ok(honourPlan(n).screens <= 5, `${n} seats asked for ${honourPlan(n).screens} screens`);
   }
 });
 
@@ -111,6 +122,59 @@ test('the winner may hold one title, never two', () => {
   const out = computeHonours(s, board([['win', 90], ['a', 20], ['b', 10]]));
   assert.equal(holders(out).filter((p) => p === 'win').length, 1,
     `the winner took ${holders(out).filter((p) => p === 'win').length} titles`);
+});
+
+test('a duel splits four titles 2+2 when both seats earned two', () => {
+  // The winner's one-title cap exists to stop a runaway winner sweeping the
+  // ceremony. In a duel it does not do that — it just makes the plan unreachable,
+  // because there is nobody else to hold the rest. Two each is not a sweep: the
+  // other seat holds exactly as many.
+  const s = stats({
+    a: seat({ mean: 400, correct: 10 }),
+    b: seat({ mean: 9000, correct: 9 }),
+  }, {
+    'flags-all': mode({ a: 40, b: 2 }),
+    'map-outlines': mode({ b: 35, a: 1 }),
+    'spot-flag': mode({ b: 30, a: 1 }),
+  });
+  const out = computeHonours(s, board([['a', 60], ['b', 40]]));
+  assert.equal(out.length, honourPlan(2).titles, `a duel awarded ${ids(out).join(', ')}`);
+  assert.equal(holders(out).filter((p) => p === 'a').length, 2);
+  assert.equal(holders(out).filter((p) => p === 'b').length, 2);
+});
+
+test('a duel where one player earned everything awards three, not four', () => {
+  // The case the plan cannot fix: the loser has exactly one thing true of them, so
+  // there is no honest fourth title. Never pad — 2+1 and stop. The winner still
+  // never gets more than one ahead, because passes spread before they stack.
+  const s = stats({
+    a: seat({ mean: 400, correct: 10 }),
+    b: seat({ mean: 9000, correct: 9 }),
+  }, {
+    'flags-all': mode({ a: 40, b: 2 }),
+    'map-outlines': mode({ a: 35, b: 1 }),
+    'spot-flag': mode({ a: 30, b: 1 }),
+  });
+  const out = computeHonours(s, board([['a', 60], ['b', 40]]));
+  const mine = holders(out).filter((p) => p === 'a').length;
+  const theirs = holders(out).filter((p) => p === 'b').length;
+  assert.equal(out.length, 3, `expected 2+1, got ${ids(out).join(', ')}`);
+  assert.equal(theirs, 1, 'the loser holds their one true title');
+  assert.equal(mine - theirs, 1, 'the winner is never more than one ahead');
+});
+
+test('the winner keeps the hard cap of one wherever the room can fill the plan', () => {
+  // Three seats can reach five titles as 1+2+2, so the cap costs nothing there and
+  // stays — it is only relaxed where it would otherwise leave titles unawarded.
+  for (const n of [3, 4, 5, 6, 7, 12]) {
+    const p = honourPlan(n);
+    const perSeat = Math.max(1, Math.ceil(p.titles / n));
+    assert.ok(1 + (n - 1) * perSeat >= p.titles,
+      `${n} seats cannot fill ${p.titles} titles with the winner held to one`);
+  }
+  const p2 = honourPlan(2);
+  assert.ok(1 + Math.max(1, Math.ceil(p2.titles / 2)) < p2.titles,
+    'two seats is the roster the relaxation exists for');
 });
 
 test('nobody takes a second title until every seat holds one', () => {
@@ -410,6 +474,29 @@ test('only the planned number of titles gets a screen, and they build weakest-fi
 test('everything awarded is returned, screened or not — nothing is lost', () => {
   // A title that did not earn a screen still gets named in front of everyone, in
   // the strip. That is what makes handing out more titles than screens honest.
+  //
+  // Six seats, because that is where the split reopens: at 2-4 seats the plan
+  // screens every title it awards, so the strip-only case simply does not arise
+  // there and a four-seat fixture would pin nothing.
+  const s = stats({
+    a: seat({ mean: 1000 }), b: seat({ mean: 2000 }), c: seat({ mean: 3000 }),
+    d: seat({ mean: 4000 }), e: seat({ mean: 9000, correct: 9 }), f: seat({ mean: 400 }),
+  }, {
+    'flags-all': mode({ a: 40 }), 'map-outlines': mode({ b: 35 }),
+    'spot-flag': mode({ c: 33 }), 'superlative-gdp': mode({ d: 30 }, { correct: { d: 4 } }),
+    'flags-weird': mode({ e: 28 }),
+  });
+  const rows = board([['a', 60], ['b', 50], ['c', 40], ['d', 30], ['e', 20], ['f', 10]]);
+  const out = computeHonours(s, rows);
+  assert.equal(out.filter((h) => h.screened).length, honourPlan(6).screens);
+  assert.ok(out.length > out.filter((h) => h.screened).length, 'some titles are strip-only');
+  assert.ok(out.length <= honourPlan(6).titles);
+});
+
+test('at four seats or fewer, every title awarded gets its own screen', () => {
+  // A consequence of 4/4 and 5/5 worth stating out loud: in a small room the
+  // "only here" mark on the board's strip never appears, because nothing was
+  // left out of the ceremony. It is not a rendering bug.
   const s = stats({
     a: seat({ mean: 400 }), b: seat({ mean: 3000 }), c: seat({ mean: 9000, correct: 9 }), d: seat({ mean: 6000 }),
   }, {
@@ -417,8 +504,8 @@ test('everything awarded is returned, screened or not — nothing is lost', () =
     'spot-flag': mode({ d: 33 }), 'superlative-gdp': mode({ c: 30 }, { correct: { c: 4 } }),
   });
   const out = computeHonours(s, board([['a', 60], ['b', 50], ['c', 40], ['d', 30]]));
-  assert.ok(out.length > out.filter((h) => h.screened).length, 'some titles are strip-only');
-  assert.ok(out.length <= honourPlan(4).titles);
+  assert.ok(out.length > 0);
+  assert.deepEqual(out.filter((h) => !h.screened), [], `strip-only titles at four seats: ${ids(out).join(', ')}`);
 });
 
 // ---- degenerate boards ----
