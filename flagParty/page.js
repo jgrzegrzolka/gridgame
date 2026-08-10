@@ -3508,16 +3508,14 @@ export function bootFlagParty() {
       text.appendChild(el('span', 'fh-label', honourTitle(h)));
       text.appendChild(el('span', 'fh-who', h.nickname || ''));
       finalHonours.appendChild(text);
-      // The value, and under it — only for a title the ceremony had no room for —
-      // the mark that says so. A screened title needs no mark: the room just
-      // watched it get its screen, so restating it is noise on the one line the
-      // strip has.
+      // The value, and nothing else. There is deliberately NO mark distinguishing a
+      // title that got a ceremony screen from one that only appears here: which
+      // half of the app's screen budget a title fell into is bookkeeping, not
+      // something anyone in the room has a model for, and a note reading "only
+      // here" beside a job title reads as qualifying the title itself.
       const right = el('span', 'fh-right');
       const value = honourValueText(h);
       if (value) right.appendChild(el('span', 'fh-value', value));
-      if (!h.screened) {
-        right.appendChild(el('span', 'fh-mark', t('party.honourMarkStripOnly', 'only here')));
-      }
       finalHonours.appendChild(right);
       // One dot per awarded title, the current one lit — so the strip says how
       // many there are and how far through them you are, rather than looking

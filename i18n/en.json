@@ -838,7 +838,6 @@
     "honourValueSleeperMany": "slept through {count} questions",
     "honourValueRound": "+{points} in the {mode} round",
     "honourValueMetric": "{correct} of {total} {mode} questions",
-    "honourMarkStripOnly": "only here",
     "breakQuip1": "bathroom break",
     "breakQuip2": "gone for a beer",
     "breakQuip3": "said they'd be right back",
