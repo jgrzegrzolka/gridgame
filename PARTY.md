@@ -2318,13 +2318,45 @@ pass.
   today. A hard cap of one is what stops a runaway winner sweeping the ceremony, and at three or more
   seats it does that at no cost (three seats reach five titles as 1+2+2). In a duel it does something
   else: there is nobody else to hold the rest, so a hard 1 caps the ending at 1+2 and two of the four
-  are never awarded even when both players genuinely earned two. The cap there becomes the ordinary
-  `perSeatCap`, which is not a sweep, because the passes still spread before they stack: the winner
-  cannot take a second until the other seat has had its chance at a first. So a duel is **2+2 when
-  both earned two, and 2+1 when one player earned everything and the other has a single true thing to
-  their name** — never 3+0, and never more than one ahead. The condition is written as arithmetic
-  (`1 + (seats - 1) * perSeatCap >= titles`), not as `seats === 2`, so a future retabling that makes a
-  bigger roster unfillable relaxes on its own.
+  are never awarded even when both players genuinely earned two. *Superseded by 18e below, which
+  replaces this roster-arithmetic special case with the general rule it was a special case of.*
+
+## Iteration 18e — the winner's spare titles — BUILT (2026-08-10)
+
+18d relaxed the winner's one-title cap on a roster too small to fill the plan without them, keyed on
+roster arithmetic (`1 + (seats - 1) * perSeatCap >= titles`, true only for a duel). That was a special
+case of a better rule, and it is now written as the rule instead:
+
+> **The winner takes the next title only when no other seat can** — never because they were strong.
+
+The cap decides who gets the **spare** title, the one a room with more titles than seats has left
+over. It goes to someone the room has not heard about yet, because the winner already holds the crown,
+their own 2.8 s screen, and the board's header. What it was never meant to do is leave a *true* title
+unsaid: once every other seat is either at its own `perSeatCap` or out of unused candidates, the choice
+stops being "the winner or someone else" and becomes "the winner or nobody", and a ceremony that stays
+quiet there is not being fair to anyone — it is just saying less than it knows.
+
+Bounded by `perSeatCap`, which is what stops it becoming the sweep the cap exists to prevent: at worst
+the winner ends level with the seats that took two, and at 7+ seats `perSeatCap` is 1 so nothing is
+relaxed at all (pinned at eight seats).
+
+**What changed in practice**, beyond deleting the special case:
+
+- **4+ seats with quiet players now award their full plan.** A four-seat game where the winner owns
+  four categories, one seat owns one and two owned nothing used to award four of its five titles and
+  sit on the winner's other three. It now awards five, and the two quiet seats are still named by the
+  tail (that is the guarantee's job, and it runs after this).
+- **The duel is unchanged**: 2+2 when both earned two, 2+1 when one earned everything. It is simply
+  the roster where the general rule fires every time rather than a case in the code.
+- An older test asserting a flat "the winner may hold one title, never two" was removed: its fixture
+  had the winner owning every category with nobody else holding a spare candidate, which is exactly
+  the "or nobody" case, so it was pinning the wrong half of the rule. Both halves are now pinned
+  separately — the cap holding while a candidate is genuinely going spare, and the `perSeatCap` bound
+  when it is not.
+
+The `someoneElseCanTake` guard inside the spare loop is an invariant stated rather than a live branch:
+the passes are exhaustive for non-winners, so it is false by the time the loop runs. It stays because
+it makes the rule a sentence in its own right instead of a consequence of the loop above it.
 
 ## Out of scope (don't sweep in)
 
