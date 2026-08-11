@@ -10,7 +10,7 @@ import { getOrCreateDeviceId } from '../flags/identity.js';
 import { rememberActiveRoom, readActiveRoom, forgetActiveRoom } from '../flags/activeRoom.js';
 import { displayNickname } from '../flags/nickname.js';
 import { loadCountries } from '../flags/group.js';
-import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, isBlankReveal, revealOrder } from '../flags/partyClient.js';
+import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCelebration, isCleanReveal, revealOrder } from '../flags/partyClient.js';
 import { showBotSeat } from './botSeat.js';
 import { setupSummaryParts, canStartGame } from './lobbySetup.js';
 import { dockSpecFor } from './dockSpec.js';
@@ -3148,12 +3148,6 @@ export function bootFlagParty() {
     const list = el('div', 'toast-list');
     const points = (state.reveal && state.reveal.points) || {};
     const breakdown = (state.reveal && state.reveal.breakdown) || {};
-    // The question beat everyone: name it. No points move, but a shared groan is
-    // the moment, and silence made a question nobody got look identical to one
-    // everybody got wrong on their own.
-    if (isBlankReveal(state.roster, state.reveal)) {
-      footEl.appendChild(el('p', 'nobody-knew', t('party.nobodyKnew', 'Nobody knew that one')));
-    }
     // Ordered by THIS question's points, biggest first — the reveal is "who nailed
     // this one", not the running standings (which the break screen is for). The
     // server sends the board by cumulative total, so re-sort here (see `revealOrder`).

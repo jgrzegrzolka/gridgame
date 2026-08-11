@@ -6,7 +6,6 @@ import {
   withLocalBuzz,
   pickPartyCelebration,
   isCleanReveal,
-  isBlankReveal,
   revealOrder,
 } from './partyClient.js';
 
@@ -349,59 +348,6 @@ test('lobby (play again) clears any draft state', () => {
   assert.equal(s.picker, null);
   assert.equal(s.hand, null);
   assert.equal(s.lastPick, null);
-});
-
-// ---- isBlankReveal: the "Nobody knew" beat ----
-
-/** @param {string} id @param {boolean} [present] */
-const blankSeat = (id, present = true) => ({ playerId: id, nickname: id, score: 0, present });
-
-test('isBlankReveal: every present player wrong → the room was beaten', () => {
-  const roster = [blankSeat('a'), blankSeat('b'), blankSeat('c')];
-  const reveal = { answer: 'pl', picks: { a: 'de', b: 'fr', c: 'de' } };
-  assert.equal(isBlankReveal(roster, reveal), true);
-});
-
-test('isBlankReveal: a timeout counts as not knowing', () => {
-  // A seat with no pick at all didn't know it either, so a question nobody even
-  // answered is the loudest version of this.
-  const roster = [blankSeat('a'), blankSeat('b')];
-  assert.equal(isBlankReveal(roster, { answer: 'pl', picks: {} }), true);
-});
-
-test('isBlankReveal: one correct answer is not a blank', () => {
-  const roster = [blankSeat('a'), blankSeat('b')];
-  assert.equal(isBlankReveal(roster, { answer: 'pl', picks: { a: 'pl', b: 'de' } }), false);
-});
-
-test('isBlankReveal: an absent player getting it wrong does not decide it', () => {
-  // Only players in the room are asked; a departed seat's stale pick shouldn't be
-  // able to turn a question somebody actually got into a shared groan (or vice versa).
-  const roster = [blankSeat('a'), blankSeat('b'), blankSeat('c', false)];
-  // The departed seat holds the only correct pick: the room still got beaten.
-  assert.equal(isBlankReveal(roster, { answer: 'pl', picks: { a: 'de', b: 'fr', c: 'pl' } }), true);
-  // ...and a present player getting it right ends the beat, absent seat or not.
-  assert.equal(isBlankReveal(roster, { answer: 'pl', picks: { a: 'pl', b: 'fr', c: 'de' } }), false);
-});
-
-test('isBlankReveal: never fires in solo play', () => {
-  // With one seat "nobody knew" is just "you were wrong", which the reveal
-  // already says, and naming it would read as the game being smug at one player.
-  assert.equal(isBlankReveal([blankSeat('a')], { answer: 'pl', picks: { a: 'de' } }), false);
-});
-
-test('isBlankReveal: no reveal, no beat', () => {
-  assert.equal(isBlankReveal([blankSeat('a'), blankSeat('b')], null), false);
-});
-
-test('isBlankReveal and isCleanReveal are mutually exclusive on a real room', () => {
-  const roster = [blankSeat('a'), blankSeat('b')];
-  /** @type {Record<string, string>[]} */
-  const cases = [{ a: 'pl', b: 'pl' }, { a: 'pl', b: 'de' }, { a: 'de', b: 'fr' }, {}];
-  for (const picks of cases) {
-    const reveal = { answer: 'pl', picks };
-    assert.equal(isCleanReveal(roster, reveal) && isBlankReveal(roster, reveal), false);
-  }
 });
 
 test('reveal message: the itemised breakdown reaches client state', () => {

@@ -792,17 +792,6 @@ button.opt { -webkit-appearance: none; appearance: none; }
 .toast .pts { margin-left: auto; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; color: var(--primary-color); }
 .toast .pts.zero { color: var(--muted-color); }
 
-/* "Nobody knew that one" — the reveal's named beat when the question beat the
-   whole room. Sits above the per-player toasts, quiet by design: it is a shared
-   groan, not an accusation, so it reads as a caption rather than a score line. */
-.nobody-knew {
-  text-align: center;
-  margin: 0 0 2px;
-  font-size: 13px;
-  font-weight: var(--weight-bold);
-  color: var(--muted-color);
-}
-
 /* Final-screen actions are now the shared bottom dock (Play again · Home),
    like every other page. The old `.pt-final .result-links` overrides — which
    opted this screen out of the sticky rail and suppressed the full-bleed
