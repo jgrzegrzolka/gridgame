@@ -470,33 +470,6 @@ export function isCleanReveal(roster, reveal) {
 }
 
 /**
- * The mirror of {@link isCleanReveal}: did the question beat the whole room?
- *
- * Drives the reveal's "Nobody knew" beat — no points change hands, but a shared
- * groan is a party moment and it costs nothing to name. A timeout counts: a seat
- * that never buzzed didn't know it either, so a question nobody even answered is
- * the loudest version of this.
- *
- * Deliberately derived from the picks rather than the points, so it means "nobody
- * got it right" and not "nobody scored" — those are the same today, and would
- * quietly stop being the same if a question ever paid out on a wrong answer.
- *
- * Solo play is excluded: with one seat "nobody knew" is just "you were wrong",
- * which the reveal already says plainly, and naming it would read as the game
- * being smug at a lone player.
- *
- * @param {RosterEntry[]} roster
- * @param {{ answer: string, picks: Record<string, string> } | null} reveal
- * @returns {boolean}
- */
-export function isBlankReveal(roster, reveal) {
-  if (!reveal) return false;
-  const present = roster.filter((r) => r.present);
-  if (present.length < 2) return false;
-  return present.every((r) => reveal.picks[r.playerId] !== reveal.answer);
-}
-
-/**
  * Order the reveal's per-player rows highest-first BY THIS QUESTION'S points, so
  * the reveal reads as "who nailed this one" — the biggest `+N` on top. The server
  * sends the scoreboard descending by cumulative total, which instead parks the

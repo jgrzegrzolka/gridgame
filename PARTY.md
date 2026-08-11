@@ -1534,10 +1534,12 @@ what's left, and both are comeback-neutral or better.
 - [x] **Sole survivor `+5`** for the only correct answer. Decided across the whole question rather
       than per buzz, so the lone correct answer arriving *last* still counts. Off in solo play, and it
       doubles on the Decider like every other point.
-- [x] **"Nobody knew that one"** on the reveal, via `isBlankReveal` — the mirror of `isCleanReveal`,
-      derived from the picks rather than the points so it keeps meaning "nobody got it right". A
-      timeout counts as not knowing. Never fires in solo, where it would just be the game being smug
-      at one player.
+- [x] ~~**"Nobody knew that one"** on the reveal, via `isBlankReveal`~~ — **removed (2026-08-11)**.
+      Being derived from an exact-pick match made it lie on the world-facts rounds: those pay
+      `closeness`, so a room where somebody was nearest (and scored for it) still got told nobody
+      knew. The line earned nothing even when it was accurate — the reveal already shows every seat's
+      `+0` — so it went out rather than getting a per-round-type condition. `isBlankReveal` and the
+      `party.nobodyKnew` strings are gone with it.
 - [x] **The Fastest badge is fixed**, and stopped being an inference: it reads `award.speed > 0`
       instead of comparing the total against `CORRECT_POINTS + SPEED_BONUS[0]`, which ignored the
       multiplier and so **never fired on the Decider**.
