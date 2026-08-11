@@ -848,6 +848,13 @@ button.opt { -webkit-appearance: none; appearance: none; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* Height is PINNED and the pill stays in flow even with no pass running.
+     Letting an empty inline-flex collapse to its padding takes ~18px out of the
+     header between every pass, which walks the whole board up and back down four
+     times per break. `.break-head`'s min-height already covers the common case;
+     this makes the pill itself immune rather than leaning on a parent. */
+  box-sizing: border-box;
+  height: 22px;
   padding: 2px 11px;
   border-radius: 999px;
   font-size: 11px;
@@ -858,6 +865,28 @@ button.opt { -webkit-appearance: none; appearance: none; }
   transform: translateY(3px);
 }
 .break-pass.in { opacity: 1; transform: none; }
+/* The stage pill: which number the board is showing right now. Quiet grey while
+   it is the round (a caption on a board still being built), then the primary
+   fill once the totals land — the standings are the louder statement, so the
+   pill that names them is the louder pill. Re-mounted on the flip (page.js
+   re-triggers the animation) so the change is something you see happen. */
+.break-stage {
+  box-sizing: border-box;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  background: var(--selected-color);
+  color: var(--muted-color);
+}
+.break-stage.total { background: var(--primary-color); color: var(--surface-color); }
+.break-stage:empty { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .break-stage.flip { animation: fchip-in 0.28s cubic-bezier(0.2, 0.8, 0.3, 1.5) both; }
+}
 .break-pass.base { color: var(--muted-color); }
 .break-pass.speed { color: var(--secondary-color); border-color: var(--secondary-color); }
 .break-pass.solo { color: var(--primary-color); }
@@ -948,6 +977,42 @@ button.opt { -webkit-appearance: none; appearance: none; }
   transition: transform 0.4s cubic-bezier(0.55, 0, 0.7, 0.2), opacity 0.4s ease;
 }
 @keyframes fchip-in { from { opacity: 0; transform: translateY(5px) scale(0.85); } to { opacity: 1; transform: none; } }
+
+/* The round chip: what this round contributed, kept beside the total once the
+   two have merged. It is what stops stage two from erasing stage one — a player
+   who gained 19 and still sits fourth can read both facts off one row instead of
+   having to remember the number the board showed four seconds ago.
+
+   In flow (not an overlay like `.fchip`), and rendered from the START at
+   `opacity: 0`, so its width is reserved while stage one runs and the totals do
+   not shift sideways when it appears. It carries the auto margin the score
+   normally has, which is why `.sc` gives its own up when the chip precedes it —
+   two auto margins would split the free space and park the chip mid-row. */
+.break-board .scoreline .round-chip {
+  margin-left: auto;
+  flex: none;
+  box-sizing: border-box;
+  height: 19px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface-color);
+  border: 1px solid var(--secondary-color);
+  color: var(--secondary-color);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transform: scale(0.85);
+}
+.break-board .scoreline .round-chip.in { opacity: 1; transform: none; }
+.break-board .scoreline .round-chip + .sc { margin-left: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .break-board .scoreline .round-chip {
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.5);
+  }
+}
 
 /* ---- draft: game length ---- */
 /* Host + lobby only, and the whole of the host's setup now that the Custom-setup

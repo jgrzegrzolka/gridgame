@@ -225,8 +225,20 @@ export const PICK_TIMEOUT_SECONDS = 45;
  *  reveal. Host-authoritative like the reveal: the host's page counts this down
  *  and fires `next` when it elapses; other clients just render the break. Keyed
  *  to reading a scoreboard, not to a question, so it's a flat duration rather than
- *  the reveal's clean/miss split. */
-export const ROUND_BREAK_SECONDS = 8;
+ *  the reveal's clean/miss split.
+ *
+ *  **Raised 8 → 12 when the board became two-staged** (the round is built from
+ *  zero, held, and only then merged into the carried total — see
+ *  {@link LEDGER_MERGE_HOLD_MS}). That reorder appends a hold, a second count-up
+ *  and a re-rank to a sequence that already ran ~7.1 s at eight seats, which put
+ *  the merge *past* the moment the host sent `next`: the new stage would have
+ *  been invisible at exactly the table sizes it matters most for. 12 s keeps the
+ *  ≥2 s of stillness the schedule tests pin. The cost is a longer break for a
+ *  small room whose round earned one bucket, where the motion ends early and the
+ *  extra seconds are all stillness — the same trade this file has taken before
+ *  (reading time is the scarce thing), and a flat number stays something a host
+ *  can predict. */
+export const ROUND_BREAK_SECONDS = 12;
 
 /** The break's standings play as a **ledger**: the board arrives showing where
  *  everyone stood *before* the round, holds a beat, counts every score up to its
@@ -275,8 +287,12 @@ export const LEDGER_ENTER_STAGGER_MS = 90;
  * the last row has arrived — the beat is "everyone is on screen, now look at them",
  * which a fixed allowance would get wrong at both two seats and eight.
  *
+ * Stage one here is the round counted up in ONE go rather than bucket by bucket;
+ * `chipsOffAt` is where it settles, and stage two ({@link mergeBeats}) hangs off
+ * that exactly as it does off the pass path's `settleAt`.
+ *
  * @param {number} rowCount  how many standings rows the break is showing
- * @returns {{ enterMs: number, countAt: number, slideAt: number, chipsOffAt: number, totalMs: number }}
+ * @returns {{ enterMs: number, countAt: number, slideAt: number, chipsOffAt: number, settleAt: number, mergeAt: number, mergeDur: number, rankAt: number, totalMs: number }}
  */
 export function ledgerSchedule(rowCount = 0) {
   const rows = Math.max(0, rowCount);
@@ -285,7 +301,8 @@ export function ledgerSchedule(rowCount = 0) {
   // The breath is between the counting FINISHING and the rows starting to move.
   const slideAt = countAt + LEDGER_COUNT_MS + LEDGER_SETTLE_MS;
   const chipsOffAt = slideAt + LEDGER_SLIDE_MS;
-  return { enterMs, countAt, slideAt, chipsOffAt, totalMs: chipsOffAt };
+  const merge = mergeBeats(chipsOffAt);
+  return { enterMs, countAt, slideAt, chipsOffAt, settleAt: chipsOffAt, ...merge };
 }
 
 // ---- the break, told bucket by bucket (the "category passes") ----
@@ -315,6 +332,58 @@ export const LEDGER_PASS_SLIDE_MS = 460;
 /** The gap after one pass has fully settled before the next pass's banner. */
 export const LEDGER_PASS_GAP_MS = 120;
 
+// ---- stage two: the round's number, then the carried total on top ----
+// The board used to open at each player's carried total and count the round into
+// it, so the round was only ever legible as a DIFFERENCE — "who won that round"
+// was a question the screen could not answer, and the pass chips were its only
+// trace. The standings still have to be on screen (hiding them makes the last
+// round pointless to play and the ending arbitrary), so the beat is reordered
+// rather than replaced: stage one builds THIS round from zero and is held long
+// enough to read, then stage two lands the carried total on top and re-ranks.
+//
+// These three offsets are what stage two costs, and they are the reason
+// ROUND_BREAK_SECONDS moved to 12.
+
+/** How long the settled ROUND result holds before the carried total lands on it.
+ *  The whole point of the reorder: a number that is never still is a number
+ *  nobody reads, and this is the only window in which the board says what the
+ *  round did. */
+export const LEDGER_MERGE_HOLD_MS = 1300;
+/** The merge count-up — the carried total climbing onto the round's number.
+ *  Longer than a pass count (760 ms) because it usually moves a much bigger
+ *  distance, and it eases out (`countUp`'s cubic) so the number decelerates into
+ *  its final value rather than stopping dead. */
+export const LEDGER_MERGE_COUNT_MS = 900;
+/** The gap from the merge STARTING to the rows re-ranking. Deliberately shorter
+ *  than the count (620 < 900) but past the point the numbers have visibly
+ *  stopped moving: re-ranking on the first frame of the merge would slide the
+ *  rows while every total on them is still climbing, which is the same "two
+ *  motions read as one blur" failure {@link LEDGER_PASS_SETTLE_MS} exists to
+ *  prevent, one stage up. */
+export const LEDGER_MERGE_RANK_MS = 620;
+
+/**
+ * Stage two's beats, given when stage one settles. Shared by both ledger paths
+ * (the bucket passes and the count-up-in-one-go fallback) so the two cannot
+ * drift into telling the merge differently.
+ *
+ * `totalMs` is when the LAST motion finishes — the re-rank slide, not the count
+ * — because that, not the arithmetic, is what the break has to fit around.
+ *
+ * @param {number} settleAt  ms from the break appearing to stage one settling
+ * @returns {{ mergeAt: number, mergeDur: number, rankAt: number, totalMs: number }}
+ */
+export function mergeBeats(settleAt) {
+  const mergeAt = settleAt + LEDGER_MERGE_HOLD_MS;
+  const rankAt = mergeAt + LEDGER_MERGE_RANK_MS;
+  return {
+    mergeAt,
+    mergeDur: LEDGER_MERGE_COUNT_MS,
+    rankAt,
+    totalMs: rankAt + LEDGER_PASS_SLIDE_MS,
+  };
+}
+
 /**
  * When each bucket pass fires, as milliseconds from the moment the break appears.
  * Each pass is a count (`countAt`) then, after the count finishes and a settle
@@ -327,9 +396,13 @@ export const LEDGER_PASS_GAP_MS = 120;
  * player actually earned this round (1–4); a round nobody scored passes 0 and the
  * sequence is just the hold.
  *
+ * `settleAt` ends STAGE ONE — the round's own number, settled and ranked by the
+ * round alone. Stage two ({@link mergeBeats}) hangs off it: the hold, the carried
+ * total counting on top, and the re-rank into the standings.
+ *
  * @param {number} rowCount   standings rows on screen (sets the entrance cascade)
  * @param {number} passCount  buckets earned this round, in [0, 4]
- * @returns {{ enterMs: number, steps: Array<{ countAt: number, slideAt: number }>, settleAt: number, totalMs: number }}
+ * @returns {{ enterMs: number, steps: Array<{ countAt: number, slideAt: number }>, settleAt: number, mergeAt: number, mergeDur: number, rankAt: number, totalMs: number }}
  */
 export function passLedgerSchedule(rowCount = 0, passCount = 0) {
   const rows = Math.max(0, rowCount);
@@ -347,7 +420,7 @@ export function passLedgerSchedule(rowCount = 0, passCount = 0) {
   // The MVP reveal lands when the last slide finishes — the trailing gap is only
   // spacing before a *next* pass that doesn't exist, so it isn't part of the run.
   const settleAt = passes > 0 ? t - LEDGER_PASS_GAP_MS : enterMs + LEDGER_PASS_HOLD_MS;
-  return { enterMs, steps, settleAt, totalMs: settleAt };
+  return { enterMs, steps, settleAt, ...mergeBeats(settleAt) };
 }
 
 /** Delay from the winner's beat starting to the confetti / fireworks burst.

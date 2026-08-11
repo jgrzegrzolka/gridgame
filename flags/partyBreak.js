@@ -89,24 +89,25 @@ const NAME_COLLATOR = new Intl.Collator(undefined, { sensitivity: 'base', numeri
  * counted — an array of indices into `rows` (which is final score order),
  * slot-first.
  *
- * The ledger's story is "here is where you stood, now watch the points land", so
- * every break after the first opens in the PREVIOUS break's order (rows by their
- * `prevScore`, descending). The very first break of a game has no previous
- * standing to open from: opening it by `prevScore` seats everyone at 0, which
- * collapses onto final score order, so the slide would start already-sorted and
- * read as a pointless shuffle. There we open ALPHABETICALLY by nickname instead —
- * a neutral order the points then rearrange into the ranking.
+ * ALPHABETICAL by nickname, always: a neutral order the round's points then
+ * rearrange into a ranking. The board opens every row at **zero** (stage one is
+ * this round alone, not the carried total), so there is no standing left for an
+ * opening order to describe — every seat is genuinely level at t=0, and any
+ * score-derived seating would be asserting an order the numbers on screen
+ * contradict.
+ *
+ * This used to branch: every break after the first opened in the PREVIOUS
+ * break's order, because the rows opened at `prevScore` and the story was "here
+ * is where you stood, now watch the points land". Stage one retired that story —
+ * `prevScore` now arrives in stage two instead, as a merge onto a number that is
+ * already settled and read.
  *
  * Ties break by final index, so the mapping is stable and deterministic.
  *
  * @param {BreakRow[]} rows  break rows in final score order
- * @param {boolean} hasPrev  was there a previous break to open from?
  * @returns {number[]} slot -> index into `rows`
  */
-export function breakOpeningOrder(rows, hasPrev) {
+export function breakOpeningOrder(rows) {
   const idx = rows.map((_, i) => i);
-  if (hasPrev) {
-    return idx.sort((a, b) => rows[b].prevScore - rows[a].prevScore || a - b);
-  }
   return idx.sort((a, b) => NAME_COLLATOR.compare(rows[a].nickname || '', rows[b].nickname || '') || a - b);
 }

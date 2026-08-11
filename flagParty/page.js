@@ -18,7 +18,7 @@ import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
 import { isPartyTitle, soleWinnerId } from '../flags/partyHonours.js';
 import { runCelebration } from '../confetti.js';
-import { QUESTION_SECONDS, revealSecondsFor, barPaints, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS, breakAllowedIn, honoursSchedule, HONOUR_STRIP_CYCLE_MS, BOARD_ROW_STAGGER_MS, FINAL_CELEBRATION_OFFSET_MS } from '../flags/partyTiming.js';
+import { QUESTION_SECONDS, revealSecondsFor, barPaints, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, LEDGER_MERGE_HOLD_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS, breakAllowedIn, honoursSchedule, HONOUR_STRIP_CYCLE_MS, BOARD_ROW_STAGGER_MS, FINAL_CELEBRATION_OFFSET_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, roundIndexAt, roundCount } from '../flags/partyPlan.js';
 import { roundBreak, breakOpeningOrder } from '../flags/partyBreak.js';
 import { emptyTally, addQuestionToTally } from '../flags/partyRoundTally.js';
@@ -540,6 +540,7 @@ export function bootFlagParty() {
   const breakStandingsLabel = $('break-standings-label');
   const breakBoard = $('break-board');
   const breakPass = $('break-pass');
+  const breakStage = $('break-stage');
   const roundCardCount = $('roundcard-count');
   const roundCardIc = $('roundcard-ic');
   const roundCardRing = $('roundcard-ring-fill');
@@ -2022,7 +2023,7 @@ export function bootFlagParty() {
    *  heights — a measurement that reads zero while the section is still display:none,
    *  which flattened every rank-change slide. So the params are held here and played
    *  from `onShown('break')`, the same beat the finish board starts from. */
-  let breakLedgerPending = /** @type {{ nodes: HTMLElement[], rows: import('../flags/partyBreak.js').BreakRow[], splits: Array<{ base: number, speed: number, solo: number, closeness: number }>, canPass: boolean, hasPrev: boolean, token: string } | null} */ (null);
+  let breakLedgerPending = /** @type {{ nodes: HTMLElement[], rows: import('../flags/partyBreak.js').BreakRow[], splits: Array<{ base: number, speed: number, solo: number, closeness: number }>, canPass: boolean, token: string } | null} */ (null);
   /** This round's running score breakdown, per player, for the break's chips.
    *  Reset when a round starts; added to once per question (the tokens below guard
    *  render()'s re-runs, which would otherwise count a question twice). */
@@ -2909,9 +2910,6 @@ export function bootFlagParty() {
     breakBuilt = true;
 
     const board = state.scoreboard || [];
-    // No previous break means the first round of the game: the ledger opens
-    // alphabetically rather than in final order (see `breakOpeningOrder`).
-    const hasPrev = Array.isArray(prevBreakBoard) && prevBreakBoard.length > 0;
     const { rows, mvp } = roundBreak(prevBreakBoard, board);
 
     // MVP banner — hidden when nobody scored in the round. Built now but held
@@ -2934,6 +2932,9 @@ export function bootFlagParty() {
     // Fresh break: clear any leftover pass banner from the previous one.
     breakPass.className = 'break-pass';
     breakPass.textContent = '';
+    // The board opens on stage one, so the pill opens naming the round. It flips
+    // to "Total" in `playLedger` when the carried score merges in.
+    setBreakStage(false);
 
     breakBoard.innerHTML = '';
     /** @type {HTMLElement[]} the row node per `rows` entry, for the slide animation */
@@ -2948,11 +2949,14 @@ export function bootFlagParty() {
       row.appendChild(el('span', 'rank', String(i + 1)));
       row.appendChild(buildAvatar(r.playerId));
       row.appendChild(el('span', 'nm', r.nickname));
-      // Tight single-line row: rank · avatar · name · total, nothing reserved for a
-      // gain chip. The round's gain isn't a persistent chip; each bucket flies into
-      // the total during the ledger (see `playLedger`), so the settled board rests
-      // on totals and even a long nickname keeps the whole line. Rank movement is
-      // the row sliding to its new place, so there's no ▲/▼ arrow either.
+      // Tight single line: rank · avatar · name · round · total. The per-bucket
+      // chips still fly into the total during stage one and leave nothing behind
+      // (see `playLedger`), but the round's TOTAL stays as `.round-chip` once the
+      // carried score merges on top — otherwise stage two erases the only thing
+      // stage one had to say. It is built here, invisible, so it reserves its
+      // width from the first frame and the totals do not shift when it fades in.
+      // Rank movement is the row sliding to its new place, so there's no ▲/▼.
+      row.appendChild(el('span', 'round-chip', `+${r.roundGain}`));
       row.appendChild(el('span', 'sc', String(r.score)));
       // The per-bucket split drives the fly-in. It "reconciles" when its buckets add
       // up to the round total; only then can we attribute the gain bucket by bucket.
@@ -2985,7 +2989,7 @@ export function bootFlagParty() {
     // it is still display:none gives a zero stride and no rank-change slide. Runs
     // now only if the break is already shown (a reconnect re-entering it); otherwise
     // `onShown('break')` plays it. See `breakLedgerPending`.
-    breakLedgerPending = { nodes: rowNodes, rows, splits: rowSplits, canPass, hasPrev, token: breakAnimToken };
+    breakLedgerPending = { nodes: rowNodes, rows, splits: rowSplits, canPass, token: breakAnimToken };
     if (swapper.shown === 'break') startBreakLedger();
   }
 
@@ -2996,28 +3000,43 @@ export function bootFlagParty() {
     const p = breakLedgerPending;
     if (!p) return;
     breakLedgerPending = null;
-    playLedger(p.nodes, p.rows, p.splits, p.canPass, p.hasPrev, p.token);
+    playLedger(p.nodes, p.rows, p.splits, p.canPass, p.token);
   }
 
   /**
-   * Play the break's standings as a **ledger** — told in the order the round
-   * actually happened rather than handing over a finished ranking. The board
-   * arrives at last break's totals (seated in last break's order — or, on the
-   * first break of the game, alphabetically, since there is no prior standing to
-   * open from), holds a beat, then climbs one SCORING BUCKET at a time — a
-   * "Correct" pass banks everyone's
-   * base, then "Speed", then "Only one" / "Close" — re-ranking after each. An
-   * overtake driven by speed happens ON the speed pass, in front of you: the
-   * board narrates *why* it moved, and every bucket earns a labelled beat so a
-   * player can read what the points were made of. The MVP line fades in last.
+   * Play the break's standings as a **two-stage ledger** — the round first, then
+   * the total — rather than handing over a finished ranking.
+   *
+   * **Stage one is the round.** Every row opens at ZERO, seated alphabetically
+   * (nobody has points yet, so no score-derived order would be honest — see
+   * `breakOpeningOrder`), and climbs one SCORING BUCKET at a time: a "Correct"
+   * pass banks everyone's base, then "Speed", then "Only one" / "Close",
+   * re-ranking after each. An overtake driven by speed happens ON the speed pass,
+   * in front of you: the board narrates *why* it moved, and every bucket earns a
+   * labelled beat so a player can read what the points were made of. It settles
+   * on this round's result, ranked by this round alone, and HOLDS there
+   * (LEDGER_MERGE_HOLD_MS) with the MVP line under it. That hold is the feature:
+   * before it, the round existed only as a difference between two totals and "who
+   * won that round" was a question the screen could not answer.
+   *
+   * **Stage two is the merge.** The carried total counts on top over
+   * LEDGER_MERGE_COUNT_MS, the header pill flips from "This round" to "Total",
+   * and LEDGER_MERGE_RANK_MS in — after the numbers have visibly stopped, never
+   * during — the rows re-rank into the standings. The round does not vanish when
+   * it is absorbed: it stays as the `.round-chip` beside each total, so a player
+   * who gained 19 and still sits fourth can read both facts at once.
+   *
+   * The standings deliberately survive all of this. Showing the round ALONE would
+   * be simpler and is wrong: the last round has to stay worth playing, and the
+   * ending needs the gap to be known.
    *
    * The seating is a FLIP: the DOM holds the rows in FINAL order, and an inline
    * `translateY` offsets each to its CURRENT slot; releasing the transition slides
    * it home. One measured stride (row + gap) converts a slot delta to pixels.
    *
    * `canPass` is false when any scoring row's split didn't reconcile (a mid-round
-   * join / reconnect): there's no trustworthy per-bucket breakdown, so we fall back
-   * to counting every score up at once — the old ledger, kept for exactly this.
+   * join / reconnect): there's no trustworthy per-bucket breakdown, so stage one
+   * counts the round up in one go instead. Stage two is identical either way.
    *
    * Pure decoration — the final scores and positions are already correct in the DOM
    * before this runs, so `prefers-reduced-motion` skips straight to them. The
@@ -3028,10 +3047,9 @@ export function bootFlagParty() {
    * @param {import('../flags/partyBreak.js').BreakRow[]} rows
    * @param {Array<{ base: number, speed: number, solo: number, closeness: number }>} splits  per-row round split
    * @param {boolean} canPass  every scoring row's split reconciles → run bucket passes
-   * @param {boolean} hasPrev  is there a previous break to open in the order of? (false = first round → open alphabetically)
    * @param {string} token  this break's identity; see above
    */
-  function playLedger(nodes, rows, splits, canPass, hasPrev, token) {
+  function playLedger(nodes, rows, splits, canPass, token) {
     const scores = nodes.map((n) => /** @type {HTMLElement} */ (n.querySelector('.sc')));
     const revealMvp = () => { if (!breakMvp.hidden) breakMvp.classList.add('in'); };
     const passLabel = (/** @type {string} */ kind) => (kind === 'base' ? t('party.passCorrect', 'Correct')
@@ -3040,25 +3058,29 @@ export function bootFlagParty() {
           : t('party.passClose', 'Close'));
 
     if (prefersReducedMotion()) {
-      // No motion: land straight on the settled totals. The gain fly-in is pure
-      // decoration (the totals are already correct in the DOM), so nothing to play.
+      // No motion: land straight on the settled totals, with both stages' facts
+      // already true — the total, the round chip beside it, and the pill naming
+      // what the numbers are. The staging is the decoration; the facts are not.
       rows.forEach((r, i) => { scores[i].textContent = String(r.score); });
+      showRoundChips(nodes);
+      setBreakStage(true);
       revealMvp();
       return;
     }
 
-    // Beat 1: rows fade in showing where everyone stood before the round. Fading
-    // only — the seat offsets below own `transform`, and an entrance that animated
-    // it would erase them (see `scoreline-fade-in`).
+    // Beat 1: rows fade in at ZERO — stage one is this round, and nobody has
+    // scored in it yet. Fading only: the seat offsets below own `transform`, and
+    // an entrance that animated it would erase them (see `scoreline-fade-in`).
     rows.forEach((r, i) => {
-      scores[i].textContent = String(r.prevScore);
+      scores[i].textContent = '0';
       nodes[i].classList.add('enter-fade');
       nodes[i].style.setProperty('--enter-delay', `${(rows.length - 1 - i) * LEDGER_ENTER_STAGGER_MS}ms`);
     });
     const stride = nodes.length > 1 ? nodes[1].offsetTop - nodes[0].offsetTop : 0;
 
     // Running score per FINAL index, and the slot each row currently occupies.
-    const running = rows.map((r) => r.prevScore);
+    // Through stage one this is the ROUND's points; the merge adds `prevScore`.
+    const running = rows.map(() => 0);
     const curSlot = new Array(rows.length).fill(-1);
     // Order the final-indices by current running score (stable on ties by final
     // index, so the settled order matches `rows`). Returns slot → final-index.
@@ -3076,23 +3098,61 @@ export function bootFlagParty() {
         curSlot[fi] = slot;
       });
     };
-    // Open in last break's order (prevScore descending, which `orderNow` gives
-    // since running === prevScore here); the first break has no prior standing, so
-    // it opens alphabetically instead — see `breakOpeningOrder`.
-    seat(breakOpeningOrder(rows, hasPrev), 0);
+    // Open alphabetically: every row is at 0, so there is no standing for an
+    // opening order to describe — see `breakOpeningOrder`.
+    seat(breakOpeningOrder(rows), 0);
     void breakBoard.offsetHeight; // commit the start positions before releasing
 
     const stillOurs = () => breakAnimToken === token;
 
-    if (!canPass) {
-      // Fallback: no trustworthy split, so count every score up in one go and slide
-      // once — no per-bucket fly-in, just the totals.
-      const { countAt, slideAt } = ledgerSchedule(rows.length);
+    /**
+     * Stage two, shared by both stage-one paths: hold on the round, then land
+     * the carried total on top of it and re-rank into the standings.
+     *
+     * The count is `countUp`'s ease-out cubic, so each total decelerates into its
+     * final value instead of stopping dead, and the re-rank is deliberately LATE
+     * (LEDGER_MERGE_RANK_MS after the merge starts, not with it) so the rows
+     * never slide while the numbers on them are still climbing.
+     *
+     * @param {{ mergeAt: number, mergeDur: number, rankAt: number }} beats
+     */
+    const playMerge = (beats) => {
+      // A first round has nothing carried: the merge would be a 900 ms count-up
+      // that changes no digit and a re-rank that moves no row. Skip the motion —
+      // but not the meaning. The pill still flips (the number IS now the total)
+      // and the chip still lands (it equals the total, which is the honest thing
+      // for it to say), just without holding for a beat that has nothing to show.
+      const nothingCarried = rows.every((r) => r.prevScore === 0);
+      if (nothingCarried) {
+        window.setTimeout(() => {
+          if (!stillOurs()) return;
+          setBreakStage(true);
+          showRoundChips(nodes);
+        }, beats.mergeAt - LEDGER_MERGE_HOLD_MS);
+        return;
+      }
       window.setTimeout(() => {
         if (!stillOurs()) return;
-        rows.forEach((r, i) => { countUp(scores[i], r.prevScore, r.score, LEDGER_COUNT_MS, 0, () => !stillOurs()); running[i] = r.score; });
-      }, countAt);
-      window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_SLIDE_MS); revealMvp(); }, slideAt);
+        setBreakStage(true);
+        showRoundChips(nodes);
+        rows.forEach((r, i) => {
+          countUp(scores[i], running[i], r.score, beats.mergeDur, 0, () => !stillOurs());
+          running[i] = r.score;
+        });
+      }, beats.mergeAt);
+      window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_PASS_SLIDE_MS); }, beats.rankAt);
+    };
+
+    if (!canPass) {
+      // Fallback: no trustworthy split, so stage one counts the round up in one go
+      // — no per-bucket fly-in, just this round's number — and then merges as usual.
+      const sched = ledgerSchedule(rows.length);
+      window.setTimeout(() => {
+        if (!stillOurs()) return;
+        rows.forEach((r, i) => { countUp(scores[i], 0, r.roundGain, LEDGER_COUNT_MS, 0, () => !stillOurs()); running[i] = r.roundGain; });
+      }, sched.countAt);
+      window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_SLIDE_MS); revealMvp(); }, sched.slideAt);
+      playMerge(sched);
       return;
     }
 
@@ -3134,13 +3194,37 @@ export function bootFlagParty() {
       window.setTimeout(() => { if (!stillOurs()) return; seat(orderNow(), LEDGER_PASS_SLIDE_MS); }, slideAt);
     });
 
-    // Last: clear the banner and bring in the round's verdict.
+    // Stage one settles: clear the banner and bring in the round's verdict. The
+    // board now reads as this round alone, and holds there long enough to be read.
     window.setTimeout(() => {
       if (!stillOurs()) return;
       breakPass.className = 'break-pass';
       breakPass.textContent = '';
       revealMvp();
     }, sched.settleAt);
+
+    playMerge(sched);
+  }
+
+  /** Flip the header pill between the two stages. Re-triggers `fchip-in` on every
+   *  call (remove the class, force a reflow, add it back) so the flip is a beat
+   *  you see rather than a word that silently changed while you were reading the
+   *  numbers underneath it. */
+  function setBreakStage(/** @type {boolean} */ merged) {
+    breakStage.textContent = merged ? t('party.stageTotal', 'Total') : t('party.stageRound', 'This round');
+    breakStage.className = 'break-stage' + (merged ? ' total' : '');
+    void breakStage.offsetWidth;
+    breakStage.classList.add('flip');
+  }
+
+  /** Land the per-row round chips (`+N` beside the total). They are in the DOM
+   *  from the first frame at `opacity: 0` so they reserve their width; this is
+   *  only the fade. */
+  function showRoundChips(/** @type {HTMLElement[]} */ nodes) {
+    for (const node of nodes) {
+      const chip = node.querySelector('.round-chip');
+      if (chip) chip.classList.add('in');
+    }
   }
 
 
