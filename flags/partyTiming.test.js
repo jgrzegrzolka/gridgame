@@ -29,6 +29,10 @@ import {
   LEDGER_PASS_COUNT_MS,
   LEDGER_PASS_SETTLE_MS,
   LEDGER_PASS_SLIDE_MS,
+  LEDGER_MERGE_HOLD_MS,
+  LEDGER_MERGE_COUNT_MS,
+  LEDGER_MERGE_RANK_MS,
+  mergeBeats,
   honoursSchedule,
   HONOUR_IN_MS,
   HONOUR_HOLD_MS,
@@ -230,6 +234,57 @@ test('the ledger animation fits inside the break with reading time left over', (
   assert.ok(ROUND_BREAK_SECONDS * 1000 - motion >= ROUND_BREAK_SECONDS * 1000 / 3);
 });
 
+// ---- mergeBeats: stage two, and the reason the break got longer ----
+
+test('mergeBeats: the hold, then the count, and the re-rank lands inside it', () => {
+  const m = mergeBeats(1000);
+  assert.equal(m.mergeAt, 1000 + LEDGER_MERGE_HOLD_MS, 'the round is held before anything lands on it');
+  assert.equal(m.mergeDur, LEDGER_MERGE_COUNT_MS);
+  assert.equal(m.rankAt, m.mergeAt + LEDGER_MERGE_RANK_MS);
+  // The one ordering that matters: rows must not start sliding on the first frame
+  // of the merge, while every total on them is still climbing.
+  assert.ok(m.rankAt > m.mergeAt, 'the re-rank comes after the merge starts, never with it');
+  assert.ok(m.rankAt < m.mergeAt + m.mergeDur, 'and still inside the count, so the two read as one beat');
+  assert.equal(m.totalMs, m.rankAt + LEDGER_PASS_SLIDE_MS, 'the sequence ends when the slide does');
+});
+
+test('mergeBeats: stage two is the same length whatever stage one did', () => {
+  // Both ledger paths hang stage two off their own settle, so the merge cannot
+  // drift into being told two different ways.
+  const a = mergeBeats(0);
+  const b = mergeBeats(5000);
+  assert.equal(b.mergeAt - b.totalMs, a.mergeAt - a.totalMs);
+  assert.equal(b.totalMs - 5000, a.totalMs);
+});
+
+test('both schedules carry the merge, hung off their own stage-one settle', () => {
+  const pass = passLedgerSchedule(4, 3);
+  assert.equal(pass.mergeAt, pass.settleAt + LEDGER_MERGE_HOLD_MS);
+  const flat = ledgerSchedule(4);
+  assert.equal(flat.settleAt, flat.chipsOffAt, 'the fallback settles when its one slide finishes');
+  assert.equal(flat.mergeAt, flat.chipsOffAt + LEDGER_MERGE_HOLD_MS);
+});
+
+test('the two-stage board fits inside the break at every room size, with reading time', () => {
+  // This is the assertion that forced ROUND_BREAK_SECONDS from 8 to 12: at eight
+  // seats and four passes the OLD sequence already ran ~7.1 s, so appending the
+  // hold, the merge and the re-rank put stage two past the moment the host sends
+  // `next` — the new stage would have been invisible exactly where it matters most.
+  for (const rows of [2, 4, 8, 12]) {
+    for (const passes of [0, 1, 2, 3, 4]) {
+      const s = passLedgerSchedule(rows, passes);
+      assert.ok(
+        s.totalMs < ROUND_BREAK_SECONDS * 1000,
+        `${rows} rows / ${passes} passes takes ${s.totalMs}ms, past the ${ROUND_BREAK_SECONDS}s break`,
+      );
+      assert.ok(
+        ROUND_BREAK_SECONDS * 1000 - s.totalMs >= 500,
+        `${rows} rows / ${passes} passes leaves only ${ROUND_BREAK_SECONDS * 1000 - s.totalMs}ms to read the board`,
+      );
+    }
+  }
+});
+
 test('ledgerSchedule: the rows slide only AFTER the counting finishes', () => {
   const s = ledgerSchedule(4);
   const countEndsAt = s.countAt + LEDGER_COUNT_MS;
@@ -281,18 +336,10 @@ test('passLedgerSchedule: the MVP reveal lands as the last pass finishes sliding
   const s = passLedgerSchedule(4, 3);
   const last = s.steps[s.steps.length - 1];
   assert.equal(s.settleAt, last.slideAt + LEDGER_PASS_SLIDE_MS);
-  assert.equal(s.totalMs, s.settleAt);
-});
-
-test('passLedgerSchedule: even a 4-pass, 8-row break fits inside the round break with reading time', () => {
-  for (const passes of [1, 2, 3, 4]) {
-    const s = passLedgerSchedule(8, passes);
-    assert.ok(s.totalMs < ROUND_BREAK_SECONDS * 1000, `${passes} passes @ 8 rows must finish before the host advances`);
-    assert.ok(
-      ROUND_BREAK_SECONDS * 1000 - s.totalMs >= 500,
-      `${passes} passes: at least half a second to read the settled board`,
-    );
-  }
+  // `settleAt` ends stage ONE. `totalMs` runs to the end of stage two, so the two
+  // are no longer the same instant — the hold between them is the whole feature.
+  assert.ok(s.totalMs > s.settleAt);
+  assert.equal(s.totalMs, s.rankAt + LEDGER_PASS_SLIDE_MS);
 });
 
 test('passLedgerSchedule: a round nobody scored is just the hold', () => {

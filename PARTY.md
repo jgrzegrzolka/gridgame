@@ -2383,6 +2383,56 @@ Nothing is lost: the strip still shows glyph, title, holder and value for every 
 dot row still says how many there are and which one is up. The `fh-right` column stays a column
 because a drawn party title has no value line and the row must not reflow around it.
 
+## Iteration 19 — the between-rounds board shows the round first — BUILT (2026-08-11)
+
+From the design canvas (`Yetanotherquiz Flag Party Changes.dc.html`, option **3a**, and its
+`CLAUDE_CODE_PROMPT_round_board.md`). The break board opened at each player's **carried total** and
+counted the round into it, so the round was only ever legible as a *difference* between two numbers —
+"who just won that round" was a question the screen could not answer, and the pass chips were its only
+trace.
+
+**The standings stay.** Showing the round alone is simpler and is wrong: the last round has to stay
+worth playing, and the ending needs the gap to be known. So the beat is reordered, not replaced.
+
+- **Stage one is the round.** Every row opens at **zero**, ranked by this round alone; the four
+  bucket passes count into that number exactly as before. Nothing about the passes changed.
+- **A 1300 ms hold** on the settled round result, with the round's best line under the board. This
+  hold is the feature — a number that is never still is a number nobody reads.
+- **Stage two is the merge.** The carried total counts on top over 900 ms (`countUp`'s ease-out
+  cubic), the header pill flips, and the rows re-rank **620 ms after the merge starts** — after the
+  numbers have visibly stopped, never during.
+- **The round survives being absorbed**: `+N` stays as `.round-chip` beside each total, so a player
+  who gained 19 and still sits fourth reads both facts off one row.
+
+**The header pill is not optional.** `#break-stage` says "This round" / "Total" (`party.stageRound` /
+`party.stageTotal`). The board's numbers change meaning halfway through the beat, and a board of
+unlabelled numbers that quietly starts meaning something else is the one way this reads as a bug.
+
+**`ROUND_BREAK_SECONDS` 8 → 12.** Forced, not a taste call: at eight seats and four passes the old
+sequence already ran ~7.1 s, so appending hold + merge + re-rank put stage two *past* the moment the
+host sends `next` — the new stage would have been invisible at exactly the table sizes it matters most
+for. A test now walks 2/4/8/12 rows × 0–4 passes and pins that the whole two-stage sequence finishes
+with ≥500 ms of stillness. The cost: a small room whose round earned one bucket now sits longer on a
+settled board. Same trade this file has taken before — reading time is the scarce thing — and a flat
+number stays something a host can predict.
+
+**`breakOpeningOrder` lost its `hasPrev` branch.** It used to seat later breaks in the *previous*
+break's order, which only meant anything while the rows opened at `prevScore`. They open at zero now,
+so every break opens alphabetically: a neutral order the round's points rearrange into a ranking.
+Seating by a score the board is not showing would assert an order its own numbers contradict.
+
+`mergeBeats(settleAt)` is shared by both ledger paths — the bucket passes and the
+count-up-in-one-go fallback a non-reconciling split falls back to — so the merge cannot drift into
+being told two different ways. The **first** break of a game carries nothing, and there the merge
+count-up and its hold are skipped (the pill still flips and the chip still lands, since the round *is*
+the total); everything else is unchanged.
+
+Verified in a real 3-seat game against the local PartyKit + SWA stack, at both the first break (rows
+0 → 30/22/15, pill flips, no dead count) and the second (round 34/20/0 held, then merged to
+64/35/22 with `+34 / +20 / +0` chips, Plucky Harbour dropping from 2nd to 3rd on a 0-point round —
+the exact story the old board could not tell). Reduced motion lands on the settled totals with the
+chips and pill already true.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).

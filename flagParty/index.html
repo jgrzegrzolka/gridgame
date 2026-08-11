@@ -402,9 +402,17 @@
         <!-- "Standings" and the bucket-pass banner share one line — the pill names
              which scoring bucket is banking right now (Correct / Speed / Only one /
              Close), riding at the right so it costs no vertical band. Empty and
-             invisible between passes; aria-live so a screen reader hears each. -->
+             invisible between passes; aria-live so a screen reader hears each.
+
+             `#break-stage` sits with the label and says WHICH NUMBER is on the
+             board — "This round" while stage one builds the round from zero, then
+             "Total" once the carried score merges in. It is not decoration: the
+             board's numbers change meaning halfway through the beat, and a board
+             of unlabelled numbers that quietly starts meaning something else is
+             the one way this reads as a bug. -->
         <div class="break-head">
           <span class="plabel" id="break-standings-label"></span>
+          <span class="break-stage" id="break-stage" aria-live="polite"></span>
           <span class="break-pass" id="break-pass" aria-live="polite"></span>
         </div>
         <div class="break-board" id="break-board"></div>

@@ -761,6 +761,8 @@
     "passCorrect": "Correct",
     "passSpeed": "Speed",
     "passClose": "Close",
+    "stageRound": "This round",
+    "stageTotal": "Total",
     "tie": "It's a tie!",
     "playAgain": "Play again",
     "backToSettings": "Back to settings",

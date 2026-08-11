@@ -103,20 +103,24 @@ test('prevScore is the real prior total even where the gain clamp bites', () => 
 
 // --- breakOpeningOrder: the slot order the ledger opens in, before any points ---
 
-test('first break opens ALPHABETICALLY by nickname, not in final score order', () => {
+test('the board opens ALPHABETICALLY by nickname, not in final score order', () => {
   // Score order is charlie, alice, bob; the opening seat must be alice, bob, charlie
   // so the slide starts from a neutral order and actually moves as points land,
   // rather than opening already-sorted (which read as a pointless shuffle).
   const { rows } = roundBreak(null, board(['charlie', 30], ['alice', 20], ['bob', 10]));
-  assert.deepEqual(breakOpeningOrder(rows, false), [1, 2, 0]);
+  assert.deepEqual(breakOpeningOrder(rows), [1, 2, 0]);
 });
 
-test('later breaks open in the PREVIOUS break order (prevScore descending)', () => {
-  const prev = board(['a', 30], ['b', 20], ['c', 10]); // a, b, c
-  const curr = board(['c', 40], ['a', 35], ['b', 22]); // final order c, a, b
+test('a later break opens alphabetically too — carried score does not seat the board', () => {
+  // Stage one is THIS round, opened at zero for everyone, so the previous break's
+  // standing has nothing to say about the opening seat. It used to: the rows
+  // opened at `prevScore`, in prevScore order. Seating by a score the board is
+  // not showing would assert an order its own numbers contradict.
+  const prev = board(['charlie', 30], ['alice', 20], ['bob', 10]);
+  const curr = board(['bob', 40], ['charlie', 35], ['alice', 22]); // final order bob, charlie, alice
   const { rows } = roundBreak(prev, curr);
-  // Opens in last break's order a, b, c -> indices 1, 2, 0 into the final-order rows.
-  assert.deepEqual(breakOpeningOrder(rows, true), [1, 2, 0]);
+  // alice, bob, charlie -> indices 2, 0, 1 into the final-order rows.
+  assert.deepEqual(breakOpeningOrder(rows), [2, 0, 1]);
 });
 
 test('opening order is name-case- and diacritic-insensitive, numeric-aware, stable on ties', () => {
@@ -127,5 +131,5 @@ test('opening order is name-case- and diacritic-insensitive, numeric-aware, stab
     { playerId: 'p3', nickname: 'Ámy', score: 0, prevScore: 0, roundGain: 0, rankDelta: null, gapToLeader: 0 },
   ];
   // Ámy < Player2 < player10 (base sensitivity folds the accent + case, numeric keeps 2 < 10).
-  assert.deepEqual(breakOpeningOrder(rows, false), [2, 0, 1]);
+  assert.deepEqual(breakOpeningOrder(rows), [2, 0, 1]);
 });
