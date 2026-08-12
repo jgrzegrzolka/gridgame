@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideBuzz, validateBotSkill, delayWindowFor, accuracyFor, buzzAccuracy, modeKeyFor, spreadGapOf, statAccuracyFor, veilSightMs, BOT_SKILLS, MODE_PROFILE, STAT_ACCURACY, PICKER_BONUS, ACCURACY_CEILING, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
+import { decideBuzz, validateBotSkill, delayWindowFor, accuracyFor, buzzAccuracy, modeKeyFor, spreadGapOf, statAccuracyFor, veilSightMs, applyFamiliarity, BOT_SKILLS, MODE_PROFILE, STAT_ACCURACY, PICKER_BONUS, ACCURACY_CEILING, ACCURACY_FLOOR, VEIL_SIGHT, VEIL_CEILING_MS, DEFAULT_BOT_SKILL, BOT_SKILL_ORDER } from './partyBot.js';
+import { FAMILIARITY_F } from './partyQuestions/superlativeCatalog.js';
 
 /** A deterministic rng that yields the given values in order, then repeats the last.
  *  @param {number[]} values */
@@ -421,15 +422,45 @@ test('statAccuracyFor: rises with the gap, spans the range, ascends by skill', (
   }
 });
 
+/** The same two questions asked about a metric of middling fame. */
+const RUNAWAY_KNOWN = { ...RUNAWAY, questionId: 'superlative-corruption', modeId: 'superlative-corruption' };
+const CLOSE_KNOWN = { ...NECK_AND_NECK, questionId: 'superlative-corruption', modeId: 'superlative-corruption' };
+/** And about one nobody has strong feelings about. */
+const CLOSE_NICHE = { ...NECK_AND_NECK, questionId: 'superlative-gold', modeId: 'superlative-gold' };
+
 test('a statistic straddles the flag pick: a clear one is easier, a close one harder', () => {
   // The point of the range. A world-facts round is not uniformly easier or harder
   // than recognising a flag — it depends entirely on how far apart the numbers are,
   // which is the same thing that decides it for a person.
+  //
+  // Asked about a KNOWN metric, the tier that still straddles cleanly at every
+  // skill. Familiarity narrowed this claim in both directions and the two edges are
+  // pinned separately below: a household metric clears the preset even on a coin
+  // flip, and a niche-or-lower one can sit under it even on a fairly clear question.
   for (const skill of BOT_SKILL_ORDER) {
     const base = BOT_SKILLS[skill].accuracy;
-    assert.ok(buzzAccuracy(RUNAWAY, skill) > base, `${skill}: a runaway beats a flag pick`);
-    assert.ok(buzzAccuracy(NECK_AND_NECK, skill) < base, `${skill}: a coin flip is worse`);
+    assert.ok(buzzAccuracy(RUNAWAY_KNOWN, skill) > base, `${skill}: a runaway beats a flag pick`);
+    assert.ok(buzzAccuracy(CLOSE_KNOWN, skill) < base, `${skill}: a coin flip is worse`);
   }
+});
+
+// The one place familiarity changed an outcome the module used to state flatly, so
+// it is pinned rather than left to be rediscovered as a regression. RUNAWAY and
+// NECK_AND_NECK are both population questions — the most familiar metric there is —
+// and a close population question no longer falls below a flag pick, because a
+// player who follows nothing else still has some feel for which country is bigger.
+//
+// If this reads as too generous in play, METRIC_FAMILIARITY_SWING is the dial, and
+// this test is what will tell you the straddle has come back.
+test('familiarity lifts even a coin-flip question on a household metric', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    assert.ok(
+      buzzAccuracy(NECK_AND_NECK, skill) > buzzAccuracy(CLOSE_NICHE, skill),
+      `${skill}: a close population question beats a close gold one`,
+    );
+  }
+  assert.ok(buzzAccuracy(NECK_AND_NECK, 'easy') > BOT_SKILLS.easy.accuracy,
+    'and at Easy it clears the flag-pick preset, unlike the niche case above');
 });
 
 test('buzzAccuracy: a statistics question ignores the mode table entirely', () => {
@@ -480,6 +511,112 @@ test('decideBuzz: the picker bonus reaches the roll, and moves nothing else', ()
         decideBuzz(q, skill, seq([0, roll])).delayMs,
         `${skill} at roll ${roll}: same window`,
       );
+    }
+  }
+});
+
+// --- metric familiarity -----------------------------------------------------
+
+test('ACCURACY_FLOOR sits at chance, below every preset the module ships', () => {
+  assert.equal(ACCURACY_FLOOR, 0.25, 'chance on a four-tile board');
+  assert.ok(ACCURACY_FLOOR < ACCURACY_CEILING);
+  for (const skill of BOT_SKILL_ORDER) {
+    assert.ok(BOT_SKILLS[skill].accuracy > ACCURACY_FLOOR, `${skill} preset`);
+    assert.ok(STAT_ACCURACY[skill].min > ACCURACY_FLOOR, `${skill} statistics floor`);
+    for (const mode of Object.keys(MODE_PROFILE)) {
+      assert.ok(accuracyFor(mode, skill) > ACCURACY_FLOOR, `${mode}/${skill}`);
+    }
+  }
+});
+
+test('applyFamiliarity: raises for known, lowers for obscure, identity at zero', () => {
+  const acc = 0.8;
+  assert.equal(applyFamiliarity(acc, 0), acc);
+  assert.ok(applyFamiliarity(acc, 1) > acc);
+  assert.ok(applyFamiliarity(acc, 0.33) > acc);
+  assert.ok(applyFamiliarity(acc, -0.33) < acc);
+  assert.ok(applyFamiliarity(acc, -1) < applyFamiliarity(acc, -0.33));
+  assert.ok(applyFamiliarity(acc, 1) > applyFamiliarity(acc, 0.33));
+});
+
+// The property the headroom formula exists for: self-bounding, so no clamp is
+// papering over an out-of-range value at the extremes.
+test('applyFamiliarity never crosses a bound, at any skill, gap or tier', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    for (let gap = 0; gap <= 1.0001; gap += 0.05) {
+      for (const f of Object.values(FAMILIARITY_F)) {
+        const out = applyFamiliarity(statAccuracyFor(gap, skill), f);
+        assert.ok(out >= ACCURACY_FLOOR, `${skill}/${gap.toFixed(2)}/${f}: ${out} under the floor`);
+        assert.ok(out <= ACCURACY_CEILING, `${skill}/${gap.toFixed(2)}/${f}: ${out} over the ceiling`);
+      }
+    }
+  }
+});
+
+// Obscurity has to bite the strong bot, whose 96% was the complaint, not the weak
+// one — pushing Easy toward a coin flip makes it broken, not easy. The headroom
+// formula delivers that ordering for free, since a higher accuracy has further to
+// fall before it reaches the floor.
+test('the obscure penalty is heaviest at Hard and lightest at Easy', () => {
+  /** @param {string} skill */
+  const drop = (skill) => {
+    const before = statAccuracyFor(0.85, skill);
+    return before - applyFamiliarity(before, FAMILIARITY_F.obscure);
+  };
+  assert.ok(drop('hard') > drop('medium'), 'hard falls further than medium');
+  assert.ok(drop('medium') > drop('easy'), 'medium falls further than easy');
+  assert.ok(drop('easy') < drop('hard') * 0.7, 'and easy moves markedly less than hard');
+  // The floor is what limits it, so no skill can be pushed through: an obscure
+  // metric at the STATISTICS floor still clears chance comfortably.
+  for (const skill of BOT_SKILL_ORDER) {
+    const worst = applyFamiliarity(statAccuracyFor(0, skill), FAMILIARITY_F.obscure);
+    assert.ok(worst > ACCURACY_FLOOR, `${skill}: ${worst} still beats a coin`);
+  }
+});
+
+test('buzzAccuracy reads the metric familiarity off the question id', () => {
+  const gapped = { ranking: ['a', 'b', 'c'], values: { a: 100, b: 20, c: 0 } };
+  const bare = statAccuracyFor(/** @type {number} */ (spreadGapOf(gapped)), 'hard');
+  /** @param {string} questionId */
+  const asked = (questionId) => buzzAccuracy({ ...gapped, questionId }, 'hard');
+  assert.ok(asked('superlative') > bare, 'population lifts it');
+  assert.ok(asked('superlative-cocoa') < bare, 'cocoa drops it');
+  // A question id from a newer server, and one with no id at all: no adjustment
+  // rather than a guessed tier, which is how these played before the table existed.
+  assert.equal(asked('superlative-unobtainium'), bare);
+  assert.equal(buzzAccuracy(gapped, 'hard'), bare);
+});
+
+// THE regression test, and the reason it is written as a comparison rather than a
+// shape assertion: the bug was an ORDERING, and every structural check in this file
+// passed against it. Cocoa deals a median gap of 0.90 and population 0.31 (measured
+// over 400 generated questions each), so before familiarity a Hard bot answered the
+// metric nobody knows at 97% and the one everybody knows at 85%. Any change that
+// re-inverts this passes the tests above and fails here.
+test('the bot is not more accurate on an obscure metric than a household one', () => {
+  /** @param {string} questionId @param {number} gap */
+  const question = (questionId, gap) => ({
+    questionId,
+    ranking: ['a', 'b', 'c'],
+    // Two values that produce exactly `gap`: |a-b| / |a-c| with c at 0.
+    values: { a: 100, b: 100 - gap * 100, c: 0 },
+  });
+  const COCOA_MEDIAN_GAP = 0.90;
+  const POPULATION_MEDIAN_GAP = 0.31;
+  for (const skill of BOT_SKILL_ORDER) {
+    const cocoa = buzzAccuracy(question('superlative-cocoa', COCOA_MEDIAN_GAP), skill);
+    const population = buzzAccuracy(question('superlative', POPULATION_MEDIAN_GAP), skill);
+    assert.ok(population > cocoa,
+      `${skill}: population ${population.toFixed(2)} must beat cocoa ${cocoa.toFixed(2)} `
+      + 'despite cocoa dealing the far bigger gap');
+  }
+});
+
+test('familiarity applies to statistics only, never to a flag or map round', () => {
+  for (const skill of BOT_SKILL_ORDER) {
+    for (const mode of ['flags-all', 'flags-weird', 'spot-flag', 'map-outlines']) {
+      assert.equal(buzzAccuracy({ modeId: mode }, skill), accuracyFor(mode, skill),
+        `${mode}/${skill}: still exactly the mode table's number`);
     }
   }
 });

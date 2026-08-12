@@ -433,6 +433,109 @@ export const SUPERLATIVE_METRICS = [
   },
 ];
 
+/**
+ * How well known a metric is to a person — the fourth fact about a metric that
+ * its data cannot tell you, and the one the **bot** reads (`flags/partyBot.js`).
+ *
+ * A statistics round's bot accuracy scales with how far the answer stands out
+ * from the field (`spreadGapOf`), which is a property of the four countries
+ * drawn. That alone got the ordering exactly backwards, and the numbers are
+ * worth stating because they are not intuitive: cocoa deals a median gap of
+ * 0.90 (Ivory Coast dwarfs whoever else is on the board) while population deals
+ * 0.31 (four countries are rarely orders apart). So a Hard bot answered cocoa at
+ * 97% and population at 85% — hardest on the metric nobody knows, gentlest on
+ * the one everybody does. The gap is real, but it measures the *numbers* pulling
+ * apart, not a person's chance of knowing which way.
+ *
+ * **Why a grouped table and not a field on each entry above.** Every other fact
+ * in this file is intrinsic to one metric — coffee's direction lock is true of
+ * coffee whatever else exists. Familiarity is *comparative*: the only question
+ * it answers is "is tea better known than cocoa", and the only way to audit it
+ * is to see the tiers side by side. Spread across 39 object literals it would be
+ * unreviewable, which is how a table like this quietly rots.
+ *
+ * **Four tiers, not a number per metric.** A continuous 0-1 is 39 arguments
+ * about individual decimals; four buckets are a judgement anyone can check at a
+ * glance and re-sort in one edit. The values are the position in [-1, +1] that
+ * `flags/partyBot.js` scales its swing by.
+ */
+export const FAMILIARITY_F = /** @type {const} */ ({
+  household: 1,
+  known: 0.33,
+  niche: -0.33,
+  obscure: -1,
+});
+
+/**
+ * The tiers, by metric key. Pinned by `superlativeCatalog.test.js` — every
+ * catalog metric appears exactly once, so a metric added without a tier fails CI
+ * rather than silently defaulting to "average" and inheriting the bias above.
+ *
+ * The bar is "does a typical player have any purchase on ranking four countries
+ * by this", not "is the metric interesting":
+ *
+ *  - **household** — everyone carries a rough mental model already.
+ *  - **known** — general knowledge gets you there (the Gulf states pump oil, the
+ *    Nordics top the happiness table, France and Italy make the wine).
+ *  - **niche** — a proxy gets you close but you are mostly guessing. Note `tea`
+ *    and `coal` sit here rather than in obscure: both deal enormous gaps, but
+ *    "China" is a strong enough association that a player is not lost. These two
+ *    are the least settled calls in the table.
+ *  - **obscure** — no purchase at all. Cocoa is the type specimen: the answer is
+ *    almost always Ivory Coast and almost nobody knows that.
+ *
+ * @type {Record<keyof typeof FAMILIARITY_F, string[]>}
+ */
+export const FAMILIARITY_TIERS = {
+  household: ['population', 'area', 'gdp'],
+  known: [
+    'gdpPerCapita', 'density', 'temperature', 'happiness', 'corruption',
+    'coastline', 'elevation', 'borders', 'forest', 'oil', 'coffee', 'wine',
+    'summerMedals', 'nobel',
+  ],
+  niche: [
+    'rice', 'banana', 'apple', 'gold', 'oliveOil', 'coal', 'tea', 'winterMedals',
+    'nobelPerCapita', 'summerMedalsPerCapita', 'tourismPerCapita',
+    'electricityPerCapita', 'meatPerCapita', 'beerPerCapita', 'alcoholPerCapita',
+    'mcdonaldsPerMillion',
+  ],
+  obscure: [
+    'cocoa', 'sugarcane', 'honey',
+    'sheepPerCapita', 'cattlePerCapita', 'winterMedalsPerCapita',
+  ],
+};
+
+/**
+ * The per-capita metrics whose base metric is also in the catalog, and what that
+ * base is.
+ *
+ * **The guideline:** a per-capita metric is never better known than the metric it
+ * normalises. Everyone can rank four countries by total Olympic medals; almost
+ * nobody can do it per head. So `winterMedalsPerCapita` sits a tier below
+ * `winterMedals`, and so on down the list.
+ *
+ * Stated as data + a test rather than computed, because only these four of the
+ * twelve per-capita metrics have a base here at all — `sheepPerCapita` and
+ * `beerPerCapita` have no "total sheep" question to derive from. Deriving four
+ * entries would need a base pointer on every metric to serve a third of the
+ * cases; a test that refuses a violation gives the same protection and keeps the
+ * tier lists above readable as the plain judgement they are.
+ *
+ * @type {Record<string, string>}
+ */
+export const PER_CAPITA_BASE = {
+  gdpPerCapita: 'gdp',
+  nobelPerCapita: 'nobel',
+  summerMedalsPerCapita: 'summerMedals',
+  winterMedalsPerCapita: 'winterMedals',
+};
+
+/** @type {Record<string, number>} */
+const FAMILIARITY_BY_KEY = Object.fromEntries(
+  Object.entries(FAMILIARITY_TIERS).flatMap(([tier, keys]) =>
+    keys.map((key) => [key, FAMILIARITY_F[/** @type {keyof typeof FAMILIARITY_F} */ (tier)]])),
+);
+
 /** @type {Record<string, SuperlativeMetric>} */
 const BY_QUESTION_ID = Object.fromEntries(SUPERLATIVE_METRICS.map((m) => [m.questionId, m]));
 
@@ -454,6 +557,28 @@ export function superlativeMetricByQuestionId(questionId) {
  */
 export function superlativeMetricByKey(key) {
   return BY_KEY[key] ?? null;
+}
+
+/**
+ * This metric's familiarity in [-1, +1], by the **question id** the server deals.
+ *
+ * Keyed on questionId rather than metric key because that is what a question
+ * carries, and because the two diverge for exactly one metric: population's mode
+ * is `superlative-pop` but its question id is the bare `superlative` (it predates
+ * the suffix convention). Resolving through the catalog rather than a second map
+ * means that quirk is handled in one place.
+ *
+ * Null for anything that is not a catalog metric — a flag or map question, or a
+ * question id from a newer server this build has never heard of. The caller
+ * (`flags/partyBot.js`) treats null as "no adjustment", which is exactly how
+ * statistics rounds played before this table existed.
+ *
+ * @param {string} [questionId]
+ * @returns {number | null}
+ */
+export function familiarityForQuestion(questionId) {
+  const metric = typeof questionId === 'string' ? BY_QUESTION_ID[questionId] : undefined;
+  return metric ? (FAMILIARITY_BY_KEY[metric.key] ?? null) : null;
 }
 
 /**

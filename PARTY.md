@@ -2433,6 +2433,77 @@ Verified in a real 3-seat game against the local PartyKit + SWA stack, at both t
 the exact story the old board could not tell). Reduced motion lands on the settled totals with the
 chips and pill already true.
 
+## Iteration 20 — the bot knows which statistics people actually know — BUILT (2026-08-12)
+
+A statistics round's bot accuracy scaled with one thing: how far the answer stood out from the other
+three (`spreadGapOf`). That is a property of the four countries drawn, and taken alone it got the
+difficulty ordering **exactly backwards**. Measured over 400 generated questions per metric:
+
+| metric | median gap | Hard bot, before |
+|---|---|---|
+| cocoa | 0.90 | 95% |
+| tea | 0.95 | 95% |
+| population | 0.31 | 87% |
+| gdp | 0.34 | 88% |
+
+Cocoa deals a huge gap because Ivory Coast dwarfs whoever else is on the board, and population deals a
+small one because four countries are rarely orders apart. So the bot was **hardest on the metrics
+nobody knows and gentlest on the ones everybody knows** — the opposite of the handicap it is supposed
+to be. The gap is a real signal, it just measures the numbers pulling apart rather than a person's
+chance of knowing which way.
+
+**The fix is a fourth layer, not a change to the gap.** `flags/partyBot.js` now reads a per-metric
+**familiarity tier** and moves the gap's answer by it. The order of the layers is mode → gap →
+metric → seat, and each is still separately explainable.
+
+- **Four tiers** (`FAMILIARITY_TIERS` in `partyQuestions/superlativeCatalog.js`): household (3
+  metrics), known (14), niche (16), obscure (6), at f = +1 / +0.33 / −0.33 / −1. Four buckets rather
+  than a number per metric, because a continuous scale is 39 arguments about individual decimals.
+- **Grouped, not a field on each catalog entry.** Every other fact in that file is intrinsic to one
+  metric; familiarity is *comparative* — the only question it answers is "is tea better known than
+  cocoa", and the only way to audit it is to see the tiers side by side.
+- **The swing is a fraction of the headroom**, not flat points. A flat penalty breaks at Easy, where
+  statistics already floor at 40% and chance on four tiles is 25%: fifteen points of room in total.
+  Scaling by what is left is self-bounding and puts the weight where it belongs for free — at Hard an
+  obscure metric drops ~25 points, at Easy the same tier drops ~14, because Easy had nowhere to go.
+  Obscurity should punish the strong bot, whose 95% was the complaint.
+- **`ACCURACY_FLOOR = 0.25`** is new, and worth having regardless: `METRIC_FAMILIARITY_SWING` is the
+  first dial in the module that pushes *down* from a preset rather than up, and nothing previously
+  recorded that chance on a four-tile board is a wall. Easy map-outlines at 0.30 was already only
+  five points clear of it.
+
+Result, averaged over real generated questions:
+
+| | household | known | niche | obscure |
+|---|---|---|---|---|
+| easy | 55 → **71%** | 60 → 65% | 64 → 59% | 65 → **51%** |
+| medium | 74 → **83%** | 79 → 81% | 82 → 75% | 83 → **63%** |
+| hard | 87 → **91%** | 90 → 91% | 92 → 84% | 93 → **69%** |
+
+**One behaviour changed that the module used to state flatly**, and it is pinned rather than left to
+be rediscovered: a *close* question on a household metric no longer falls below the flag-pick preset.
+"China 1410 vs India 1400" now plays at 61% on Easy against a flag pick's 50%, on the reasoning that a
+player who follows nothing else still has some feel for which country is bigger. If that reads as too
+generous in play, `METRIC_FAMILIARITY_SWING` is the single dial — it moves every metric at once and
+keeps the tiers' relative order intact, which is what you want before re-arguing individual metrics.
+
+**`tea` and `coal` sit in niche, not obscure** — both deal enormous gaps, but "China" is a strong
+enough association that a player is not lost. These are the least settled calls in the table.
+
+**The per-capita guideline** (`PER_CAPITA_BASE`): a per-capita metric is never better known than the
+metric it normalises — everyone can rank four countries by total Olympic medals, almost nobody can do
+it per head. Stated as data plus a test rather than computed, because only 4 of the 12 per-capita
+metrics have a base in the catalog at all.
+
+The regression test is written as a **comparison, not a shape assertion**, because the bug was an
+ordering and every structural check in `partyBot.test.js` passed against it. Anything that re-inverts
+population against cocoa fails there and nowhere else.
+
+**Not done here:** statistics rounds still buzz on the flag-pick clock (6–9 / 3–6 / 1–3 s). Reading
+four flags, mapping them to countries and ranking them by coffee output is nothing like one
+recognition, and the bot pays nothing for it. That wants a delay window for the whole metric family —
+a separate change, since how hard a round is and how long it takes to answer are separate dials.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).
