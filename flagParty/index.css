@@ -292,6 +292,10 @@
    412) and drops it only on the 360-class ones. */
 @media (max-width: 379px) {
   .bot-seat-scale { display: none; }
+  /* One px of side padding back on the narrowest phone still worth supporting.
+     It is the difference between the longest title landing whole at 320 and
+     landing one character short. */
+  .final-honours { padding: 9px 11px; }
 }
 /* The host's remove-bot ×, pushed to the trailing edge of the chip. */
 .chip-remove {
@@ -1667,7 +1671,15 @@ body.party-break > .burger {
 .final-winner .avatar { width: 46px; height: 46px; font-size: 17px; }
 .final-winner .fw-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .final-winner .fw-name { font-size: 20px; font-weight: var(--weight-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.final-winner .fw-crown { font-size: 11px; color: var(--accent-rose); }
+/* "♛ Winner · ⚡ Fastest Finger in the West". Two spans, because when this line
+   runs out of room the crown is the half that must survive: it says the person
+   won, which is the whole point of the card. So `♛ Winner ·` is pinned and only
+   the title after it may truncate. At 390 px the longest title does not need
+   this — a long typed-in name does. */
+.final-winner .fw-crown { font-size: 11px; color: var(--accent-rose); min-width: 0; overflow: hidden; }
+.final-winner .fw-crown-run { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.final-winner .fw-crown-lead { flex: none; }
+.final-winner .fw-crown-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .final-winner .fw-score { font-size: 26px; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
 
 /* ONE reserved line, cycling. This replaces a title under each honoured seat's
@@ -1675,34 +1687,64 @@ body.party-break > .burger {
    something only three of them earned. It also means an honoured seat keeps its
    mention when its row is scrolled out of view — which is the case that decides
    it at twelve seats. */
+/* TWO lines, not one. The strip used to lay the title and its value on a single
+   row with the value block sized to its content, so the value took what it needed
+   and the TITLE — the thing being awarded — got the remainder and was clipped. At
+   390 px the longest title in the set ("Najszybszy palec Zachodu") needed 171 px
+   and was given 144: "NAJSZYBSZY PALEC ZA…". Every other title is short enough to
+   survive, which is why it went unnoticed; the one that breaks is also one of the
+   most likely to be awarded.
+
+   row 1:  [glyph]  TITLE                          <- the full width
+   row 2:           winner              value      <- value right-aligned
+
+   The value is the line that yields now, and that is the right way round: the
+   value restates what the title was for, the title IS the award. */
 .final-honours {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 3px;
   margin-top: 10px;
-  padding: 8px 12px;
+  padding: 9px 12px;
   background: var(--surface-color);
   border: 1px solid var(--muted-soft-color);
   border-radius: 12px;
 }
 .final-honours[hidden] { display: none; }
-.final-honours .fh-glyph { flex: none; font-size: 13px; font-weight: var(--weight-bold); color: var(--accent-rose); }
-.final-honours .fh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.final-honours .fh-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.final-honours .fh-glyph { flex: none; font-size: 12px; font-weight: var(--weight-bold); color: var(--accent-rose); }
+/* 12px with the tracking cut to .04em, up from 11px at .08em. Counter-intuitive
+   but it nets MORE characters per line, not fewer — the tracking was costing more
+   width than the extra point of size buys. Ellipsis is kept as a last resort for a
+   title longer than any in today's set. */
 .final-honours .fh-label {
-  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.3;
   color: var(--muted-color);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.final-honours .fh-who { font-size: 13px; font-weight: var(--weight-bold); }
+/* 19px = the glyph's width plus the head's gap, so the winner's name starts under
+   the TITLE rather than under the glyph. */
+.final-honours .fh-sub { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding-left: 19px; }
+.final-honours .fh-who { flex: none; font-size: 13px; font-weight: var(--weight-bold); }
 /* The value, and only the value — a title that never got a ceremony screen wears
-   no mark saying so (see the note in page.js). The column stays a column because a
-   drawn party title has no value at all and the row must not reflow around it. */
-.final-honours .fh-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.final-honours .fh-value { font-size: 11px; color: var(--muted-color); }
+   no mark saying so (see the note in page.js). */
+.final-honours .fh-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* One dot per awarded title, so the strip reads as a set being cycled rather
    than a line that changes on its own — at seven titles a full pass takes 21 s,
@@ -1768,6 +1810,36 @@ body.party-break > .burger {
   .winner-crown.land { animation: party-sub-pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
   .final-winner.land { animation: cer-header-land 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
   .final-honours.swap { animation: scoreline-fade-in 0.26s ease both; }
+
+  /* The line that still cannot fit: at 320 px the crown, the title and a
+     typed-in name do not all go, however the row is built, and there is nothing
+     left to drop. So instead of cutting it, it flows — set by `fitWinnerCrown`
+     in page.js, which measures first and adds `.flowing` ONLY when the title is
+     actually being clipped. A line that fits never moves.
+
+     Everything about the effect lives inside this no-preference block on
+     purpose, so `.flowing` is inert under reduced motion and the pinned-crown
+     ellipsis above is what a reduced-motion player sees. That is the documented
+     fallback, and it costs nothing to get it this way round.
+
+     Never applied to the strip's title: the two-line strip already fits every
+     title in the set, and two things sliding at once is unreadable. */
+  .final-winner .fw-crown.flowing {
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent 100%);
+  }
+  /* The run stops shrinking to fit and is allowed to be wider than its box; the
+     translate is what brings the tail into view. */
+  .final-winner .fw-crown.flowing .fw-crown-run {
+    display: inline-flex;
+    white-space: nowrap;
+    animation: flow-peek 6s cubic-bezier(0.4, 0, 0.4, 1) infinite;
+  }
+  .final-winner .fw-crown.flowing .fw-crown-title {
+    flex: none;
+    overflow: visible;
+    text-overflow: clip;
+  }
   .pt-final .final-board .scoreline.enter-board {
     animation: scoreline-fade-in 0.24s ease both;
     animation-delay: var(--enter-delay, 0ms);
@@ -1800,4 +1872,18 @@ body.party-break > .burger {
 @keyframes cer-header-land {
   from { transform: scale(1.06); }
   to   { transform: scale(1); }
+}
+
+/* A line too long for its box, peeking at its own tail. NOT a marquee: it holds
+   still at each end long enough to be read, and a line that fits never runs this
+   at all (`fitWinnerCrown` only sets `--flow` when the text is really clipped).
+
+   Reads as: ~1 s still at the start, slide, ~1 s still at the tail, return.
+   6 s round trip against the honours strip's 3 s cycle, so the two are never in
+   motion together — one thing moving on the last screen of the night is a detail,
+   two is a fairground. */
+@keyframes flow-peek {
+  0%, 16%   { transform: translateX(0); }
+  62%, 78%  { transform: translateX(var(--flow)); }
+  96%, 100% { transform: translateX(0); }
 }

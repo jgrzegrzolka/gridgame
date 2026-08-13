@@ -17,6 +17,7 @@ import { dockSpecFor } from './dockSpec.js';
 import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
 import { isPartyTitle, soleWinnerId } from '../flags/partyHonours.js';
+import { flowDistance } from './crownFlow.js';
 import { runCelebration } from '../confetti.js';
 import { QUESTION_SECONDS, revealSecondsFor, barPaints, ROUND_BREAK_SECONDS, ROUND_INTRO_SECONDS, PICK_TIMEOUT_SECONDS, secondsLeft, remainingFraction, veilProgress, namesRevealed, isMetricQuestion, veilActive as veilActiveFor, DEFAULT_REVEAL, LEDGER_COUNT_MS, LEDGER_SLIDE_MS, LEDGER_ENTER_STAGGER_MS, ledgerSchedule, passLedgerSchedule, LEDGER_PASS_COUNT_MS, LEDGER_PASS_SLIDE_MS, LEDGER_MERGE_HOLD_MS, CHART_REVEAL_SECONDS, initialHold, beginHold, endHold, heldMsAt, PAUSE_POPUP_DELAY_MS, breakAllowedIn, honoursSchedule, HONOUR_STRIP_CYCLE_MS, BOARD_ROW_STAGGER_MS, FINAL_CELEBRATION_OFFSET_MS } from '../flags/partyTiming.js';
 import { ROUND_QUESTIONS, METRIC_MODES, PARTY_MODES, isRoundBoundary, isRoundStart, roundIndexAt, roundCount } from '../flags/partyPlan.js';
@@ -3526,8 +3527,19 @@ export function bootFlagParty() {
       // withheld from the header that names them. "♛ Winner · ✓ Flag Sommelier".
       const own = ceremonyHonours.find((h) => h.playerId === winner.playerId);
       const crown = t('party.honourWinner', '♛ Winner');
-      text.appendChild(el('span', 'fw-crown',
-        own ? `${crown} · ${own.glyph ?? ''} ${honourTitle(own)}`.replace('  ', ' ') : crown));
+      // Two spans, not one string: when the line runs out of room the crown is
+      // the half that has to survive — it says they won, which is what the card
+      // is for — so it is pinned and only the title after it may give way. See
+      // `.fw-crown-lead` / `.fw-crown-title` in index.css.
+      const crownBox = el('span', 'fw-crown');
+      const run = el('span', 'fw-crown-run');
+      run.appendChild(el('span', 'fw-crown-lead', own ? `${crown} ·` : crown));
+      if (own) {
+        run.appendChild(el('span', 'fw-crown-title',
+          `${own.glyph ?? ''} ${honourTitle(own)}`.trim()));
+      }
+      crownBox.appendChild(run);
+      text.appendChild(crownBox);
       finalWinner.appendChild(text);
       finalWinner.appendChild(el('span', 'fw-score', String(winner.score)));
       // Landed, not arriving: it is the same card the winner beat just showed,
@@ -3536,6 +3548,9 @@ export function bootFlagParty() {
     }
 
     paintHonourStrip(animate);
+    // After layout, never during it: scrollWidth on a node that has not been laid
+    // out yet reads 0, which measures as "fits" and silently skips the effect.
+    window.requestAnimationFrame(fitWinnerCrown);
 
     // Rows start at 2: the winner is the header, not a row. On a tie nobody is
     // the header, so the list runs from 1 and reads as the plain ranking it is.
@@ -3563,6 +3578,46 @@ export function bootFlagParty() {
     finalBoard.scrollTop = 0;
   }
 
+  /**
+   * Decide whether the winner's honour line has to flow, and how far.
+   *
+   * The pinned crown plus an ellipsis (`.fw-crown-title`) handles most of it, but
+   * at 320 px the crown, the title and a typed-in name genuinely do not fit and
+   * there is nothing left to drop. That one line slides to show its tail instead
+   * of being cut — see `flow-peek` in index.css.
+   *
+   * Measured in the RESTING state, before `.flowing` is applied: with the ellipsis
+   * in force, a text span's `scrollWidth` is its full width and `clientWidth` is
+   * what it was given, so the difference is exactly how much is being hidden. Once
+   * `.flowing` is on, the run is allowed to overflow and that reading no longer
+   * means the same thing — which is why the class is always cleared first, and why
+   * this can be called again on resize without compounding.
+   *
+   * Whether the slide is allowed at all is CSS's business, not this function's:
+   * everything `.flowing` does lives inside a `prefers-reduced-motion:
+   * no-preference` block, so a reduced-motion player gets the ellipsis and this
+   * function's class does nothing.
+   */
+  function fitWinnerCrown() {
+    const box = /** @type {HTMLElement | null} */ (finalWinner.querySelector('.fw-crown'));
+    const title = /** @type {HTMLElement | null} */ (finalWinner.querySelector('.fw-crown-title'));
+    if (!box) return;
+    box.classList.remove('flowing');
+    box.style.removeProperty('--flow');
+    // No title means the crown alone, which always fits.
+    if (!title) return;
+    const distance = flowDistance(title.scrollWidth, title.clientWidth);
+    if (distance === null) return;
+    box.style.setProperty('--flow', `${distance}px`);
+    box.classList.add('flowing');
+  }
+
+  // A rotation changes the available width without re-rendering the board, and a
+  // line that fitted in portrait can be clipped in the other direction. Cheap
+  // enough to re-measure unconditionally: it returns at the first line when the
+  // card is not on screen.
+  window.addEventListener('resize', fitWinnerCrown);
+
   /** Start (or restart) the honours strip's cycle.
    *
    *  ONE reserved line rather than a title under each honoured seat: a second
@@ -3581,20 +3636,24 @@ export function bootFlagParty() {
     const paint = () => {
       const h = honours[i % honours.length];
       finalHonours.innerHTML = '';
-      finalHonours.appendChild(el('span', 'fh-glyph', h.glyph ?? ''));
-      const text = el('div', 'fh-text');
-      text.appendChild(el('span', 'fh-label', honourTitle(h)));
-      text.appendChild(el('span', 'fh-who', h.nickname || ''));
-      finalHonours.appendChild(text);
+      // Two rows: the title owns the first one outright, the winner and the value
+      // share the second. The title used to share a row with a value block sized
+      // to its content, which meant the value took what it needed and the title —
+      // the award itself — got the remainder and was clipped (see index.css).
+      const head = el('div', 'fh-head');
+      head.appendChild(el('span', 'fh-glyph', h.glyph ?? ''));
+      head.appendChild(el('span', 'fh-label', honourTitle(h)));
+      finalHonours.appendChild(head);
+      const sub = el('div', 'fh-sub');
+      sub.appendChild(el('span', 'fh-who', h.nickname || ''));
       // The value, and nothing else. There is deliberately NO mark distinguishing a
       // title that got a ceremony screen from one that only appears here: which
       // half of the app's screen budget a title fell into is bookkeeping, not
       // something anyone in the room has a model for, and a note reading "only
       // here" beside a job title reads as qualifying the title itself.
-      const right = el('span', 'fh-right');
       const value = honourValueText(h);
-      if (value) right.appendChild(el('span', 'fh-value', value));
-      finalHonours.appendChild(right);
+      if (value) sub.appendChild(el('span', 'fh-value', value));
+      finalHonours.appendChild(sub);
       // One dot per awarded title, the current one lit — so the strip says how
       // many there are and how far through them you are, rather than looking
       // like a line that changes at random.
