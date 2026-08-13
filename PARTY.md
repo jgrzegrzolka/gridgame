@@ -2504,6 +2504,67 @@ four flags, mapping them to countries and ranking them by coffee output is nothi
 recognition, and the bot pays nothing for it. That wants a delay window for the whole metric family —
 a separate change, since how hard a round is and how long it takes to answer are separate dials.
 
+## Iteration 21 — the final board: long honour titles fit — BUILT (2026-08-13)
+
+From the design canvas (`Yetanotherquiz Flag Party Changes.dc.html`, **4a**–**4c**, and its
+`CLAUDE_CODE_PROMPT_board_long_titles.md`). The honours strip laid the title and its value on one
+row with the value block sized to its content, so the value took what it needed and the **title —
+the thing being awarded — got the remainder and was clipped**. Measured at 390 px with the worst
+real combination (*Najszybszy palec Zachodu* · *ostatni klik, 8 z 10 trafionych*): the title needed
+171 px and was given 145. Every other title in the set is short enough to survive, which is why it
+went unnoticed; the one that breaks is also one of the most likely to be awarded.
+
+**Fix 1 — the strip is two lines.** The title stops sharing a row with anything: `[glyph] TITLE` on
+line one at full width, `winner … value` on line two with the value right-aligned and `padding-left:
+19px` so the name starts under the title rather than under the glyph. The value is the line that
+yields now, which is the right way round — the value restates what the title was for, the title *is*
+the award. The title goes to **12 px / .04 em** from 11 px / .08 em: counter-intuitive, but cutting
+the tracking buys more width than the extra point of size costs, so it nets more characters. Measured
+after: **293/293 at 390 and 237/237 at 320** — nothing clipped at either. The 320 figure needs the
+`padding: 9px 11px` at `max-width: 379px`; at 12 px of padding it lands one character short.
+
+**Fix 2 — the winner card's honour line is two spans.** `♛ Zwycięzca ·` is pinned (`flex: none`) and
+only the title after it may truncate, because when that line runs out of room the crown is the half
+that has to survive — it says they won, which is what the card is for. The winner's *name* span
+already had its ellipsis, so only the crown line changed.
+
+**Fix 3 — the line that still cannot fit flows instead of being cut.** At 320 the crown, the title
+and a typed-in name do not all go however the row is built. That line slides once per cycle to show
+its tail and slides back (`flow-peek`, 6 s against the strip's 3 s so the two are never moving
+together), with a right-edge fade instead of an ellipsis so the text visibly continues.
+
+- **The distance is the trap**, and it is why `flagParty/crownFlow.js` exists as a tested module
+  rather than three lines in `page.js`: the slide must clear the **fade band as well as the
+  overflow**. `-(scrollWidth - clientWidth)` alone parks the last characters *underneath* the mask,
+  semi-transparent at exactly the moment the animation holds still for them to be read.
+  `--flow = -(overflow + 16)`. Measured at 320: overflow 60 → `-76px`.
+- **A floor of 8 px**, which the design did not call for and the measurement did. At 390 the same
+  line overflows by **2 px** — flowing for it would slide 18 px to reveal two, forever, while the
+  board is on screen. Below the floor the ellipsis is the honest answer.
+- Everything `.flowing` does lives inside `prefers-reduced-motion: no-preference`, so a
+  reduced-motion player simply gets Fix 2's ellipsis. That is the documented fallback and it costs
+  nothing to get it this way round.
+- Measured in the RESTING state (with the ellipsis in force, a text span's `scrollWidth` is its full
+  width), after layout via `requestAnimationFrame` — `scrollWidth` on an unlaid-out node reads 0,
+  which measures as "fits" and silently skips the effect. Re-measured on resize, and the class is
+  cleared first so repeat calls cannot compound.
+
+**Deliberately NOT taken from the canvas:** the design moves the `miał swój ekran` / `tylko tutaj`
+mark out of the strip and onto the dots row. That mark does not exist here — **Iteration 18f deleted
+it outright** (#1163), and `page.js` carries an explicit note saying which half of the screen budget
+a title fell into is bookkeeping nobody in the room has a model for. The layout reason the canvas
+gives for moving it (it made the right column wide) is already solved by its deletion. The
+`was-screened` dot is the only trace and is unchanged.
+
+Verified against the real stylesheet at 342 px and 284 px content width — the actual widths, since
+`body` pads 24 px each side — with the pre-fix rules restored alongside for an A/B: the old strip
+clips at both sizes and the old crown line *wraps to two lines* at 320, the new one does neither. The
+flow was frozen at 70% of its cycle (the hold at the tail) to confirm the last word lands clear of
+the fade rather than under it. **One residual**: at 390 the crown line shows `⚡ Najszybszy palec
+Zacho…` — the 2 px above, sitting just under the flow floor. That is Fix 2 working as specified
+rather than a defect, but the canvas's own 4b mock had marginally more room and shows it whole, so it
+is worth a look on a real handset before deciding the floor is right.
+
 ## Out of scope (don't sweep in)
 
 - Persistent competitive leaderboards for the show (it's a live party, not a ranked ladder).
