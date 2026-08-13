@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, superlativeMetricByKey, hintFor, canLabelDirection } from './superlativeCatalog.js';
+import { SUPERLATIVE_METRICS, superlativeMetricByQuestionId, superlativeMetricByKey, hintFor, canLabelDirection, FAMILIARITY_F, FAMILIARITY_TIERS, PER_CAPITA_BASE, familiarityForQuestion } from './superlativeCatalog.js';
 import { METRIC_FILES } from '../metrics/index.js';
 import { METRIC_MODES } from '../partyPlan.js';
 
@@ -163,4 +163,62 @@ test('the population question keeps its legacy unsuffixed id', () => {
   const pop = superlativeMetricByKey('population');
   assert.ok(pop);
   assert.equal(pop.questionId, 'superlative');
+});
+
+// --- familiarity tiers ------------------------------------------------------
+
+// The drift test for the bot's tier table, and the reason it is grouped rather
+// than a field on each entry: a metric added to the catalog with no tier would
+// otherwise fall through to "no adjustment" and silently inherit the gap bias the
+// tiers exist to correct (see FAMILIARITY_TIERS' doc), which nothing else fails on.
+test('every catalog metric sits in exactly one familiarity tier', () => {
+  const tiered = Object.values(FAMILIARITY_TIERS).flat();
+  assert.equal(new Set(tiered).size, tiered.length, 'a metric is listed in two tiers');
+  assert.deepEqual(tiered.slice().sort(), SUPERLATIVE_METRICS.map((m) => m.key).sort());
+});
+
+test('every tier name has an f value, and they run household high to obscure low', () => {
+  assert.deepEqual(Object.keys(FAMILIARITY_TIERS).sort(), Object.keys(FAMILIARITY_F).sort());
+  const order = /** @type {(keyof typeof FAMILIARITY_F)[]} */ (['household', 'known', 'niche', 'obscure']);
+  const fs = order.map((t) => FAMILIARITY_F[t]);
+  for (let i = 1; i < fs.length; i++) {
+    assert.ok(fs[i] < fs[i - 1], `${order[i]} must sit below ${order[i - 1]}`);
+  }
+  for (const f of fs) assert.ok(f >= -1 && f <= 1, `${f} outside [-1, 1]`);
+});
+
+// The guideline the PER_CAPITA_BASE table exists to state: nobody who can rank
+// four countries by total Olympic medals can also do it per head. Enforced rather
+// than derived, because only 4 of the 12 per-capita metrics have a base here.
+test('no per-capita metric is better known than the metric it normalises', () => {
+  /** @type {Record<string, number>} */
+  const rank = { household: 3, known: 2, niche: 1, obscure: 0 };
+  /** @param {string} key @returns {string | undefined} */
+  const tierOf = (key) => Object.keys(FAMILIARITY_TIERS)
+    .find((t) => FAMILIARITY_TIERS[/** @type {keyof typeof FAMILIARITY_TIERS} */ (t)].includes(key));
+  for (const [perCapita, base] of Object.entries(PER_CAPITA_BASE)) {
+    const pcTier = tierOf(perCapita);
+    const baseTier = tierOf(base);
+    assert.ok(pcTier && baseTier, `${perCapita} / ${base} must both be tiered`);
+    assert.ok(rank[pcTier] <= rank[baseTier],
+      `${perCapita} (${pcTier}) ranks above its base ${base} (${baseTier})`);
+  }
+});
+
+test('PER_CAPITA_BASE names real catalog metrics on both sides', () => {
+  for (const [perCapita, base] of Object.entries(PER_CAPITA_BASE)) {
+    assert.ok(superlativeMetricByKey(perCapita), `${perCapita} is not a catalog metric`);
+    assert.ok(superlativeMetricByKey(base), `${base} is not a catalog metric`);
+  }
+});
+
+test('familiarityForQuestion resolves by question id, legacy population id included', () => {
+  assert.equal(familiarityForQuestion('superlative'), FAMILIARITY_F.household);
+  assert.equal(familiarityForQuestion('superlative-cocoa'), FAMILIARITY_F.obscure);
+  assert.equal(familiarityForQuestion('superlative-coffee'), FAMILIARITY_F.known);
+  // Not a statistic, and a question id from a newer server: both read as "no
+  // adjustment" rather than throwing or guessing a tier.
+  assert.equal(familiarityForQuestion('flagPick'), null);
+  assert.equal(familiarityForQuestion('superlative-unobtainium'), null);
+  assert.equal(familiarityForQuestion(undefined), null);
 });

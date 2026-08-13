@@ -20,15 +20,18 @@
  * (`QUESTION_SECONDS`, 20 s) so a bot always answers before the clock forces the
  * reveal.
  *
- * A skill preset is only the starting point. Three things move it, in this order:
+ * A skill preset is only the starting point. Four things move it, in this order:
  * the **mode** ({@link MODE_PROFILE} — weird flags and map outlines are harder
  * than sovereign flags, spot-the-flag is easier and slower), the **question**
  * (a statistic's accuracy comes from how far its answer stands out —
- * {@link spreadGapOf}), and the **seat** (a bot that drafted this round plays it
- * a little better — {@link PICKER_BONUS}).
+ * {@link spreadGapOf}), the **metric** (a statistic nobody has heard of is harder
+ * than one everybody has — {@link applyFamiliarity}, whose tiers live in
+ * `partyQuestions/superlativeCatalog.js`), and the **seat** (a bot that drafted
+ * this round plays it a little better — {@link PICKER_BONUS}).
  */
 
 import { QUESTION_SECONDS, DEFAULT_REVEAL, revealCategoryFor, veilActive } from './partyTiming.js';
+import { familiarityForQuestion } from './partyQuestions/superlativeCatalog.js';
 
 /**
  * @typedef {{ accuracy: number, delayMinMs: number, delayMaxMs: number }} BotSkill
@@ -247,6 +250,31 @@ export const PICKER_BONUS = 0.08;
  */
 export const ACCURACY_CEILING = 0.99;
 
+/**
+ * The hard floor under any accuracy: chance on a four-tile board.
+ *
+ * A bot below this is not "easy", it is losing on purpose — it would pick the
+ * wrong tile more often than a coin, which a player reads as broken rather than
+ * beatable. Nothing hits it today (the lowest number in the module is Easy
+ * map-outlines at 0.30) but it is only five points clear, and
+ * {@link METRIC_FAMILIARITY_SWING} below is the first dial that pushes DOWNWARD
+ * from a preset rather than up.
+ */
+export const ACCURACY_FLOOR = 0.25;
+
+/**
+ * How much of the room between an accuracy and the bound a full familiarity tier
+ * consumes — see {@link applyFamiliarity}.
+ *
+ * 0.35 is chosen so the worst case is a real handicap without being a different
+ * game: at Hard an obscure metric falls from ~96% to ~70%, roughly the gap
+ * between the Hard and Easy presets on a sovereign flag pick. If statistics
+ * rounds feel wrong after this ships, THIS is the dial to turn — it moves every
+ * metric at once and keeps the tiers' relative order intact, which is what you
+ * want before you start re-arguing individual metrics.
+ */
+export const METRIC_FAMILIARITY_SWING = 0.35;
+
 /** The skill a bot gets when none (or an unknown one) is asked for. */
 export const DEFAULT_BOT_SKILL = 'medium';
 
@@ -295,15 +323,44 @@ export function accuracyFor(modeId, skill) {
 }
 
 /**
- * The accuracy one buzz rolls against: the mode's number, or the question's own
- * where it has one (a statistic scales with how clear its answer is), plus the
- * picker's bonus when this bot chose the round, capped at
- * {@link ACCURACY_CEILING}.
+ * Move an accuracy by a metric's familiarity, as a fraction of the room it has
+ * left — toward {@link ACCURACY_CEILING} for a well-known metric, toward
+ * {@link ACCURACY_FLOOR} for an obscure one.
  *
- * The three layers are ordered deliberately. The gap REPLACES the mode number
- * rather than nudging it — a statistics round has no meaningful fixed difficulty
- * to nudge — while the picker bonus ADDS to whatever came out, because it is a
- * property of the seat, not of the question.
+ * **Why a fraction of the headroom rather than flat percentage points.** The
+ * obvious version ("obscure costs 12 points") breaks at Easy, where statistics
+ * already floor at 40% and chance is 25%: there are 15 points of room in total,
+ * so a flat penalty either does nothing at Hard or shoves Easy through the
+ * floor. Scaling by what is left is self-bounding — the result can approach
+ * either bound but never crosses one, so no clamping artifact can appear at the
+ * extremes — and it puts the weight where it belongs for free. At Hard an
+ * obscure metric drops ~25 points; at Easy the same tier drops ~7, because Easy
+ * had nowhere to go. Obscurity should punish the strong bot, which is the one
+ * whose 96% was the problem, not push the weak one below a coin flip.
+ *
+ * @param {number} accuracy  an accuracy already inside [FLOOR, CEILING]
+ * @param {number} familiarity  a {@link familiarityForQuestion} value in [-1, +1]
+ * @returns {number}
+ */
+export function applyFamiliarity(accuracy, familiarity) {
+  if (familiarity === 0) return accuracy;
+  return familiarity > 0
+    ? accuracy + familiarity * METRIC_FAMILIARITY_SWING * (ACCURACY_CEILING - accuracy)
+    : accuracy + familiarity * METRIC_FAMILIARITY_SWING * (accuracy - ACCURACY_FLOOR);
+}
+
+/**
+ * The accuracy one buzz rolls against: the mode's number, or the question's own
+ * where it has one (a statistic scales with how clear its answer is, then with
+ * how well known the metric is), plus the picker's bonus when this bot chose the
+ * round, held inside [{@link ACCURACY_FLOOR}, {@link ACCURACY_CEILING}].
+ *
+ * The layers are ordered deliberately. The gap REPLACES the mode number rather
+ * than nudging it — a statistics round has no meaningful fixed difficulty to
+ * nudge. Familiarity then moves that result, because it is a property of the
+ * METRIC and only a statistic has one; a flag-pick round's difficulty is already
+ * stated outright in {@link MODE_PROFILE}. The picker bonus ADDS last, because it
+ * is a property of the seat rather than of the question.
  *
  * @param {{ modeId?: string, questionId?: string, ranking?: string[], values?: Record<string, number> }} question
  * @param {string} skill  an already-validated BOT_SKILLS id
@@ -312,9 +369,17 @@ export function accuracyFor(modeId, skill) {
  */
 export function buzzAccuracy(question, skill, opts = {}) {
   const gap = spreadGapOf(question);
-  const base = gap === null ? accuracyFor(modeKeyFor(question), skill) : statAccuracyFor(gap, skill);
+  let base;
+  if (gap === null) {
+    base = accuracyFor(modeKeyFor(question), skill);
+  } else {
+    // Null familiarity = a question id this build has no metric for; leave the
+    // gap's number alone rather than guessing a tier for it.
+    const familiarity = familiarityForQuestion(question.questionId);
+    base = applyFamiliarity(statAccuracyFor(gap, skill), familiarity ?? 0);
+  }
   const withBonus = opts.picked === true ? base + PICKER_BONUS : base;
-  return Math.min(ACCURACY_CEILING, withBonus);
+  return Math.max(ACCURACY_FLOOR, Math.min(ACCURACY_CEILING, withBonus));
 }
 
 /**
