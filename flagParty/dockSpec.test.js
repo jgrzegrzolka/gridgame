@@ -110,6 +110,31 @@ test('a null or unknown screen resolves to no dock rather than throwing', () => 
   assert.equal(dockSpecFor('nope'), null);
 });
 
+test('host-only items are hidden by the dock sync, never from a render path', () => {
+  // The finish's three screens are put up by the CEREMONY's timers, not by
+  // render(): `playCeremony` returns having only armed them. So a hide written
+  // beside a render call runs against the bar the previous screen was wearing —
+  // a silent no-op, since that bar has no play-again in it — and the honour beat
+  // then mounts a fresh, visible one. That shipped: guests had a live "Play
+  // again" through the whole ending, and `applyPlayAgain` drops a non-host
+  // message without a reply, so pressing it did nothing at all.
+  //
+  // The fix is that mounting the bar and painting it for the seat are one step
+  // (`seatDock.js`), reached only through `syncDock`. This pins that they stay
+  // one step.
+  assert.ok(/createSeatDock\(/.test(pageJs),
+    'page.js must build its dock through createSeatDock');
+  assert.ok(/seatDock\.sync\(spec, state\.isHost\)/.test(pageJs),
+    'syncDock must paint the bar for the seat every time it points it at a screen');
+  // `dockItem()` is the only way to reach an item on the bar, so a seat check
+  // near one of its call sites is a seat check outside the sync — which is
+  // exactly the shape that shipped the bug.
+  for (const m of pageJs.matchAll(/dockItem\((.*?)\)([\s\S]{0,160})/g)) {
+    assert.ok(!/isHost/.test(m[2]),
+      `dockItem(${m[1]}) is gated on the seat outside the dock sync — it will run against the wrong bar, see seatDock.js`);
+  }
+});
+
 test('dock items are looked up live, never cached across a remount', () => {
   // mountDock() replaces the dock's children, so the Play again / Back to
   // settings buttons are DIFFERENT elements after every phase change. A module

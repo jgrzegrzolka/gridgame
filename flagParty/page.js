@@ -14,6 +14,7 @@ import { initialPartyClientState, reducePartyMessage, withLocalBuzz, pickPartyCe
 import { showBotSeat } from './botSeat.js';
 import { setupSummaryParts, canStartGame } from './lobbySetup.js';
 import { dockSpecFor } from './dockSpec.js';
+import { createSeatDock } from './seatDock.js';
 import { setDock } from '../common.js';
 import { pauseCardStep } from './pauseCard.js';
 import { isPartyTitle, soleWinnerId } from '../flags/partyHonours.js';
@@ -610,9 +611,16 @@ export function bootFlagParty() {
   const partyDock = $('party-dock');
   const dockItem = (/** @type {string} */ id) =>
     /** @type {HTMLElement | null} */ (partyDock.querySelector(`#${id}`));
-  /** The spec currently mounted, so an unchanged screen doesn't rebuild the bar
-   *  under the user's finger (a remount would drop a press mid-tap). */
-  let mountedDockSpec = partyDock.dataset.dock ?? null;
+  /** Mounts the bar and hides the host-only items on it, as one step — see
+   *  `seatDock.js` for why those cannot be two. Holds the mounted spec, so an
+   *  unchanged screen doesn't rebuild the bar under the user's finger. */
+  const seatDock = createSeatDock({
+    mount: (spec) => setDock(spec, partyDock),
+    setHidden: (id, hidden) => { const item = dockItem(id); if (item) item.hidden = hidden; },
+    // A remount builds fresh items from the catalog, so a queued break would
+    // silently repaint itself back to "Pause" on every screen change.
+    afterMount: () => paintBreakControl(),
+  }, partyDock.dataset.dock ?? null);
   const joinError = $('join-error');
   const joinForm = /** @type {HTMLFormElement} */ ($('join-form'));
   const joinCodeInput = /** @type {HTMLInputElement} */ ($('join-code'));
@@ -755,21 +763,17 @@ export function bootFlagParty() {
    * animation now, so it has no reason to wait for it, and changing it up front
    * means the bar never shows the previous screen's actions over the new one.
    *
-   * Remounts only on a real change — rebuilding an identical bar would destroy
-   * and recreate the button under a finger that is already on it.
+   * This is the ONLY place the host-only items are hidden, and it has to be:
+   * the finish's screens are put up by the ceremony's timers, so anything that
+   * hid them from a render path would be painting the bar the show has already
+   * left. See `seatDock.js`.
    *
    * @param {string | null} which
    */
   function syncDock(which) {
     const spec = dockSpecFor(which);
     partyDock.hidden = spec === null;
-    if (spec === null || spec === mountedDockSpec) return;
-    setDock(spec, partyDock);
-    mountedDockSpec = spec;
-    // A remount builds fresh items from the catalog, so a queued break would
-    // silently repaint itself back to "Pause" on every screen change. Re-applied
-    // here, at the one place that knows the bar was just rebuilt.
-    paintBreakControl();
+    seatDock.sync(spec, state.isHost);
   }
 
   /** @returns {boolean} whether the socket was open enough to actually send.
@@ -2351,13 +2355,10 @@ export function bootFlagParty() {
   function renderQuestion() {
     const q = state.question;
     if (!q) return;
-    // Only the host can abort a game back to the settings screen (it resets the
-    // whole room); guests just have Home. The adjacent `·` hides itself via CSS
-    // when this button is hidden, so there's nothing else to toggle.
-    // Looked up live: the dock is rebuilt on every screen change, so this is a
-    // different element each time the question screen comes round.
-    const backItem = dockItem('question-to-settings');
-    if (backItem) backItem.hidden = !state.isHost;
+    // "Back to settings" is host-only (it resets the whole room) and is hidden
+    // for everyone else by `syncDock`, alongside Play again — not from here.
+    // The adjacent `·` hides itself via CSS when the button is hidden, so
+    // there's nothing else to toggle.
     // The pill used to carry "Round 1/6 · Question 1/30". Both are gone. The
     // question total was the most alarming number on the screen and the least
     // useful — it says the show is long, not where you are — and the round
@@ -3721,7 +3722,6 @@ export function bootFlagParty() {
     if (ceremonyScreen !== null) {
       if (ceremonyScreen === 'final') renderBoard(board, winner, false);
       showSection(ceremonyScreen);
-      applyFinalDock();
       return;
     }
 
@@ -3738,21 +3738,17 @@ export function bootFlagParty() {
       renderBoard(board, winner, false);
       showSection('final');
       if (firstShow) celebrate(board);
-      applyFinalDock();
       return;
     }
+    // No dock work here. The ceremony paints its screens from its own timers, so
+    // at this point the bar is still the one the QUESTION screen was wearing —
+    // hiding "Play again" against it would find nothing to hide, and the honour
+    // beat would mount a fresh visible one a moment later. Only the host can
+    // restart, so every seat's copy of the button is hidden by `syncDock` at the
+    // moment the finish's bar is actually built. (The dock has no separators, and
+    // hidden items drop out with the remaining ones re-centring — so a guest sees
+    // Home centred on its own.)
     playCeremony(honours, winner, board);
-    applyFinalDock();
-  }
-
-  function applyFinalDock() {
-    // Only the host can restart, so "Play again" shows for the host alone;
-    // everyone else sees just "Home". (The dock has no separators, and hidden
-    // items drop out with the remaining ones re-centring — so hiding Play
-    // again leaves Home centred on its own.) Live lookup, same as the question
-    // screen's Back to settings — the dock is rebuilt per screen.
-    const againItem = dockItem('play-again');
-    if (againItem) againItem.hidden = !state.isHost;
   }
 
   function prefersReducedMotion() {
