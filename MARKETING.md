@@ -49,11 +49,15 @@ Phase 1 of Item 2 (below) is "zero new pages, just plumbing." Promoted out of th
 - [x] **Canonical + description added** to `ticTacToe/solo/` and `ticTacToe/offline/`, which had neither.
 - [x] **`seo.test.js`** pins all of the above: one origin everywhere, every indexable page in the sitemap, every sitemap entry a real non-noindex file, noindex present where intended, and no path both disallowed and noindexed. Each pin was verified to go red against the unfixed state.
 
-**Left to do — Jan only (needs a Google account and the Cloudflare dashboard):**
+**Search Console: already done, discovered 2026-08-21.**
 
-- [ ] Create the Search Console property as a **Domain property** (`yetanotherquiz.com`), not a URL-prefix property. A Domain property covers apex + www + http + https in one, which matters precisely because of the apex->www redirect.
-- [ ] Verification is a **DNS TXT record** on the Cloudflare zone (DNS is Cloudflare-hosted, see `infra/operations.md`). Google supplies the token.
-- [ ] Once verified: submit `https://www.yetanotherquiz.com/sitemap.xml`, then leave it alone for ~2 weeks. Coverage and Performance data need time to populate before any of it means anything.
+It turns out the property was set up on **2026-06-22**, the same day this file was created, and was never recorded here. Verified as a **Domain property** (`yetanotherquiz.com`), which is the right type — it covers apex + www + http + https under one verification, and DNS-TXT verification leaves no trace in the repo, which is why a codebase check said "not wired". Don't re-derive this; check the property in Search Console before concluding anything about setup state.
+
+- [x] Domain property created and verified via DNS TXT on the Cloudflare zone.
+- [x] `https://www.yetanotherquiz.com/sitemap.xml` submitted 2026-06-22. Status Success, last read 2026-08-17, 6 pages discovered (matching the pre-expansion file). It re-reads on its own, so the 11-URL version needs no resubmission.
+- [x] Three malformed sitemap entries removed 2026-08-21 (`.../sitemap.xml/sitemap.xml` and two apex variants, all permanently "Couldn't fetch" — someone pasted a full URL into a field that already prefixes the origin). Removal is not in the row-level menu; open the sitemap's own detail view and use the menu there.
+
+**Next check-in: around 2026-09-04.** Coverage and Performance need roughly two weeks after the canonical fix deploys before the numbers mean anything. What to look at then: how many of the 11 URLs are indexed, and which queries the site already surfaces for. That is the baseline every later SEO decision gets measured against.
 
 **What phase 1 does not include:** any new page. Per-country / per-continent / per-motif generation is phase 2+ of Item 2 and stays in the backlog until Search Console has a baseline to measure against.
 
