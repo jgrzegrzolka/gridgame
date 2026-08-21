@@ -1,8 +1,15 @@
 User-agent: *
 Allow: /
 
-# Stats sub-page is a personal-progress view — useful for the user, not
-# useful in search results.
-Disallow: /flagQuiz/stats/
+# Nothing is Disallowed on purpose.
+#
+# Pages we want kept out of search results (personal views like /profile/
+# and /flagQuiz/stats/, and the author-only previews under /daily/) carry a
+# `<meta name="robots" content="noindex, nofollow">` instead. That is the
+# directive that actually removes a page from the index — but a crawler has
+# to *fetch* the page to read it. A `Disallow` here would block that fetch,
+# so the noindex would never be seen and the URL could still be indexed
+# from an inbound link. Disallow and noindex on the same path cancel out;
+# pick noindex. `seo.test.js` pins that we never reintroduce the conflict.
 
 Sitemap: https://www.yetanotherquiz.com/sitemap.xml

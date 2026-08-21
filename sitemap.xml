@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every URL here uses the www origin, which is the one production serves;
+  the apex 301-redirects to it. `seo.test.js` pins that this file and every
+  page's rel=canonical agree on that host, that every indexable page is
+  listed here, and that nothing listed here is missing or marked noindex.
+  Personal views (/profile/, /flagQuiz/stats/) and the daily authoring
+  previews are deliberately absent — they carry a noindex robots meta.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.yetanotherquiz.com/</loc>
@@ -11,6 +19,11 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://www.yetanotherquiz.com/daily/archive.html</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://www.yetanotherquiz.com/flagQuiz/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -21,13 +34,33 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://www.yetanotherquiz.com/flagParty/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://www.yetanotherquiz.com/ticTacToe/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.yetanotherquiz.com/ticTacToe/solo/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.yetanotherquiz.com/ticTacToe/offline/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://www.yetanotherquiz.com/flagsdata/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.yetanotherquiz.com/privacy/</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
   </url>
 </urlset>

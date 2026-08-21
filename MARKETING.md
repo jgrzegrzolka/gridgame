@@ -34,7 +34,33 @@ The constraints that shape every item below:
 
 ## Now
 
-*(No active marketing work — file created 2026-06-22, pre-marketing phase.)*
+### Item 2, phase 1: Search Console + sitemap plumbing
+
+**Status:** code side shipped 2026-08-21. One step left, and it is Jan's to do.
+
+Phase 1 of Item 2 (below) is "zero new pages, just plumbing." Promoted out of the backlog because it gates every other SEO decision: without Search Console there is no way to tell whether anything we do next is indexed, or what queries the site already surfaces for.
+
+**Done (this branch):**
+
+- [x] **Canonical host unified on `www`.** Every `rel=canonical` and `og:url` pointed at the **apex** (`https://yetanotherquiz.com/...`) while `sitemap.xml` pointed at `www`. The apex 301-redirects to www (verified), so every canonical named a URL that does not return 200, and the sitemap contradicted it. All 11 pages rewritten to the www origin.
+- [x] **Sitemap expanded 6 -> 11 URLs.** Added `/flagParty/`, `/daily/archive.html`, `/ticTacToe/solo/`, `/ticTacToe/offline/`, `/privacy/` — real public destinations that were relying on crawl discovery alone.
+- [x] **`noindex` on personal views.** `/profile/`, `/profile/sync/`, `/flagQuiz/stats/` had no robots meta. Added.
+- [x] **`robots.txt` Disallow/noindex conflict removed.** The file disallowed `/flagQuiz/stats/`, which blocks the crawl and therefore prevents the crawler ever *reading* a noindex. Disallow and noindex on one path cancel out. Now nothing is disallowed; the noindex metas do the work.
+- [x] **Canonical + description added** to `ticTacToe/solo/` and `ticTacToe/offline/`, which had neither.
+- [x] **`seo.test.js`** pins all of the above: one origin everywhere, every indexable page in the sitemap, every sitemap entry a real non-noindex file, noindex present where intended, and no path both disallowed and noindexed. Each pin was verified to go red against the unfixed state.
+
+**Search Console: already done, discovered 2026-08-21.**
+
+It turns out the property was set up on **2026-06-22**, the same day this file was created, and was never recorded here. Verified as a **Domain property** (`yetanotherquiz.com`), which is the right type — it covers apex + www + http + https under one verification, and DNS-TXT verification leaves no trace in the repo, which is why a codebase check said "not wired". Don't re-derive this; check the property in Search Console before concluding anything about setup state.
+
+- [x] Domain property created and verified via DNS TXT on the Cloudflare zone.
+- [x] `https://www.yetanotherquiz.com/sitemap.xml` submitted 2026-06-22. Status Success, last read 2026-08-17, 6 pages discovered (matching the pre-expansion file). It re-reads on its own, so the 11-URL version needs no resubmission.
+- [x] Three malformed sitemap entries removed 2026-08-21 (`.../sitemap.xml/sitemap.xml` and two apex variants, all permanently "Couldn't fetch" — someone pasted a full URL into a field that already prefixes the origin). Removal is not in the row-level menu; open the sitemap's own detail view and use the menu there.
+
+**Next check-in: around 2026-09-04.** Coverage and Performance need roughly two weeks after the canonical fix deploys before the numbers mean anything. What to look at then: how many of the 11 URLs are indexed, and which queries the site already surfaces for. That is the baseline every later SEO decision gets measured against.
+
+**What phase 1 does not include:** any new page. Per-country / per-continent / per-motif generation is phase 2+ of Item 2 and stays in the backlog until Search Console has a baseline to measure against.
+
 
 ---
 
