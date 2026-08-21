@@ -34,7 +34,29 @@ The constraints that shape every item below:
 
 ## Now
 
-*(No active marketing work — file created 2026-06-22, pre-marketing phase.)*
+### Item 2, phase 1: Search Console + sitemap plumbing
+
+**Status:** code side shipped 2026-08-21. One step left, and it is Jan's to do.
+
+Phase 1 of Item 2 (below) is "zero new pages, just plumbing." Promoted out of the backlog because it gates every other SEO decision: without Search Console there is no way to tell whether anything we do next is indexed, or what queries the site already surfaces for.
+
+**Done (this branch):**
+
+- [x] **Canonical host unified on `www`.** Every `rel=canonical` and `og:url` pointed at the **apex** (`https://yetanotherquiz.com/...`) while `sitemap.xml` pointed at `www`. The apex 301-redirects to www (verified), so every canonical named a URL that does not return 200, and the sitemap contradicted it. All 11 pages rewritten to the www origin.
+- [x] **Sitemap expanded 6 -> 11 URLs.** Added `/flagParty/`, `/daily/archive.html`, `/ticTacToe/solo/`, `/ticTacToe/offline/`, `/privacy/` — real public destinations that were relying on crawl discovery alone.
+- [x] **`noindex` on personal views.** `/profile/`, `/profile/sync/`, `/flagQuiz/stats/` had no robots meta. Added.
+- [x] **`robots.txt` Disallow/noindex conflict removed.** The file disallowed `/flagQuiz/stats/`, which blocks the crawl and therefore prevents the crawler ever *reading* a noindex. Disallow and noindex on one path cancel out. Now nothing is disallowed; the noindex metas do the work.
+- [x] **Canonical + description added** to `ticTacToe/solo/` and `ticTacToe/offline/`, which had neither.
+- [x] **`seo.test.js`** pins all of the above: one origin everywhere, every indexable page in the sitemap, every sitemap entry a real non-noindex file, noindex present where intended, and no path both disallowed and noindexed. Each pin was verified to go red against the unfixed state.
+
+**Left to do — Jan only (needs a Google account and the Cloudflare dashboard):**
+
+- [ ] Create the Search Console property as a **Domain property** (`yetanotherquiz.com`), not a URL-prefix property. A Domain property covers apex + www + http + https in one, which matters precisely because of the apex->www redirect.
+- [ ] Verification is a **DNS TXT record** on the Cloudflare zone (DNS is Cloudflare-hosted, see `infra/operations.md`). Google supplies the token.
+- [ ] Once verified: submit `https://www.yetanotherquiz.com/sitemap.xml`, then leave it alone for ~2 weeks. Coverage and Performance data need time to populate before any of it means anything.
+
+**What phase 1 does not include:** any new page. Per-country / per-continent / per-motif generation is phase 2+ of Item 2 and stays in the backlog until Search Console has a baseline to measure against.
+
 
 ---
 
