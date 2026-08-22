@@ -62,6 +62,107 @@ It turns out the property was set up on **2026-06-22**, the same day this file w
 **What phase 1 does not include:** any new page. Per-country / per-continent / per-motif generation is phase 2+ of Item 2 and stays in the backlog until Search Console has a baseline to measure against.
 
 
+### Item 6: Distribution channels — where to plant the daily puzzle
+
+**Status:** live as of 2026-08-22. Promoted from Backlog and started the same day. Step 1 is done; steps 2-4 are dated below and are Jan's to run (agents can't post to Reddit, and shouldn't).
+
+**Goal.** Identify the handful of places where geography/flag-curious people hang out and get a daily-puzzle presence there. Channel posting is the short-tail "where do today's first 100 visitors come from" play; programmatic SEO (Item 2) is the long-tail compounding one. Both matter, and this is the one Jan-the-engineer is most likely to skip.
+
+**Why this matters.** Channel posting also generates the small wave of social proof that makes later SEO results more clickable — sites that show up in social *and* search feel more legitimate than sites that only show up in one.
+
+#### Subreddit rules, read 2026-08-22
+
+Checked directly against each sub's `about/rules.json`. **Two obvious-looking candidates are closed** — recorded here so nobody re-derives them:
+
+| Sub | Size | Verdict | The rules that bind |
+| --- | --- | --- | --- |
+| **r/WebGames** | 142k | **Open, best fit** | P3: title must start with the game's name. P4: direct link, **no collections or directories**. P5: no signup. P2: no repost for 3 months. |
+| **r/flags** | 90k | **Open, relaxed** | Must be flag-related. No low-effort. No politics. No self-promotion rule at all. |
+| **r/vexillology** | 1.0M | **Open, strict** | R5 concise descriptive title. R6 **must seed a context comment** or the post is removed. R10 flair required. R8 "no fluff" is the live risk. |
+| r/geography | 6M+ | **Closed to standalone posts** | R3 names *"flag posts, geography trivia, geography quiz results"* as extraneous. R8: *"No standalone quiz/game/challenge posts. See stickied monthly thread."* Monthly thread is the only route and wasn't visible in hot. |
+| r/dailygames | 1.6k | **Closed, wrong genre** | Not a Wordle-clone directory — it's comment-driven daily *fiction*: *"Daily Games are required to be affected by the comments."* Plus *"No Advertising: no sending links to personal channels."* |
+| r/InternetIsBeautiful | 16.6M | **Closed** | *"No Webgames: webgames are not allowed. This includes quizzes, puzzles, etc."* Not a one-shot to save for later. Simply not eligible. |
+
+**Consequence worth remembering:** the **homepage is a directory** for r/WebGames' purposes (it hubs several games), so channel links point at `/daily/`, never `/`.
+
+#### Rollout
+
+- [x] **Step 1 — 2026-08-22: r/WebGames.** Link post to `/daily/` + context comment. Post URL: _(paste here)_
+- [ ] **Step 2 — 2026-08-23 to 08-25: measure, don't post.** Watch Cloudflare Web Analytics, answer comments, log any bug anyone reports. The gap is also what stops three posts reading as a spam run.
+- [ ] **Step 3 — 2026-08-28 (Fri): r/flags.** Text post, draft below. Dated to the day puzzle **#84** (red-and-yellow-only, 4 answers) is live, so a click-through lands on exactly the puzzle the post describes.
+- [ ] **Step 4 — week of 2026-09-01: r/vexillology.** Only if steps 1 and 3 surfaced no embarrassing bugs. Biggest room and strictest mods, so it goes last: every earlier post is a rehearsal that costs little if it goes badly; this is the one worth regretting.
+- [ ] **2026-09-04: read both numbers together** — the Search Console baseline (Item 2 phase 1) and whatever these channels sent. First time the site has two traffic sources to compare.
+
+**Cadence rule:** never the same link to multiple subs in one evening. Reddit-wide norm is roughly 90/10 participation to self-promotion (r/InternetIsBeautiful writes it into its rules), so ordinary commenting between posts is part of the work.
+
+**Silent removals:** Reddit removals are invisible to the poster — a removed post still looks fine while logged in. Check each post logged out, in a private window, ~30 min after submitting.
+
+#### Post drafts
+
+**r/WebGames** (used 2026-08-22). Title, then link, then the context as the first comment (a link post has no body):
+
+```
+Yet Another Quiz: a daily flag puzzle. One rule, find every flag that matches it.
+```
+```
+https://www.yetanotherquiz.com/daily/
+```
+```
+Today's rule is "Asian flags with yellow but no white". There are six.
+
+New puzzle every day, same for everyone, free, no signup and no ads. Takes about
+a minute. If the daily isn't your thing, the same site has a flag quiz, a
+find-all-flags-by-category mode, flags tic-tac-toe, and a live multiplayer round.
+
+I build it solo in my spare time. Happy to take feedback, especially on anything
+that felt unfair or ambiguous.
+```
+
+**r/flags** (step 3). Text post — the flag fact is the content and the link rides along:
+
+```
+Only four national flags use nothing but red and yellow
+```
+```
+China, Kyrgyzstan, North Macedonia, Vietnam. That's the complete list of
+sovereign flags whose entire palette is red and yellow, nothing else.
+
+The near-misses are the interesting part. Spain reads red-and-yellow at a glance
+but the coat of arms drags in half a dozen more colours. Same story for a few
+others that feel like they belong.
+
+I found this building a daily flag puzzle, which is exactly this kind of
+question: https://www.yetanotherquiz.com/daily/
+```
+
+**r/vexillology** (step 4). Link goes at the **end of the required context comment**, not in the title, or it reads as an ad and trips "no fluff":
+
+```
+Only four sovereign flags use red and yellow and no other colour
+```
+```
+The four: China, Kyrgyzstan, North Macedonia, Vietnam.
+
+What makes the count debatable is where you draw the line on charges. Spain's
+field is red-yellow-red, but the arms carry blue, white, silver and more, so on
+a strict "every colour on the flag" reading it's out. Kyrgyzstan's sun and tunduk
+stay within the two. Whether a coat of arms counts as part of the palette or as
+a separate device is the whole question, and I don't think there's a settled
+answer.
+
+I hit this while building a daily flag puzzle that asks these questions as
+puzzles. Today's is Asian flags with yellow but no white:
+https://www.yetanotherquiz.com/daily/
+```
+
+Drafts deliberately carry **no em dash** — they're user-facing copy, and the repo's rule is that the long dash reads as AI outside repo docs.
+
+#### Open design calls
+
+- **Manual vs automated daily post.** Still manual, deliberately. A scheduled Action posting each day's puzzle to X/Bluesky is trivial to build, but the "data-as-state over scheduled jobs" rule applies and, more to the point, the channel work is a marketing experiment rather than infrastructure. Prove a channel converts with 30-second manual posts before automating it.
+- **Settled by the rules pass:** subreddit etiquette (per-sub, table above) and tone ("I built a thing" gets downvoted; leading with the puzzle or the flag fact does not — see drafts).
+- **Not yet tried:** Bluesky / Mastodon accounts, language-learning Discords, the `#geography` X community. Revisit once the Reddit posts give a sense of whether channel traffic sticks or spikes and dies.
+
 ---
 
 ## Backlog
@@ -150,19 +251,6 @@ Items here are not blocking current work but deserve durable memory. Agents read
 **Open design calls:**
 - **Where placements actually fit naturally.** Forcing affiliates onto game screens cheapens the polish; not placing them anywhere makes this item moot. The honest answer is probably "one tasteful 'further reading' / 'recommended atlases' panel on `flagsdata/`, that's it."
 - **Disclosure.** FTC + EU rules require visible affiliate disclosure. Match the polish — a one-line note in the footer beats a generic disclaimer.
-
-### Item 6: Distribution channels — where to plant the daily puzzle
-
-**Status:** unstarted. This is the work Jan-the-engineer is most likely to skip; calling it out as its own backlog item so it can't hide.
-
-**Goal.** Identify the 3-5 places where geography/flag-curious people hang out and get a daily-puzzle presence there. Examples: `r/geography`, `r/vexillology`, `r/quiz`, language-learning Discords, `#geography` X/Twitter community, possibly a low-effort Mastodon or Bluesky account that posts each day's puzzle.
-
-**Why this matters.** Programmatic SEO (Item 2) is the long-tail compounding play; channel posting is the short-tail "where do today's first 100 visitors come from" play. Both matter. Channel posting also generates the small wave of social proof that makes the SEO results more clickable later (sites that show up in social *and* search feel more legitimate than sites that only show up in one).
-
-**Open design calls:**
-- **Manual vs automated daily post.** A scheduled GitHub Action that posts the day's puzzle to X/Bluesky is technically trivial. But: Jan's memory has a "data-as-state over scheduled jobs" rule from the three failed scheduler attempts. Suggest manual posting from Jan's own account for v1 — the channel work is a marketing experiment, not infrastructure, and a 30-second daily post is the kind of routine that proves the channel works before automation is justified.
-- **Subreddit posting etiquette.** Self-promotion rules vary per subreddit; some require moderator pre-approval. Worth one-time research per target subreddit before posting.
-- **Tone.** "I built a thing" gets downvoted; "today's daily flag puzzle if anyone's bored" gets upvoted. Same site, different framing.
 
 ---
 
