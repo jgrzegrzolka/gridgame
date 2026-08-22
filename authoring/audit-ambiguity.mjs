@@ -40,6 +40,13 @@ const CATALOG_DIR = join(ROOT, '.catalog');
 const PUZZLES = JSON.parse(readFileSync(join(CATALOG_DIR, 'puzzles.json'), 'utf-8'));
 const IDEAS = JSON.parse(readFileSync(join(CATALOG_DIR, 'ideas.json'), 'utf-8'));
 
+// Grandfathered: released before Armenia declared its yellow/orange
+// ambiguity (DATA_FEATURE Feature ER). Both were played, and re-authoring
+// a played puzzle would invalidate its recorded Cosmos results, so the gate
+// can only bind on puzzles that can still be changed. Mirrors the set in
+// flags/daily.test.js — keep the two in step. NEVER add to this list.
+const GRANDFATHERED = new Set([68, 78]);
+
 const BUCKETS = /** @type {const} */ ([
   ['PUZZLES', PUZZLES],
   ['IDEAS', IDEAS],
@@ -49,6 +56,7 @@ let total = 0;
 for (const [label, list] of BUCKETS) {
   let bucketHits = 0;
   for (const puzzle of list) {
+    if (label === 'PUZZLES' && GRANDFATHERED.has(puzzle.n)) continue;
     // Mirror the rule-15 gate in flags/daily.test.js so this script's output
     // matches what actually fails the build. Manual + superlative entries have
     // no criterion filter (a superlative's optional filter is a pool

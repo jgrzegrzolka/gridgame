@@ -172,6 +172,51 @@ The daily-puzzle surface for every metric (area, density, GDP, GDP per capita, a
 
 ## Done
 
+### Feature ER: Armenia's band is yellow-orange, and the ambiguity column now says so (complete 2026-08-22, pending PR)
+
+**How it surfaced.** Jan played daily #78 (`continent:Asia,color:yellow,color:!white`, released 2026-08-22, the same morning the site's first Reddit post went out) and reported the puzzle as ambiguous: "Armenia has orange, Sri Lanka has both, either both colour are really similar." His proposed fix was an authoring convention — always ask "yellow or orange" together, or exclude both.
+
+**What the data actually said.** The convention would have been a wide fix for a narrow fault. Measuring the hue of every warm band in the flag set puts the fault in one place:
+
+| Flag | Band | Hue | Tagged |
+| --- | --- | --- | --- |
+| Kosovo | `#D0A650` | 40.0° | yellow |
+| Nauru | `#ffb20d` | 41.1° | yellow |
+| **Armenia** | **`#f2a800`** | **41.7°** | **orange** |
+| Guatemala / South Africa / Kiribati | | 42° | yellow |
+| Lithuania / Argentina / Sri Lanka's border | | 43° | yellow |
+
+Against a genuine-orange cluster that sits far below: Niger 20.9°, Ireland 28.5°, India 30.0°, French Polynesia 30.0°, Zambia 31.4°, Cyprus 33.4°. The palette splits cleanly at roughly 35°, and **Armenia is the only flag tagged orange whose band sits on the yellow side of the split.** Nine flags of the same hue are called yellow. That is a data inconsistency, not a player misreading a flag.
+
+Sri Lanka, which Jan also flagged, is correctly tagged: border 43.1° (yellow), bands 21.4° (orange), both declared. The two just sit adjacent and both read "warm."
+
+**The fix.** `flags/countries.json` gains `ambiguousColors: ["yellow", "orange"]` on Armenia; canonical `primaryColors` keeps `orange`, so no answer set moves and no released puzzle is re-scored. This is Feature DA's membership veto finally getting the audit-driven evidence its seed-data phase deliberately waited for ("conservative tag list ... deferred pending audit-driven evidence rather than over-tagging upfront").
+
+**Both directions of the doubt, not one.** The first cut tagged `["yellow"]` only. That leaves a loophole the candidate search found immediately: `continent:Asia,color:blue,color:!orange` passes a yellow-only veto while excluding Armenia *for the contested colour itself*. A player who reads the band as yellow equally believes the flag has **no orange**, so the honest tag names both. Adding `orange` cost nothing — zero additional catalog or idea violations — and closes the loophole.
+
+**Grandfathering, and why.** The gate is a pre-publication check, so it can only bind on puzzles that can still be changed. Two released puzzles trip it and cannot be re-authored without invalidating results already recorded in Cosmos:
+
+- **#68** (2026-08-12) `continent:Asia,color:blue,color:!yellow` — Armenia is in the answer set canonically, out of it under the plausible flip.
+- **#78** (2026-08-22) `continent:Asia,color:yellow,color:!white` — the reverse, and the puzzle that started this.
+
+Both sit in `AMBIGUITY_GRANDFATHERED` in `flags/daily.test.js`, mirrored in `authoring/audit-ambiguity.mjs` so the CLI keeps exiting 0 and stays worth reading. The list must never grow: a new puzzle passes the gate or it is re-authored.
+
+**Two unreleased puzzles re-authored.** Both were future-dated, so rule 1's drift detector allowed the rewrite:
+
+- **#98** (2026-09-11) `continent:Asia,color:yellow,color:!green` → `continent:Asia,color:blue,color:red`. A candidate search over every Asia-plus-yellow variant returned **zero** viable replacements — with Armenia tagged, every Asian yellow framing either leaves it on the boundary or breaks rule 2 (redundant token) or rule 5 (primary-clean). The slot had to change theme. Difficulty 3.48 → 3.40, 10 answers → 12.
+- **#136** (2026-10-19) `stripesOnly:horizontal,color:yellow` → `stripesOnly:horizontal,color:!white`. Difficulty 4.00 → 4.03, 6 answers → 7. Armenia is now *in* this answer set, for having no white, which is true under either reading of the band.
+
+One `ideas.json` candidate (`continent:Asia,color:red,color:!yellow`) was dropped rather than reworked; its only viable replacement collided with the new #98.
+
+**A trap worth naming: don't game the veto.** `stripesOnly:horizontal,color:yellow,colorCount:3` passes the audit and looks like a tidy minimal edit to #136. It is wrong. The audit models a disputed colour by *adding* it to the palette, so Armenia flips to 4 colours and drops out — but a player who reads the band as yellow counts red/blue/yellow and still says three. The audit's model is a conservative approximation, not the player's mental model. A replacement is only honest when the flag is excluded (or included) for a reason that holds under **both** readings.
+
+**Standing artifacts:**
+
+- Armenia's `ambiguousColors` pin, with the hue table above as its justification — the reason not to re-derive "Armenia is orange, obviously" later.
+- `AMBIGUITY_GRANDFATHERED` in `flags/daily.test.js` + `authoring/audit-ambiguity.mjs` — the pattern for any future tag that catches already-played puzzles.
+
+**Out of scope, deliberately:** the two genuine borderline cases, Côte d'Ivoire (36.2°) and Marshall Islands (37.6°). Both sit closer to the orange cluster than to Armenia, and tagging them costs a third puzzle (#188) for a much weaker case. Re-open if a player reports either.
+
 ### Feature EK: Tourist arrivals per capita as a world metric, an intensive "non-obvious #1" metric (code surfaces complete 2026-07-16, pending PR; daily deferred to `METRIC_DAILY_PUZZLES.md`)
 
 Thirty-first world metric. Jan asked for two new production/consumption metrics whose top spot is a *surprise*, not one of the five biggest countries by size. Tourist arrivals per capita delivers exactly that: **Andorra ~102 arrivals per resident** tops it, then Monaco / San Marino / the Caribbean micro-states; the big countries sit near the bottom per head (USA ~0.5, China ~0.12, India ~0.01). The intensive (size-independent) property is the whole point, same family as sheep/cattle-per-capita.
