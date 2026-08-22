@@ -1140,8 +1140,17 @@ test('formatPuzzleDate: DD.MM.YYYY format', () => {
 // and DATA_FEATURE.md.
 const SOV_FOR_AUDIT = flagsGamePool(COUNTRIES, false);
 
+// Released before Armenia declared its yellow/orange ambiguity
+// (DATA_FEATURE Feature ER). Both were played by real people, and
+// re-authoring a played puzzle would invalidate the results recorded
+// against it in Cosmos. The gate is a pre-publication check, so it can
+// only bind on puzzles that can still be changed.
+// NEVER add to this list — a new puzzle must pass the gate.
+const AMBIGUITY_GRANDFATHERED = new Set([68, 78]);
+
 test('no puzzle has a flag-data ambiguity violation', () => {
   for (const entry of PUZZLES) {
+    if (AMBIGUITY_GRANDFATHERED.has(entry.n)) continue;
     // Manual + superlative entries have no criterion filter — the audit's
     // "plausible count flips filter membership" logic doesn't apply. Author
     // owns judgment about ambiguous flags in the roster (for a compound

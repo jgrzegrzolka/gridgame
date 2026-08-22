@@ -239,6 +239,10 @@
       "orange"
     ],
     "additionalColors": [],
+    "ambiguousColors": [
+      "yellow",
+      "orange"
+    ],
     "motifs": [],
     "stripesOnly": "horizontal"
   },
