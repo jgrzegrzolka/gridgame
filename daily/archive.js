@@ -8,6 +8,7 @@ import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.
 import { fetchCatalog } from './catalogSource.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
+import { pickRandomUnplayed } from './randomUnplayed.js';
 import { msUntilNextWarsawMidnight, formatCountdown } from '../flags/nextPuzzleCountdown.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -60,6 +61,12 @@ export async function bootArchive() {
           score: scores[entry.n],
         }));
       }
+      // Shuffle action: jump straight to a puzzle with no saved score.
+      // Wired only once the catalog has resolved, because the pool it
+      // draws from does not exist before then. When everything has been
+      // played the item is removed rather than left inert — a dock item
+      // that does nothing when tapped is worse than one that isn't there.
+      wireRandomUnplayed(catalog, scores);
       // Ghost tile at the tail — non-clickable preview of the next-dated
       // entry with a Warsaw-midnight countdown. Skipped when the
       // schedule has been exhausted (nothing more to count down to).
@@ -122,4 +129,27 @@ function mountNextPuzzleGhostTile(listEl, allEntries) {
   };
   setInterval(tick, 30_000);
   document.addEventListener('langchanged', tick);
+}
+
+/**
+ * Point the archive's shuffle dock item at a random unplayed puzzle, or
+ * drop it when there is nothing left to offer.
+ *
+ * @param {DailyPuzzle[]} catalog
+ * @param {Record<number, any>} scores
+ */
+function wireRandomUnplayed(catalog, scores) {
+  const el = document.getElementById('random-unplayed');
+  if (!el) return;
+  if (!pickRandomUnplayed(catalog, scores)) {
+    el.remove();
+    return;
+  }
+  el.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    // Re-drawn per click, not captured at wire time, so a second tap
+    // gives a different puzzle instead of repeating the first draw.
+    const pick = pickRandomUnplayed(catalog, scores);
+    if (pick) window.location.href = `./?n=${pick.n}`;
+  });
 }
