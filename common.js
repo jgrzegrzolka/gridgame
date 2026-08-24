@@ -133,12 +133,13 @@ const DOCK_CATALOG = {
   // playAgain/playAgainInline) they can't share one id.
   random: { tag: 'a', domId: 'game-random', i18nKey: 'menu.random', en: 'Random', icon: 'shuffle', href: '#' },
   randomResult: { tag: 'a', domId: 'play-random', i18nKey: 'menu.random', en: 'Random', icon: 'shuffle', href: '#' },
-  // Daily archive: jump to a random puzzle, preferring unplayed ones.
+  // Daily archive: jump to a random puzzle the player has no score for.
   // Own id (not `random`/`randomResult`) because those are findFlag's
   // reshuffle handlers and this is a different action on a different page.
+  // archive.js removes the item once the catalog shows nothing unplayed.
   // Shares menu.random's wording: same icon, same idea, and the archive page
   // title already says "previous", so the label needn't repeat it.
-  randomPuzzle: { tag: 'a', domId: 'random-puzzle', i18nKey: 'menu.random', en: 'Random', icon: 'shuffle', href: '#' },
+  randomUnplayed: { tag: 'a', domId: 'random-unplayed', i18nKey: 'menu.random', en: 'Random', icon: 'shuffle', href: '#' },
   // findFlag "Make another puzzle" — a plain nav link back to the builder.
   makeAnother: { tag: 'a', domId: null, i18nKey: 'findFlag.pickAnotherCategory', en: 'Make another puzzle', icon: 'plus', href: './' },
   // profile → sync page. A nav link, no JS handler.
