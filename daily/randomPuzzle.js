@@ -1,5 +1,14 @@
 /**
- * "Play a puzzle you haven't done yet" — the archive's shuffle action.
+ * "Give me a puzzle" — the archive's shuffle action.
+ *
+ * **Prefers one you haven't played, but always offers something.** The
+ * first cut removed the dock item once every puzzle had a score, which
+ * hid the feature from precisely the people who use the site most: the
+ * regulars, who are the only ones who ever reach that state. A control
+ * labelled "Random" that disappears for your best players is worse than
+ * one that occasionally repeats a puzzle, and replaying is already a
+ * first-class action here (every archive tile replays, and the result
+ * screen has Play again).
  *
  * A puzzle counts as **unplayed when `daily.scores` has no record for its
  * `n`**. A record is written when a run finishes or is given up, so
@@ -29,7 +38,9 @@ export function unplayedPuzzles(catalog, scores) {
 }
 
 /**
- * Pick one unplayed puzzle at random, or null when there are none left.
+ * Pick a puzzle at random, preferring ones with no saved score. Falls back
+ * to the whole catalog once everything has been played, so the action is
+ * only ever empty-handed when the catalog itself is empty.
  *
  * `rand` is injectable so the choice is testable; it must behave like
  * `Math.random` (in `[0, 1)`). The index is clamped anyway, because a
@@ -41,8 +52,9 @@ export function unplayedPuzzles(catalog, scores) {
  * @param {() => number} [rand]
  * @returns {DailyPuzzle | null}
  */
-export function pickRandomUnplayed(catalog, scores, rand = Math.random) {
-  const pool = unplayedPuzzles(catalog, scores);
+export function pickRandomPuzzle(catalog, scores, rand = Math.random) {
+  const unplayed = unplayedPuzzles(catalog, scores);
+  const pool = unplayed.length > 0 ? unplayed : (Array.isArray(catalog) ? catalog : []);
   if (pool.length === 0) return null;
   const i = Math.min(pool.length - 1, Math.max(0, Math.floor(rand() * pool.length)));
   return pool[i];
