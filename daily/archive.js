@@ -8,7 +8,7 @@ import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.
 import { fetchCatalog } from './catalogSource.js';
 import { warsawToday } from '../flags/warsawTime.js';
 import { visiblePuzzles } from '../flags/puzzleFilter.js';
-import { pickRandomPuzzle } from './randomPuzzle.js';
+import { pickRandomUnplayed } from './randomUnplayed.js';
 import { msUntilNextWarsawMidnight, formatCountdown } from '../flags/nextPuzzleCountdown.js';
 
 /** @typedef {import('../flags/daily.js').DailyPuzzle} DailyPuzzle */
@@ -61,10 +61,12 @@ export async function bootArchive() {
           score: scores[entry.n],
         }));
       }
-      // Shuffle action: jump to a puzzle, preferring ones with no saved
-      // score. Wired only once the catalog has resolved, because the pool
-      // it draws from does not exist before then.
-      wireRandomPuzzle(catalog, scores);
+      // Shuffle action: jump straight to a puzzle with no saved score.
+      // Wired only once the catalog has resolved, because the pool it
+      // draws from does not exist before then. When everything has been
+      // played the item is removed rather than left inert — a dock item
+      // that does nothing when tapped is worse than one that isn't there.
+      wireRandomUnplayed(catalog, scores);
       // Ghost tile at the tail — non-clickable preview of the next-dated
       // entry with a Warsaw-midnight countdown. Skipped when the
       // schedule has been exhausted (nothing more to count down to).
@@ -130,24 +132,24 @@ function mountNextPuzzleGhostTile(listEl, allEntries) {
 }
 
 /**
- * Point the archive's shuffle dock item at a random puzzle, preferring
- * ones the player has no score for.
- *
- * The item is never removed. An earlier cut dropped it once every puzzle
- * had been played, which hid it from the regulars — the only players who
- * ever reach that state, and the ones most likely to want it.
+ * Point the archive's shuffle dock item at a random unplayed puzzle, or
+ * drop it when there is nothing left to offer.
  *
  * @param {DailyPuzzle[]} catalog
  * @param {Record<number, any>} scores
  */
-function wireRandomPuzzle(catalog, scores) {
-  const el = document.getElementById('random-puzzle');
+function wireRandomUnplayed(catalog, scores) {
+  const el = document.getElementById('random-unplayed');
   if (!el) return;
+  if (!pickRandomUnplayed(catalog, scores)) {
+    el.remove();
+    return;
+  }
   el.addEventListener('click', (ev) => {
     ev.preventDefault();
     // Re-drawn per click, not captured at wire time, so a second tap
     // gives a different puzzle instead of repeating the first draw.
-    const pick = pickRandomPuzzle(catalog, scores);
+    const pick = pickRandomUnplayed(catalog, scores);
     if (pick) window.location.href = `./?n=${pick.n}`;
   });
 }
