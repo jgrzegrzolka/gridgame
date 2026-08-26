@@ -56,6 +56,7 @@ test('clearBrowserState removes every key in DEV_RESET_STORAGE_KEYS and leaves o
     'gridgame.submittedPuzzles': '[1,2]',
     'daily.scores': '{}',
     'daily.progress': '{"12":{"c":["so"],"w":["pl"],"s":1}}',
+    'gridgame.pendingSubmits': '{"12":{"c":["so"],"a":1}}',
     'gridgame.ideas.reviewed': '[5]',
     'gridgame.nickname': 'Alice',
     'unrelated.key': 'keep',
@@ -73,7 +74,7 @@ test('the reset list covers every daily-flow key, progress included', () => {
   // pins membership, which is the thing that actually regresses: an
   // uncleared `daily.progress` leaves the dev resuming a half-played
   // puzzle after a "Reset browser" that claimed to start them fresh.
-  for (const k of ['gridgame.deviceId', 'gridgame.submittedPuzzles', 'daily.scores', 'daily.progress', 'gridgame.nickname']) {
+  for (const k of ['gridgame.deviceId', 'gridgame.submittedPuzzles', 'daily.scores', 'daily.progress', 'gridgame.pendingSubmits', 'gridgame.nickname']) {
     assert.ok(DEV_RESET_STORAGE_KEYS.includes(k), `${k} missing from DEV_RESET_STORAGE_KEYS`);
   }
 });

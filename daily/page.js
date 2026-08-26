@@ -30,7 +30,8 @@ import {
 } from './playFlow.js';
 import { getOrCreateDeviceId, IDENTITY_STORAGE_KEY } from '../flags/identity.js';
 import { trySyncDevices, resolveIdentityAndHydrate } from '../flags/syncHydrate.js';
-import { submitResult } from './statsSubmit.js';
+import { submitResult, flushPendingSubmits } from './statsSubmit.js';
+import { isPending } from './pendingSubmit.js';
 import { fetchStats } from './statsClient.js';
 import { applyFindRatesToTiles } from './statsOverlay.js';
 import { ensureTurnstile, getTurnstileToken } from './turnstileClient.js';
@@ -717,6 +718,25 @@ function wirePlayersPillDismiss() {
  *   the total comes from `scoreState` now.
  * @param {{ loading?: boolean }} [opts]
  */
+/**
+ * Show / hide the "this result did not reach the server" line.
+ *
+ * Deliberately plain text in the muted tone, not a red verdict: nothing
+ * the player did was wrong, their score stands locally, and the retry is
+ * automatic (daily/pendingSubmit.js). Red is reserved for right/wrong
+ * answers — see CLAUDE.md.
+ *
+ * @param {boolean} failed
+ */
+function paintSubmitWarning(failed) {
+  const el = document.getElementById('daily-submit-warning');
+  if (!el) return;
+  el.textContent = failed
+    ? t('daily.submit.failed', 'This result has not reached the server yet. It is saved on this device and will be sent again next time you open the page.')
+    : '';
+  el.hidden = !failed;
+}
+
 function paintCommunityStats(stats, total, opts = {}) {
   const labels = statsLabels();
   const container = /** @type {HTMLElement} */ (document.getElementById('daily-stats'));
@@ -946,6 +966,9 @@ async function handleFinish(n, targets, all, info, isToday) {
   cascadeStart = Date.now();
   setTimeout(() => { cascadeActive = false; }, 2600);
   setShareCtx(n, targets, info.foundCodes);
+  // Clear any warning left over from an earlier paint in this page load —
+  // this attempt gets to prove itself.
+  paintSubmitWarning(false);
   const widgetContainer = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
   const deviceId = getOrCreateDeviceId(window.localStorage, () => crypto.randomUUID());
   const found = info.foundCodes.length;
@@ -979,6 +1002,7 @@ async function handleFinish(n, targets, all, info, isToday) {
       paintCommunityStats(null, info.totalCount, { loading: true });
     },
     onCleared: () => paintCommunityStats(null, info.totalCount),
+    onSubmitFailed: () => paintSubmitWarning(true),
     onStats: (stats) => {
       paintCommunityStats(stats, targets.length);
       applyFindRatesToTiles(/** @type {HTMLElement} */ (document.getElementById('find-result-found')), stats);
@@ -1022,6 +1046,26 @@ export async function bootDaily() {
   wireZoom();
   mountDevReset();
   wirePlayersPillDismiss();
+
+  // Re-send anything an earlier finish failed to deliver. Every finish
+  // happens on this page (today's puzzle and `?n=` archive plays alike),
+  // so this is the one boot that sees every parked attempt. Fire-and-
+  // forget: nothing below waits on it, and it costs a single localStorage
+  // read when there's nothing to send.
+  //
+  // The token thunk mirrors handleFinish's: no widget while Turnstile is
+  // soft-disabled, and a real (idempotent) mount + execute if it is ever
+  // switched back on, so recovery doesn't quietly stop working then.
+  flushPendingSubmits({
+    store: window.localStorage,
+    getToken: SKIP_TURNSTILE
+      ? () => Promise.resolve('')
+      : async () => {
+        const container = /** @type {HTMLElement} */ (document.getElementById('turnstile-widget'));
+        await ensureTurnstile({ container, siteKey: TURNSTILE_SITE_KEY });
+        return getTurnstileToken();
+      },
+  }).catch(() => { /* recovery is a nicety; boot must not depend on it */ });
 
   // Feature W: resolve identity durably before anything reads local caches —
   // restoring the original deviceId + rebuilding `daily.scores` from Cosmos if
@@ -1247,6 +1291,10 @@ export async function bootDaily() {
         // `#game.is-finished .daily-lives` rule keeps the row hidden.
         setShareCtx(n, result.targets, foundCodes);
         paintScoreBlock(foundCodes.size, result.targets.length);
+        // A result the server never accepted keeps saying so on revisit —
+        // otherwise the one screen the player returns to is also the one
+        // that hides the problem. Clears itself once the boot flush lands.
+        paintSubmitWarning(isPending(window.localStorage, n));
         paintCommunityStats(null, result.targets.length, { loading: true });
         // Community stats are gated on Cosmos, not this device's
         // localStorage: always GET, and let the response decide
@@ -1268,6 +1316,7 @@ export async function bootDaily() {
           renderResult(result.targets, foundCodes, labelFor());
           setShareCtx(n, result.targets, foundCodes);
           paintScoreBlock(foundCodes.size, result.targets.length);
+          paintSubmitWarning(isPending(window.localStorage, n));
           paintCommunityStats(null, result.targets.length, { loading: true });
           loadAndPaintStats(n, result.targets, foundCodes.size, all, wrongCodes);
           if (isToday) {

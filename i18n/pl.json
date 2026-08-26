@@ -483,6 +483,9 @@
     "streak": {
       "line": "twoja seria: {n}"
     },
+    "submit": {
+      "failed": "Ten wynik nie dotarł jeszcze na serwer. Jest zapisany na tym urządzeniu i zostanie wysłany ponownie przy następnym otwarciu strony."
+    },
     "callout": {
       "easiest": "najłatwiejsze:",
       "hardest": "najtrudniejsze:"

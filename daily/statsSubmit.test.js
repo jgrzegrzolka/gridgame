@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { submitResult } from './statsSubmit.js';
+import { submitResult, flushPendingSubmits } from './statsSubmit.js';
+import { loadPending, MAX_ATTEMPTS } from './pendingSubmit.js';
 
 function fakeStore(initial = {}) {
   /** @type {Map<string, string>} */
@@ -211,4 +212,132 @@ test('a persistent 5xx failure does NOT mark submitted (so a later visit can ret
     fetchImpl: async () => fakeRes(500, { error: 'server_error' }),
   });
   assert.equal(store._map.has('gridgame.submittedPuzzles'), false);
+});
+
+// --- Parked attempts (see pendingSubmit.js) -------------------------------
+// A failed submit used to lose the score outright: no retry beyond this
+// function's own, no message, and a revisit never re-POSTs. Parking the
+// payload is what makes the next page load able to finish the job.
+
+test('a deterministic 4xx parks the attempt for a later page load', async () => {
+  const store = fakeStore();
+  const r = await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => fakeRes(400, { error: 'invalid_durationMs' }),
+  });
+  assert.equal(r.outcome, 'failed');
+  const parked = loadPending(store);
+  assert.equal(parked.length, 1);
+  assert.equal(parked[0].n, 7);
+  assert.deepEqual(parked[0].foundCodes, ['ch', 'dk']);
+  assert.deepEqual(parked[0].wrongCodes, ['de', 'fr']);
+  assert.equal(parked[0].totalCount, 9);
+  assert.equal(parked[0].durationMs, 87_000);
+  assert.equal(parked[0].deviceId, baseArgs.deviceId);
+});
+
+test('an exhausted 5xx retry parks the attempt too', async () => {
+  const store = fakeStore();
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => fakeRes(500, { error: 'server_error' }),
+  });
+  assert.equal(loadPending(store).length, 1);
+});
+
+test('a network error parks the attempt', async () => {
+  const store = fakeStore();
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => { throw new Error('offline'); },
+  });
+  assert.equal(loadPending(store).length, 1);
+});
+
+test('a 204 clears any attempt parked by an earlier failure', async () => {
+  const store = fakeStore();
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => { throw new Error('offline'); },
+  });
+  assert.equal(loadPending(store).length, 1, 'parked by the first, failed attempt');
+
+  const r = await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep, fetchImpl: async () => fakeRes(204),
+  });
+  assert.equal(r.outcome, 'ok');
+  assert.deepEqual(loadPending(store), []);
+});
+
+test('a 409 clears the parked attempt as well (server already has it)', async () => {
+  const store = fakeStore();
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep, fetchImpl: async () => fakeRes(500, {}),
+  });
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep,
+    fetchImpl: async () => fakeRes(409, { error: 'already_submitted' }),
+  });
+  assert.deepEqual(loadPending(store), []);
+});
+
+test('flushPendingSubmits: re-sends a parked attempt and clears it on success', async () => {
+  const store = fakeStore();
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep, fetchImpl: async () => fakeRes(400, { error: 'nope' }),
+  });
+
+  /** @type {any[]} */
+  const bodies = [];
+  const sent = await flushPendingSubmits({
+    store,
+    getToken: async () => 'tok',
+    sleepImpl: noSleep,
+    fetchImpl: async (_url, opts) => { bodies.push(JSON.parse(opts.body)); return fakeRes(204); },
+  });
+
+  assert.equal(sent, 1);
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].puzzleId, 7);
+  assert.equal(bodies[0].durationMs, 87_000, 'the original duration is re-sent, not invented');
+  assert.deepEqual(bodies[0].foundCodes, ['ch', 'dk']);
+  assert.deepEqual(loadPending(store), []);
+});
+
+test('flushPendingSubmits: a still-failing attempt stays parked, then ages out', async () => {
+  const store = fakeStore();
+  const fail = async () => fakeRes(400, { error: 'nope' });
+  await submitResult({ ...baseArgs, store, sleepImpl: noSleep, fetchImpl: fail });
+
+  for (let i = 1; i < MAX_ATTEMPTS; i++) {
+    const sent = await flushPendingSubmits({
+      store, getToken: async () => '', sleepImpl: noSleep, fetchImpl: fail,
+    });
+    assert.equal(sent, 0, `flush ${i} delivered nothing`);
+  }
+  assert.deepEqual(loadPending(store), [], 'gives up rather than POSTing forever');
+});
+
+test('flushPendingSubmits: nothing parked means no request at all', async () => {
+  let called = false;
+  const sent = await flushPendingSubmits({
+    store: fakeStore(),
+    getToken: async () => { called = true; return ''; },
+    fetchImpl: async () => { called = true; return fakeRes(204); },
+  });
+  assert.equal(sent, 0);
+  assert.equal(called, false, 'not even a Turnstile token is requested');
+});
+
+test('flushPendingSubmits: a failing token provider is not fatal', async () => {
+  const store = fakeStore();
+  await submitResult({
+    ...baseArgs, store, sleepImpl: noSleep, fetchImpl: async () => fakeRes(400, {}),
+  });
+  const sent = await flushPendingSubmits({
+    store, getToken: async () => { throw new Error('turnstile down'); },
+    sleepImpl: noSleep, fetchImpl: async () => fakeRes(204),
+  });
+  assert.equal(sent, 0);
+  assert.equal(loadPending(store).length, 1, 'stays parked for the next load');
 });

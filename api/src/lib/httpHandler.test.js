@@ -132,3 +132,43 @@ test('wrapHandler: propagates an error the handler itself throws', async () => {
   const wrapped = wrapHandler(async () => { throw boom; });
   await assert.rejects(() => wrapped(fakeReq(), fakeContext()), /boom/);
 });
+
+// A numeric puzzleId is the real wire shape (`validateResult` requires an
+// int), so a string-only gate dropped it from every trace — which is why the
+// 2026-08-26 rejected daily submission couldn't be pivoted to its puzzle.
+test('pickTelemetryIds: stamps a numeric puzzleId', () => {
+  assert.deepStrictEqual(
+    pickTelemetryIds(query({}), { deviceId: 'd1', puzzleId: 82 }),
+    { deviceId: 'd1', puzzleId: '82' },
+  );
+});
+
+test('pickTelemetryIds: omits a non-finite numeric puzzleId', () => {
+  assert.deepStrictEqual(pickTelemetryIds(query({}), { deviceId: 'd1', puzzleId: NaN }), { deviceId: 'd1' });
+});
+
+test('wrapHandler: stamps the error code of a 4xx onto the trace', async () => {
+  const ctx = fakeContext();
+  const req = fakeReq({ method: 'POST', body: { deviceId: 'd1', puzzleId: 82 } });
+  const wrapped = wrapHandler(async () => ({ status: 400, jsonBody: { error: 'invalid_durationMs' } }));
+  await wrapped(req, ctx);
+  assert.deepStrictEqual(ctx.infos, [
+    ['apiTelemetry', { deviceId: 'd1', puzzleId: '82', status: 400, error: 'invalid_durationMs' }],
+  ]);
+});
+
+test('wrapHandler: emits an error-only trace for a 4xx with no ids', async () => {
+  const ctx = fakeContext();
+  const req = fakeReq({ method: 'GET' });
+  const wrapped = wrapHandler(async () => ({ status: 400, jsonBody: { error: 'invalid_puzzleId' } }));
+  await wrapped(req, ctx);
+  assert.deepStrictEqual(ctx.infos, [['apiTelemetry', { status: 400, error: 'invalid_puzzleId' }]]);
+});
+
+test('wrapHandler: adds no error field on a success', async () => {
+  const ctx = fakeContext();
+  const req = fakeReq({ method: 'POST', body: { deviceId: 'd1' } });
+  const wrapped = wrapHandler(async () => ({ status: 204 }));
+  await wrapped(req, ctx);
+  assert.deepStrictEqual(ctx.infos, [['apiTelemetry', { deviceId: 'd1', status: 204 }]]);
+});

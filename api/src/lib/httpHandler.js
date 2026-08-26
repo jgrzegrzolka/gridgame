@@ -30,6 +30,13 @@
  * source; query is the GET fallback). Missing / non-string values are
  * omitted, never emitted as "undefined".
  *
+ * `puzzleId` is additionally accepted as a NUMBER, because that is its real
+ * wire shape — `validateResult` requires an int, so the client always posts
+ * one. The original string-only gate therefore dropped it from every trace
+ * the daily endpoints emitted, and a rejected submission on 2026-08-26 could
+ * not be pivoted to the puzzle it belonged to. `deviceId` stays string-only:
+ * it is an opaque UUID and a numeric one would be a bug worth seeing as one.
+ *
  * @param {{ get?: (k: string) => (string | null) } | undefined} query
  * @param {any} body
  * @returns {Record<string, string>}
@@ -39,11 +46,13 @@ function pickTelemetryIds(query, body) {
     query && typeof query.get === 'function' ? query.get(k) : null;
   /** @param {unknown} v */
   const str = (v) => (typeof v === 'string' && v.length > 0 ? v : '');
+  /** @param {unknown} v */
+  const idish = (v) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : str(v));
 
   /** @type {Record<string, string>} */
   const out = {};
   const deviceId = str(body && body.deviceId) || str(fromQuery('deviceId'));
-  const puzzleId = str(body && body.puzzleId) || str(fromQuery('puzzleId'));
+  const puzzleId = idish(body && body.puzzleId) || str(fromQuery('puzzleId'));
   if (deviceId) out.deviceId = deviceId;
   if (puzzleId) out.puzzleId = puzzleId;
   return out;
@@ -88,13 +97,25 @@ function wrapHandler(handler) {
     const res = await handler(req, context);
     const status = res && typeof res.status === 'number' ? res.status : 200;
 
+    // Every endpoint answers a rejection with `{ error: <stable code> }`, but
+    // that code only ever reached the caller — nothing recorded WHY a request
+    // was refused. On 2026-08-26 a real 13/13 daily submission was rejected
+    // 400 and the reason was unrecoverable afterwards: the status alone can't
+    // tell `invalid_durationMs` from `not_released`. Lifting the code here
+    // (rather than logging in each handler) covers every 4xx the API can
+    // return, present and future.
+    const error = status >= 400 && res && res.jsonBody && typeof res.jsonBody.error === 'string'
+      ? res.jsonBody.error
+      : '';
+
     // Correlated trace: shares this invocation's operation_Id, so it joins to
     // the auto-collected request row. Only emit when we actually have an id —
-    // no point in an empty trace for health checks. Needs `Function` at
-    // Information in host.json or the host filters it (same trap as the
-    // original request-telemetry bug).
-    if (Object.keys(ids).length > 0 && context && typeof context.info === 'function') {
-      context.info('apiTelemetry', { ...ids, status });
+    // no point in an empty trace for health checks. A rejection is worth a
+    // trace even with no ids at all, since the error code is the whole point.
+    // Needs `Function` at Information in host.json or the host filters it
+    // (same trap as the original request-telemetry bug).
+    if ((Object.keys(ids).length > 0 || error) && context && typeof context.info === 'function') {
+      context.info('apiTelemetry', { ...ids, status, ...(error ? { error } : {}) });
     }
 
     if (status >= 500) {
