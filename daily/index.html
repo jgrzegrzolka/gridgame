@@ -142,6 +142,10 @@
            average fills in once community stats land. Sits above Found
            so the player's numbers are the first thing they see. -->
       <section id="daily-personal-stats" class="daily-stats" hidden></section>
+      <!-- Shown only when this result did not reach the server. Sits
+           directly under the score because that is the number it casts
+           doubt on. See daily/pendingSubmit.js for what happens next. -->
+      <p id="daily-submit-warning" class="daily-submit-warning" role="status" hidden></p>
       <!-- Found / Missed headings carry the count ("Znalezione · 14");
            renderResult sets the text, so no data-i18n here. -->
       <h2 class="result-section-title" id="found-title" hidden>Found</h2>

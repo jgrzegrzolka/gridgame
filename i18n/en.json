@@ -483,6 +483,9 @@
     "streak": {
       "line": "your streak: {n}"
     },
+    "submit": {
+      "failed": "This result has not reached the server yet. It is saved on this device and will be sent again next time you open the page."
+    },
     "callout": {
       "easiest": "easiest:",
       "hardest": "hardest:"

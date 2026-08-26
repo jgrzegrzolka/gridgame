@@ -56,12 +56,13 @@
  *   onLoading: () => void,
  *   onCleared: () => void,
  *   onStats: (stats: Stats) => void,
+ *   onSubmitFailed?: (reason: string) => void,
  * }} args
  */
 export async function runFinishFlow({
   n, found, totalCount, foundCodes, wrongCodes, durationMs, deviceId, store,
   ensureTurnstile, getTurnstileToken, submitResult, fetchStats,
-  onLoading, onCleared, onStats,
+  onLoading, onCleared, onStats, onSubmitFailed,
 }) {
   // `found` is included so callers' onLoading/onCleared closures stay
   // self-contained — they don't have to recompute foundCodes.length.
@@ -82,10 +83,18 @@ export async function runFinishFlow({
   // a replay the row already exists (the server 409s the dup), and the
   // community data stands whether or not this POST landed — so a flaked
   // submit shouldn't leave the player at "score only".
-  await submitResult({
+  const submitted = await submitResult({
     store, n, foundCodes, wrongCodes, totalCount, durationMs, deviceId,
     turnstileToken: token,
   });
+  // Not gating the stats panel, but no longer swallowing it either. The
+  // outcome used to be discarded here, so a rejected result looked exactly
+  // like an accepted one: the player kept their local score and never
+  // learned the server hadn't taken it. `submitResult` has already parked
+  // the payload for a later retry; this is only about saying so.
+  if (submitted && submitted.outcome === 'failed' && onSubmitFailed) {
+    onSubmitFailed(submitted.reason);
+  }
 
   // Prefer the FRESH aggregate (`bypassCache` forces Cosmos, so the
   // just-submitted row is reflected). But the fresh path always hits

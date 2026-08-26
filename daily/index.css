@@ -380,6 +380,17 @@
  * spread (easiest / hardest flags). Whitespace-separated from the grids
  * above (44px), no hairline. Desktop lays the two facts in a row; mobile
  * stacks them (design 3b). */
+/* "This result has not reached the server yet." Muted, not red: red means
+ * a wrong answer (see CLAUDE.md), and nothing the player did was wrong.
+ * Left as a plain block element so the UA's `[hidden]` rule is enough —
+ * no `display` here, so no need for a `[hidden]` override. */
+.daily-submit-warning {
+  margin: 12px 0 0;
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted-color);
+}
 .daily-callout {
   margin: 44px 0 28px;
   display: flex;
